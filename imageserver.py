@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import cv2
-import time
 from picamera2 import Picamera2, MappedArray
 import socketserver
 from urllib.parse import parse_qs
@@ -14,12 +13,10 @@ from http import server
 import socketserver
 from PIL import Image
 from picamera2 import Picamera2, MappedArray
-import time
 import cv2
 from lib.FrameServer import FrameServer
-from lib.AutofocusCallbackFrameserver import FocusState, doFocus
-from lib.Focuser519 import Focuser519 as Focuser
-import time
+from lib.Autofocus import FocusState, doFocus
+from lib.FocuserImx519 import Focuser519 as Focuser
 import cv2
 from lib.RepeatedTimer import RepeatedTimer
 
@@ -32,7 +29,7 @@ from picamera2 import Picamera2, MappedArray
 # constants
 class CONFIG:
     # debugging
-    DEBUG = True
+    DEBUG = False
     DEBUG_SHOWPREVIEW = False
     LOGGING_LEVEL = logging.DEBUG
 
@@ -186,7 +183,6 @@ def apply_overlay(request):
 
 
 if __name__ == '__main__':
-
     picam2 = Picamera2()
     full_resolution = picam2.sensor_resolution
     half_resolution = [dim // 2 for dim in picam2.sensor_resolution]
@@ -199,18 +195,17 @@ if __name__ == '__main__':
     frameServer.start()
 
     focuser = Focuser("/dev/v4l-subdev1")
-    focuser.verbose = True
     focusState = FocusState()
-    focusState.verbose = True
+    focuser.verbose = CONFIG.DEBUG
+    focusState.verbose = CONFIG.DEBUG
 
     if CONFIG.DEBUG:
         picam2.pre_callback = apply_overlay
 
     picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
-    if CONFIG.DEBUG:
-        time.sleep(1)
-        doFocus(frameServer, focuser, focusState)
+    # time.sleep(1)
+    #doFocus(frameServer, focuser, focusState)
 
     def refocus():
         logger.info("refocusing")
@@ -221,9 +216,8 @@ if __name__ == '__main__':
     # it auto-starts, no need of rt.start()
     rt = RepeatedTimer(5, refocus)
 
-    if CONFIG.DEBUG:
-        time.sleep(1)
-        frameServer.trigger_hq_capture()
+    # time.sleep(1)
+    # frameServer.trigger_hq_capture()
 
     try:
         address = ('', 8000)

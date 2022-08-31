@@ -64,7 +64,7 @@ class Focuser519:
             value = info["MIN_VALUE"]
         self.write(self.CHIP_I2C_ADDR, value)
         if self.verbose:
-            print("write: {}".format(value))
+            print("set focus_absolute={}".format(value))
 
 
 pass
