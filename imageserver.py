@@ -1,41 +1,36 @@
 #!/usr/bin/python3
 
+# ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
+#
+# Set up script as a service to run always in the background:
+# https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267
+
+
 import cv2
 from picamera2 import Picamera2, MappedArray
-import socketserver
 from urllib.parse import parse_qs
-from http import server
-from PIL import Image
 import logging
-from http import server
-from PIL import Image
-from http import server
-import socketserver
-from PIL import Image
 from picamera2 import Picamera2, MappedArray
-import cv2
 from lib.FrameServer import FrameServer
 from lib.Autofocus import FocusState, doFocus
 from lib.FocuserImx519 import Focuser519 as Focuser
-import cv2
 from lib.RepeatedTimer import RepeatedTimer
-
 from http import server
 import socketserver
 from PIL import Image
-from picamera2 import Picamera2, MappedArray
 
 
 # constants
 class CONFIG:
     # debugging
     DEBUG = False
+    DEBUG_LOGFILE = False
+    LOGGING_LEVEL = logging.INFO
     DEBUG_SHOWPREVIEW = False
-    LOGGING_LEVEL = logging.DEBUG
 
     # quality
-    LORES_QUALITY = 85
-    HIRES_QUALITY = 85
+    LORES_QUALITY = 80
+    HIRES_QUALITY = 90
 
 
 # logger
@@ -47,9 +42,10 @@ fh_formatter = logging.Formatter(
     '%(asctime)s %(levelname)s %(lineno)d:%(filename)s(%(process)d) - %(message)s')
 fh.setFormatter(fh_formatter)
 logger.addHandler(fh)
-fh2 = logging.FileHandler("frameserver.log")
-fh2.setFormatter(fh_formatter)
-logger.addHandler(fh2)
+if CONFIG.DEBUG_LOGFILE:
+    fh2 = logging.FileHandler("/tmp/frameserver.log")
+    fh2.setFormatter(fh_formatter)
+    logger.addHandler(fh2)
 
 
 thread_abort = False
@@ -168,9 +164,9 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 def apply_overlay(request):
     overlay1 = f"{focuser.get(focuser.OPT_FOCUS)} focus"
     overlay2 = f"{frameServer.fps} fps"
-    colour = (255, 255, 255)
-    origin1 = (0, 30)
-    origin2 = (0, 60)
+    colour = (210, 210, 210)
+    origin1 = (10, 200)
+    origin2 = (10, 230)
     font = cv2.FONT_HERSHEY_SIMPLEX
     scale = 1
     thickness = 2
@@ -204,21 +200,16 @@ if __name__ == '__main__':
 
     picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
-    # time.sleep(1)
-    #doFocus(frameServer, focuser, focusState)
-
     def refocus():
         logger.info("refocusing")
 
-        # focusState.reset()  # fix: reset because otherwise focusthread will not loop
         doFocus(frameServer, focuser, focusState)
 
     # it auto-starts, no need of rt.start()
+    refocus()
     rt = RepeatedTimer(5, refocus)
 
-    # time.sleep(1)
-    # frameServer.trigger_hq_capture()
-
+    # serve files forever
     try:
         address = ('', 8000)
         server = StreamingServer(address, StreamingHandler)
