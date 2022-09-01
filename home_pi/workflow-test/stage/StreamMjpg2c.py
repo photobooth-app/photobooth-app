@@ -1,35 +1,20 @@
-#!/usr/bin/python3
+# https://lightrun.com/answers/raspberrypi-picamera2-how-to-simultaneous-recording-and-webserver
 
-# Mostly copied from https://picamera.readthedocs.io/en/release-1.13/recipes2.html
-# Run this script, then point a web browser at http:<this-ip-address>:8000
-# Note: needs simplejpeg to be installed (pip3 install simplejpeg).
 
-import threading
-import io
-import logging
+# idea working :)
+
+
+#import logging
 import socketserver
 from http import server
-from threading import Condition
+from threading import Condition, Thread
+import simplejpeg
 import cv2
-
+import time
+import threading
 from picamera2 import Picamera2, MappedArray
-from picamera2.encoders import JpegEncoder
-from picamera2.outputs import FileOutput
-
-#from lib.RpiCamera import Camera
-from lib.FocuserImx519 import Focuser519 as Focuser
-from lib.AutofocusCallback import FocusState, doFocus
-
-exit_ = False
-
-
-def sigint_handler(signum, frame):
-    global exit_
-    exit_ = True
-
-
-#signal.signal(signal.SIGINT, sigint_handler)
-#signal.signal(signal.SIGTERM, sigint_handler)
+from lib.Focuser519 import Focuser519 as Focuser
+from lib.AutofocusCallback import FocusState
 
 PAGE = """\
 <html>
@@ -44,19 +29,45 @@ PAGE = """\
 """
 
 
-class StreamingOutput(io.BufferedIOBase):
-    def __init__(self):
-        self.frame = None
-        self.condition = Condition()
+def pic_capture():
+    global capture_pic
+    global mjpeg_conversion_flag
 
-    def write(self, buf):
-        with self.condition:
-            self.frame = buf
-            self.condition.notify_all()
+    while True:
+        if capture_pic:
+            mjpeg_conversion_flag = False
+            time.sleep(0.4)
+            print("capturing 1 sec delay\n")
+            request = picam2.capture_request()
+            request.save("main", "StreamMjpgStill2b.jpg")
+            print(request.get_metadata())
+            request.release()
+            time.sleep(0.1)
+            capture_pic = False
+            mjpeg_conversion_flag = True
+
+
+def mjpeg_conversion():
+    global mjpeg_frame
+
+    while True:
+        if mjpeg_conversion_flag:
+            yuv = picam2.capture_array("lores")
+            rgb = cv2.cvtColor(yuv, cv2.COLOR_YUV420p2RGB)
+            buf = simplejpeg.encode_jpeg(
+                rgb, quality=90, colorspace='BGR', colorsubsampling='420')
+            size = len(buf)
+            print("jpeg size", round(size/1000, 1))
+            with mjpeg_condition:
+                mjpeg_frame = buf
+                mjpeg_condition.notify_all()
+
+            print('mjpeg conversion active')
 
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
+        global capture_pic
         if self.path == '/':
             self.send_response(301)
             self.send_header('Location', '/index.html')
@@ -68,6 +79,16 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Content-Length', len(content))
             self.end_headers()
             self.wfile.write(content)
+        elif self.path == '/capture':
+            content = PAGE.encode('utf-8')
+            self.send_response(200)
+            capture_pic = True
+            self.end_headers()
+
+            while capture_pic:
+                time.sleep(0.05)
+
+            self.wfile.write(b'frame capture done\r\n')
         elif self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
@@ -78,9 +99,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
             try:
                 while True:
-                    with output.condition:
-                        output.condition.wait()
-                        frame = output.frame
+                    with mjpeg_condition:
+                        mjpeg_condition.wait()
+                        frame = mjpeg_frame
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length', len(frame))
@@ -88,7 +109,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     self.wfile.write(frame)
                     self.wfile.write(b'\r\n')
             except Exception as e:
-                logging.warning(
+                print(
                     'Removed streaming client %s: %s',
                     self.client_address, str(e))
         else:
@@ -102,8 +123,13 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 picam2 = Picamera2()
-picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
-output = StreamingOutput()
+half_resolution = [dim // 2 for dim in picam2.sensor_resolution]
+main_stream = {"size": picam2.sensor_resolution}
+lores_stream = {"size": (640, 480)}
+video_config = picam2.create_still_configuration(
+    main_stream, lores_stream, encode="lores")
+picam2.configure(video_config)
+
 
 colour = (0, 255, 0)
 origin = (0, 30)
@@ -114,20 +140,40 @@ thickness = 2
 
 def apply_timestamp(request):
     timestamp = str(focuser.get(focuser.OPT_FOCUS))
-    with MappedArray(request, "main") as m:
+    with MappedArray(request, "lores") as m:
         cv2.putText(m.array, timestamp, origin, font, scale, colour, thickness)
     #os.system("v4l2-ctl -c focus_absolute=%d -d /dev/v4l-subdev1" % (500))
 
 
 picam2.pre_callback = apply_timestamp
 
-picam2.start_recording(JpegEncoder(), FileOutput(output))
-
+picam2.start()
 
 focuser = Focuser("/dev/v4l-subdev1")
 focuser.verbose = True
 focusState = FocusState()
 focusState.verbose = True
+
+mjpeg_conversion_flag = True
+capture_pic = False
+mjpeg_frame = None
+mjpeg_condition = Condition()
+mjpeg_thread = Thread(target=mjpeg_conversion, daemon=True)
+mjpeg_thread.start()
+pic_condition = Condition()
+pic_thread = Thread(target=pic_capture, daemon=True)
+pic_thread.start()
+
+
+def capture():
+    print("capturing\n")
+    global capture_pic
+    capture_pic = True
+
+
+S = threading.Timer(5.0, capture)
+S.start()
+# capture()
 
 
 def setInterval(interval):
@@ -151,31 +197,28 @@ def setInterval(interval):
 def refocus():
     print("refocusing\n")
 
-    # if focusState.isFinish():
-    doFocus(picam2, focuser, focusState)
+    focusState.reset()  # fix: reset because otherwise focusthread will not loop
+    #doFocus(picam2, focuser, focusState)
 
 
-refocus()
+# refocus()
 
 
-# @setInterval(7)
-def capture():
-    print("capturing\n")
+statsThread_ = threading.Thread(
+    target=statsThread, args=(camera, focuser, focusState))
+statsThread_.daemon = True
+statsThread_.start()
 
-    request = picam2.capture_request()
-    request.save("main", "StreamMjpgStill.jpg")
-    print(request.get_metadata())
-    request.release()
-    print("Still image captured!")
+focusThread_ = threading.Thread(
+    target=focusThread, args=(focuser, focusState))
+focusThread_.daemon = True
+focusThread_.start()
 
-
-capture()
 
 try:
     address = ('', 8000)
     server = StreamingServer(address, StreamingHandler)
     server.serve_forever()
 finally:
-    server.shutdown()
-
-print("Exit Program\n")
+    mjpeg_conversion_flag = False
+    mjpeg_thread.join()

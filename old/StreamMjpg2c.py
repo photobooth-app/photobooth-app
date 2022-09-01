@@ -13,7 +13,7 @@ import cv2
 import time
 import threading
 from picamera2 import Picamera2, MappedArray
-from lib.Focuser519 import Focuser519 as Focuser
+from lib.FocuserImx519 import Focuser519 as Focuser
 from lib.AutofocusCallback import FocusState
 
 PAGE = """\

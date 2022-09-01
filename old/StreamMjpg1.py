@@ -17,7 +17,7 @@ from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 
 #from lib.RpiCamera import Camera
-from lib.Focuser519 import Focuser519 as Focuser
+from lib.FocuserImx519 import Focuser519 as Focuser
 from lib.AutofocusCallback import FocusState, doFocus
 
 exit_ = False

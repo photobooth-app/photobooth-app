@@ -1,8 +1,8 @@
 import signal
 import time
 import argparse
-from lib.RpiCamera import Camera
-from lib.Focuser519 import Focuser519 as Focuser
+from old.RpiCamera import Camera
+from lib.FocuserImx519 import Focuser519 as Focuser
 from lib.Autofocus import FocusState, doFocus
 exit_ = False
 
