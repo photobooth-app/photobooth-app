@@ -6,6 +6,7 @@
 # https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267
 
 
+import time
 import cv2
 from picamera2 import Picamera2, MappedArray
 from urllib.parse import parse_qs
@@ -116,6 +117,8 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == '/capture':
+            start_time = time.time()
+
             content_len = int(self.headers.get('Content-Length', 0))
             post_body = self.rfile.read(content_len)
             logger.debug("post_body(%s)" % (post_body))
@@ -141,7 +144,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
                 self.send_response(200)
                 self.end_headers()
-                logger.info(f"capture to file {filename} successfull")
+                processing_time = round((time.time() - start_time), 1)
+                logger.info(
+                    f"capture to file {filename} successfull, process took {processing_time}s")
                 self.wfile.write(b'Done, frame capture successful\r\n')
             except Exception as e:
                 logger.error(f"error during capture: {e}")
