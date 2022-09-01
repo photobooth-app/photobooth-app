@@ -81,6 +81,9 @@ class FrameServer:
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["main"])
                 self._logger.debug(self._metadata)
+
+                # TODO: add a denoise algorithm here?
+
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
