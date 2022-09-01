@@ -30,6 +30,8 @@ class CONFIG:
     DEBUG_SHOWPREVIEW = False
 
     # quality
+    MAIN_RESOLUTION_REDUCE_FACTOR = 1
+    LORES_RESOLUTION = (1280, 720)
     LORES_QUALITY = 80
     HIRES_QUALITY = 90
 
@@ -185,13 +187,15 @@ def apply_overlay(request):
 
 if __name__ == '__main__':
     picam2 = Picamera2()
-    full_resolution = picam2.sensor_resolution
-    half_resolution = [dim // 2 for dim in picam2.sensor_resolution]
-    main_stream = {"size": full_resolution}
-    lores_stream = {"size": (640, 480)}
+
+    main_resolution = [
+        dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in picam2.sensor_resolution]
+    main_stream = {"size": main_resolution}
+    lores_stream = {"size": CONFIG.LORES_RESOLUTION}
     config = picam2.create_still_configuration(
         main_stream, lores_stream, encode="lores", buffer_count=1, display="lores")
     picam2.configure(config)
+
     frameServer = FrameServer(picam2, logger, CONFIG)
     frameServer.start()
 
