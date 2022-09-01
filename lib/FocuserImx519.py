@@ -2,6 +2,19 @@ import time
 import os
 
 
+###
+# This script works after installing the driver for 16mp imx519 driver from arducam
+# only driver necessary, not the libcamera apps
+# How to install the driver
+# https://www.arducam.com/docs/cameras-for-raspberry-pi/raspberry-pi-libcamera-guide/how-to-use-arducam-16mp-camera-on-rapberry-pi/
+# You can use our auto-install script to install the driver for arducam 64MP camera:
+# wget - O install_pivariety_pkgs.sh https: // github.com/ArduCAM/Arducam-Pivariety-V4L2-Driver/releases/download/install_script/install_pivariety_pkgs.sh
+# chmod + x install_pivariety_pkgs.sh
+# ./install_pivariety_pkgs.sh - p imx519_kernel_driver_low_speed
+#
+# driver may have to be reinstalled after system updates!
+
+
 def init(bus, address):
     return
 
