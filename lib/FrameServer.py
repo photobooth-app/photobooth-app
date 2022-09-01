@@ -82,7 +82,8 @@ class FrameServer:
                     ["main"])
                 self._logger.debug(self._metadata)
 
-                # TODO: add a denoise algorithm here?
+                # algorithm way too slow for raspi (takes minutes :( )
+                #array = cv2.fastNlMeansDenoisingColored(array, None, 5, 5, 7, 21)
 
                 with self._hq_condition:
                     self._hq_array = array
