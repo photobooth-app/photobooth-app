@@ -15,6 +15,7 @@ class FrameServer:
         self._CONFIG = CONFIG
         self._hq_array = None
         self._lores_array = None
+        self._metadata = None
         self._lores_convert_to_jpeg = True
         self._hq_condition = Condition()
         self._lores_condition = Condition()
@@ -56,7 +57,8 @@ class FrameServer:
             start_time = time.time()  # start time of the loop
 
             if not self._trigger_hq_capture:
-                array = self._picam2.capture_array("lores")
+                (array,), self._metadata = self._picam2.capture_arrays(
+                    ["lores"])
 
                 if self._lores_convert_to_jpeg:
                     rgb = cv2.cvtColor(array, cv2.COLOR_YUV420p2RGB)
@@ -76,7 +78,9 @@ class FrameServer:
                 self._trigger_hq_capture = False
 
                 # capture hq picture
-                array = self._picam2.capture_array("main")
+                (array,), self._metadata = self._picam2.capture_arrays(
+                    ["main"])
+                self._logger.debug(self._metadata)
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
