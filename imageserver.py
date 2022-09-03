@@ -6,6 +6,12 @@
 # https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267
 
 
+# TODO / Improvements
+# 1) cv2 face detection to autofocus on faces
+# 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
+# 3) improve autofocus algorithm
+# 4) bug: negative focus values!
+
 import time
 import cv2
 from picamera2 import Picamera2, MappedArray
@@ -14,7 +20,8 @@ import logging
 from picamera2 import Picamera2, MappedArray
 from lib.FrameServer import FrameServer
 from lib.Autofocus import FocusState, doFocus
-from lib.FocuserImx519 import Focuser519 as Focuser
+# from lib.FocuserImx519 import Focuser      # import for Arducam 16mp sony imx519
+from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
 from http import server
 import socketserver
@@ -24,16 +31,20 @@ from PIL import Image
 # constants
 class CONFIG:
     # debugging
-    DEBUG = False
+    DEBUG = True
     DEBUG_LOGFILE = False
-    LOGGING_LEVEL = logging.INFO
-    DEBUG_SHOWPREVIEW = False
+    LOGGING_LEVEL = logging.DEBUG
+    DEBUG_SHOWPREVIEW = True
 
     # quality
-    MAIN_RESOLUTION_REDUCE_FACTOR = 1
+    MAIN_RESOLUTION_REDUCE_FACTOR = 2
     LORES_RESOLUTION = (1280, 720)
     LORES_QUALITY = 80
     HIRES_QUALITY = 90
+
+    # autofocus
+    # 70 for imx519 (range 0...4000) and 20 for arducam64mp (range 0...1000)
+    FOCUS_STEP = 20
 
 
 # logger
@@ -56,12 +67,12 @@ thread_abort = False
 PAGE = """\
 <html>
 <head>
-<title>picamera2 MJPEG streaming demo</title>
+<title>Photobooth Imageserver</title>
 </head>
 <body>
-<h1>Picamera2 MJPEG Streaming Demo</h1>
-<img src="stream.mjpg" width="640" height="480" /><br>
-<a href="./capture">trigger high quality capture</a>
+<h1>Photobooth Imageserver</h1>
+<form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
+<img src="stream.mjpg" height="720" /><br>
 </body>
 </html>
 """
@@ -203,6 +214,7 @@ if __name__ == '__main__':
     focusState = FocusState()
     focuser.verbose = CONFIG.DEBUG
     focusState.verbose = CONFIG.DEBUG
+    focusState.focus_step = CONFIG.FOCUS_STEP
 
     if CONFIG.DEBUG:
         picam2.pre_callback = apply_overlay

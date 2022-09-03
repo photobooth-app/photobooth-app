@@ -1,12 +1,12 @@
 import time
 import threading
-from lib.FocuserImx519 import Focuser519 as Focuser
+from lib.FocuserImxArdu64 import Focuser
 from queue import Queue
 
 
 class FocusState(object):
     def __init__(self):
-        self.FOCUS_SETP = 70
+        self.focus_step = 40
         self.MOVE_TIME = 0.066
 
         self.lock = threading.Lock()
@@ -31,8 +31,21 @@ class FocusState(object):
         self.finish = False
 
 
+def getROIFrame(roi, frame):
+    h, w = frame.shape[:2]
+    x_start = int(w * roi[0])
+    x_end = x_start + int(w * roi[2])
+
+    y_start = int(h * roi[1])
+    y_end = y_start + int(h * roi[3])
+
+    roi_frame = frame[y_start:y_end, x_start:x_end]
+    return roi_frame
+
+
 def statsThread(frameServer, focuser, focusState):
     maxPosition = focuser.opts[focuser.OPT_FOCUS]["MAX_VALUE"]
+    minPosition = focuser.opts[focuser.OPT_FOCUS]["MIN_VALUE"]
     lastPosition = focuser.get(focuser.OPT_FOCUS)
     focuser.set(Focuser.OPT_FOCUS, lastPosition)  # init position
     lastTime = time.time()
@@ -50,7 +63,7 @@ def statsThread(frameServer, focuser, focusState):
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
             if lastPosition != maxPosition:
                 focuser.set(Focuser.OPT_FOCUS, lastPosition +
-                            (focusState.direction*focusState.FOCUS_SETP))
+                            (focusState.direction*focusState.focus_step))
                 lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
@@ -59,9 +72,12 @@ def statsThread(frameServer, focuser, focusState):
             sharpnessList.append(item)
             focusState.sharpnessList.put(item)
 
-            lastPosition += (focusState.direction*focusState.FOCUS_SETP)
+            lastPosition += (focusState.direction*focusState.focus_step)
 
             if lastPosition > maxPosition:
+                break
+
+            if lastPosition < minPosition:
                 break
 
     # End of stats.

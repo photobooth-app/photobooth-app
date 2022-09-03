@@ -23,7 +23,7 @@ def write(bus, address, value):
     os.system("v4l2-ctl -c focus_absolute={} -d {}".format(value, bus))
 
 
-class Focuser519:
+class Focuser:
     bus = None
     CHIP_I2C_ADDR = 0x0C
 
@@ -85,12 +85,12 @@ pass
 
 
 def test():
-    focuser = Focuser519(7)
-    focuser.set(Focuser519.OPT_FOCUS, 0)
+    focuser = Focuser(7)
+    focuser.set(Focuser.OPT_FOCUS, 0)
     time.sleep(3)
-    focuser.set(Focuser519.OPT_FOCUS, 1000)
+    focuser.set(Focuser.OPT_FOCUS, 1000)
     time.sleep(3)
-    focuser.reset(Focuser519.OPT_FOCUS)
+    focuser.reset(Focuser.OPT_FOCUS)
 
 
 if __name__ == "__main__":
