@@ -13,8 +13,13 @@ picam2.start_preview(Preview.QTGL)
 preview_config = picam2.create_preview_configuration()
 picam2.configure(preview_config)
 
+print(picam2.create_still_configuration()["controls"])
+print(picam2.camera_controls)
+
 picam2.start()
 time.sleep(1)
+
+print(picam2.controls)
 
 with picam2.controls as ctrl:
     ctrl.AnalogueGain = 6.0
