@@ -10,9 +10,8 @@
 # 1) cv2 face detection to autofocus on faces
 # 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
 # 3) improve autofocus algorithm
-# 4) pause autofocus before HQ capture!
-# 5) trigger for autofocus?
-# 6) higher framerates! where is the bottleneck?
+# 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
+# 5) higher framerates! where is the bottleneck?
 
 import psutil
 from io import BytesIO
@@ -20,7 +19,6 @@ import matplotlib.pyplot as plt
 import argparse
 import time
 import cv2
-from picamera2 import Picamera2, MappedArray
 from urllib.parse import parse_qs
 import logging
 from picamera2 import Picamera2, MappedArray
@@ -70,7 +68,6 @@ if args.preview:
 
 
 # logger
-print(CONFIG.LOGGING_LEVEL)
 logger = logging.getLogger(__name__)
 logger.setLevel(CONFIG.LOGGING_LEVEL)
 fh = logging.StreamHandler()
