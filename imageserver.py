@@ -14,6 +14,7 @@
 # 5) trigger for autofocus?
 # 6) higher framerates! where is the bottleneck?
 
+import psutil
 from io import BytesIO
 import matplotlib.pyplot as plt
 import argparse
@@ -45,8 +46,8 @@ class CONFIG:
     HIRES_QUALITY = 90
 
     # autofocus
-    # 70 for imx519 (range 0...4000) and 20 for arducam64mp (range 0...1000)
-    FOCUS_STEP = 20
+    # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
+    FOCUS_STEP = 30
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -93,6 +94,8 @@ PAGE = """\
 <body>
 <h1>Photobooth Imageserver</h1>
 <form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
+<br>
+<a href="/cmd/autofocus/on">autofocus on</a>  *  <a href="/cmd/autofocus/off">autofocus off</a><br>
 <img src="stream.mjpg" height="720" /><br>
 Last Focuser Run results
 <img src="./images/focuser" id="image_focuser" /><br>
@@ -136,6 +139,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'image/png')
             self.end_headers()
 
+            # remove! too high load!
             # create data
             plt.close("all")
             fig = plt.figure()
@@ -152,11 +156,18 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             figdata = BytesIO()
             fig.savefig(figdata, format='png')
             self.wfile.write(figdata.getvalue())
-        elif self.path == '/cmd/autofocus':
+        elif self.path == '/cmd/autofocus/on':
             self.send_response(200)
             self.end_headers()
-            #TODO: dummy
-            self.wfile.write(b'Done\r\n')
+            logger.info("Switched Autofocus Timer ON")
+            rt.start()
+            self.wfile.write(b'Switched Autofocus Timer ON\r\n')
+        elif self.path == '/cmd/autofocus/off':
+            self.send_response(200)
+            self.end_headers()
+            logger.info("Switched Autofocus Timer OFF")
+            rt.stop()
+            self.wfile.write(b'Switched Autofocus Timer OFF\r\n')
         elif self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
@@ -205,6 +216,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.debug(f"save to file: {filename}")
 
             try:
+                # turn of autofocus trigger, cam needs to be in focus at this point by regular focusing
+                rt.stop()
+
                 # triggerpic
                 frameServer.trigger_hq_capture()
 
@@ -229,7 +243,8 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 self.wfile.write(b'error during capture\r\n')
 
             finally:
-                pass
+                # turn on regular autofocus in every case
+                rt.start()
         else:
             self.send_error(404)
             self.end_headers()
@@ -248,6 +263,7 @@ def apply_overlay(request):
         overlay4 = f"Lux: {round(frameServer._metadata['Lux'],1)}"
         overlay5 = f"Ae locked: {frameServer._metadata['AeLocked']}, analogue gain {frameServer._metadata['AnalogueGain']}"
         overlay6 = f"Colour Temp: {frameServer._metadata['ColourTemperature']}"
+        overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}"
         colour = (210, 210, 210)
         origin1 = (10, 200)
         origin2 = (10, 230)
@@ -255,6 +271,7 @@ def apply_overlay(request):
         origin4 = (10, 290)
         origin5 = (10, 320)
         origin6 = (10, 350)
+        origin7 = (10, 380)
         font = cv2.FONT_HERSHEY_SIMPLEX
         scale = 1
         thickness = 2
@@ -271,6 +288,8 @@ def apply_overlay(request):
             cv2.putText(m.array, overlay5, origin5,
                         font, scale, colour, thickness)
             cv2.putText(m.array, overlay6, origin6,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay7, origin7,
                         font, scale, colour, thickness)
     except:
         # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)

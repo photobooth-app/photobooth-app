@@ -9,6 +9,7 @@ class FocusState(object):
     def __init__(self):
         self.focus_step = 40
         self.MOVE_TIME = 0.066
+        self.jpeg_quality = 85
         self._lastRunResult = []
         self.sharpnessList = Queue()
         self.lock = threading.Lock()
@@ -68,7 +69,7 @@ def statsThread(frameServer, focuser, focusState):
             cv2.imshow("roi", roi_frame)
 
         is_success, buffer = cv2.imencode(
-            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, focusState.jpeg_quality])
         #io_buf = io.BytesIO(buffer)
 
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
