@@ -10,8 +10,13 @@
 # 1) cv2 face detection to autofocus on faces
 # 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
 # 3) improve autofocus algorithm
-# 4) bug: negative focus values!
+# 4) pause autofocus before HQ capture!
+# 5) trigger for autofocus?
+# 6) higher framerates! where is the bottleneck?
 
+from io import BytesIO
+import matplotlib.pyplot as plt
+import argparse
 import time
 import cv2
 from picamera2 import Picamera2, MappedArray
@@ -31,10 +36,8 @@ from PIL import Image
 # constants
 class CONFIG:
     # debugging
-    DEBUG = True
     DEBUG_LOGFILE = False
     LOGGING_LEVEL = logging.DEBUG
-    DEBUG_SHOWPREVIEW = True
 
     # quality
     MAIN_RESOLUTION_REDUCE_FACTOR = 2
@@ -45,6 +48,25 @@ class CONFIG:
     # autofocus
     # 70 for imx519 (range 0...4000) and 20 for arducam64mp (range 0...1000)
     FOCUS_STEP = 20
+
+    # dont change following defaults. If necessary change via argument
+    DEBUG = False
+    DEBUG_SHOWPREVIEW = False
+# constants
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help="enable verbose debugging")
+parser.add_argument('-p', '--preview', action='store_true',
+                    help="enable local preview window")
+args = parser.parse_args()
+
+if args.verbose:
+    CONFIG.DEBUG = True
+if args.preview:
+    CONFIG.DEBUG_SHOWPREVIEW = True
 
 
 # logger
@@ -97,10 +119,37 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
 
             self.wfile.write(b'use post command instead!\r\n')
-        elif self.path == '/autofocus':
+        elif self.path == '/images/focuser':
             self.send_response(200)
+            self.send_header('Age', 0)
+            self.send_header('Cache-Control', 'no-cache, private')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Content-Type', 'image/png')
             self.end_headers()
 
+            # create data
+            print((focusState._lastRunResult))
+
+            fig = plt.figure()
+            ax = fig.add_subplot()
+            fig.supxlabel('focus_absolute')
+            fig.supylabel('sharpness')
+            fig.suptitle('Sharpness(focus_absolute)')
+            fig.tight_layout()
+
+            ax.set_xlim(1, 1023)
+            ax.grid(True)
+
+            ax.plot(*zip(*focusState._lastRunResult))
+
+            figdata = BytesIO()
+            fig.savefig(figdata, format='png')
+
+            self.wfile.write(figdata.getvalue())
+        elif self.path == '/cmd/autofocus':
+            self.send_response(200)
+            self.end_headers()
+            #TODO: dummy
             self.wfile.write(b'Done\r\n')
         elif self.path == '/stream.mjpg':
             self.send_response(200)
@@ -180,24 +229,47 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 def apply_overlay(request):
-    overlay1 = f"{focuser.get(focuser.OPT_FOCUS)} focus"
-    overlay2 = f"{frameServer.fps} fps"
-    colour = (210, 210, 210)
-    origin1 = (10, 200)
-    origin2 = (10, 230)
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 1
-    thickness = 2
+    try:
+        overlay1 = f"{focuser.get(focuser.OPT_FOCUS)} focus"
+        overlay2 = f"{frameServer.fps} fps"
+        overlay3 = f"Exposure time: {frameServer._metadata['ExposureTime']}us, resulting max fps: {round(1/frameServer._metadata['ExposureTime']*1000*1000,1)}"
+        overlay4 = f"Lux: {round(frameServer._metadata['Lux'],1)}"
+        overlay5 = f"Ae locked: {frameServer._metadata['AeLocked']}, analogue gain {frameServer._metadata['AnalogueGain']}"
+        overlay6 = f"Colour Temp: {frameServer._metadata['ColourTemperature']}"
+        colour = (210, 210, 210)
+        origin1 = (10, 200)
+        origin2 = (10, 230)
+        origin3 = (10, 260)
+        origin4 = (10, 290)
+        origin5 = (10, 320)
+        origin6 = (10, 350)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        scale = 1
+        thickness = 2
 
-    with MappedArray(request, "lores") as m:
-        cv2.putText(m.array, overlay1, origin1,
-                    font, scale, colour, thickness)
-        cv2.putText(m.array, overlay2, origin2,
-                    font, scale, colour, thickness)
+        with MappedArray(request, "lores") as m:
+            cv2.putText(m.array, overlay1, origin1,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay2, origin2,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay3, origin3,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay4, origin4,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay5, origin5,
+                        font, scale, colour, thickness)
+            cv2.putText(m.array, overlay6, origin6,
+                        font, scale, colour, thickness)
+    except:
+        # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
+        pass
 
 
 if __name__ == '__main__':
     picam2 = Picamera2()
+
+    # print common information to log
+    logger.info(f"sensor_modes: {picam2.sensor_modes}")
 
     main_resolution = [
         dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in picam2.sensor_resolution]
@@ -206,6 +278,10 @@ if __name__ == '__main__':
     config = picam2.create_still_configuration(
         main_stream, lores_stream, encode="lores", buffer_count=1, display="lores")
     picam2.configure(config)
+
+    logger.info(f"camera_config: {picam2.camera_config}")
+    logger.info(f"camera_controls: {picam2.camera_controls}")
+    logger.info(f"controls: {picam2.controls}")
 
     frameServer = FrameServer(picam2, logger, CONFIG)
     frameServer.start()

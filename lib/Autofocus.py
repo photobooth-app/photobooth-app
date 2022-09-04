@@ -1,14 +1,15 @@
-import time
-import threading
-from lib.FocuserImxArdu64 import Focuser
 from queue import Queue
+from lib.FocuserImxArdu64 import Focuser
+import threading
+import time
 
 
 class FocusState(object):
     def __init__(self):
         self.focus_step = 40
         self.MOVE_TIME = 0.066
-
+        self._lastRunResult = []
+        self.sharpnessList = Queue()
         self.lock = threading.Lock()
         self.verbose = False
         self.roi = (0.1, 0.1, 0.8, 0.8)  # x, y, width, height
@@ -82,6 +83,7 @@ def statsThread(frameServer, focuser, focusState):
 
     # End of stats.
     focusState.sharpnessList.put((-1, -1))
+    focusState._lastRunResult = sharpnessList
 
     # reverse search direction next time.
     focusState.direction *= -1

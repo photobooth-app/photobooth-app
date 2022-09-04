@@ -24,6 +24,7 @@ class FrameServer:
         self._count = 0
         self._fps = 0
         self._thread = Thread(target=self._thread_func, daemon=True)
+        self._statsthread = Thread(target=self._statsthread_func, daemon=True)
 
     @property
     def count(self):
@@ -38,6 +39,7 @@ class FrameServer:
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         self._thread.start()
+        self._statsthread.start()
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
@@ -45,16 +47,34 @@ class FrameServer:
         Picamera2 object until the FrameServer has been stopped."""
         self._running = False
         self._thread.join(1)
+        self._statsthread.join(1)
 
     def trigger_hq_capture(self):
         """switch one time to hq capture"""
         self._trigger_hq_capture = True
 
+    def _statsthread_func(self):
+        CALC_EVERY = 2  # update every x seconds only
+
+        # FPS = 1 / time to process loop
+        start_time = time.time()  # start time of the loop
+
+        # to calc frames per second every second
+        while self._running:
+            if (time.time() > (start_time+CALC_EVERY)):
+                self._fps = round(float(self._count) /
+                                  (time.time() - start_time), 1)
+                self._logger.debug(f"{self._fps} fps")
+
+                # reset
+                self._count = 0
+                start_time = time.time()
+
+            # thread wait otherwise 100% load ;)
+            time.sleep(0.05)
+
     def _thread_func(self):
         while self._running:
-
-            # to calc frames per second
-            start_time = time.time()  # start time of the loop
 
             if not self._trigger_hq_capture:
                 (array,), self._metadata = self._picam2.capture_arrays(
@@ -88,11 +108,6 @@ class FrameServer:
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
-
-            # FPS = 1 / time to process loop
-            self._fps = round(1.0 / (time.time() - start_time), 1)
-            self._logger.debug(
-                f"{self._fps} fps")
 
             self._count += 1
 
