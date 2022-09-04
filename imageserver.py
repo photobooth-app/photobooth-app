@@ -14,6 +14,7 @@
 # 5) trigger for autofocus?
 # 6) higher framerates! where is the bottleneck?
 
+import simplejpeg
 from io import BytesIO
 import matplotlib.pyplot as plt
 import argparse
@@ -138,15 +139,13 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
 
             # create data
-            print((focusState._lastRunResult))
-
+            plt.close("all")
             fig = plt.figure()
             ax = fig.add_subplot()
             fig.supxlabel('focus_absolute')
             fig.supylabel('sharpness')
             fig.suptitle('Sharpness(focus_absolute)')
             fig.tight_layout()
-
             ax.set_xlim(1, 1023)
             ax.grid(True)
 
@@ -154,7 +153,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
             figdata = BytesIO()
             fig.savefig(figdata, format='png')
-
             self.wfile.write(figdata.getvalue())
         elif self.path == '/cmd/autofocus':
             self.send_response(200)
@@ -173,11 +171,14 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 while True:
                     frame = frameServer.wait_for_lores_frame()
 
+                    out_jpg = simplejpeg.encode_jpeg(
+                        frame, quality=CONFIG.LORES_QUALITY, colorspace='BGR', colorsubsampling='420')
+
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length', len(frame))
+                    self.send_header('Content-Length', len(out_jpg))
                     self.end_headers()
-                    self.wfile.write(frame)
+                    self.wfile.write(out_jpg)
                     self.wfile.write(b'\r\n')
             except Exception as e:
                 logger.info(

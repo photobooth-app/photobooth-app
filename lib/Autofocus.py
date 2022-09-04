@@ -1,3 +1,4 @@
+import simplejpeg
 from queue import Queue
 from lib.FocuserImxArdu64 import Focuser
 import threading
@@ -61,6 +62,9 @@ def statsThread(frameServer, focuser, focusState):
             print("error, got no frame, but why?!")
             continue
 
+        out_jpg = simplejpeg.encode_jpeg(
+            frame, quality=70, colorspace='BGR', colorsubsampling='420')
+
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
             if lastPosition != maxPosition:
                 focuser.set(Focuser.OPT_FOCUS, lastPosition +
@@ -68,7 +72,7 @@ def statsThread(frameServer, focuser, focusState):
                 lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
-            sharpness = len(frame)
+            sharpness = len(out_jpg)
             item = (lastPosition, sharpness)
             sharpnessList.append(item)
             focusState.sharpnessList.put(item)

@@ -1,6 +1,5 @@
 from threading import Condition, Thread
 import cv2
-import simplejpeg
 import time
 
 
@@ -16,7 +15,6 @@ class FrameServer:
         self._hq_array = None
         self._lores_array = None
         self._metadata = None
-        self._lores_convert_to_jpeg = True
         self._hq_condition = Condition()
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
@@ -80,15 +78,8 @@ class FrameServer:
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["lores"])
 
-                if self._lores_convert_to_jpeg:
-                    rgb = cv2.cvtColor(array, cv2.COLOR_YUV420p2RGB)
-                    buf = simplejpeg.encode_jpeg(
-                        rgb, quality=self._CONFIG.LORES_QUALITY, colorspace='BGR', colorsubsampling='420')
-                    size = len(buf)
-                    self._logger.debug(
-                        f'mjpeg conversion active, jpeg size: {round(size/1000, 1)} kb')
-
-                    array = buf
+                # convert colors to rgb because lores-stream is always YUV420 that is not used in application usually.
+                array = cv2.cvtColor(array, cv2.COLOR_YUV420p2RGB)
 
                 with self._lores_condition:
                     self._lores_array = array
