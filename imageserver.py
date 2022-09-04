@@ -95,6 +95,16 @@ PAGE = """\
 <h1>Photobooth Imageserver</h1>
 <form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
 <img src="stream.mjpg" height="720" /><br>
+Last Focuser Run results
+<img src="./images/focuser" id="image_focuser" /><br>
+
+<script type="text/javascript">
+const img = document.getElementById("image_focuser")
+
+setInterval( () => {
+   img.src = "./images/focuser#" + new Date().getTime();
+}, 1000) // 1000ms
+</script>
 </body>
 </html>
 """
