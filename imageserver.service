@@ -1,0 +1,17 @@
+[Unit]
+Description=Photobooth Imageserver
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+#Adjust following line if necessary: ExecStart=/usr/bin/python3 PATH_TO_YOUR_imageserver.py_FILE
+ExecStart=/usr/bin/python3 /usr/bin/python3 /home/pi/imageserver/imageserver.py
+
+[Install]
+WantedBy=multi-user.target
+
+## enable service and autostart on system startup:
+#sudo systemctl enable imageserver.service
+## start service manually:
+# sudo systemctl start application
