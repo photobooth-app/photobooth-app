@@ -1,4 +1,4 @@
-import simplejpeg
+import cv2
 from queue import Queue
 from lib.FocuserImxArdu64 import Focuser
 import threading
@@ -13,7 +13,7 @@ class FocusState(object):
         self.sharpnessList = Queue()
         self.lock = threading.Lock()
         self.verbose = False
-        self.roi = (0.1, 0.1, 0.8, 0.8)  # x, y, width, height
+        self.roi = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
         self.direction = 1
         self.reset()
 
@@ -62,8 +62,14 @@ def statsThread(frameServer, focuser, focusState):
             print("error, got no frame, but why?!")
             continue
 
-        out_jpg = simplejpeg.encode_jpeg(
-            frame, quality=70, colorspace='BGR', colorsubsampling='420')
+        roi_frame = getROIFrame(focusState.roi, frame)
+
+        if focusState.verbose:
+            cv2.imshow("roi", roi_frame)
+
+        is_success, buffer = cv2.imencode(
+            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        #io_buf = io.BytesIO(buffer)
 
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
             if lastPosition != maxPosition:
@@ -72,7 +78,7 @@ def statsThread(frameServer, focuser, focusState):
                 lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
-            sharpness = len(out_jpg)
+            sharpness = len(buffer)
             item = (lastPosition, sharpness)
             sharpnessList.append(item)
             focusState.sharpnessList.put(item)
@@ -91,10 +97,6 @@ def statsThread(frameServer, focuser, focusState):
 
     # reverse search direction next time.
     focusState.direction *= -1
-
-    # nasa type of math...
-    # parabel = np.polyfit([x[0] for x in list(focusState.sharpnessList)], [
-    #                     y[1] for y in list(focusState.sharpnessList)], 2)
 
     if focusState.verbose:
         print(sharpnessList)
