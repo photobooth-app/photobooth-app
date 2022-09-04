@@ -14,7 +14,6 @@
 # 5) trigger for autofocus?
 # 6) higher framerates! where is the bottleneck?
 
-import simplejpeg
 from io import BytesIO
 import matplotlib.pyplot as plt
 import argparse
@@ -31,7 +30,6 @@ from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
 from http import server
 import socketserver
-from PIL import Image
 
 
 # constants
@@ -171,14 +169,15 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 while True:
                     frame = frameServer.wait_for_lores_frame()
 
-                    out_jpg = simplejpeg.encode_jpeg(
-                        frame, quality=CONFIG.LORES_QUALITY, colorspace='BGR', colorsubsampling='420')
+                    is_success, buffer = cv2.imencode(
+                        ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, CONFIG.LORES_QUALITY])
+                    #io_buf = io.BytesIO(buffer)
 
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length', len(out_jpg))
+                    self.send_header('Content-Length', len(buffer))
                     self.end_headers()
-                    self.wfile.write(out_jpg)
+                    self.wfile.write(buffer)
                     self.wfile.write(b'\r\n')
             except Exception as e:
                 logger.info(
@@ -211,10 +210,11 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
                 # waitforpic and store to disk
                 frame = frameServer.wait_for_hq_frame()
-                PIL_image = Image.fromarray(frame.astype('uint8'), 'RGB')
-                PIL_image.save(f"{filename}",
-                               quality=CONFIG.HIRES_QUALITY)
 
+                is_success = cv2.imwrite(
+                    f"{filename}", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, CONFIG.HIRES_QUALITY])
+                if not is_success:
+                    raise Exception("cv2 imwrite failed")
                 self.send_response(200)
                 self.end_headers()
                 processing_time = round((time.time() - start_time), 1)
@@ -227,6 +227,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f'error during capture: {e}\r\n'.encode())
                 self.wfile.write(b'error during capture\r\n')
+
             finally:
                 pass
         else:

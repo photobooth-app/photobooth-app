@@ -68,7 +68,7 @@ def statsThread(frameServer, focuser, focusState):
             cv2.imshow("roi", roi_frame)
 
         is_success, buffer = cv2.imencode(
-            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
         #io_buf = io.BytesIO(buffer)
 
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
