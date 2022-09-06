@@ -13,6 +13,8 @@
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 # 5) higher framerates! where is the bottleneck?
 
+import threading
+import sys
 import psutil
 from io import BytesIO
 import matplotlib.pyplot as plt
@@ -75,11 +77,19 @@ fh_formatter = logging.Formatter(
     '%(asctime)s %(levelname)s %(lineno)d:%(filename)s(%(process)d) - %(message)s')
 fh.setFormatter(fh_formatter)
 logger.addHandler(fh)
+
+
+def log_exceptions(type, value, tb):
+    logger.exception("Uncaught exception: {0}".format(str(value)))
+
+
+# Install exception handler
+sys.excepthook = log_exceptions
+
 if CONFIG.DEBUG_LOGFILE:
     fh2 = logging.FileHandler("/tmp/frameserver.log")
     fh2.setFormatter(fh_formatter)
     logger.addHandler(fh2)
-
 
 thread_abort = False
 
@@ -260,7 +270,7 @@ def apply_overlay(request):
         overlay4 = f"Lux: {round(frameServer._metadata['Lux'],1)}"
         overlay5 = f"Ae locked: {frameServer._metadata['AeLocked']}, analogue gain {frameServer._metadata['AnalogueGain']}"
         overlay6 = f"Colour Temp: {frameServer._metadata['ColourTemperature']}"
-        overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}"
+        overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, thread active count {threading.active_count()}"
         colour = (210, 210, 210)
         origin1 = (10, 200)
         origin2 = (10, 230)
