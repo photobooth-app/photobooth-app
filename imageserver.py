@@ -336,7 +336,7 @@ if __name__ == '__main__':
     picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
     def refocus():
-        logger.info("refocusing")
+        logger.info("refocus triggered")
 
         doFocus(frameServer, focuser, focusState)
 
@@ -354,5 +354,3 @@ if __name__ == '__main__':
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()
         picam2.stop()
-
-        logger.info(f"serverMain received {frameServer.count} frames")

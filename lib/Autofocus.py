@@ -31,7 +31,7 @@ class FocusState(object):
 
     def reset(self):
         self.sharpnessList = Queue()
-        self.finish = False
+        self.finish = True
 
 
 def getROIFrame(roi, frame):
@@ -111,6 +111,7 @@ def focusThread(focuser, focusState):
     maxPosition = 0
     lastSharpness = 0
     while not focusState.isFinish():
+
         position, sharpness = focusState.sharpnessList.get()
         if focusState.verbose:
             print("got stats data: {}, {}".format(position, sharpness))
@@ -146,11 +147,19 @@ def focusThread(focuser, focusState):
 
 
 def doFocus(frameServer, focuser, focusState):
-    focusState.reset()
-    threadAutofocusStats = threading.Thread(target=statsThread, args=(
-        frameServer, focuser, focusState), daemon=True)
-    threadAutofocusStats.start()
+    # guard to perfom autofocus only once at a time
+    if focusState.isFinish():
+        focusState.reset()
+        focusState.setFinish(False)
 
-    threadAutofocusFocusSupervisor = threading.Thread(target=focusThread, args=(
-        focuser, focusState), daemon=True)
-    threadAutofocusFocusSupervisor.start()
+        threadAutofocusStats = threading.Thread(target=statsThread, args=(
+            frameServer, focuser, focusState), daemon=True)
+        threadAutofocusStats.start()
+
+        threadAutofocusFocusSupervisor = threading.Thread(target=focusThread, args=(
+            focuser, focusState), daemon=True)
+        threadAutofocusFocusSupervisor.start()
+
+    else:
+        if focusState.verbose:
+            print("Focus is not done yet.")
