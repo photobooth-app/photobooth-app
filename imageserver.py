@@ -314,7 +314,7 @@ if __name__ == '__main__':
     main_stream = {"size": main_resolution}
     lores_stream = {"size": CONFIG.LORES_RESOLUTION}
     config = picam2.create_still_configuration(
-        main_stream, lores_stream, encode="lores", buffer_count=1, display="lores")
+        main_stream, lores_stream, encode="lores", buffer_count=2, display="lores")
     picam2.configure(config)
 
     logger.info(f"camera_config: {picam2.camera_config}")
