@@ -26,8 +26,9 @@ import logging
 from picamera2 import Picamera2, MappedArray
 from lib.FrameServer import FrameServer
 from lib.Autofocus import FocusState, doFocus
-# from lib.FocuserImx519 import Focuser      # import for Arducam 16mp sony imx519
-from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
+# import for Arducam 16mp sony imx519
+from lib.FocuserImx519 import Focuser
+# from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
 from http import server
 import socketserver
@@ -40,14 +41,14 @@ class CONFIG:
     LOGGING_LEVEL = logging.DEBUG
 
     # quality
-    MAIN_RESOLUTION_REDUCE_FACTOR = 2
+    MAIN_RESOLUTION_REDUCE_FACTOR = 1
     LORES_RESOLUTION = (1280, 720)
     LORES_QUALITY = 80
     HIRES_QUALITY = 90
 
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    FOCUS_STEP = 30
+    FOCUS_STEP = 50
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -175,6 +176,14 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info("Switched Autofocus Timer OFF")
             rt.stop()
             self.wfile.write(b'Switched Autofocus Timer OFF\r\n')
+        elif self.path == '/cmd/autofocus/abort':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "Aborted autofocus run, returned to previous focus position")
+            # focusState.abort()   TODO
+            self.wfile.write(
+                b'Aborted autofocus run, returned to previous focus position\r\n')
         elif self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
@@ -304,6 +313,12 @@ def apply_overlay(request):
 
 
 if __name__ == '__main__':
+    # tuning = Picamera2.load_tuning_file(
+    #    "imx519.json")   # or imx519.json or imx477.json
+    #algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
+    # algo["exposure_modes"]["normal"] = {
+    #    "shutter": [100, 120000], "gain": [1.0, 8.0]}
+    #picam2 = Picamera2(tuning=tuning)
     picam2 = Picamera2()
 
     # print common information to log
