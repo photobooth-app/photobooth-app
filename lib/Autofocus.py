@@ -65,8 +65,8 @@ def statsThread(frameServer, focuser, focusState):
 
         roi_frame = getROIFrame(focusState.roi, frame)
 
-        if focusState.verbose:
-            cv2.imshow("roi", roi_frame)
+        # if focusState.verbose:
+        #    cv2.imshow("roi", roi_frame)
 
         is_success, buffer = cv2.imencode(
             ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, focusState.jpeg_quality])
