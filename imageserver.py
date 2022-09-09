@@ -307,7 +307,8 @@ if __name__ == '__main__':
     picam2 = Picamera2()
 
     # print common information to log
-    logger.info(f"sensor_modes: {picam2.sensor_modes}")
+    # pay attention! only comment out for testing. reconfigures the camera sensor and on arducam cams the fps rate is very low if used!
+    #logger.info(f"sensor_modes: {picam2.sensor_modes}")
 
     main_resolution = [
         dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in picam2.sensor_resolution]
