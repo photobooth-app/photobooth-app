@@ -1,0 +1,59 @@
+<html>
+<head>
+<title>Photobooth Imageserver</title>
+</head>
+<body>
+<h1>Photobooth Imageserver</h1>
+<form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
+<br>
+<a href="/cmd/autofocus/on">autofocus on</a>  *  <a href="/cmd/autofocus/off">autofocus off</a><br>
+<img src="stream.mjpg" height="720" /><br>
+Last Focuser Run results
+<div style="width: 500px">
+  <canvas id="myChart"></canvas>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script 	  src="https://code.jquery.com/jquery-3.6.1.min.js"
+			  integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+			  crossorigin="anonymous"></script>
+
+<script type="text/javascript">
+$(document).ready(function () {
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [0,100],
+            datasets: [{
+                label: 'focus',
+                backgroundColor: 'rgb(129, 198, 228)',
+                borderColor: 'rgb(0, 150, 215)',
+                data: [0,100]
+            }]
+        },
+        options: {
+            responsive: 'true',
+        }
+    });
+
+  
+    setInterval( () => {
+        $.getJSON("http://photobooth:8000/stats/focuser", function(data) {
+            var labels = data.map(function(e) {
+                return e[0];
+            });
+            var data = data.map(function(e) {
+                return e[1];
+            });
+            console.log(labels, data);
+            chart.data.labels=labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        });
+    }, 1000) // 1000ms
+});
+
+
+</script>
+</body>
+</html>

@@ -13,11 +13,10 @@
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 # 5) higher framerates! where is the bottleneck?
 
+import json
 import threading
 import sys
 import psutil
-from io import BytesIO
-import matplotlib.pyplot as plt
 import argparse
 import time
 import cv2
@@ -48,7 +47,7 @@ class CONFIG:
 
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    FOCUS_STEP = 50
+    FOCUS_STEP = 70
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -94,76 +93,34 @@ if CONFIG.DEBUG_LOGFILE:
 
 thread_abort = False
 
-PAGE = """\
-<html>
-<head>
-<title>Photobooth Imageserver</title>
-</head>
-<body>
-<h1>Photobooth Imageserver</h1>
-<form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
-<br>
-<a href="/cmd/autofocus/on">autofocus on</a>  *  <a href="/cmd/autofocus/off">autofocus off</a><br>
-<img src="stream.mjpg" height="720" /><br>
-Last Focuser Run results
-<img src="./images/focuser" id="image_focuser" /><br>
-
-<script type="text/javascript">
-const img = document.getElementById("image_focuser")
-
-setInterval( () => {
-   img.src = "./images/focuser#" + new Date().getTime();
-}, 1000) // 1000ms
-</script>
-</body>
-</html>
-"""
-
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
-
+        # TODO serve directory: https://stackoverflow.com/questions/55052811/serve-directory-in-python-3
         if self.path == '/':
             self.send_response(301)
             self.send_header('Location', '/index.html')
             self.end_headers()
         elif self.path == '/index.html':
-            content = PAGE.encode('utf-8')
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html')
-            self.send_header('Content-Length', len(content))
-            self.end_headers()
-            self.wfile.write(content)
+            with open(f"web{self.path}", 'rb') as f:
+                data = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.send_header('Content-Length', len(data))
+                self.end_headers()
+                self.wfile.write(data)
         elif self.path == '/capture':
             self.send_response(500)
             self.end_headers()
 
             self.wfile.write(b'use post command instead!\r\n')
-        elif self.path == '/images/focuser':
+        elif self.path == '/stats/focuser':
             self.send_response(200)
-            self.send_header('Age', 0)
-            self.send_header('Cache-Control', 'no-cache, private')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Type', 'application/json')
             self.end_headers()
 
-            # remove! too high load!
-            # create data
-            plt.close("all")
-            fig = plt.figure()
-            ax = fig.add_subplot()
-            fig.supxlabel('focus_absolute')
-            fig.supylabel('sharpness')
-            fig.suptitle('Sharpness(focus_absolute)')
-            fig.tight_layout()
-            ax.set_xlim(1, 1023)
-            ax.grid(True)
-
-            ax.plot(*zip(*focusState._lastRunResult))
-
-            figdata = BytesIO()
-            fig.savefig(figdata, format='png')
-            self.wfile.write(figdata.getvalue())
+            self.wfile.write(json.dumps(
+                focusState._lastRunResult).encode('utf8'))
         elif self.path == '/cmd/autofocus/on':
             self.send_response(200)
             self.end_headers()
@@ -341,6 +298,7 @@ if __name__ == '__main__':
     frameServer.start()
 
     focuser = Focuser("/dev/v4l-subdev1")
+    focuser.reset(Focuser.OPT_FOCUS)
     focusState = FocusState()
     focuser.verbose = CONFIG.DEBUG
     focusState.verbose = CONFIG.DEBUG
