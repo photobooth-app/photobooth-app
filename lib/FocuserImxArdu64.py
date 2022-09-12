@@ -56,7 +56,7 @@ class Focuser:
             "MIN_VALUE": 0,
             # "MAX_VALUE": 4000,
             "MAX_VALUE": 1000,
-            "DEF_VALUE": 0,
+            "DEF_VALUE": 200,
         },
     }
 

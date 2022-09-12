@@ -55,7 +55,7 @@ class Focuser:
         OPT_FOCUS: {
             "MIN_VALUE": 0,
             "MAX_VALUE": 4000,
-            "DEF_VALUE": 0,
+            "DEF_VALUE": 400,
         },
     }
 

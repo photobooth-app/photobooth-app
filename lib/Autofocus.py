@@ -7,7 +7,7 @@ import time
 
 class FocusState(object):
     def __init__(self):
-        self.focus_step = 40
+        self.focus_step = 60
         self.MOVE_TIME = 0.066
         self.jpeg_quality = 85
         self._lastRunResult = []
