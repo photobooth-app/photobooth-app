@@ -4,7 +4,6 @@ import time
 
 face_detector = cv2.CascadeClassifier(
     "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml")
-cv2.startWindowThread()
 
 
 class FrameServer:
