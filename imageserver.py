@@ -31,9 +31,14 @@ from lib.FocuserImx519 import Focuser
 from lib.RepeatedTimer import RepeatedTimer
 from http import server
 import socketserver
+import os
 
+# change to files path
+os.chdir(sys.path[0])
 
 # constants
+
+
 class CONFIG:
     # debugging
     DEBUG_LOGFILE = False
@@ -109,11 +114,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 self.send_header('Content-Length', len(data))
                 self.end_headers()
                 self.wfile.write(data)
-        elif self.path == '/capture':
-            self.send_response(500)
-            self.end_headers()
-
-            self.wfile.write(b'use post command instead!\r\n')
         elif self.path == '/stats/focuser':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

@@ -6,7 +6,7 @@ After=multi-user.target
 Type=simple
 Restart=always
 #Adjust following line if necessary: ExecStart=/usr/bin/python3 PATH_TO_YOUR_imageserver.py_FILE
-ExecStart=/usr/bin/python3 /usr/bin/python3 /home/pi/imageserver/imageserver.py
+ExecStart=/usr/bin/python3 /home/pi/imageserver/imageserver.py
 
 [Install]
 WantedBy=multi-user.target
