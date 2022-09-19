@@ -2,6 +2,10 @@ from threading import Condition, Thread
 import cv2
 import time
 
+face_detector = cv2.CascadeClassifier(
+    "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml")
+cv2.startWindowThread()
+
 
 class FrameServer:
     def __init__(self, picam2, logger, CONFIG):
@@ -23,6 +27,8 @@ class FrameServer:
         self._fps = 0
         self._thread = Thread(target=self._thread_func, daemon=True)
         self._statsthread = Thread(target=self._statsthread_func, daemon=True)
+        self._facedetectionthread = Thread(
+            target=self._FacedetectionThread, daemon=True)
 
     @property
     def count(self):
@@ -38,6 +44,7 @@ class FrameServer:
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         self._thread.start()
         self._statsthread.start()
+        # self._facedetectionthread.start()
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
@@ -46,6 +53,7 @@ class FrameServer:
         self._running = False
         self._thread.join(1)
         self._statsthread.join(1)
+        # self._facedetectionthread.join(1)
 
     def trigger_hq_capture(self):
         """switch one time to hq capture"""
@@ -71,15 +79,34 @@ class FrameServer:
             # thread wait otherwise 100% load ;)
             time.sleep(0.05)
 
+    def _FacedetectionThread(self):
+        # TODO, could be used for autofocus on faces. slow.
+        while self._running:
+            frame = self.wait_for_lores_frame()
+            grey = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+            faces = face_detector.detectMultiScale(grey,       scaleFactor=1.1,
+                                                   minNeighbors=5,
+                                                   minSize=(60, 60),
+                                                   maxSize=(500, 600))
+
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0))
+
+            cv2.imshow("faces", frame)
+
+            print("faces", faces)
+
+            time.sleep(1)
+
     def _thread_func(self):
         while self._running:
 
             if not self._trigger_hq_capture:
-                (array,), self._metadata = self._picam2.capture_arrays(
+                (orig_array,), self._metadata = self._picam2.capture_arrays(
                     ["lores"])
 
                 # convert colors to rgb because lores-stream is always YUV420 that is not used in application usually.
-                array = cv2.cvtColor(array, cv2.COLOR_YUV420p2RGB)
+                array = cv2.cvtColor(orig_array, cv2.COLOR_YUV420p2RGB)
 
                 with self._lores_condition:
                     self._lores_array = array
