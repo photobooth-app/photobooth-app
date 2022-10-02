@@ -2,7 +2,7 @@
 #import board
 #import neopixel
 import time
-import StoppableThread
+from lib.StoppableThread import StoppableThread
 import time
 from rpi_ws281x import PixelStrip, Color, WS2812_STRIP
 
@@ -41,7 +41,7 @@ class InfoLed():
                       255, color >> 8 & 255, color >> 0 & 255, color >> 24 & 255]  # RGBW
         # print(colorarray)
 
-        while not self._countdownAnimationThread.stopped():
+        while not self._countdownAnimationThread.stopped():  # repeat until stopped
             for i in range(0, self._pixels.numPixels()):
                 self._pixels.setPixelColor(
                     (i+3) % 12, Color(colorarray[0], colorarray[1], colorarray[2], colorarray[3]))
@@ -51,7 +51,15 @@ class InfoLed():
                     (i+1) % 12, Color(colorarray[0] >> 4, colorarray[1] >> 4, colorarray[2] >> 4, colorarray[3] >> 4))
                 self._pixels.setPixelColor((i+0) % 12, 0)
                 self._pixels.show()
+
+                # in between check to abort animation if stop requested during run
+                if (self._countdownAnimationThread.stopped()):
+                    break
+
                 time.sleep(self._CONFIG.WS2812_ANIMATION_UPDATE / 1000.0)
+
+        # turn off all led when countdown ends
+        self._fill(Color(0, 0, 0))
 
     def startCountdown(self):
         #print("startCountdown executed")
@@ -65,7 +73,7 @@ class InfoLed():
         if self._countdownAnimationThread.is_alive():
             self._countdownAnimationThread.stop()
             self._countdownAnimationThread.join(
-                (self._CONFIG.WS2812_ANIMATION_UPDATE+100)/1000.0)
+                ((self._CONFIG.WS2812_ANIMATION_UPDATE+50) / 1000.0))   # wait one update run longest, afterwards continue...
 
         self._fill(Color(0, 0, 0))
 
