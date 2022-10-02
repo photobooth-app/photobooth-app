@@ -7,13 +7,14 @@ face_detector = cv2.CascadeClassifier(
 
 
 class FrameServer:
-    def __init__(self, picam2, logger, CONFIG):
+    def __init__(self, picam2, logger, infoled, CONFIG):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = picam2
         self._logger = logger
+        self._infoled = infoled
         self._CONFIG = CONFIG
         self._hq_array = None
         self._lores_array = None
@@ -113,7 +114,7 @@ class FrameServer:
             else:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
-
+                self._infoled.captureStart()
                 # capture hq picture
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["main"])
@@ -125,6 +126,8 @@ class FrameServer:
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
+
+                self._infoled.captureFinished()
 
             self._count += 1
 

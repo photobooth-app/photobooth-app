@@ -32,7 +32,8 @@ from lib.RepeatedTimer import RepeatedTimer
 from http import server
 import socketserver
 import os
-
+from lib.InfoLed import InfoLed
+from rpi_ws281x import Color
 # change to files path
 os.chdir(sys.path[0])
 
@@ -57,6 +58,14 @@ class CONFIG:
     # dont change following defaults. If necessary change via argument
     DEBUG = False
     DEBUG_SHOWPREVIEW = False
+
+    # infoled / ws2812b ring settings
+    WS2812_NUMBER_LEDS = 12
+    WS2812_GPIO_PIN = 18
+    WS2812_COLOR = Color(255, 255, 255)
+    WS2812_CAPTURE_COLOR = Color(0, 125, 125)
+    WS2812_MAX_BRIGHTNESS = 50
+    WS2812_ANIMATION_UPDATE = 70    # update circle animation every XX ms
 # constants
 
 
@@ -85,7 +94,7 @@ logger.addHandler(fh)
 
 
 def log_exceptions(type, value, tb):
-    logger.exception("Uncaught exception: {0}".format(str(value)))
+    logger.exception(f"Uncaught exception: {str(value)} {str(tb)}")
 
 
 # Install exception handler
@@ -121,6 +130,34 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
             self.wfile.write(json.dumps(
                 focusState._lastRunResult).encode('utf8'))
+        elif self.path == '/cmd/capturePrepare':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "imageserver informed about upcoming request to capture")
+            # start countdown led and stop autofocus algorithm
+            infoled.startCountdown()
+            rt.stop()
+            self.wfile.write(
+                b'imageserver informed about upcoming request to capture\r\n')
+        elif self.path == '/cmd/infoled/countdown':
+            self.send_response(200)
+            self.end_headers()
+            logger.info("request infoLed mode countdown")
+            infoled.startCountdown()
+            self.wfile.write(b'Switched capture LED on\r\n')
+        elif self.path == '/cmd/infoled/captureStart':
+            self.send_response(200)
+            self.end_headers()
+            logger.info("request infoLed mode captureStart")
+            infoled.captureStart()
+            self.wfile.write(b'request infoLed mode captureStart\r\n')
+        elif self.path == '/cmd/infoled/captureFinished':
+            self.send_response(200)
+            self.end_headers()
+            logger.info("request infoLed mode captureFinished")
+            infoled.captureFinished()
+            self.wfile.write(b'request infoLed mode captureFinished\r\n')
         elif self.path == '/cmd/autofocus/on':
             self.send_response(200)
             self.end_headers()
@@ -278,6 +315,8 @@ if __name__ == '__main__':
     #picam2 = Picamera2(tuning=tuning)
     picam2 = Picamera2()
 
+    infoled = InfoLed(CONFIG)
+
     # print common information to log
     # pay attention! only comment out for testing. reconfigures the camera sensor and on arducam cams the fps rate is very low if used!
     #logger.info(f"sensor_modes: {picam2.sensor_modes}")
@@ -294,7 +333,7 @@ if __name__ == '__main__':
     logger.info(f"camera_controls: {picam2.camera_controls}")
     logger.info(f"controls: {picam2.controls}")
 
-    frameServer = FrameServer(picam2, logger, CONFIG)
+    frameServer = FrameServer(picam2, logger, infoled, CONFIG)
     frameServer.start()
 
     focuser = Focuser("/dev/v4l-subdev1")
