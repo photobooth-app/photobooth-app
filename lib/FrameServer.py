@@ -133,11 +133,11 @@ class FrameServer:
         try:
             overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
             overlay2 = f"{self.fps} fps"
-            overlay3 = f"Exposure time: {self._metadata['ExposureTime']}us, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
+            overlay3 = f"Exposure time: {round(self._metadata['ExposureTime']/1000,1)}ms, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
             overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
             overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
             overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
-            overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, thread active count {threading.active_count()}"
+            overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, active threads #{threading.active_count()}"
             colour = (210, 210, 210)
             origin1 = (30, 200)
             origin2 = (30, 230)
