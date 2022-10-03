@@ -5,9 +5,6 @@ import cv2
 import time
 from picamera2 import MappedArray
 
-face_detector = cv2.CascadeClassifier(
-    "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml")
-
 
 class FrameServer:
     def __init__(self, picam2, logger, notifier, CONFIG):
@@ -17,8 +14,8 @@ class FrameServer:
         to serve up frames."""
         self._picam2 = picam2
         self._logger = logger
-        #self._infoled = infoled
         self._CONFIG = CONFIG
+
         self._hq_array = None
         self._lores_array = None
         self._metadata = None
@@ -30,8 +27,6 @@ class FrameServer:
         self._fps = 0
         self._thread = Thread(target=self._thread_func, daemon=True)
         self._statsthread = Thread(target=self._statsthread_func, daemon=True)
-        self._facedetectionthread = Thread(
-            target=self._FacedetectionThread, daemon=True)
 
         self._notifier = notifier
 
@@ -52,7 +47,6 @@ class FrameServer:
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         self._thread.start()
         self._statsthread.start()
-        # self._facedetectionthread.start()
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
@@ -61,7 +55,6 @@ class FrameServer:
         self._running = False
         self._thread.join(1)
         self._statsthread.join(1)
-        # self._facedetectionthread.join(1)
 
     def trigger_hq_capture(self):
         """switch one time to hq capture"""
@@ -86,25 +79,6 @@ class FrameServer:
 
             # thread wait otherwise 100% load ;)
             time.sleep(0.05)
-
-    def _FacedetectionThread(self):
-        # TODO, could be used for autofocus on faces. slow.
-        while self._running:
-            frame = self.wait_for_lores_frame()
-            grey = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            faces = face_detector.detectMultiScale(grey,       scaleFactor=1.1,
-                                                   minNeighbors=5,
-                                                   minSize=(60, 60),
-                                                   maxSize=(500, 600))
-
-            for (x, y, w, h) in faces:
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0))
-
-            cv2.imshow("faces", frame)
-
-            print("faces", faces)
-
-            time.sleep(1)
 
     def _thread_func(self):
         while self._running:
@@ -161,17 +135,17 @@ class FrameServer:
             overlay2 = f"{self.fps} fps"
             overlay3 = f"Exposure time: {self._metadata['ExposureTime']}us, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
             overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
-            overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {self._metadata['AnalogueGain']}"
+            overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
             overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
             overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, thread active count {threading.active_count()}"
             colour = (210, 210, 210)
-            origin1 = (10, 200)
-            origin2 = (10, 230)
-            origin3 = (10, 260)
-            origin4 = (10, 290)
-            origin5 = (10, 320)
-            origin6 = (10, 350)
-            origin7 = (10, 380)
+            origin1 = (30, 200)
+            origin2 = (30, 230)
+            origin3 = (30, 260)
+            origin4 = (30, 290)
+            origin5 = (30, 320)
+            origin6 = (30, 350)
+            origin7 = (30, 380)
             font = cv2.FONT_HERSHEY_SIMPLEX
             scale = 1
             thickness = 2

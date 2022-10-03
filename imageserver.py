@@ -57,6 +57,9 @@ class CONFIG:
     FOCUSER_MAX_VALUE = 4000
     FOCUSER_DEF_VALUE = 400
     FOCUSER_STEP = 100
+    FOCUSER_MOVE_TIME = 0.066
+    FOCUSER_JPEG_QUALITY = 85
+    FOCUSER_ROI = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -142,7 +145,6 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 "imageserver informed about upcoming request to capture")
             # start countdown led and stop autofocus algorithm
             notifier.raise_event("onCountdownTakePicture")
-            # rt.stop()
             self.wfile.write(
                 b'imageserver informed about upcoming request to capture\r\n')
         elif self.path == '/cmd/infoled/countdown':

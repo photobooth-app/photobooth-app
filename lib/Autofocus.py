@@ -6,9 +6,7 @@ import time
 
 class FocusState(object):
     def __init__(self, frameServer, focuser, notifier, CONFIG):
-        self.focus_step = CONFIG.FOCUSER_STEP
-        self.MOVE_TIME = 0.066
-        self.jpeg_quality = 85
+        self._CONFIG = CONFIG
 
         self._frameServer = frameServer
         self._focuser = focuser
@@ -22,9 +20,8 @@ class FocusState(object):
         self._lastRunResult = []
         self.sharpnessList = Queue()
         self.lock = threading.Lock()
-        self.verbose = CONFIG.DEBUG
-        self.roi = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
         self.direction = 1
+
         self.setAllowFocusRequests()
         self.reset()
 
@@ -49,7 +46,7 @@ class FocusState(object):
             threadAutofocusFocusSupervisor.start()
 
         else:
-            if self.verbose:
+            if self._CONFIG.DEBUG:
                 print("Focus is not done yet or in standby.")
 
     def isFinish(self):
@@ -97,19 +94,19 @@ def statsThread(frameServer, focuser, focusState):
             print("error, got no frame, but why?!")
             continue
 
-        roi_frame = getROIFrame(focusState.roi, frame)
+        roi_frame = getROIFrame(focusState._CONFIG.FOCUSER_ROI, frame)
 
-        # if focusState.verbose:
+        # if foscusState._CONFIG.DEBUG:
         #    cv2.imshow("roi", roi_frame)
 
         is_success, buffer = cv2.imencode(
-            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, focusState.jpeg_quality])
+            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, focusState._CONFIG.FOCUSER_JPEG_QUALITY])
         #io_buf = io.BytesIO(buffer)
 
-        if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
+        if time.time() - lastTime >= focusState._CONFIG.FOCUSER_MOVE_TIME and not focusState.isFinish():
             if lastPosition != maxPosition:
                 focuser.set(lastPosition +
-                            (focusState.direction*focusState.focus_step))
+                            (focusState.direction*focusState._CONFIG.FOCUSER_STEP))
                 lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
@@ -118,7 +115,8 @@ def statsThread(frameServer, focuser, focusState):
             sharpnessList.append(item)
             focusState.sharpnessList.put(item)
 
-            lastPosition += (focusState.direction*focusState.focus_step)
+            lastPosition += (focusState.direction *
+                             focusState._CONFIG.FOCUSER_STEP)
 
             if lastPosition > maxPosition:
                 break
@@ -133,7 +131,7 @@ def statsThread(frameServer, focuser, focusState):
     # reverse search direction next time.
     focusState.direction *= -1
 
-    if focusState.verbose:
+    if focusState._CONFIG.DEBUG:
         print(sharpnessList)
         print("autofocus run finished")
 
@@ -147,7 +145,7 @@ def focusThread(focuser, focusState):
     while not focusState.isFinish():
 
         position, sharpness = focusState.sharpnessList.get()
-        if focusState.verbose:
+        if focusState._CONFIG.DEBUG:
             print("got stats data: {}, {}".format(position, sharpness))
 
         if lastSharpness / sharpness >= 1:
@@ -171,7 +169,7 @@ def focusThread(focuser, focusState):
 
     maxItem = max(sharpnessList, key=lambda item: item[1])
 
-    if focusState.verbose:
+    if focusState._CONFIG.DEBUG:
         print("max: {}".format(maxItem))
 
     if continuousDecline < 3:
