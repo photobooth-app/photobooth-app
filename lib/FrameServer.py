@@ -1,20 +1,23 @@
+import psutil
+import threading
 from threading import Condition, Thread
 import cv2
 import time
+from picamera2 import MappedArray
 
 face_detector = cv2.CascadeClassifier(
     "/usr/share/opencv4/haarcascades/haarcascade_frontalface_default.xml")
 
 
 class FrameServer:
-    def __init__(self, picam2, logger, infoled, CONFIG):
+    def __init__(self, picam2, logger, notifier, CONFIG):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = picam2
         self._logger = logger
-        self._infoled = infoled
+        #self._infoled = infoled
         self._CONFIG = CONFIG
         self._hq_array = None
         self._lores_array = None
@@ -29,6 +32,11 @@ class FrameServer:
         self._statsthread = Thread(target=self._statsthread_func, daemon=True)
         self._facedetectionthread = Thread(
             target=self._FacedetectionThread, daemon=True)
+
+        self._notifier = notifier
+
+        if CONFIG.DEBUG:
+            self._picam2.pre_callback = self.apply_overlay
 
     @property
     def count(self):
@@ -114,7 +122,9 @@ class FrameServer:
             else:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
-                self._infoled.captureStart()
+
+                self._notifier.raise_event("onTakePicture")
+
                 # capture hq picture
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["main"])
@@ -123,11 +133,11 @@ class FrameServer:
                 # algorithm way too slow for raspi (takes minutes :( )
                 #array = cv2.fastNlMeansDenoisingColored(array, None, 5, 5, 7, 21)
 
+                self._notifier.raise_event("onTakePictureFinished")
+
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
-
-                self._infoled.captureFinished()
 
             self._count += 1
 
@@ -144,3 +154,43 @@ class FrameServer:
             while True:
                 self._hq_condition.wait()
                 return self._hq_array
+
+    def apply_overlay(self, request):
+        try:
+            overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
+            overlay2 = f"{self.fps} fps"
+            overlay3 = f"Exposure time: {self._metadata['ExposureTime']}us, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
+            overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
+            overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {self._metadata['AnalogueGain']}"
+            overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
+            overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, thread active count {threading.active_count()}"
+            colour = (210, 210, 210)
+            origin1 = (10, 200)
+            origin2 = (10, 230)
+            origin3 = (10, 260)
+            origin4 = (10, 290)
+            origin5 = (10, 320)
+            origin6 = (10, 350)
+            origin7 = (10, 380)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            scale = 1
+            thickness = 2
+
+            with MappedArray(request, "lores") as m:
+                cv2.putText(m.array, overlay1, origin1,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay2, origin2,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay3, origin3,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay4, origin4,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay5, origin5,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay6, origin6,
+                            font, scale, colour, thickness)
+                cv2.putText(m.array, overlay7, origin7,
+                            font, scale, colour, thickness)
+        except:
+            # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
+            pass

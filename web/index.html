@@ -4,10 +4,10 @@
 </head>
 <body>
 <h1>Photobooth Imageserver</h1>
-<form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form>
+
 <br>
 autofocus: <a href="/cmd/autofocus/on">on</a>  *  <a href="/cmd/autofocus/off">off</a><br>
-infoled: <a href="/cmd/infoled/countdown">countdown</a>  *  <a href="/cmd/infoled/captureStart">capture start</a>  *  <a href="/cmd/infoled/captureFinished">capture finished</a><br>
+capture: <a id="countdown" href="/cmd/infoled/countdown">countdown</a> <form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form> <br>
 <img src="stream.mjpg" height="720" /><br>
 Last Focuser Run results
 <div style="width: 500px">
@@ -20,6 +20,8 @@ Last Focuser Run results
 
 <script type="text/javascript">
 $(document).ready(function () {
+    //$('a#countdown').click( function(e) {e.preventDefault(); /*your_code_here;*/ return false; } );
+
     var ctx = document.getElementById('myChart').getContext('2d');
     var chart = new Chart(ctx, {
         type: 'line',

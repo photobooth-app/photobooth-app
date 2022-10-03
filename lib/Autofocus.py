@@ -1,22 +1,56 @@
 import cv2
 from queue import Queue
-from lib.FocuserImxArdu64 import Focuser
 import threading
 import time
 
 
 class FocusState(object):
-    def __init__(self):
-        self.focus_step = 60
+    def __init__(self, frameServer, focuser, notifier, CONFIG):
+        self.focus_step = CONFIG.FOCUSER_STEP
         self.MOVE_TIME = 0.066
         self.jpeg_quality = 85
+
+        self._frameServer = frameServer
+        self._focuser = focuser
+        self._notifier = notifier
+        self._notifier.subscribe("onRefocus", self.doFocus)
+        self._notifier.subscribe(
+            "onCountdownTakePicture", self.setIgnoreFocusRequests)
+        self._notifier.subscribe(
+            "onTakePictureFinished", self.setAllowFocusRequests)
+
         self._lastRunResult = []
         self.sharpnessList = Queue()
         self.lock = threading.Lock()
-        self.verbose = False
+        self.verbose = CONFIG.DEBUG
         self.roi = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
         self.direction = 1
+        self.setAllowFocusRequests()
         self.reset()
+
+    def setIgnoreFocusRequests(self):
+        self._standby = True
+
+    def setAllowFocusRequests(self):
+        self._standby = False
+
+    def doFocus(self):
+        # guard to perfom autofocus only once at a time
+        if self.isFinish() & self._standby == False:
+            self.reset()
+            self.setFinish(False)
+
+            threadAutofocusStats = threading.Thread(target=statsThread, args=(
+                self._frameServer, self._focuser, self), daemon=True)
+            threadAutofocusStats.start()
+
+            threadAutofocusFocusSupervisor = threading.Thread(target=focusThread, args=(
+                self._focuser, self), daemon=True)
+            threadAutofocusFocusSupervisor.start()
+
+        else:
+            if self.verbose:
+                print("Focus is not done yet or in standby.")
 
     def isFinish(self):
         self.lock.acquire()
@@ -47,10 +81,10 @@ def getROIFrame(roi, frame):
 
 
 def statsThread(frameServer, focuser, focusState):
-    maxPosition = focuser.opts[focuser.OPT_FOCUS]["MAX_VALUE"]
-    minPosition = focuser.opts[focuser.OPT_FOCUS]["MIN_VALUE"]
-    lastPosition = focuser.get(focuser.OPT_FOCUS)
-    focuser.set(Focuser.OPT_FOCUS, lastPosition)  # init position
+    maxPosition = focuser.MAX_VALUE
+    minPosition = focuser.MIN_VALUE
+    lastPosition = focuser.get()
+    # focuser.set(lastPosition)  # init position
     lastTime = time.time()
 
     sharpnessList = []
@@ -74,7 +108,7 @@ def statsThread(frameServer, focuser, focusState):
 
         if time.time() - lastTime >= focusState.MOVE_TIME and not focusState.isFinish():
             if lastPosition != maxPosition:
-                focuser.set(Focuser.OPT_FOCUS, lastPosition +
+                focuser.set(lastPosition +
                             (focusState.direction*focusState.focus_step))
                 lastTime = time.time()
 
@@ -141,25 +175,6 @@ def focusThread(focuser, focusState):
         print("max: {}".format(maxItem))
 
     if continuousDecline < 3:
-        focuser.set(Focuser.OPT_FOCUS, maxItem[0])
+        focuser.set(maxItem[0])
     else:
-        focuser.set(Focuser.OPT_FOCUS, maxPosition)
-
-
-def doFocus(frameServer, focuser, focusState):
-    # guard to perfom autofocus only once at a time
-    if focusState.isFinish():
-        focusState.reset()
-        focusState.setFinish(False)
-
-        threadAutofocusStats = threading.Thread(target=statsThread, args=(
-            frameServer, focuser, focusState), daemon=True)
-        threadAutofocusStats.start()
-
-        threadAutofocusFocusSupervisor = threading.Thread(target=focusThread, args=(
-            focuser, focusState), daemon=True)
-        threadAutofocusFocusSupervisor.start()
-
-    else:
-        if focusState.verbose:
-            print("Focus is not done yet.")
+        focuser.set(maxPosition)

@@ -13,20 +13,20 @@
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 # 5) higher framerates! where is the bottleneck?
 
+import traceback
+from EventNotifier import Notifier
 import json
-import threading
 import sys
-import psutil
 import argparse
 import time
 import cv2
 from urllib.parse import parse_qs
 import logging
-from picamera2 import Picamera2, MappedArray
+from picamera2 import Picamera2
 from lib.FrameServer import FrameServer
-from lib.Autofocus import FocusState, doFocus
+from lib.Autofocus import FocusState
 # import for Arducam 16mp sony imx519
-from lib.FocuserImx519 import Focuser
+from lib.Focuser import Focuser
 # from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
 from http import server
@@ -53,7 +53,10 @@ class CONFIG:
 
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    FOCUS_STEP = 70
+    FOCUSER_MIN_VALUE = 0
+    FOCUSER_MAX_VALUE = 4000
+    FOCUSER_DEF_VALUE = 400
+    FOCUSER_STEP = 100
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -94,7 +97,8 @@ logger.addHandler(fh)
 
 
 def log_exceptions(type, value, tb):
-    logger.exception(f"Uncaught exception: {str(value)} {str(tb)}")
+    logger.exception(
+        f"Uncaught exception: {str(value)} {(traceback.format_tb(tb))}")
 
 
 # Install exception handler
@@ -105,7 +109,8 @@ if CONFIG.DEBUG_LOGFILE:
     fh2.setFormatter(fh_formatter)
     logger.addHandler(fh2)
 
-thread_abort = False
+notifier = Notifier(
+    ["onTakePicture", "onTakePictureFinished", "onCountdownTakePicture", "onRefocus"], logger)
 
 
 class StreamingHandler(server.BaseHTTPRequestHandler):
@@ -136,28 +141,16 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info(
                 "imageserver informed about upcoming request to capture")
             # start countdown led and stop autofocus algorithm
-            infoled.startCountdown()
-            rt.stop()
+            notifier.raise_event("onCountdownTakePicture")
+            # rt.stop()
             self.wfile.write(
                 b'imageserver informed about upcoming request to capture\r\n')
         elif self.path == '/cmd/infoled/countdown':
             self.send_response(200)
             self.end_headers()
             logger.info("request infoLed mode countdown")
-            infoled.startCountdown()
+            notifier.raise_event("onCountdownTakePicture")
             self.wfile.write(b'Switched capture LED on\r\n')
-        elif self.path == '/cmd/infoled/captureStart':
-            self.send_response(200)
-            self.end_headers()
-            logger.info("request infoLed mode captureStart")
-            infoled.captureStart()
-            self.wfile.write(b'request infoLed mode captureStart\r\n')
-        elif self.path == '/cmd/infoled/captureFinished':
-            self.send_response(200)
-            self.end_headers()
-            logger.info("request infoLed mode captureFinished")
-            infoled.captureFinished()
-            self.wfile.write(b'request infoLed mode captureFinished\r\n')
         elif self.path == '/cmd/autofocus/on':
             self.send_response(200)
             self.end_headers()
@@ -192,7 +185,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
                     is_success, buffer = cv2.imencode(
                         ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, CONFIG.LORES_QUALITY])
-                    #io_buf = io.BytesIO(buffer)
+                    # io_buf = io.BytesIO(buffer)
 
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
@@ -265,61 +258,20 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     daemon_threads = True
 
 
-def apply_overlay(request):
-    try:
-        overlay1 = f"{focuser.get(focuser.OPT_FOCUS)} focus"
-        overlay2 = f"{frameServer.fps} fps"
-        overlay3 = f"Exposure time: {frameServer._metadata['ExposureTime']}us, resulting max fps: {round(1/frameServer._metadata['ExposureTime']*1000*1000,1)}"
-        overlay4 = f"Lux: {round(frameServer._metadata['Lux'],1)}"
-        overlay5 = f"Ae locked: {frameServer._metadata['AeLocked']}, analogue gain {frameServer._metadata['AnalogueGain']}"
-        overlay6 = f"Colour Temp: {frameServer._metadata['ColourTemperature']}"
-        overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, thread active count {threading.active_count()}"
-        colour = (210, 210, 210)
-        origin1 = (10, 200)
-        origin2 = (10, 230)
-        origin3 = (10, 260)
-        origin4 = (10, 290)
-        origin5 = (10, 320)
-        origin6 = (10, 350)
-        origin7 = (10, 380)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        scale = 1
-        thickness = 2
-
-        with MappedArray(request, "lores") as m:
-            cv2.putText(m.array, overlay1, origin1,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay2, origin2,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay3, origin3,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay4, origin4,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay5, origin5,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay6, origin6,
-                        font, scale, colour, thickness)
-            cv2.putText(m.array, overlay7, origin7,
-                        font, scale, colour, thickness)
-    except:
-        # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
-        pass
-
-
 if __name__ == '__main__':
+
     # tuning = Picamera2.load_tuning_file(
     #    "imx519.json")   # or imx519.json or imx477.json
-    #algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
+    # algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
     # algo["exposure_modes"]["normal"] = {
     #    "shutter": [100, 120000], "gain": [1.0, 8.0]}
-    #picam2 = Picamera2(tuning=tuning)
+    # picam2 = Picamera2(tuning=tuning)
     picam2 = Picamera2()
-
-    infoled = InfoLed(CONFIG)
-
-    # print common information to log
-    # pay attention! only comment out for testing. reconfigures the camera sensor and on arducam cams the fps rate is very low if used!
-    #logger.info(f"sensor_modes: {picam2.sensor_modes}")
+    infoled = InfoLed(CONFIG, notifier)
+    frameServer = FrameServer(picam2, logger, notifier, CONFIG)
+    focuser = Focuser("/dev/v4l-subdev1", CONFIG)
+    focusState = FocusState(frameServer, focuser, notifier, CONFIG)
+    rt = RepeatedTimer(5, notifier.raise_event, "onRefocus")
 
     main_resolution = [
         dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in picam2.sensor_resolution]
@@ -333,29 +285,15 @@ if __name__ == '__main__':
     logger.info(f"camera_controls: {picam2.camera_controls}")
     logger.info(f"controls: {picam2.controls}")
 
-    frameServer = FrameServer(picam2, logger, infoled, CONFIG)
     frameServer.start()
 
-    focuser = Focuser("/dev/v4l-subdev1")
-    focuser.reset(Focuser.OPT_FOCUS)
-    focusState = FocusState()
-    focuser.verbose = CONFIG.DEBUG
-    focusState.verbose = CONFIG.DEBUG
-    focusState.focus_step = CONFIG.FOCUS_STEP
+    focuser.reset()
 
-    if CONFIG.DEBUG:
-        picam2.pre_callback = apply_overlay
-
+    # start camera
     picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
-    def refocus():
-        logger.info("refocus triggered")
-
-        doFocus(frameServer, focuser, focusState)
-
-    # it auto-starts, no need of rt.start()
-    refocus()
-    rt = RepeatedTimer(5, refocus)
+    # first time focus
+    notifier.raise_event("onRefocus")
 
     # serve files forever
     try:
@@ -363,7 +301,6 @@ if __name__ == '__main__':
         server = StreamingServer(address, StreamingHandler)
         server.serve_forever()
     finally:
-        thread_abort = True
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()
         picam2.stop()
