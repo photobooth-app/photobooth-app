@@ -30,6 +30,8 @@ class FrameServer:
 
         self._notifier = notifier
 
+        self.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+
     @property
     def count(self):
         """A count of the number of frames received."""
@@ -126,6 +128,17 @@ class FrameServer:
                 self._hq_condition.wait()
                 return self._hq_array
 
+    def setmode(self, newmode):
+        #algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
+        #print(f"set new mode {newmode.name.lower()}")
+        #print("mode avail=?")
+        # print(newmode.name.lower()
+        #    in algo["exposure_modes"].keys())
+        # if (newmode.name.lower() in algo["exposure_modes"].keys()):
+        self._picam2.set_controls({"AeExposureMode": newmode})
+        # else:
+        #    print("mode not avail!")
+
     def apply_overlay(self, enable=False):
         if enable == True:
             self._picam2.pre_callback = self.overlay
@@ -136,7 +149,7 @@ class FrameServer:
         try:
             overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
             overlay2 = f"{self.fps} fps"
-            overlay3 = f"Exposure time: {round(self._metadata['ExposureTime']/1000,1)}ms, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
+            overlay3 = f"Exposure: {round(self._metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self._metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
             overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
             overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
             overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"

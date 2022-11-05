@@ -12,11 +12,11 @@
 # 3) improve autofocus algorithm
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 
+from libcamera import controls
 import traceback
 from EventNotifier import Notifier
 import json
 import sys
-import argparse
 import time
 import cv2
 from urllib.parse import parse_qs
@@ -36,6 +36,9 @@ from rpi_ws281x import Color
 # change to files path
 os.chdir(sys.path[0])
 
+
+#print(f"picamera2 v{picamera2.__version__}")
+
 # constants
 
 
@@ -49,6 +52,9 @@ class CONFIG:
     LORES_RESOLUTION = (1280, 720)
     LORES_QUALITY = 80
     HIRES_QUALITY = 90
+
+    # capture
+    CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Short
 
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
@@ -72,20 +78,6 @@ class CONFIG:
     WS2812_MAX_BRIGHTNESS = 50
     WS2812_ANIMATION_UPDATE = 70    # update circle animation every XX ms
 # constants
-
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('-v', '--verbose', action='store_true',
-                    help="enable verbose debugging")
-parser.add_argument('-p', '--preview', action='store_true',
-                    help="enable local preview window")
-args = parser.parse_args()
-
-if args.verbose:
-    CONFIG.DEBUG = True
-if args.preview:
-    CONFIG.DEBUG_SHOWPREVIEW = True
 
 
 # logger
@@ -137,6 +129,24 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
             self.wfile.write(json.dumps(
                 focusState._lastRunResult).encode('utf8'))
+        elif self.path == '/cmd/debug/on':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "enable debug")
+
+            CONFIG.DEBUG = True
+            self.wfile.write(
+                b'enable debug\r\n')
+        elif self.path == '/cmd/debug/off':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "disable debug")
+
+            CONFIG.DEBUG = False
+            self.wfile.write(
+                b'disable debug\r\n')
         elif self.path == '/cmd/applyoverlay/on':
             self.send_response(200)
             self.end_headers()
