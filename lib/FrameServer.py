@@ -14,7 +14,7 @@ class FrameServer:
         to serve up frames."""
         self._picam2 = picam2
         self._logger = logger
-        self._CONFIG = CONFIG
+        # self._CONFIG = CONFIG  # currently not used actually...
 
         self._hq_array = None
         self._lores_array = None
@@ -29,9 +29,6 @@ class FrameServer:
         self._statsthread = Thread(target=self._statsthread_func, daemon=True)
 
         self._notifier = notifier
-
-        if CONFIG.DEBUG:
-            self._picam2.pre_callback = self.apply_overlay
 
     @property
     def count(self):
@@ -129,7 +126,13 @@ class FrameServer:
                 self._hq_condition.wait()
                 return self._hq_array
 
-    def apply_overlay(self, request):
+    def apply_overlay(self, enable=False):
+        if enable == True:
+            self._picam2.pre_callback = self.overlay
+        else:
+            self._picam2.pre_callback = None
+
+    def overlay(self, request):
         try:
             overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
             overlay2 = f"{self.fps} fps"
@@ -137,7 +140,7 @@ class FrameServer:
             overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
             overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
             overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
-            overlay7 = f"cpu: {psutil.cpu_percent()}%, loadavg {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}, active threads #{threading.active_count()}"
+            overlay7 = f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%, active threads #{threading.active_count()}"
             colour = (210, 210, 210)
             origin1 = (30, 200)
             origin2 = (30, 230)

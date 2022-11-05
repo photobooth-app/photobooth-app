@@ -7,11 +7,10 @@
 
 
 # TODO / Improvements
-# 1) cv2 face detection to autofocus on faces
+# 1) idea: cv2 face detection to autofocus on faces (might be to high load on RP)
 # 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
 # 3) improve autofocus algorithm
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
-# 5) higher framerates! where is the bottleneck?
 
 import traceback
 from EventNotifier import Notifier
@@ -138,6 +137,24 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
             self.wfile.write(json.dumps(
                 focusState._lastRunResult).encode('utf8'))
+        elif self.path == '/cmd/applyoverlay/on':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "enable frameserver overlay")
+            # enable overlay in frameserver
+            frameServer.apply_overlay(True)
+            self.wfile.write(
+                b'enable frameserver overlay\r\n')
+        elif self.path == '/cmd/applyoverlay/off':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "disable frameserver overlay")
+            # enable overlay in frameserver
+            frameServer.apply_overlay(False)
+            self.wfile.write(
+                b'disable frameserver overlay\r\n')
         elif self.path == '/cmd/capturePrepare':
             self.send_response(200)
             self.end_headers()
