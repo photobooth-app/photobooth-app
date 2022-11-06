@@ -12,6 +12,9 @@
 # 3) improve autofocus algorithm
 # 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 
+from datetime import datetime
+import piexif
+from PIL import Image
 from libcamera import controls
 import traceback
 from EventNotifier import Notifier
@@ -35,7 +38,6 @@ from lib.InfoLed import InfoLed
 from rpi_ws281x import Color
 # change to files path
 os.chdir(sys.path[0])
-
 
 #print(f"picamera2 v{picamera2.__version__}")
 
@@ -257,10 +259,22 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 # waitforpic and store to disk
                 frame = frameServer.wait_for_hq_frame()
 
-                is_success = cv2.imwrite(
-                    f"{filename}", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, CONFIG.HIRES_QUALITY])
-                if not is_success:
-                    raise Exception("cv2 imwrite failed")
+                # grab metadata and store to exif
+                now = datetime.now()
+                zero_ifd = {piexif.ImageIFD.Make: "Arducam",
+                            piexif.ImageIFD.Model: picam2.camera.id,
+                            piexif.ImageIFD.Software: "Photobooth Imageserver"}
+                total_gain = frameServer._metadata["AnalogueGain"] * \
+                    frameServer._metadata["DigitalGain"]
+                exif_ifd = {piexif.ExifIFD.ExposureTime: (frameServer._metadata["ExposureTime"], 1000000),
+                            piexif.ExifIFD.DateTimeOriginal: now.strftime("%Y:%m:%d %H:%M:%S"),
+                            piexif.ExifIFD.ISOSpeedRatings: int(total_gain * 100)}
+                exif_bytes = piexif.dump({"0th": zero_ifd, "Exif": exif_ifd})
+
+                image = Image.fromarray(frame.astype('uint8'), 'RGB')
+                image.save(f"{filename}",
+                           quality=CONFIG.HIRES_QUALITY, exif=exif_bytes)
+
                 self.send_response(200)
                 self.end_headers()
                 processing_time = round((time.time() - start_time), 1)
