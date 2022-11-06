@@ -35,51 +35,10 @@ from http import server
 import socketserver
 import os
 from lib.InfoLed import InfoLed
-from rpi_ws281x import Color
-
+from config import CONFIG
 
 # change to files path
 os.chdir(sys.path[0])
-
-
-class CONFIG:
-    # debugging
-    DEBUG_LOGFILE = False
-    LOGGING_LEVEL = logging.DEBUG
-
-    # quality
-    MAIN_RESOLUTION_REDUCE_FACTOR = 1
-    LORES_RESOLUTION = (1280, 720)
-    LORES_QUALITY = 80
-    HIRES_QUALITY = 90
-
-    # capture
-    CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Short
-
-    # autofocus
-    # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    FOCUSER_MIN_VALUE = 0
-    FOCUSER_MAX_VALUE = 4000
-    FOCUSER_DEF_VALUE = 400
-    FOCUSER_STEP = 50
-    FOCUSER_MOVE_TIME = 0.066
-    FOCUSER_JPEG_QUALITY = 85
-    FOCUSER_ROI = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
-    FOCUSER_DEVICE = "/dev/v4l-subdev1"
-    FOCUSER_REPEAT_TRIGGER = 5  # every x seconds trigger autofocus
-
-    # dont change following defaults. If necessary change via argument
-    DEBUG = False
-    DEBUG_SHOWPREVIEW = False
-
-    # infoled / ws2812b ring settings
-    WS2812_NUMBER_LEDS = 12
-    WS2812_GPIO_PIN = 18
-    WS2812_COLOR = Color(255, 255, 255)
-    WS2812_CAPTURE_COLOR = Color(0, 125, 125)
-    WS2812_MAX_BRIGHTNESS = 50
-    WS2812_ANIMATION_UPDATE = 70    # update circle animation every XX ms
-# constants
 
 
 # logger
@@ -133,6 +92,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 focusState._lastRunResult).encode('utf8'))
         elif self.path == '/cmd/debug/on':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "enable debug")
@@ -142,6 +102,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'enable debug\r\n')
         elif self.path == '/cmd/debug/off':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "disable debug")
@@ -151,6 +112,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'disable debug\r\n')
         elif self.path == '/cmd/applyoverlay/on':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "enable frameserver overlay")
@@ -160,6 +122,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'enable frameserver overlay\r\n')
         elif self.path == '/cmd/applyoverlay/off':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "disable frameserver overlay")
@@ -169,6 +132,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'disable frameserver overlay\r\n')
         elif self.path == '/cmd/exposuremode/normal':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "/cmd/exposuremode/normal")
@@ -179,6 +143,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'/cmd/exposuremode/normal\r\n')
         elif self.path == '/cmd/exposuremode/short':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "/cmd/exposuremode/short")
@@ -189,6 +154,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'/cmd/exposuremode/short\r\n')
         elif self.path == '/cmd/capturePrepare':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "imageserver informed about upcoming request to capture")
@@ -198,24 +164,28 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 b'imageserver informed about upcoming request to capture\r\n')
         elif self.path == '/cmd/infoled/countdown':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info("request infoLed mode countdown")
             notifier.raise_event("onCountdownTakePicture")
             self.wfile.write(b'Switched capture LED on\r\n')
         elif self.path == '/cmd/autofocus/on':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info("Switched Autofocus Timer ON")
             rt.start()
             self.wfile.write(b'Switched Autofocus Timer ON\r\n')
         elif self.path == '/cmd/autofocus/off':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info("Switched Autofocus Timer OFF")
             rt.stop()
             self.wfile.write(b'Switched Autofocus Timer OFF\r\n')
         elif self.path == '/cmd/autofocus/abort':
             self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
                 "Aborted autofocus run, returned to previous focus position")
