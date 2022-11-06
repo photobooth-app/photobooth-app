@@ -36,12 +36,10 @@ import socketserver
 import os
 from lib.InfoLed import InfoLed
 from rpi_ws281x import Color
+
+
 # change to files path
 os.chdir(sys.path[0])
-
-#print(f"picamera2 v{picamera2.__version__}")
-
-# constants
 
 
 class CONFIG:
@@ -63,10 +61,12 @@ class CONFIG:
     FOCUSER_MIN_VALUE = 0
     FOCUSER_MAX_VALUE = 4000
     FOCUSER_DEF_VALUE = 400
-    FOCUSER_STEP = 100
+    FOCUSER_STEP = 50
     FOCUSER_MOVE_TIME = 0.066
     FOCUSER_JPEG_QUALITY = 85
     FOCUSER_ROI = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
+    FOCUSER_DEVICE = "/dev/v4l-subdev1"
+    FOCUSER_REPEAT_TRIGGER = 5  # every x seconds trigger autofocus
 
     # dont change following defaults. If necessary change via argument
     DEBUG = False
@@ -322,38 +322,17 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 
 if __name__ == '__main__':
-
-    # tuning = Picamera2.load_tuning_file(
-    #    "imx519.json")   # or imx519.json or imx477.json
-    # algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
-    # algo["exposure_modes"]["normal"] = {
-    #    "shutter": [100, 120000], "gain": [1.0, 8.0]}
-    # picam2 = Picamera2(tuning=tuning)
     picam2 = Picamera2()
     infoled = InfoLed(CONFIG, notifier)
     frameServer = FrameServer(picam2, logger, notifier, CONFIG)
-    focuser = Focuser("/dev/v4l-subdev1", CONFIG)
+    focuser = Focuser(CONFIG.FOCUSER_DEVICE, CONFIG)
     focusState = FocusState(frameServer, focuser, notifier, CONFIG)
-    rt = RepeatedTimer(5, notifier.raise_event, "onRefocus")
-
-    main_resolution = [
-        dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in picam2.sensor_resolution]
-    main_stream = {"size": main_resolution}
-    lores_stream = {"size": CONFIG.LORES_RESOLUTION}
-    config = picam2.create_still_configuration(
-        main_stream, lores_stream, encode="lores", buffer_count=3, display="lores")
-    picam2.configure(config)
-
-    logger.info(f"camera_config: {picam2.camera_config}")
-    logger.info(f"camera_controls: {picam2.camera_controls}")
-    logger.info(f"controls: {picam2.controls}")
+    rt = RepeatedTimer(CONFIG.FOCUSER_REPEAT_TRIGGER,
+                       notifier.raise_event, "onRefocus")
 
     frameServer.start()
 
     focuser.reset()
-
-    # start camera
-    picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
     # first time focus
     notifier.raise_event("onRefocus")

@@ -27,10 +27,23 @@ class FrameServer:
         self._fps = 0
         self._thread = Thread(target=self._thread_func, daemon=True)
         self._statsthread = Thread(target=self._statsthread_func, daemon=True)
-
         self._notifier = notifier
 
+        main_resolution = [
+            dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in self._picam2.sensor_resolution]
+        main_stream = {"size": main_resolution}
+        lores_stream = {"size": CONFIG.LORES_RESOLUTION}
+        self._picam2.configure(self._picam2.create_still_configuration(
+            main_stream, lores_stream, encode="lores", buffer_count=3, display="lores"))
+
+        logger.info(f"camera_config: {self._picam2.camera_config}")
+        logger.info(f"camera_controls: {self._picam2.camera_controls}")
+        logger.info(f"controls: {self._picam2.controls}")
+
         self.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+
+        # start camera
+        self._picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
 
     @property
     def count(self):
