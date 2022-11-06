@@ -12,7 +12,7 @@ ExecStart=/usr/bin/python3 /home/pi/imageserver/imageserver.py
 WantedBy=multi-user.target
 
 ## enable service and autostart on system startup:
-#1 copy imageserver.service to /etc/systemd/system/
+#1 sudo cp ~/imageserver/imageserver.service /etc/systemd/system/
 #2 sudo systemctl enable imageserver.service
-## start/stop/status service:
-# sudo systemctl start application
+#3 sudo systemctl start imageserver.service
+#4 sudo systemctl status imageserver.service
