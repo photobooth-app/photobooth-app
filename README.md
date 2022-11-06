@@ -22,46 +22,60 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
 ## :wrench: Installation
-
+Install packages (as root because imageserver needs to run as root)
+```
 sudo pip install event-notifier opencv-python rpi_ws281x
 sudo apt install -y python3-picamera2
-Copy github repo files to ~/imageserver
-start the server by issuing
+git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
+```
+
+Test run the server by issuing
+```
 sudo python ~/imageserver/imageserver.py
+```
 Browse to <http://photobooth:8000> (replace photobooth by actual hostname) and see that it is working
+
 Now install the service:
+```
 sudo cp ~/imageserver/imageserver.service /etc/systemd/system/
 sudo systemctl enable imageserver.service
 sudo systemctl start imageserver.service
 sudo systemctl status imageserver.service
-
+```
 ### Integrate with ImageServer
 
+```
 take_picture_cmd: curl -X POST localhost:8000/capture -d 'filename=%s'
 take_picture_msg: Done
 pre_photo_cmd: curl localhost:8000/cmd/capturePrepare
 post_photo_cmd: curl localhost:8000/cmd/autofocus/on
 preview_url: url(<http://photobooth:8000/stream.mjpg>)
 background_defaults: url(<http://photobooth:8000/stream.mjpg>)
+```
 
 ### Sync Online (for file downloads via QR Code)
 
+```
 sudo apt-get install rclone inotify-tools
-
+```
+```
 rclone config
+```
 Setup the remote named "boothupload"!
 
+```
 chmod u+x ~/imageserver/boothupload.sh
 cp ~/imageserver/boothupload.service ~/.config/systemd/user/
 systemctl --user enable boothupload.service
 systemctl --user start boothupload
 systemctl --user status boothupload
-
+```
 ### Setup Wifi and Hotspot
 
 At home prefer local wifi with endless data. If this is not available connect to a mobile hotspot for online sync.
 
 In file /etc/wpa_supplicant/wpa_supplicant.conf set a priority for local and hotspot wifi:
+```
 network={
     ssid="homewifi"
     psk="passwordOfhomewifi"
@@ -72,7 +86,7 @@ network={
    psk="passwordOfmobileexpensivewifi"
    priority=5
 }
-
+```
 ## :mag: Changelog
 
 - 2022-10-03
