@@ -6,11 +6,12 @@
 <h1>Photobooth Imageserver</h1>
 
 <br>
-autofocus: <a href="/cmd/autofocus/on">on</a>  *  <a href="/cmd/autofocus/off">off</a><br>
-debug: <a href="/cmd/debug/on">on</a> * <a href="/cmd/debug/off">off</a><br>
-img overlay: <a href="/cmd/applyoverlay/on">on</a> * <a href="/cmd/applyoverlay/off">off</a><br>
-exposure_mode: <a href="/cmd/exposuremode/normal">normal</a> * <a href="/cmd/exposuremode/short">short</a> * <a href="/cmd/exposuremode/long">long</a> * <a href="/cmd/exposuremode/custom">custom</a><br>
-capture: <a id="countdown" href="/cmd/infoled/countdown">countdown</a> <form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form> <br>
+autofocus timer: <a href="javascript:cmdGet('/cmd/autofocus/on')">on</a>  *  <a href="javascript:cmdGet('/cmd/autofocus/off')">off</a><br>
+debug: <a href="javascript:cmdGet('/cmd/debug/on')">on</a> * <a href="javascript:cmdGet('/cmd/debug/off')">off</a><br>
+img overlay: <a href="javascript:cmdGet('/cmd/applyoverlay/on')">on</a> * <a href="javascript:cmdGet('/cmd/applyoverlay/off')">off</a><br>
+exposure_mode: <a href="javascript:cmdGet('/cmd/exposuremode/normal')">normal</a> * <a href="javascript:cmdGet('/cmd/exposuremode/short')">short</a> * <a href="javascript:cmdGet('/cmd/exposuremode/long')">long</a> * <a href="javascript:cmdGet('/cmd/exposuremode/custom')">custom</a><br>
+capture: <a id="countdown" href="javascript:cmdGet('/cmd/infoled/countdown')">countdown</a>
+<form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form> <br>
 <img src="stream.mjpg" height="720" /><br>
 Last Focuser Run results
 <div style="width: 500px">
@@ -22,9 +23,13 @@ Last Focuser Run results
 			  crossorigin="anonymous"></script>
 
 <script type="text/javascript">
-$(document).ready(function () {
-    //$('a#countdown').click( function(e) {e.preventDefault(); /*your_code_here;*/ return false; } );
+function cmdGet (url) {
+    $.get(url, function (data) {
+        console.log(data);
+    });
+}
 
+$(document).ready(function () {
     var ctx = document.getElementById('myChart').getContext('2d');
     var chart = new Chart(ctx, {
         type: 'line',
@@ -51,7 +56,7 @@ $(document).ready(function () {
             var data = data.map(function(e) {
                 return e[1];
             });
-            console.log(labels, data);
+            //console.log(labels, data);
             chart.data.labels=labels;
             chart.data.datasets[0].data = data;
             chart.update();
