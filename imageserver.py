@@ -167,6 +167,26 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             frameServer.apply_overlay(False)
             self.wfile.write(
                 b'disable frameserver overlay\r\n')
+        elif self.path == '/cmd/exposuremode/normal':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "/cmd/exposuremode/normal")
+            # enable overlay in frameserver
+            CONFIG.CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Normal
+            frameServer.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+            self.wfile.write(
+                b'/cmd/exposuremode/normal\r\n')
+        elif self.path == '/cmd/exposuremode/short':
+            self.send_response(200)
+            self.end_headers()
+            logger.info(
+                "/cmd/exposuremode/short")
+            # enable overlay in frameserver
+            CONFIG.CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Short
+            frameServer.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+            self.wfile.write(
+                b'/cmd/exposuremode/short\r\n')
         elif self.path == '/cmd/capturePrepare':
             self.send_response(200)
             self.end_headers()

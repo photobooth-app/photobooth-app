@@ -138,6 +138,7 @@ class FrameServer:
         self._picam2.set_controls({"AeExposureMode": newmode})
         # else:
         #    print("mode not avail!")
+        print(self._picam2.controls.get_libcamera_controls())
 
     def apply_overlay(self, enable=False):
         if enable == True:
