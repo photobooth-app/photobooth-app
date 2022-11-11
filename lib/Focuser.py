@@ -11,6 +11,7 @@ import os
 # ./install_pivariety_pkgs.sh - p imx519_kernel_driver_low_speed
 #
 # driver may have to be reinstalled after system updates!
+from os.path import exists as file_exists
 
 
 class Focuser:
@@ -20,6 +21,11 @@ class Focuser:
         self._CONFIG = CONFIG
         self.MAX_VALUE = self._CONFIG.FOCUSER_MAX_VALUE
         self.MIN_VALUE = self._CONFIG.FOCUSER_MIN_VALUE
+
+        # if arducam drivers are not installed properly, the device might not exist and we have to fail hard here now.
+        if not (file_exists(self._device)):
+            raise Exception(
+                f"ERROR! Focuser device {self._device} not existing!")
 
         self.reset()
 
@@ -36,7 +42,11 @@ class Focuser:
             value = self._CONFIG.FOCUSER_MIN_VALUE
 
         value = int(value)
-        os.system("v4l2-ctl -c focus_absolute={} -d {}".format(value, self._device))
+        try:
+            os.system(
+                "v4l2-ctl -c focus_absolute={} -d {}".format(value, self._device))
+        except:
+            print("error")
 
         self.focus_value = value
 
