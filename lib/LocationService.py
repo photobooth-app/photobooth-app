@@ -91,6 +91,16 @@ class LocationService:
         except KeyError:
             return None
 
+    def decdeg2dms(self, dd):
+        # 52.400561, 9.679484 converts to
+        # 52°24'02.0"N 9°40'46.1"E
+        is_positive = dd >= 0
+        dd = abs(dd)
+        minutes, seconds = divmod(dd*3600, 60)
+        degrees, minutes = divmod(minutes, 60)
+        degrees = degrees if is_positive else -degrees
+        return (degrees, minutes, seconds)
+
     def is_connected(self):
         try:
             # connect to the host -- tells us if the host is actually

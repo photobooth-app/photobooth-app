@@ -6,7 +6,7 @@ from libcamera import controls
 class CONFIG():
     # debugging
     DEBUG_LOGFILE = False
-    LOGGING_LEVEL = logging.DEBUG
+    LOGGING_LEVEL = logging.INFO
 
     # quality
     MAIN_RESOLUTION_REDUCE_FACTOR = 1

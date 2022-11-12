@@ -267,7 +267,20 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                 exif_ifd = {piexif.ExifIFD.ExposureTime: (frameServer._metadata["ExposureTime"], 1000000),
                             piexif.ExifIFD.DateTimeOriginal: now.strftime("%Y:%m:%d %H:%M:%S"),
                             piexif.ExifIFD.ISOSpeedRatings: int(total_gain * 100)}
-                exif_bytes = piexif.dump({"0th": zero_ifd, "Exif": exif_ifd})
+
+                gps_ifd = {}
+
+                if (locationService.accuracy):
+                    print("adding exif gps")
+                    gps_ifd = {piexif.GPSIFD.GPSVersionID: (2, 0, 0, 0),
+                               piexif.GPSIFD.GPSLatitudeRef: 'S' if locationService.latitude < 0 else 'N',
+                               piexif.GPSIFD.GPSLatitude: locationService.decdeg2dms(locationService.latitude),
+                               piexif.GPSIFD.GPSLongitudeRef: 'W' if locationService.longitude < 0 else 'E',
+                               piexif.GPSIFD.GPSLongitude: locationService.decdeg2dms(locationService.longitude),
+                               }
+
+                exif_bytes = piexif.dump(
+                    {"0th": zero_ifd, "Exif": exif_ifd})   # TODO: add gps
 
                 image = Image.fromarray(frame.astype('uint8'), 'RGB')
                 image.save(f"{filename}",
