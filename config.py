@@ -14,6 +14,16 @@ class CONFIG():
     LORES_QUALITY = 80
     HIRES_QUALITY = 90
 
+    # location service
+    LOCATION_SERVICE_API_KEY = "AIzaSyCzOzWNecM2ysPJjrSHW18YyM0DC0ot0QQ"
+    LOCATION_SERVICE_CONSIDER_IP = True
+    LOCATION_SERVICE_WIFI_INTERFACE_NO = 0
+    LOCATION_SERVICE_FORCED_UPDATE = 60  # every x minutes
+    # retries after program start to get more accurate data
+    LOCATION_SERVICE_HIGH_FREQ_UPDATE = 10
+    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
+    LOCATION_SERVICE_THRESHOLD_ACCURATE = 1000
+
     # capture
     CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Short
 

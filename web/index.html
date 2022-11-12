@@ -11,8 +11,12 @@ debug: <a href="javascript:cmdGet('/cmd/debug/on')">on</a> * <a href="javascript
 img overlay: <a href="javascript:cmdGet('/cmd/applyoverlay/on')">on</a> * <a href="javascript:cmdGet('/cmd/applyoverlay/off')">off</a><br>
 exposure_mode: <a href="javascript:cmdGet('/cmd/exposuremode/normal')">normal</a> * <a href="javascript:cmdGet('/cmd/exposuremode/short')">short</a> * <a href="javascript:cmdGet('/cmd/exposuremode/long')">long</a> * <a href="javascript:cmdGet('/cmd/exposuremode/custom')">custom</a><br>
 capture: <a id="countdown" href="javascript:cmdGet('/cmd/infoled/countdown')">countdown</a>
+<div>Latest LocationService results: <span id="locationservice"></span>
+    <a target="_new" id="mapslink" href="#">open in maps</a>
+</div>
 <form target="_blank" method="post" action="./capture"><input type="text" name="filename" value="test.jpeg"><input type="submit" value"take hq pic"></form> <br>
 <img src="stream.mjpg" height="720" /><br>
+
 Last Focuser Run results
 <div style="width: 500px">
   <canvas id="myChart"></canvas>
@@ -62,6 +66,20 @@ $(document).ready(function () {
             chart.update();
         });
     }, 1000) // 1000ms
+    
+
+    setInterval(() => {
+        $.getJSON("http://photobooth:8000/stats/locationservice", function (data) {
+            if(data.location) {
+                var strLink = "https://maps.google.com/?q="+ data.location.lat + "," + data.location.lng;
+                document.getElementById("mapslink").setAttribute("href", strLink);
+
+                document.getElementById('locationservice').textContent= JSON.stringify(data) ;
+            } else {
+                document.getElementById('locationservice').textContent = "no data";
+            }
+        });
+    }, 5000) // 1000ms
 });
 
 

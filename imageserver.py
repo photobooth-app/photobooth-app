@@ -31,6 +31,7 @@ from lib.Autofocus import FocusState
 from lib.Focuser import Focuser
 # from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
+from lib.LocationService import LocationService
 from http import server
 import socketserver
 import os
@@ -90,6 +91,13 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
             self.wfile.write(json.dumps(
                 focusState._lastRunResult).encode('utf8'))
+        elif self.path == '/stats/locationservice':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+
+            self.wfile.write(json.dumps(
+                locationService._geolocation_response).encode('utf8'))
         elif self.path == '/cmd/debug/on':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
@@ -299,6 +307,7 @@ if __name__ == '__main__':
     focusState = FocusState(frameServer, focuser, notifier, CONFIG)
     rt = RepeatedTimer(CONFIG.FOCUSER_REPEAT_TRIGGER,
                        notifier.raise_event, "onRefocus")
+    locationService = LocationService(logger, notifier, CONFIG)
 
     frameServer.start()
 
@@ -306,6 +315,10 @@ if __name__ == '__main__':
 
     # first time focus
     notifier.raise_event("onRefocus")
+
+    # first time try to get location
+    locationService.start()
+    #print(f"{locationService.longitude}, {locationService.latitude}, {locationService.accuracy}")
 
     # serve files forever
     try:
