@@ -268,19 +268,23 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                             piexif.ExifIFD.DateTimeOriginal: now.strftime("%Y:%m:%d %H:%M:%S"),
                             piexif.ExifIFD.ISOSpeedRatings: int(total_gain * 100)}
 
-                gps_ifd = {}
+                exif_dict = {"0th": zero_ifd, "Exif": exif_ifd}
 
                 if (locationService.accuracy):
-                    print("adding exif gps")
-                    gps_ifd = {piexif.GPSIFD.GPSVersionID: (2, 0, 0, 0),
-                               piexif.GPSIFD.GPSLatitudeRef: 'S' if locationService.latitude < 0 else 'N',
-                               piexif.GPSIFD.GPSLatitude: locationService.decdeg2dms(locationService.latitude),
-                               piexif.GPSIFD.GPSLongitudeRef: 'W' if locationService.longitude < 0 else 'E',
-                               piexif.GPSIFD.GPSLongitude: locationService.decdeg2dms(locationService.longitude),
-                               }
+                    logger.info("adding GPS data to exif")
+                    logger.debug(
+                        f"gps location: {locationService.latitude},{locationService.longitude}")
 
-                exif_bytes = piexif.dump(
-                    {"0th": zero_ifd, "Exif": exif_ifd})   # TODO: add gps
+                    gps_ifd = {
+                        piexif.GPSIFD.GPSLatitudeRef: locationService.latitudeRef,
+                        piexif.GPSIFD.GPSLatitude: locationService.latitudeDMS,
+                        piexif.GPSIFD.GPSLongitudeRef: locationService.longitudeRef,
+                        piexif.GPSIFD.GPSLongitude: locationService.longitudeDMS,
+                    }
+                    # add gps dict
+                    exif_dict.update({"GPS": gps_ifd})
+
+                exif_bytes = piexif.dump(exif_dict)
 
                 image = Image.fromarray(frame.astype('uint8'), 'RGB')
                 image.save(f"{filename}",
@@ -331,7 +335,6 @@ if __name__ == '__main__':
 
     # first time try to get location
     locationService.start()
-    #print(f"{locationService.longitude}, {locationService.latitude}, {locationService.accuracy}")
 
     # serve files forever
     try:

@@ -1,5 +1,5 @@
+from fractions import Fraction
 import time
-import socket
 import googlemaps
 import pywifi
 from threading import Thread
@@ -17,6 +17,7 @@ class LocationService:
 
         self._thread = Thread(target=self._thread_func, daemon=True)
         self._running = True
+        self._init_successful = True
 
         # request data
         self._wifi_access_points = []
@@ -26,13 +27,28 @@ class LocationService:
         # https://developers.google.com/maps/documentation/geolocation/overview#responses
         self._geolocation_response = {}
 
-        self._wifi = pywifi.PyWiFi()
-        self._iface = self._wifi.interfaces(
-        )[self._CONFIG.LOCATION_SERVICE_WIFI_INTERFACE_NO]
-        self._client = googlemaps.Client(self._CONFIG.LOCATION_SERVICE_API_KEY)
+        try:
+            self._wifi = pywifi.PyWiFi()
+            self._iface = self._wifi.interfaces(
+            )[self._CONFIG.LOCATION_SERVICE_WIFI_INTERFACE_NO]
+            self._client = googlemaps.Client(
+                self._CONFIG.LOCATION_SERVICE_API_KEY)
+        except Exception as e:
+            self._logger.error(
+                f"geolocation setup failed, stopping thread, error {e}")
+            self._init_successful = False   # thread cannot be enabled.
 
     def start(self):
-        self._thread.start()
+        if (self._init_successful):
+            if (self._CONFIG.LOCATION_SERVICE_ENABLED):
+                self._running = True
+                self._thread.start()
+            else:
+                self._logger.info(
+                    "LocationService started but not actually enabled in config")
+        else:
+            self._logger.error(
+                "LocationService cannot be started since not initialized properly!")
 
     def stop(self):
         self._running = False
@@ -91,7 +107,35 @@ class LocationService:
         except KeyError:
             return None
 
-    def decdeg2dms(self, dd):
+    @property
+    def latitudeDMS(self):
+        try:
+            return self._decdeg2dms(self._geolocation_response['location']['lat'])
+        except KeyError:
+            return None
+
+    @property
+    def longitudeDMS(self):
+        try:
+            return self._decdeg2dms(self._geolocation_response['location']['lng'])
+        except KeyError:
+            return None
+
+    @property
+    def latitudeRef(self):
+        if (self.latitude != None):
+            return 'S' if self.latitude < 0 else 'N'
+        else:
+            return None
+
+    @property
+    def longitudeRef(self):
+        if (self.longitude != None):
+            return 'W' if self.longitude < 0 else 'E'
+        else:
+            return None
+
+    def _decdeg2dms(self, dd):
         # 52.400561, 9.679484 converts to
         # 52°24'02.0"N 9°40'46.1"E
         is_positive = dd >= 0
@@ -99,17 +143,8 @@ class LocationService:
         minutes, seconds = divmod(dd*3600, 60)
         degrees, minutes = divmod(minutes, 60)
         degrees = degrees if is_positive else -degrees
-        return (degrees, minutes, seconds)
 
-    def is_connected(self):
-        try:
-            # connect to the host -- tells us if the host is actually
-            # reachable
-            socket.create_connection(("1.1.1.1", 53), timeout=2)
-            return True
-        except OSError:
-            pass
-        return False
+        return (Fraction(degrees).as_integer_ratio(), Fraction(minutes).as_integer_ratio(), Fraction(seconds).limit_denominator(100000).as_integer_ratio())
 
     def requestGeolocation(self):
         # use api key to request via nearby wifis
@@ -119,8 +154,8 @@ class LocationService:
 
             self._logger.info(f"geolocation results: {results}")
             self._geolocation_response = (results)
-        except:
-            self._logger.info("no internet avail to request geolocation!")
+        except Exception as e:
+            self._logger.error(f"geolocation request failed, error {e}")
 
     def gatherWifi(self):
         self._iface.scan()
