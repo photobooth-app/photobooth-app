@@ -35,6 +35,7 @@ class CONFIG():
 
         # dont change following defaults. If necessary change via argument
         self.DEBUG = False
+        self.DEBUG_OVERLAY = False
         self.DEBUG_SHOWPREVIEW = False
 
         # infoled / ws2812b ring settings
@@ -56,7 +57,7 @@ class CONFIG():
         # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
         self.LOCATION_SERVICE_THRESHOLD_ACCURATE = 1000
 
-        self.load()
+        pass
 
     def reset_default_values(self):
         self.__dict__ = vars(CONFIG())
@@ -84,11 +85,12 @@ class CONFIG():
 
     def save(self):
         # save only non-default values:
-        set_defaults = set(vars(CONFIG()).items())
+        ##set_defaults = set(vars(CONFIG()).items())
         # print(set_defaults)
-        set_current = set(self.__dict__.items())
+        ##set_current = set(self.__dict__.items())
         # print(set_current)
-        save_dict = dict(set_current-set_defaults)
+        ##save_dict = dict(set_current-set_defaults)
+        save_dict = self.__dict__
         print("saving following dict:")
         print(save_dict)
         with open("settings.json", "w") as write_file:
