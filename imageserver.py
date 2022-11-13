@@ -15,7 +15,6 @@
 from datetime import datetime
 import piexif
 from PIL import Image
-from libcamera import controls
 import traceback
 from EventNotifier import Notifier
 import json
@@ -38,13 +37,17 @@ import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
 
+
 # change to files path
 os.chdir(sys.path[0])
 
 
+# setup config object
+config_instance = CONFIG()
+
 # logger
 logger = logging.getLogger(__name__)
-logger.setLevel(CONFIG.LOGGING_LEVEL)
+logger.setLevel(config_instance.LOGGING_LEVEL)
 fh = logging.StreamHandler()
 fh_formatter = logging.Formatter(
     '%(asctime)s %(levelname)s %(lineno)d:%(filename)s(%(process)d) - %(message)s')
@@ -60,7 +63,7 @@ def log_exceptions(type, value, tb):
 # Install exception handler
 sys.excepthook = log_exceptions
 
-if CONFIG.DEBUG_LOGFILE:
+if config_instance.DEBUG_LOGFILE:
     fh2 = logging.FileHandler("/tmp/frameserver.log")
     fh2.setFormatter(fh_formatter)
     logger.addHandler(fh2)
@@ -105,7 +108,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info(
                 "enable debug")
 
-            CONFIG.DEBUG = True
+            config_instance.DEBUG = True
             self.wfile.write(
                 b'enable debug\r\n')
         elif self.path == '/cmd/debug/off':
@@ -115,19 +118,37 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info(
                 "disable debug")
 
-            CONFIG.DEBUG = False
+            config_instance.DEBUG = False
             self.wfile.write(
                 b'disable debug\r\n')
-        elif self.path == '/cmd/applyoverlay/on':
+
+        elif self.path == '/cmd/config/reset':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
-                "enable frameserver overlay")
-            # enable overlay in frameserver
-            frameServer.apply_overlay(True)
+                "reset config")
+            config_instance.reset_default_values()
             self.wfile.write(
-                b'enable frameserver overlay\r\n')
+                b'reset config\r\n')
+        elif self.path == '/cmd/config/save':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            logger.info(
+                "save config")
+            config_instance.save()
+            self.wfile.write(
+                b'save config\r\n')
+        elif self.path == '/cmd/config/load':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            logger.info(
+                "load config")
+            config_instance.load()
+            self.wfile.write(
+                b'load config\r\n')
         elif self.path == '/cmd/applyoverlay/off':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
@@ -145,8 +166,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info(
                 "/cmd/exposuremode/normal")
             # enable overlay in frameserver
-            CONFIG.CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Normal
-            frameServer.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+            config_instance.CAPTURE_EXPOSURE_MODE = "normal"
+            frameServer.setAeExposureMode(
+                config_instance.CAPTURE_EXPOSURE_MODE)
             self.wfile.write(
                 b'/cmd/exposuremode/normal\r\n')
         elif self.path == '/cmd/exposuremode/short':
@@ -156,8 +178,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             logger.info(
                 "/cmd/exposuremode/short")
             # enable overlay in frameserver
-            CONFIG.CAPTURE_EXPOSURE_MODE = controls.AeExposureModeEnum.Short
-            frameServer.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+            config_instance.CAPTURE_EXPOSURE_MODE = "short"
+            frameServer.setAeExposureMode(
+                config_instance.CAPTURE_EXPOSURE_MODE)
             self.wfile.write(
                 b'/cmd/exposuremode/short\r\n')
         elif self.path == '/cmd/capturePrepare':
@@ -213,7 +236,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     frame = frameServer.wait_for_lores_frame()
 
                     is_success, buffer = cv2.imencode(
-                        ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, CONFIG.LORES_QUALITY])
+                        ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, config_instance.LORES_QUALITY])
                     # io_buf = io.BytesIO(buffer)
 
                     self.wfile.write(b'--FRAME\r\n')
@@ -288,7 +311,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 
                 image = Image.fromarray(frame.astype('uint8'), 'RGB')
                 image.save(f"{filename}",
-                           quality=CONFIG.HIRES_QUALITY, exif=exif_bytes)
+                           quality=config_instance.HIRES_QUALITY, exif=exif_bytes)
 
                 self.send_response(200)
                 self.end_headers()
@@ -318,13 +341,13 @@ class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
 
 if __name__ == '__main__':
     picam2 = Picamera2()
-    infoled = InfoLed(CONFIG, notifier)
-    frameServer = FrameServer(picam2, logger, notifier, CONFIG)
-    focuser = Focuser(CONFIG.FOCUSER_DEVICE, CONFIG)
-    focusState = FocusState(frameServer, focuser, notifier, CONFIG)
-    rt = RepeatedTimer(CONFIG.FOCUSER_REPEAT_TRIGGER,
+    infoled = InfoLed(config_instance, notifier)
+    frameServer = FrameServer(picam2, logger, notifier, config_instance)
+    focuser = Focuser(config_instance.FOCUSER_DEVICE, config_instance)
+    focusState = FocusState(frameServer, focuser, notifier, config_instance)
+    rt = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
                        notifier.raise_event, "onRefocus")
-    locationService = LocationService(logger, notifier, CONFIG)
+    locationService = LocationService(logger, notifier, config_instance)
 
     frameServer.start()
 

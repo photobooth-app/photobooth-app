@@ -1,3 +1,4 @@
+from picamera2 import Picamera2
 import psutil
 import threading
 from threading import Condition, Thread
@@ -40,7 +41,13 @@ class FrameServer:
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        self.setmode(CONFIG.CAPTURE_EXPOSURE_MODE)
+        tuning = Picamera2.load_tuning_file(CONFIG.CAMERA_TUNINGFILE)
+        algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
+        self._availAeExposureModes = (algo["exposure_modes"].keys())
+        self._logger.info(
+            f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
+
+        self.setAeExposureMode(CONFIG.CAPTURE_EXPOSURE_MODE)
 
         # start camera
         self._picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
@@ -141,19 +148,20 @@ class FrameServer:
                 self._hq_condition.wait()
                 return self._hq_array
 
-    def setmode(self, newmode):
-        #algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
-        #print(f"set new mode {newmode.name.lower()}")
-        #print("mode avail=?")
-        # print(newmode.name.lower()
-        #    in algo["exposure_modes"].keys())
-        # if (newmode.name.lower() in algo["exposure_modes"].keys()):
-        self._picam2.set_controls({"AeExposureMode": newmode})
-        # else:
-        #    print("mode not avail!")
-        print(self._picam2.controls.get_libcamera_controls())
+    def setAeExposureMode(self, newmode):
+        self._logger.info(f"setAeExposureMode, try to set to {newmode}")
+        try:
+            newmode_Int = (
+                list(self._availAeExposureModes).index(newmode.lower()))
+            self._picam2.set_controls({"AeExposureMode": newmode_Int})
+        except:
+            self._logger.error(
+                f"setAeExposureMode failed! Mode {newmode} not available")
 
-    def apply_overlay(self, enable=False):
+        self._logger.info(
+            f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
+
+    def apply_overlay(self, enable=False):  # TODO
         if enable == True:
             self._picam2.pre_callback = self.overlay
         else:

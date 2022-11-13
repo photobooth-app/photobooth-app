@@ -43,7 +43,8 @@ class InfoLed():
 
     def _countdownAnimationFun(self):
         """Loading circle animation"""
-        color = self._CONFIG.WS2812_COLOR
+        color = Color(
+            self._CONFIG.WS2812_COLOR[0], self._CONFIG.WS2812_COLOR[1], self._CONFIG.WS2812_COLOR[2], self._CONFIG.WS2812_COLOR[3])
         colorarray = [color >> 16 &
                       255, color >> 8 & 255, color >> 0 & 255, color >> 24 & 255]  # RGBW
         # print(colorarray)
@@ -84,7 +85,8 @@ class InfoLed():
 
     def captureStart(self):
         self.stopCountdown()
-        self._fill(self._CONFIG.WS2812_CAPTURE_COLOR)
+        self._fill(Color(
+            self._CONFIG.WS2812_CAPTURE_COLOR[0], self._CONFIG.WS2812_CAPTURE_COLOR[1], self._CONFIG.WS2812_CAPTURE_COLOR[2], self._CONFIG.WS2812_CAPTURE_COLOR[3]))
 
     def captureFinished(self):
         self.stopCountdown()
