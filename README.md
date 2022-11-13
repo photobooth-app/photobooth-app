@@ -15,7 +15,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 
 ## :gear: Prerequisites
 
-- Python 3
+- Python 3.9
 - Arducam 16MP imx519 with autofocus motor
 - Arducam drivers/libcamera apps properly installed
 - [photobooth installed](https://photoboothproject.github.io/)
@@ -26,7 +26,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 Install packages (as root because imageserver needs to run as root)
 
 ```text
-sudo pip install event-notifier opencv-python rpi_ws281x
+sudo pip install event-notifier opencv-python rpi_ws281x googlemaps pywifi
 sudo apt install -y python3-picamera2 git
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
