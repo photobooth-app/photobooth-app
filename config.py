@@ -2,6 +2,8 @@ import os
 import json
 import logging
 
+CONFIG_FILENAME = "config.json"
+
 
 class CONFIG():
 
@@ -63,13 +65,13 @@ class CONFIG():
         self.__dict__ = vars(CONFIG())
 
         try:
-            os.remove("settings.json")
+            os.remove(CONFIG_FILENAME)
         except:
             print("delete settings.json file failed.")
 
     def load(self):
         try:
-            with open("settings.json", "r") as read_file:
+            with open(CONFIG_FILENAME, "r") as read_file:
                 read_settings = json.load(read_file)
                 print(read_settings)
 
@@ -93,5 +95,5 @@ class CONFIG():
         save_dict = self.__dict__
         print("saving following dict:")
         print(save_dict)
-        with open("settings.json", "w") as write_file:
+        with open(CONFIG_FILENAME, "w") as write_file:
             json.dump(save_dict, write_file, indent=4)
