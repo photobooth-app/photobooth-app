@@ -8,14 +8,14 @@ from picamera2 import MappedArray
 
 
 class FrameServer:
-    def __init__(self, picam2, logger, notifier, CONFIG):
+    def __init__(self, picam2, logger, notifier, config):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = picam2
         self._logger = logger
-        # self._CONFIG = CONFIG  # currently not used actually...
+        self._config = config
 
         self._hq_array = None
         self._lores_array = None
@@ -31,9 +31,9 @@ class FrameServer:
         self._notifier = notifier
 
         main_resolution = [
-            dim // CONFIG.MAIN_RESOLUTION_REDUCE_FACTOR for dim in self._picam2.sensor_resolution]
+            dim // config.MAIN_RESOLUTION_REDUCE_FACTOR for dim in self._picam2.sensor_resolution]
         main_stream = {"size": main_resolution}
-        lores_stream = {"size": CONFIG.LORES_RESOLUTION}
+        lores_stream = {"size": config.LORES_RESOLUTION}
         self._picam2.configure(self._picam2.create_still_configuration(
             main_stream, lores_stream, encode="lores", buffer_count=3, display="lores"))
 
@@ -41,16 +41,19 @@ class FrameServer:
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        tuning = Picamera2.load_tuning_file(CONFIG.CAMERA_TUNINGFILE)
+        tuning = Picamera2.load_tuning_file(config.CAMERA_TUNINGFILE)
         algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
         self._availAeExposureModes = (algo["exposure_modes"].keys())
         self._logger.info(
             f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
 
-        self.setAeExposureMode(CONFIG.CAPTURE_EXPOSURE_MODE)
+        self.setAeExposureMode(config.CAPTURE_EXPOSURE_MODE)
 
         # start camera
-        self._picam2.start(show_preview=CONFIG.DEBUG_SHOWPREVIEW)
+        self._picam2.start(show_preview=config.DEBUG_SHOWPREVIEW)
+
+        # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
+        self._picam2.pre_callback = self._pre_callback_overlay
 
     @property
     def count(self):
@@ -161,48 +164,43 @@ class FrameServer:
         self._logger.info(
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
-    def apply_overlay(self, enable=False):  # TODO
-        if enable == True:
-            self._picam2.pre_callback = self.overlay
-        else:
-            self._picam2.pre_callback = None
+    def _pre_callback_overlay(self, request):
+        if self._config.DEBUG_OVERLAY:
+            try:
+                overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
+                overlay2 = f"{self.fps} fps"
+                overlay3 = f"Exposure: {round(self._metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self._metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
+                overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
+                overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
+                overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
+                overlay7 = f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%, active threads #{threading.active_count()}"
+                colour = (210, 210, 210)
+                origin1 = (30, 200)
+                origin2 = (30, 230)
+                origin3 = (30, 260)
+                origin4 = (30, 290)
+                origin5 = (30, 320)
+                origin6 = (30, 350)
+                origin7 = (30, 380)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                scale = 1
+                thickness = 2
 
-    def overlay(self, request):
-        try:
-            overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
-            overlay2 = f"{self.fps} fps"
-            overlay3 = f"Exposure: {round(self._metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self._metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self._metadata['ExposureTime']*1000*1000,1)}"
-            overlay4 = f"Lux: {round(self._metadata['Lux'],1)}"
-            overlay5 = f"Ae locked: {self._metadata['AeLocked']}, analogue gain {round(self._metadata['AnalogueGain'],1)}"
-            overlay6 = f"Colour Temp: {self._metadata['ColourTemperature']}"
-            overlay7 = f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%, active threads #{threading.active_count()}"
-            colour = (210, 210, 210)
-            origin1 = (30, 200)
-            origin2 = (30, 230)
-            origin3 = (30, 260)
-            origin4 = (30, 290)
-            origin5 = (30, 320)
-            origin6 = (30, 350)
-            origin7 = (30, 380)
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            scale = 1
-            thickness = 2
-
-            with MappedArray(request, "lores") as m:
-                cv2.putText(m.array, overlay1, origin1,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay2, origin2,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay3, origin3,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay4, origin4,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay5, origin5,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay6, origin6,
-                            font, scale, colour, thickness)
-                cv2.putText(m.array, overlay7, origin7,
-                            font, scale, colour, thickness)
-        except:
-            # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
-            pass
+                with MappedArray(request, "lores") as m:
+                    cv2.putText(m.array, overlay1, origin1,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay2, origin2,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay3, origin3,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay4, origin4,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay5, origin5,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay6, origin6,
+                                font, scale, colour, thickness)
+                    cv2.putText(m.array, overlay7, origin7,
+                                font, scale, colour, thickness)
+            except:
+                # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
+                pass

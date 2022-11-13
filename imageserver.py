@@ -44,6 +44,7 @@ os.chdir(sys.path[0])
 
 # setup config object
 config_instance = CONFIG()
+config_instance.load()
 
 # logger
 logger = logging.getLogger(__name__)
@@ -149,16 +150,24 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             config_instance.load()
             self.wfile.write(
                 b'load config\r\n')
-        elif self.path == '/cmd/applyoverlay/off':
+        elif self.path == '/cmd/debugoverlay/on':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             logger.info(
-                "disable frameserver overlay")
-            # enable overlay in frameserver
-            frameServer.apply_overlay(False)
+                "enable debugoverlay")
+            config_instance.DEBUG_OVERLAY = True
             self.wfile.write(
-                b'disable frameserver overlay\r\n')
+                b'disable debugoverlay\r\n')
+        elif self.path == '/cmd/debugoverlay/off':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            logger.info(
+                "disable debugoverlay")
+            config_instance.DEBUG_OVERLAY = False
+            self.wfile.write(
+                b'disable debugoverlay\r\n')
         elif self.path == '/cmd/exposuremode/normal':
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
