@@ -17,11 +17,9 @@ import piexif
 from PIL import Image
 import traceback
 from EventNotifier import Notifier
-import json
 import sys
 import time
 import cv2
-from urllib.parse import parse_qs
 import logging
 from picamera2 import Picamera2
 from lib.FrameServer import FrameServer
@@ -31,12 +29,10 @@ from lib.Focuser import Focuser
 # from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
 from lib.RepeatedTimer import RepeatedTimer
 from lib.LocationService import LocationService
-from http import server
-import socketserver
 import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
-from flask import Flask, render_template, Response, jsonify, request
+from flask import Flask, Response, jsonify, request
 
 import os
 
@@ -109,10 +105,7 @@ def api_cmd(action, param):
         else:
             # save new val only if try succeeded
             config_instance.CAPTURE_EXPOSURE_MODE = param
-    elif (action == "captureprepare" or (action == "infoled" and param == "countdown")):
-        notifier.raise_event("onCountdownTakePicture")
-
-    elif (action == "infoled"):
+    elif (action == "arm" and param == "countdown"):
         notifier.raise_event("onCountdownTakePicture")
 
     return f"action={action}, param={param}"
