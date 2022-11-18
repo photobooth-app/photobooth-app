@@ -33,8 +33,9 @@ import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
 from flask import Flask, Response, jsonify, request
-
 import os
+import threading
+
 
 # change to files path
 os.chdir(sys.path[0])
@@ -75,6 +76,14 @@ if config_instance.DEBUG_LOGFILE:
 
 notifier = Notifier(
     ["onTakePicture", "onTakePictureFinished", "onCountdownTakePicture", "onRefocus"], logger)
+
+
+@app.route("/debug/threads")
+def api_debug_threads():
+
+    list = [item.getName() for item in threading.enumerate()]
+    logger.debug(f"active threads: {list}")
+    return jsonify(list)
 
 
 @app.route("/cmd/<action>/<param>")
