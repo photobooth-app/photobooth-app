@@ -32,7 +32,11 @@ from lib.LocationService import LocationService
 import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
-from flask import Flask, Response, jsonify, request
+#from flask import Flask, Response, jsonify, request
+import uvicorn
+from fastapi import FastAPI, Form
+from starlette.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
 import os
 import threading
 
@@ -41,10 +45,7 @@ import threading
 os.chdir(sys.path[0])
 
 
-app = Flask(__name__,
-            static_url_path='',
-            static_folder='web',
-            )
+app = FastAPI()
 
 
 # setup config object
@@ -78,16 +79,16 @@ notifier = Notifier(
     ["onTakePicture", "onTakePictureFinished", "onCountdownTakePicture", "onRefocus"], logger)
 
 
-@app.route("/debug/threads")
-def api_debug_threads():
+@app.get("/debug/threads")
+async def api_debug_threads():
 
     list = [item.getName() for item in threading.enumerate()]
     logger.debug(f"active threads: {list}")
-    return jsonify(list)
+    return (list)
 
 
-@app.route("/cmd/<action>/<param>")
-def api_cmd(action, param):
+@app.get("/cmd/{action}/{param}")
+async def api_cmd(action, param):
     logger.info("log request")
 
     if (action == "debug"):
@@ -120,15 +121,15 @@ def api_cmd(action, param):
     return f"action={action}, param={param}"
 
 
-@app.route("/cmd/capture", methods=['POST'])
-def api_cmd_capture():
+@app.post("/cmd/capture")
+def api_cmd_capture(filename: str = Form()):
     start_time = time.time()
 
-    logger.debug(f"request data={request}")
+    #logger.debug(f"request data={request}")
 
     # decode -d "foo=bar" (application/x-www-form-urlencoded) sent by curl like:
     # curl -X POST -d 'filename=%s' http://localhost:8000/cmd/capture
-    filename = request.form['filename']
+    #filename = request.form['filename']
     logger.debug(f"capture to filename: {filename}")
 
     try:
@@ -188,17 +189,17 @@ def api_cmd_capture():
         rt.start()
 
 
-@app.route("/stats/focuser")
+@app.get("/stats/focuser")
 def api_stats_focuser():
-    return jsonify(focusState._lastRunResult)
+    return (focusState._lastRunResult)
 
 
-@app.route("/stats/locationservice")
+@app.get("/stats/locationservice")
 def api_stats_locationservice():
-    return jsonify(locationService._geolocation_response)
+    return (locationService._geolocation_response)
 
 
-@app.route('/')
+@app.get('/')
 def index():
     return app.send_static_file('index.html')
 
@@ -214,11 +215,14 @@ def gen_stream(frameServer):
                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
 
 
-@app.route('/stream.mjpg')
+@app.get('/stream.mjpg')
 def video_stream():
-    return Response(gen_stream(frameServer),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return StreamingResponse(gen_stream(frameServer),
+                             media_type='multipart/x-mixed-replace; boundary=frame')
 
+
+# if not match anything above, default to deliver static files from web directory
+app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
     picam2 = Picamera2()
@@ -242,7 +246,9 @@ if __name__ == '__main__':
 
     # serve files forever
     try:
-        app.run(host='0.0.0.0', port=8000)
+        #app.run(host='0.0.0.0', port=8000)
+        # uvicorn.run("fastapi_code:app")
+        uvicorn.run(app, host="0.0.0.0", port=8000)
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()
