@@ -28,8 +28,8 @@ class InfoLed():
         self._notifier.subscribe(
             "onTakePictureFinished", self.captureFinished)
 
-        self._countdownAnimationThread = StoppableThread(
-            target=self._countdownAnimationFun, daemon=True)
+        self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
+                                                         target=self._countdownAnimationFun, daemon=True)
 
         self._pixels = PixelStrip(CONFIG.WS2812_NUMBER_LEDS, CONFIG.WS2812_GPIO_PIN, LED_FREQ_HZ,
                                   LED_DMA, LED_INVERT, CONFIG.WS2812_MAX_BRIGHTNESS, LED_CHANNEL, LED_STRIP_TYPE)
@@ -70,8 +70,8 @@ class InfoLed():
         self._fill(Color(0, 0, 0))
 
     def startCountdown(self):
-        self._countdownAnimationThread = StoppableThread(
-            target=self._countdownAnimationFun, daemon=True)
+        self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
+                                                         target=self._countdownAnimationFun, daemon=True)
 
         self._countdownAnimationThread.start()
 

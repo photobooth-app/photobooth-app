@@ -37,11 +37,11 @@ class FocusState(object):
             self.reset()
             self.setFinish(False)
 
-            threadAutofocusStats = threading.Thread(target=statsThread, args=(
+            threadAutofocusStats = threading.Thread(name='AutofocusStats', target=statsThread, args=(
                 self._frameServer, self._focuser, self), daemon=True)
             threadAutofocusStats.start()
 
-            threadAutofocusFocusSupervisor = threading.Thread(target=focusThread, args=(
+            threadAutofocusFocusSupervisor = threading.Thread(name='AutofocusSupervisor', target=focusThread, args=(
                 self._focuser, self), daemon=True)
             threadAutofocusFocusSupervisor.start()
 

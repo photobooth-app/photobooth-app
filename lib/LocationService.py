@@ -15,7 +15,8 @@ class LocationService:
         self._CONFIG = CONFIG
         self._notifier = notifier
 
-        self._thread = Thread(target=self._thread_func, daemon=True)
+        self._thread = Thread(name="LocationServiceThread",
+                              target=self._thread_func, daemon=True)
         self._running = True
         self._init_successful = True
 

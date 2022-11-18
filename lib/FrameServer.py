@@ -26,8 +26,10 @@ class FrameServer:
         self._running = True
         self._count = 0
         self._fps = 0
-        self._thread = Thread(target=self._thread_func, daemon=True)
-        self._statsthread = Thread(target=self._statsthread_func, daemon=True)
+        self._thread = Thread(name='FrameServerMainThread',
+                              target=self._thread_func, daemon=True)
+        self._statsthread = Thread(
+            name='FrameServerStatsThread', target=self._statsthread_func, daemon=True)
         self._notifier = notifier
 
         main_resolution = [
