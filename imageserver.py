@@ -110,6 +110,12 @@ async def message_stream(request: Request):
                     "retry": 15000,
                     "data": json.dumps({"key1": "value1", "key2": "value2"})
                 }
+                yield {
+                    "event": "stats/geolocation",
+                    "id": uuid.uuid4(),
+                    "retry": 15000,
+                    "data": json.dumps((locationService._geolocation_response))
+                }
 
             await asyncio.sleep(1)
 
