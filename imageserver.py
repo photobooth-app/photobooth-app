@@ -1,19 +1,6 @@
 #!/usr/bin/python3
-
-# ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
-#
-# Set up script as a service to run always in the background:
-# https://medium.com/codex/setup-a-python-script-as-a-service-through-systemctl-systemd-f0cc55a42267
-
-
-# TODO / Improvements
-# 1) idea: cv2 face detection to autofocus on faces (might be to high load on RP)
-# 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
-# 3) improve autofocus algorithm
-# 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
-
+import uuid
 import asyncio
-from sse_starlette.sse import EventSourceResponse
 from datetime import datetime
 import piexif
 from PIL import Image
@@ -34,13 +21,29 @@ from lib.LocationService import LocationService
 import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
-#from flask import Flask, Response, jsonify, request
 import uvicorn
 from fastapi import FastAPI, Form, Request
 from starlette.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
 import os
 import threading
+import json
+
+"""
+ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
+
+# TODO / Improvements
+event system: EventNotifier vs Pyee vs this list: https://stackoverflow.com/a/16192256
+thinking about using blinker or pymitter
+
+
+1) idea: cv2 face detection to autofocus on faces (might be to high load on RP)
+2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
+3) improve autofocus algorithm
+4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
+
+"""
 
 
 # change to files path
@@ -96,10 +99,16 @@ async def message_stream(request: Request):
             # Checks for new messages and return them to client if any
             if new_messages():
                 yield {
-                    "event": "new_message",
-                    "id": "message_id",
+                    "event": "message",
+                    "id": uuid.uuid4(),
                     "retry": 15000,
                     "data": "message_content"
+                }
+                yield {
+                    "event": "stats/focuser",
+                    "id": uuid.uuid4(),
+                    "retry": 15000,
+                    "data": json.dumps({"key1": "value1", "key2": "value2"})
                 }
 
             await asyncio.sleep(1)
