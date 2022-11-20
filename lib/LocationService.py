@@ -9,11 +9,11 @@ from threading import Thread
 
 
 class LocationService:
-    def __init__(self, logger, notifier, CONFIG):
+    def __init__(self, logger, ee, CONFIG):
 
         self._logger = logger
         self._CONFIG = CONFIG
-        self._notifier = notifier
+        self._ee = ee
 
         self._thread = Thread(name="LocationServiceThread",
                               target=self._thread_func, daemon=True)

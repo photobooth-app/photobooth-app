@@ -5,16 +5,16 @@ import time
 
 
 class FocusState(object):
-    def __init__(self, frameServer, focuser, notifier, CONFIG):
+    def __init__(self, frameServer, focuser, ee, CONFIG):
         self._CONFIG = CONFIG
 
         self._frameServer = frameServer
         self._focuser = focuser
-        self._notifier = notifier
-        self._notifier.subscribe("onRefocus", self.doFocus)
-        self._notifier.subscribe(
+        self._ee = ee
+        self._ee.on("onRefocus", self.doFocus)
+        self._ee.on(
             "onCountdownTakePicture", self.setIgnoreFocusRequests)
-        self._notifier.subscribe(
+        self._ee.on(
             "onTakePictureFinished", self.setAllowFocusRequests)
 
         self._lastRunResult = []

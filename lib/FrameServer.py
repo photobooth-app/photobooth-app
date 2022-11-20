@@ -8,7 +8,7 @@ from picamera2 import MappedArray
 
 
 class FrameServer:
-    def __init__(self, picam2, logger, notifier, config):
+    def __init__(self, picam2, logger, ee, config):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
@@ -30,7 +30,7 @@ class FrameServer:
                               target=self._thread_func, daemon=True)
         self._statsthread = Thread(
             name='FrameServerStatsThread', target=self._statsthread_func, daemon=True)
-        self._notifier = notifier
+        self._ee = ee
 
         main_resolution = [
             dim // config.MAIN_RESOLUTION_REDUCE_FACTOR for dim in self._picam2.sensor_resolution]
@@ -121,7 +121,7 @@ class FrameServer:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
 
-                self._notifier.raise_event("onTakePicture")
+                self._ee.emit("onTakePicture")
 
                 # capture hq picture
                 (array,), self._metadata = self._picam2.capture_arrays(
@@ -131,7 +131,7 @@ class FrameServer:
                 # algorithm way too slow for raspi (takes minutes :( )
                 #array = cv2.fastNlMeansDenoisingColored(array, None, 5, 5, 7, 21)
 
-                self._notifier.raise_event("onTakePictureFinished")
+                self._ee.emit("onTakePictureFinished")
 
                 with self._hq_condition:
                     self._hq_array = array

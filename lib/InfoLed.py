@@ -16,17 +16,16 @@ LED_STRIP_TYPE = WS2812_STRIP  # or WS2811_STRIP_GRB
 
 
 class InfoLed():
-    def __init__(self, CONFIG, notifier, *args, **kwargs):
+    def __init__(self, CONFIG, ee, *args, **kwargs):
         self._CONFIG = CONFIG
 
         self.args = args
         self.kwargs = kwargs
 
-        self._notifier = notifier
-        self._notifier.subscribe("onCountdownTakePicture", self.startCountdown)
-        self._notifier.subscribe("onTakePicture", self.captureStart)
-        self._notifier.subscribe(
-            "onTakePictureFinished", self.captureFinished)
+        self._ee = ee
+        self._ee.on("onCountdownTakePicture", self.startCountdown)
+        self._ee.on("onTakePicture", self.captureStart)
+        self._ee.on("onTakePictureFinished", self.captureFinished)
 
         self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
                                                          target=self._countdownAnimationFun, daemon=True)

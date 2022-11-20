@@ -5,7 +5,6 @@ from datetime import datetime
 import piexif
 from PIL import Image
 import traceback
-from EventNotifier import Notifier
 import sys
 import time
 import cv2
@@ -29,15 +28,12 @@ from sse_starlette.sse import EventSourceResponse
 import os
 import threading
 import json
+from pymitter import EventEmitter
 
 """
 ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
 
 # TODO / Improvements
-event system: EventNotifier vs Pyee vs this list: https://stackoverflow.com/a/16192256
-thinking about using blinker or pymitter
-
-
 1) idea: cv2 face detection to autofocus on faces (might be to high load on RP)
 2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
 3) improve autofocus algorithm
@@ -52,6 +48,7 @@ os.chdir(sys.path[0])
 
 app = FastAPI()
 
+ee = EventEmitter()
 
 # setup config object
 config_instance = CONFIG()
@@ -59,6 +56,7 @@ config_instance.load()
 
 # logger
 logger = logging.getLogger(__name__)
+logging.getLogger().handlers.clear()  # remove default handlers if any
 logger.setLevel(config_instance.LOGGING_LEVEL)
 fh = logging.StreamHandler()
 fh_formatter = logging.Formatter(
@@ -79,9 +77,6 @@ if config_instance.DEBUG_LOGFILE:
     fh2 = logging.FileHandler("/tmp/frameserver.log")
     fh2.setFormatter(fh_formatter)
     logger.addHandler(fh2)
-
-notifier = Notifier(
-    ["onTakePicture", "onTakePictureFinished", "onCountdownTakePicture", "onRefocus"], logger)
 
 
 @app.get('/eventstream')
@@ -159,7 +154,7 @@ async def api_cmd(action, param):
             # save new val only if try succeeded
             config_instance.CAPTURE_EXPOSURE_MODE = param
     elif (action == "arm" and param == "countdown"):
-        notifier.raise_event("onCountdownTakePicture")
+        ee.emit("onCountdownTakePicture")
 
     return f"action={action}, param={param}"
 
@@ -242,6 +237,7 @@ def api_stats_locationservice():
     return (locationService._geolocation_response)
 
 
+@app.get('')
 @app.get('/')
 def index():
     return app.send_static_file('index.html')
@@ -269,28 +265,29 @@ app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
     picam2 = Picamera2()
-    infoled = InfoLed(config_instance, notifier)
-    frameServer = FrameServer(picam2, logger, notifier, config_instance)
+    infoled = InfoLed(config_instance, ee)
+    frameServer = FrameServer(picam2, logger, ee, config_instance)
     focuser = Focuser(config_instance.FOCUSER_DEVICE, config_instance)
-    focusState = FocusState(frameServer, focuser, notifier, config_instance)
+    focusState = FocusState(frameServer, focuser, ee, config_instance)
     rt = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
-                       notifier.raise_event, "onRefocus")
-    locationService = LocationService(logger, notifier, config_instance)
+                       ee.emit, "onRefocus")
+    locationService = LocationService(logger, ee, config_instance)
 
     frameServer.start()
 
     focuser.reset()
 
     # first time focus
-    notifier.raise_event("onRefocus")
+    ee.emit("onRefocus")
 
     # first time try to get location
     locationService.start()
 
+    # log all registered listener
+    logger.debug(ee.listeners_all())
+
     # serve files forever
     try:
-        #app.run(host='0.0.0.0', port=8000)
-        # uvicorn.run("fastapi_code:app")
         uvicorn.run(app, host="0.0.0.0", port=8000)
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
