@@ -10,7 +10,7 @@ class CONFIG():
     def __init__(self):
         # debugging
         self.DEBUG_LOGFILE = False
-        self.LOGGING_LEVEL = logging.INFO
+        self.LOGGING_LEVEL = logging.DEBUG
 
         # quality
         self.MAIN_RESOLUTION_REDUCE_FACTOR = 1
