@@ -9,7 +9,6 @@ import sys
 import time
 import cv2
 import logging
-from picamera2 import Picamera2
 from lib.FrameServer import FrameServer
 from lib.Autofocus import FocusState
 # import for Arducam 16mp sony imx519
@@ -40,7 +39,7 @@ ImageServer used to stream photos from raspberry pi camera for liveview and high
 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 
 """
-
+import signal
 
 # change to files path
 os.chdir(sys.path[0])
@@ -49,6 +48,8 @@ os.chdir(sys.path[0])
 app = FastAPI()
 
 ee = EventEmitter()
+
+request_stop = False
 
 # setup config object
 config_instance = CONFIG()
@@ -79,6 +80,19 @@ if config_instance.DEBUG_LOGFILE:
     logger.addHandler(fh2)
 
 
+def signal_handler(sig, frame):
+    global request_stop
+
+    request_stop = True
+
+    logger.info("request_stop set True to stop ongoing processes")
+    # TODO! this seems not to work properly yet, function is not called!
+
+
+# signal CTRL-C and systemctl stop
+signal.signal(signal.SIGINT, signal_handler)
+
+
 @app.get('/eventstream')
 async def message_stream(request: Request):
     def new_messages():
@@ -89,6 +103,8 @@ async def message_stream(request: Request):
         while True:
             # If client closes connection, stop sending events
             if await request.is_disconnected():
+                break
+            if request_stop:
                 break
 
             # Checks for new messages and return them to client if any
@@ -183,7 +199,7 @@ def api_cmd_capture(filename: str = Form()):
         # grab metadata and store to exif
         now = datetime.now()
         zero_ifd = {piexif.ImageIFD.Make: "Arducam",
-                    piexif.ImageIFD.Model: picam2.camera.id,
+                    piexif.ImageIFD.Model: frameServer._picam2.camera.id,
                     piexif.ImageIFD.Software: "Photobooth Imageserver"}
         total_gain = frameServer._metadata["AnalogueGain"] * \
             frameServer._metadata["DigitalGain"]
@@ -246,6 +262,9 @@ def index():
 def gen_stream(frameServer):
     # get camera frame
     while True:
+        if request_stop:
+            break
+
         frame = frameServer.wait_for_lores_frame()
 
         is_success, buffer = cv2.imencode(
@@ -264,9 +283,8 @@ def video_stream():
 app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
-    picam2 = Picamera2()
     infoled = InfoLed(config_instance, ee)
-    frameServer = FrameServer(picam2, logger, ee, config_instance)
+    frameServer = FrameServer(logger, ee, config_instance)
     focuser = Focuser(config_instance.FOCUSER_DEVICE, config_instance)
     focusState = FocusState(frameServer, focuser, ee, config_instance)
     rt = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
@@ -292,4 +310,3 @@ if __name__ == '__main__':
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()
-        picam2.stop()

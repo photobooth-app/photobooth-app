@@ -8,12 +8,12 @@ from picamera2 import MappedArray
 
 
 class FrameServer:
-    def __init__(self, picam2, logger, ee, config):
+    def __init__(self, logger, ee, config):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
-        self._picam2 = picam2
+        self._picam2 = Picamera2()
         self._logger = logger
         self._config = config
 
@@ -79,6 +79,8 @@ class FrameServer:
         self._running = False
         self._thread.join(1)
         self._statsthread.join(1)
+
+        self._picam2.stop()
 
     def trigger_hq_capture(self):
         """switch one time to hq capture"""
