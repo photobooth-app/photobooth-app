@@ -1,3 +1,4 @@
+import json
 from picamera2 import Picamera2
 import psutil
 import threading
@@ -57,6 +58,9 @@ class FrameServer:
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
 
+        # register to send initial data SSE
+        self._ee.on("publishSSE/initial", self._publishSSEInitial)
+
     @property
     def count(self):
         """A count of the number of frames received."""
@@ -87,7 +91,7 @@ class FrameServer:
         self._trigger_hq_capture = True
 
     def _statsthread_func(self):
-        CALC_EVERY = 2  # update every x seconds only
+        CALC_EVERY = 1  # update every x seconds only
 
         # FPS = 1 / time to process loop
         start_time = time.time()  # start time of the loop
@@ -97,11 +101,13 @@ class FrameServer:
             if (time.time() > (start_time+CALC_EVERY)):
                 self._fps = round(float(self._count) /
                                   (time.time() - start_time), 1)
-                self._logger.debug(f"{self._fps} fps")
 
                 # reset
                 self._count = 0
                 start_time = time.time()
+
+                # send metadata
+                self._publishSSE_metadata()
 
             # thread wait otherwise 100% load ;)
             time.sleep(0.05)
@@ -208,3 +214,10 @@ class FrameServer:
             except:
                 # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
                 pass
+
+    def _publishSSEInitial(self):
+        self._publishSSE_metadata()
+
+    def _publishSSE_metadata(self):
+        self._ee.emit("publishSSE", sse_event="frameserver/metadata",
+                      sse_data=json.dumps(self._metadata))

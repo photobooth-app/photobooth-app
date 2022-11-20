@@ -1,3 +1,4 @@
+import json
 from fractions import Fraction
 import time
 import googlemaps
@@ -24,9 +25,9 @@ class LocationService:
         self._wifi_access_points = []
 
         # response data
-        # stores geolocation response; None if no request was sent yet
+        # stores geolocation response; {} if no request was sent yet
         # https://developers.google.com/maps/documentation/geolocation/overview#responses
-        self._geolocation_response = {}
+        self._setGeolocation({})
 
         try:
             self._wifi = pywifi.PyWiFi()
@@ -38,6 +39,8 @@ class LocationService:
             self._logger.error(
                 f"geolocation setup failed, stopping thread, error {e}")
             self._init_successful = False   # thread cannot be enabled.
+
+        self._ee.on("publishSSE/initial", self._publishSSEInitial)
 
     def start(self):
         if (self._init_successful):
@@ -154,7 +157,8 @@ class LocationService:
                 consider_ip=self._CONFIG.LOCATION_SERVICE_CONSIDER_IP, wifi_access_points=self._wifi_access_points)
 
             self._logger.info(f"geolocation results: {results}")
-            self._geolocation_response = (results)
+
+            self._setGeolocation(results)
         except Exception as e:
             self._logger.error(f"geolocation request failed, error {e}")
 
@@ -179,3 +183,14 @@ class LocationService:
 
         # send request
         self.requestGeolocation()
+
+    def _setGeolocation(self, results):
+        self._geolocation_response = results
+        self._publishSSE_geolocation()
+
+    def _publishSSEInitial(self):
+        self._publishSSE_geolocation()
+
+    def _publishSSE_geolocation(self):
+        self._ee.emit("publishSSE", sse_event="locationservice/geolocation",
+                      sse_data=json.dumps(self._geolocation_response))

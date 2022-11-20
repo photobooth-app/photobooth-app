@@ -50,8 +50,5 @@ class Focuser:
 
         self.focus_value = value
 
-        if self._CONFIG.DEBUG:
-            print("set focus_absolute={}".format(value))
-
 
 pass

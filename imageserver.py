@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+import json
+import signal
+from queue import Queue
 import uuid
 import asyncio
 from datetime import datetime
@@ -23,10 +26,9 @@ import uvicorn
 from fastapi import FastAPI, Form, Request
 from starlette.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
-from sse_starlette.sse import EventSourceResponse
+from sse_starlette import EventSourceResponse, ServerSentEvent
 import os
 import threading
-import json
 from pymitter import EventEmitter
 
 """
@@ -39,7 +41,6 @@ ImageServer used to stream photos from raspberry pi camera for liveview and high
 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 
 """
-import signal
 
 # change to files path
 os.chdir(sys.path[0])
@@ -88,49 +89,85 @@ def signal_handler(sig, frame):
     logger.info("request_stop set True to stop ongoing processes")
     # TODO! this seems not to work properly yet, function is not called!
 
+    # sys.exit(0)
+
 
 # signal CTRL-C and systemctl stop
 signal.signal(signal.SIGINT, signal_handler)
 
 
-@app.get('/eventstream')
-async def message_stream(request: Request):
-    def new_messages():
-        # Add logic here to check for new messages
-        yield 'Hello World'
+# rtQueue1 = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
+#                         ee.emit, event="publishSSE", sse_event="test", sse_data="data")
 
-    async def event_generator():
-        while True:
-            # If client closes connection, stop sending events
-            if await request.is_disconnected():
-                break
-            if request_stop:
-                break
 
-            # Checks for new messages and return them to client if any
-            if new_messages():
-                yield {
-                    "event": "message",
-                    "id": uuid.uuid4(),
-                    "retry": 15000,
-                    "data": "message_content"
-                }
-                yield {
-                    "event": "stats/focuser",
-                    "id": uuid.uuid4(),
-                    "retry": 15000,
-                    "data": json.dumps({"key1": "value1", "key2": "value2"})
-                }
-                yield {
-                    "event": "stats/geolocation",
-                    "id": uuid.uuid4(),
-                    "retry": 15000,
-                    "data": json.dumps((locationService._geolocation_response))
-                }
+@app.get("/eventstream")
+async def subscribe(request: Request):
+    # principle with queues like described here:
+    # https://maxhalford.github.io/blog/flask-sse-no-deps/
+    # and https://github.com/sysid/sse-starlette
+    # and https://github.com/encode/starlette/issues/20#issuecomment-587410233
+    # ... this code example seems to be cleaner https://github.com/sysid/sse-starlette/blob/master/examples/custom_generator.py
 
-            await asyncio.sleep(1)
+    # local message queue
+    queue = Queue()
 
-    return EventSourceResponse(event_generator())
+    def add_subscriptions():
+        logger.debug(f"add subscription for publishSSE")
+        ee.on("publishSSE", addToQueue)
+
+    def remove_subscriptions():
+        logger.debug(f"remove subscriptions for publishSSE")
+        ee.off("publishSSE", addToQueue)
+
+    def addToQueue(sse_event, sse_data):
+        logger.debug(f"addToQueue called event={sse_event} data={sse_data}")
+        queue.put_nowait(ServerSentEvent(
+            id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+
+    async def event_iterator():
+        try:
+            while True:
+                if await request.is_disconnected():
+                    logger.info(f"request.is_disconnected() true")
+                    break
+                if request_stop:
+                    logger.info(f"event_iterator stop requested")
+                    break
+
+                try:
+                    # try to get a event/message off the queue. timeout after 1 second to allow while loop break if client disconnected
+                    # attention: queue.get(timeout=1) is blocking for 1sec - this blocks also other webserver threads!
+                    # workaround is very small timeout
+                    #event = queue.get(timeout=1)
+                    event = queue.get(timeout=0.005)  # TODO optimize
+                    # event = queue.get_nowait()  # not an option as this slows down the process (100% load for 1 cpu core)
+                except:
+                    continue
+
+                # send data to client
+                yield event
+
+        except asyncio.CancelledError as e:
+            logger.info(
+                f"Disconnected from client (via refresh/close) {request.client}")
+            # Do any other cleanup, if any
+            remove_subscriptions()
+
+            raise e
+
+    logger.info(f"Client connected {request.client}")
+    add_subscriptions()
+
+    # initial messages on client connect
+    addToQueue(sse_event="message",
+               sse_data=f"Client connected {request.client}")
+    addToQueue(sse_event="config/currentconfig",
+               sse_data=json.dumps(config_instance.__dict__))  # TODO: needs to be changed to initial publish as all other.
+    # all modules can register this event to send initial messages on connection
+
+    ee.emit("publishSSE/initial")
+
+    return EventSourceResponse(event_iterator(), ping=1)
 
 
 @app.get("/debug/threads")
@@ -306,7 +343,9 @@ if __name__ == '__main__':
 
     # serve files forever
     try:
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        # log_level="trace", default info
+        uvicorn.run(app, host="0.0.0.0", port=8000,
+                    log_level="info")
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()

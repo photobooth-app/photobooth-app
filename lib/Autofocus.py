@@ -1,3 +1,4 @@
+import json
 import cv2
 from queue import Queue
 import threading
@@ -131,6 +132,9 @@ def statsThread(frameServer, focuser, focusState):
     # reverse search direction next time.
     focusState.direction *= -1
 
+    focusState._ee.emit("publishSSE", sse_event="autofocus/sharpness",
+                        sse_data=json.dumps(sharpnessList))
+
     if focusState._CONFIG.DEBUG:
         print(sharpnessList)
         print("autofocus run finished")
@@ -145,8 +149,8 @@ def focusThread(focuser, focusState):
     while not focusState.isFinish():
 
         position, sharpness = focusState.sharpnessList.get()
-        if focusState._CONFIG.DEBUG:
-            print("got stats data: {}, {}".format(position, sharpness))
+        # if focusState._CONFIG.DEBUG:
+        #    print("got stats data: {}, {}".format(position, sharpness))
 
         if lastSharpness / sharpness >= 1:
             continuousDecline += 1

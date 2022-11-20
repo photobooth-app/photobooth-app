@@ -59,8 +59,6 @@ class CONFIG():
         # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
         self.LOCATION_SERVICE_THRESHOLD_ACCURATE = 1000
 
-        pass
-
     def reset_default_values(self):
         self.__dict__ = vars(CONFIG())
 
@@ -68,6 +66,8 @@ class CONFIG():
             os.remove(CONFIG_FILENAME)
         except:
             print("delete settings.json file failed.")
+
+        # self._publishSSE_currentconfig()
 
     def load(self):
         try:
@@ -81,6 +81,9 @@ class CONFIG():
                         self.__dict__[key] = read_settings[key]
                         print(
                             f"updated config[{key}] set to {read_settings[key]}")
+
+            # self._publishSSE_currentconfig()
+
         except Exception as e:
             print("load settings failed (no file?)")
             print(e)
@@ -97,3 +100,12 @@ class CONFIG():
         print(save_dict)
         with open(CONFIG_FILENAME, "w") as write_file:
             json.dump(save_dict, write_file, indent=4)
+
+        # self._publishSSE_currentconfig()
+
+    def _publishSSEInitial(self):   # TODO, refactor class to make this possible
+        self._publishSSE_currentconfig()
+
+    def _publishSSE_currentconfig(self):
+        self._ee.emit("publishSSE", sse_event="config/currentconfig",
+                      sse_data=json.dumps(self.__dict__))
