@@ -133,6 +133,13 @@ class FrameServer:
     def _thread_func(self):
         while self._running:
 
+            if self._trigger_hq_capture == True and self._currentmode != self._captureConfig:
+                # ensure cam is in capture quality mode even if there was no countdown triggered beforehand
+                # usually there is a countdown, but this is to be safe
+                self._logger.warning(
+                    f"force switchmode to capture config right before taking picture (no countdown?!)")
+                self._setConfigCapture()
+
             if (not self._currentmode == self._lastmode) and self._lastmode != None:
                 self._logger.info(f"switch_mode invoked")
                 self._picam2.switch_mode(self._currentmode)
