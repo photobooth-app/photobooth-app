@@ -216,9 +216,20 @@ async def api_cmd(action, param):
 
 
 @app.get("/cmd/capture")
+def api_cmd_capture_get():
+    return capture(f"{time.strftime('%Y%m%d_%H%M%S')}.jpg")
+
+
 @app.post("/cmd/capture")
-def api_cmd_capture(filename: str = Body(f"{time.strftime('%Y%m%d_%H%M%S')}.jpg")):
+def api_cmd_capture_post(filename: str = Body("capture.jpg")):
+    return capture(filename)
+
+
+def capture(filename):
     start_time = time.time()
+
+    if not filename:
+        filename = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
 
     #logger.debug(f"request data={request}")
 
