@@ -25,6 +25,7 @@ class FrameServer:
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
         self._running = True
+        self._currentmode = None
         self._count = 0
         self._fps = 0
         self._thread = Thread(name='FrameServerMainThread',
@@ -33,12 +34,17 @@ class FrameServer:
             name='FrameServerStatsThread', target=self._statsthread_func, daemon=True)
         self._ee = ee
 
-        main_resolution = [
-            dim // config.MAIN_RESOLUTION_REDUCE_FACTOR for dim in self._picam2.sensor_resolution]
-        main_stream = {"size": main_resolution}
-        lores_stream = {"size": config.LORES_RESOLUTION}
-        self._picam2.configure(self._picam2.create_still_configuration(
-            main_stream, lores_stream, encode="lores", buffer_count=3, display="lores"))
+        # config HQ mode (used for picture capture and live preview on countdown)
+        self._captureConfig = self._picam2.create_still_configuration(
+            {"size": self._config.CAPTURE_CAM_RESOLUTION}, {"size": self._config.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores")
+
+        # config preview mode (used for permanent live view)
+        self._previewConfig = self._picam2.create_video_configuration(
+            {"size": self._config.PREVIEW_CAM_RESOLUTION}, {"size": self._config.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores")
+
+        # activate preview mode on init
+        self._setConfigPreview()
+        self._picam2.configure(self._currentmode)
 
         logger.info(f"camera_config: {self._picam2.camera_config}")
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
@@ -60,6 +66,18 @@ class FrameServer:
 
         # register to send initial data SSE
         self._ee.on("publishSSE/initial", self._publishSSEInitial)
+
+        # when countdown starts change mode to HQ. after picture was taken change back.
+        self._ee.on("onCountdownTakePicture",
+                    self._setConfigCapture)
+
+    def _setConfigCapture(self):
+        self._lastmode = self._currentmode
+        self._currentmode = self._captureConfig
+
+    def _setConfigPreview(self):
+        self._lastmode = self._currentmode
+        self._currentmode = self._previewConfig
 
     @property
     def count(self):
@@ -115,6 +133,11 @@ class FrameServer:
     def _thread_func(self):
         while self._running:
 
+            if (not self._currentmode == self._lastmode) and self._lastmode != None:
+                self._logger.info(f"switch_mode invoked")
+                self._picam2.switch_mode(self._currentmode)
+                self._lastmode = self._currentmode
+
             if not self._trigger_hq_capture:
                 (orig_array,), self._metadata = self._picam2.capture_arrays(
                     ["lores"])
@@ -136,14 +159,14 @@ class FrameServer:
                     ["main"])
                 self._logger.debug(self._metadata)
 
-                # algorithm way too slow for raspi (takes minutes :( )
-                #array = cv2.fastNlMeansDenoisingColored(array, None, 5, 5, 7, 21)
-
                 self._ee.emit("onTakePictureFinished")
 
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
+
+                # switch back to preview mode
+                self._setConfigPreview()
 
             self._count += 1
 

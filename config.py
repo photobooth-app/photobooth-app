@@ -13,8 +13,10 @@ class CONFIG():
         self.LOGGING_LEVEL = logging.DEBUG
 
         # quality
-        self.MAIN_RESOLUTION_REDUCE_FACTOR = 1
-        self.LORES_RESOLUTION = (1280, 720)
+        self.CAPTURE_CAM_RESOLUTION = (4656, 3496)
+        self.CAPTURE_VIDEO_RESOLUTION = (1280, 720)
+        self.PREVIEW_CAM_RESOLUTION = (2328, 1748)
+        self.PREVIEW_VIDEO_RESOLUTION = (1280, 720)
         self.LORES_QUALITY = 80
         self.HIRES_QUALITY = 90
 
@@ -25,9 +27,9 @@ class CONFIG():
 
         # autofocus
         # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-        self.FOCUSER_MIN_VALUE = 0
-        self.FOCUSER_MAX_VALUE = 4000
-        self.FOCUSER_DEF_VALUE = 400
+        self.FOCUSER_MIN_VALUE = 300
+        self.FOCUSER_MAX_VALUE = 3000
+        self.FOCUSER_DEF_VALUE = 800
         self.FOCUSER_STEP = 50
         self.FOCUSER_MOVE_TIME = 0.066
         self.FOCUSER_JPEG_QUALITY = 85
