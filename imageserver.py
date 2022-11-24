@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+from fastapi import Body, FastAPI
+import shutil
+import glob
 import json
 import signal
 from queue import Queue
@@ -23,7 +26,7 @@ import os
 from lib.InfoLed import InfoLed
 from config import CONFIG
 import uvicorn
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Request, Body
 from starlette.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from sse_starlette import EventSourceResponse, ServerSentEvent
@@ -212,15 +215,16 @@ async def api_cmd(action, param):
     return f"action={action}, param={param}"
 
 
+@app.get("/cmd/capture")
 @app.post("/cmd/capture")
-def api_cmd_capture(filename: str = Form()):
+def api_cmd_capture(filename: str = Body(f"{time.strftime('%Y%m%d_%H%M%S')}.jpg")):
     start_time = time.time()
 
     #logger.debug(f"request data={request}")
 
     # decode -d "foo=bar" (application/x-www-form-urlencoded) sent by curl like:
-    # curl -X POST -d 'filename=%s' http://localhost:8000/cmd/capture
-    #filename = request.form['filename']
+    # curl -X POST localhost:8000/cmd/capture -H 'accept: application/json' -H 'Content-Type: application/json' -d '"%s"'
+    # filename = await request.json()  # ['filename']
     logger.debug(f"capture to filename: {filename}")
 
     try:
@@ -266,6 +270,9 @@ def api_cmd_capture(filename: str = Form()):
         image.save(f"{filename}",
                    quality=config_instance.HIRES_QUALITY, exif=exif_bytes)
 
+        # later we have our own photobooth frontend - for now just copy to the development frontend for testing...
+        shutil.copy2(filename, "data/images/")
+
         processing_time = round((time.time() - start_time), 1)
         logger.info(
             f"capture to file {filename} successfull, process took {processing_time}s")
@@ -288,6 +295,21 @@ def api_stats_focuser():
 @app.get("/stats/locationservice")
 def api_stats_locationservice():
     return (locationService._geolocation_response)
+
+
+@app.get("/gallery/images")
+def api_gallery_images():
+    image_paths = sorted(glob.glob("data/images/*.jpg"),
+                         key=os.path.getmtime, reverse=True)
+
+    output = []
+    for image_path in image_paths:
+        output.append({
+            "thumbnail": image_path,
+            "image": image_path,
+            "preview": image_path
+        })
+    return output
 
 
 @app.get('')
@@ -316,8 +338,12 @@ def video_stream():
                              media_type='multipart/x-mixed-replace; boundary=frame')
 
 
+# serve data directory holding images, thumbnails, ...
+app.mount('/data', StaticFiles(directory='data'), name="data")
+
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
+
 
 if __name__ == '__main__':
     infoled = InfoLed(config_instance, ee)
