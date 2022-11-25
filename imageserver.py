@@ -5,7 +5,7 @@ import threading
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, Body
+from fastapi import FastAPI, Request, Body, HTTPException
 import uvicorn
 from lib.InfoLed import InfoLed
 import os
@@ -272,11 +272,22 @@ def capture(filename):
         exif_bytes = piexif.dump(exif_dict)
 
         image = Image.fromarray(frame.astype('uint8'), 'RGB')
+
+        # this one is for photobooth
         image.save(f"{filename}",
                    quality=config_instance.HIRES_QUALITY, exif=exif_bytes)
 
-        # later we have our own photobooth frontend - for now just copy to the development frontend for testing...
+        # these are copies for qPhotobooth
         shutil.copy2(filename, "data/images/")
+        basename_file = os.path.basename(filename)
+        imageth = image.copy()
+        imageth.thumbnail(config_instance.THUMBNAIL_SIZE)
+        imageth.save(f'data/thumbnail/{basename_file}',
+                     quality=config_instance.THUMBNAIL_QUALITY)
+        imageprev = image.copy()
+        imageprev.thumbnail(config_instance.PREVIEW_SIZE)
+        imageprev.save(f'data/preview/{basename_file}',
+                       quality=config_instance.PREVIEW_QUALITY)
 
         processing_time = round((time.time() - start_time), 1)
         logger.info(
@@ -304,17 +315,27 @@ def api_stats_locationservice():
 
 @app.get("/gallery/images")
 def api_gallery_images():
-    image_paths = sorted(glob.glob("data/images/*.jpg"),
-                         key=os.path.getmtime, reverse=True)
+    try:
+        image_paths = sorted(glob.glob("data/image/*.jpg"),
+                             key=os.path.getmtime, reverse=True)
 
-    output = []
-    for image_path in image_paths:
-        output.append({
-            "thumbnail": image_path,
-            "image": image_path,
-            "preview": image_path
-        })
-    return output
+        output = []
+
+        for image_path in image_paths:
+            data_dir = "data/"
+            image_basepath = os.path.basename(image_path)
+            output.append({
+                "caption": f"{image_basepath}",
+                "filename": f"{image_basepath}",
+                "ext_download_url": str(config_instance.EXT_DOWNLOAD_URL).format(filename=image_basepath),
+                "thumbnail": f"{data_dir}/thumbnail/{image_basepath}",
+                "image": f"{data_dir}/image/{image_basepath}",
+                "preview": f"{data_dir}/preview/{image_basepath}",
+            })
+        return output
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"something went wrong, Exception: {e}")
 
 
 @app.get('')

@@ -15,7 +15,13 @@ class CONFIG():
         self.PREVIEW_CAM_RESOLUTION = (2328, 1748)
         self.PREVIEW_VIDEO_RESOLUTION = (1280, 720)
         self.LORES_QUALITY = 80
+        self.THUMBNAIL_SIZE = (400, 400)
+        self.THUMBNAIL_QUALITY = 60
+        self.PREVIEW_SIZE = (1000, 1000)
+        self.PREVIEW_QUALITY = 75
         self.HIRES_QUALITY = 90
+
+        self.EXT_DOWNLOAD_URL = "http://test.example.com/{filename}"
 
         # capture
         # Normal/Short(/Long/Custom)
