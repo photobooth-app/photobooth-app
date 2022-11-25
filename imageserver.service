@@ -5,8 +5,9 @@ After=multi-user.target
 [Service]
 Type=simple
 Restart=always
-#Adjust following line if necessary: ExecStart=/usr/bin/python3 PATH_TO_YOUR_imageserver.py_FILE
-ExecStart=/usr/bin/python3 /home/pi/imageserver/imageserver.py
+#Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_imageserver.py_FILE
+WordkingDirectory=/home/pi/imageserver/
+ExecStart=/usr/bin/python3 imageserver.py
 
 [Install]
 WantedBy=multi-user.target
