@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import psutil
+from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
 import threading
 from sse_starlette import EventSourceResponse, ServerSentEvent
@@ -89,10 +91,6 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
-# rtQueue1 = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
-#                         ee.emit, event="publishSSE", sse_event="test", sse_data="data")
-
-
 @app.get("/eventstream")
 async def subscribe(request: Request):
     # principle with queues like described here:
@@ -102,7 +100,7 @@ async def subscribe(request: Request):
     # ... this code example seems to be cleaner https://github.com/sysid/sse-starlette/blob/master/examples/custom_generator.py
 
     # local message queue
-    queue = Queue()
+    queue = Queue()  # TODO: limit max queue size in case client doesnt catch up so fast?
 
     def add_subscriptions():
         logger.debug(f"add subscription for publishSSE")
@@ -160,6 +158,14 @@ async def subscribe(request: Request):
     ee.emit("publishSSE/initial")
 
     return EventSourceResponse(event_iterator(), ping=1)
+
+
+@app.get("/debug/health")
+async def api_debug_health():
+    la = LoadAverage(
+        minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
+    cpu_temperature = round(CPUTemperature().temperature, 1)
+    return ({"cpu_current_load": la.value, "cpu_above_threshold": la.is_active, "cpu_temperature": cpu_temperature})
 
 
 @app.get("/debug/threads")
@@ -340,17 +346,22 @@ def index():
 
 
 def gen_stream(frameServer):
-    # get camera frame
+    skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+
     while True:
         if request_stop:
             break
 
         frame = frameServer.wait_for_lores_frame()
 
-        is_success, buffer = cv2.imencode(
-            ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, config_instance.LORES_QUALITY])
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
+        if (skip_counter <= 1):
+            is_success, buffer = cv2.imencode(
+                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, config_instance.LORES_QUALITY])
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
+            skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+        else:
+            skip_counter -= 1
 
 
 @app.get('/stream.mjpg')

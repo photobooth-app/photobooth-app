@@ -20,6 +20,7 @@ class CONFIG():
         self.PREVIEW_SIZE = (1000, 1000)
         self.PREVIEW_QUALITY = 75
         self.HIRES_QUALITY = 90
+        self.PREVIEW_PREVIEW_FRAMERATE_DIVIDER = 3
 
         self.EXT_DOWNLOAD_URL = "http://test.example.com/{filename}"
 

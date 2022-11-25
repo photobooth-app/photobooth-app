@@ -110,7 +110,7 @@ class FrameServer:
         self._trigger_hq_capture = True
 
     def _statsthread_func(self):
-        CALC_EVERY = 1  # update every x seconds only
+        CALC_EVERY = 2  # update every x seconds only
 
         # FPS = 1 / time to process loop
         start_time = time.time()  # start time of the loop
