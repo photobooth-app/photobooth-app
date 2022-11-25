@@ -6,16 +6,17 @@ from threading import Condition, Thread
 import cv2
 import time
 from picamera2 import MappedArray
+import logging
+logger = logging.getLogger(__name__)
 
 
 class FrameServer:
-    def __init__(self, logger, ee, config):
+    def __init__(self, ee, config):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = Picamera2()
-        self._logger = logger
         self._config = config
 
         self._hq_array = None
@@ -53,7 +54,7 @@ class FrameServer:
         tuning = Picamera2.load_tuning_file(config.CAMERA_TUNINGFILE)
         algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
         self._availAeExposureModes = (algo["exposure_modes"].keys())
-        self._logger.info(
+        logger.info(
             f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
 
         self.setAeExposureMode(config.CAPTURE_EXPOSURE_MODE)
@@ -136,12 +137,12 @@ class FrameServer:
             if self._trigger_hq_capture == True and self._currentmode != self._captureConfig:
                 # ensure cam is in capture quality mode even if there was no countdown triggered beforehand
                 # usually there is a countdown, but this is to be safe
-                self._logger.warning(
+                logger.warning(
                     f"force switchmode to capture config right before taking picture (no countdown?!)")
                 self._setConfigCapture()
 
             if (not self._currentmode == self._lastmode) and self._lastmode != None:
-                self._logger.info(f"switch_mode invoked")
+                logger.info(f"switch_mode invoked")
                 self._picam2.switch_mode(self._currentmode)
                 self._lastmode = self._currentmode
 
@@ -164,7 +165,7 @@ class FrameServer:
                 # capture hq picture
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["main"])
-                self._logger.debug(self._metadata)
+                logger.debug(self._metadata)
 
                 self._ee.emit("onTakePictureFinished")
 
@@ -192,16 +193,16 @@ class FrameServer:
                 return self._hq_array
 
     def setAeExposureMode(self, newmode):
-        self._logger.info(f"setAeExposureMode, try to set to {newmode}")
+        logger.info(f"setAeExposureMode, try to set to {newmode}")
         try:
             newmode_Int = (
                 list(self._availAeExposureModes).index(newmode.lower()))
             self._picam2.set_controls({"AeExposureMode": newmode_Int})
         except:
-            self._logger.error(
+            logger.error(
                 f"setAeExposureMode failed! Mode {newmode} not available")
 
-        self._logger.info(
+        logger.info(
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):

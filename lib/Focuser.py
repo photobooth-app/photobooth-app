@@ -1,4 +1,7 @@
+from os.path import exists as file_exists
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 ###
 # This script works after installing the driver for 16mp imx519 driver from arducam
@@ -11,7 +14,6 @@ import os
 # ./install_pivariety_pkgs.sh - p imx519_kernel_driver_low_speed
 #
 # driver may have to be reinstalled after system updates!
-from os.path import exists as file_exists
 
 
 class Focuser:
@@ -45,8 +47,8 @@ class Focuser:
         try:
             os.system(
                 "v4l2-ctl -c focus_absolute={} -d {}".format(value, self._device))
-        except:
-            print("error")
+        except Exception as e:
+            logger.error(f"Error on focus command: {e}")
 
         self.focus_value = value
 

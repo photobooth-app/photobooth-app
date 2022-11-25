@@ -1,38 +1,62 @@
 #!/usr/bin/python3
-from fastapi import Body, FastAPI
-import shutil
-import glob
-import json
-import signal
-from queue import Queue
-import uuid
-import asyncio
-from datetime import datetime
-import piexif
-from PIL import Image
-import traceback
-import sys
-import time
-import cv2
-import logging
-from lib.FrameServer import FrameServer
-from lib.Autofocus import FocusState
-# import for Arducam 16mp sony imx519
-from lib.Focuser import Focuser
-# from lib.FocuserImxArdu64 import Focuser    # import for Arducam 64mp
-from lib.RepeatedTimer import RepeatedTimer
-from lib.LocationService import LocationService
-import os
-from lib.InfoLed import InfoLed
-from config import CONFIG
-import uvicorn
-from fastapi import FastAPI, Request, Body
-from starlette.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse
-from sse_starlette import EventSourceResponse, ServerSentEvent
-import os
-import threading
+
 from pymitter import EventEmitter
+import threading
+from sse_starlette import EventSourceResponse, ServerSentEvent
+from fastapi.responses import StreamingResponse
+from starlette.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, Body
+import uvicorn
+from lib.InfoLed import InfoLed
+import os
+from lib.LocationService import LocationService
+from lib.RepeatedTimer import RepeatedTimer
+from lib.Focuser import Focuser
+from lib.Autofocus import FocusState
+from lib.FrameServer import FrameServer
+import cv2
+import time
+import sys
+from PIL import Image
+import piexif
+from datetime import datetime
+import asyncio
+import uuid
+from queue import Queue
+import signal
+import json
+import glob
+import shutil
+from config import CONFIG
+import logging
+
+# setup config object
+config_instance = CONFIG()
+config_instance.load()
+
+# event system
+ee = EventEmitter()
+
+
+class EventstreamLogHandler(logging.Handler):
+    """
+    Logging handler to emit events to eventstream; to be displayed in console.log on browser frontend
+    """
+
+    def __init__(self):
+        logging.Handler.__init__(self)
+
+    def emit(self, record):
+        ee.emit("publishSSE", sse_event="message",
+                sse_data=self.format(record))
+
+
+# logger
+logging.config.dictConfig(config_instance.LOGGING_CONFIG)
+logger = logging.getLogger(__name__)
+
+
+logger.info('Welcome to qPhotobooth')
 
 """
 ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
@@ -51,37 +75,8 @@ os.chdir(sys.path[0])
 
 app = FastAPI()
 
-ee = EventEmitter()
 
 request_stop = False
-
-# setup config object
-config_instance = CONFIG()
-config_instance.load()
-
-# logger
-logger = logging.getLogger(__name__)
-logging.getLogger().handlers.clear()  # remove default handlers if any
-logger.setLevel(config_instance.LOGGING_LEVEL)
-fh = logging.StreamHandler()
-fh_formatter = logging.Formatter(
-    '%(asctime)s %(levelname)s %(lineno)d:%(filename)s(%(process)d) - %(message)s')
-fh.setFormatter(fh_formatter)
-logger.addHandler(fh)
-
-
-def log_exceptions(type, value, tb):
-    logger.exception(
-        f"Uncaught exception: {str(value)} {(traceback.format_tb(tb))}")
-
-
-# Install exception handler
-sys.excepthook = log_exceptions
-
-if config_instance.DEBUG_LOGFILE:
-    fh2 = logging.FileHandler("/tmp/frameserver.log")
-    fh2.setFormatter(fh_formatter)
-    logger.addHandler(fh2)
 
 
 def signal_handler(sig, frame):
@@ -123,7 +118,6 @@ async def subscribe(request: Request):
         ee.off("publishSSE", addToQueue)
 
     def addToQueue(sse_event, sse_data):
-        logger.debug(f"addToQueue called event={sse_event} data={sse_data}")
         queue.put_nowait(ServerSentEvent(
             id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
 
@@ -358,12 +352,12 @@ app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
     infoled = InfoLed(config_instance, ee)
-    frameServer = FrameServer(logger, ee, config_instance)
+    frameServer = FrameServer(ee, config_instance)
     focuser = Focuser(config_instance.FOCUSER_DEVICE, config_instance)
     focusState = FocusState(frameServer, focuser, ee, config_instance)
     rt = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
                        ee.emit, "onRefocus")
-    locationService = LocationService(logger, ee, config_instance)
+    locationService = LocationService(ee, config_instance)
 
     frameServer.start()
 

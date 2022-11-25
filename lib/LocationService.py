@@ -4,15 +4,15 @@ import time
 import googlemaps
 import pywifi
 from threading import Thread
-
+import logging
+logger = logging.getLogger(__name__)
 # using google geolocation api for positioning
 # might add a gps receiver and pynmea2 in future also, but mostly systems inside so no gps avail
 
 
 class LocationService:
-    def __init__(self, logger, ee, CONFIG):
+    def __init__(self, ee, CONFIG):
 
-        self._logger = logger
         self._CONFIG = CONFIG
         self._ee = ee
 
@@ -36,7 +36,7 @@ class LocationService:
             self._client = googlemaps.Client(
                 self._CONFIG.LOCATION_SERVICE_API_KEY)
         except Exception as e:
-            self._logger.error(
+            logger.error(
                 f"geolocation setup failed, stopping thread, error {e}")
             self._init_successful = False   # thread cannot be enabled.
 
@@ -48,10 +48,10 @@ class LocationService:
                 self._running = True
                 self._thread.start()
             else:
-                self._logger.info(
+                logger.info(
                     "LocationService started but not actually enabled in config")
         else:
-            self._logger.error(
+            logger.error(
                 "LocationService cannot be started since not initialized properly!")
 
     def stop(self):
@@ -67,7 +67,7 @@ class LocationService:
         while self._running:
             # forced update by time
             if (time.time() > (last_forced_update_time+CALC_EVERY)):
-                self._logger.info(
+                logger.info(
                     f"geolocation forced update by time triggered")
 
                 self.updateGeolocation()
@@ -77,7 +77,7 @@ class LocationService:
 
             # higher frequency retry initial after bootup. if fails still forced update every hour or so above.
             elif (self.accuracy == None or self.accuracy > self._CONFIG.LOCATION_SERVICE_THRESHOLD_ACCURATE) and max_retries_high_frequency > 0:
-                self._logger.info(
+                logger.info(
                     f"no or inaccurate location result, retry {max_retries_high_frequency} times again")
 
                 self.updateGeolocation()
@@ -156,11 +156,11 @@ class LocationService:
             results = self._client.geolocate(
                 consider_ip=self._CONFIG.LOCATION_SERVICE_CONSIDER_IP, wifi_access_points=self._wifi_access_points)
 
-            self._logger.info(f"geolocation results: {results}")
+            logger.info(f"geolocation results: {results}")
 
             self._setGeolocation(results)
         except Exception as e:
-            self._logger.error(f"geolocation request failed, error {e}")
+            logger.error(f"geolocation request failed, error {e}")
 
     def gatherWifi(self):
         self._iface.scan()
@@ -172,8 +172,8 @@ class LocationService:
             wifi_access_points.append(
                 {"macAddress": scan_result.bssid, "signalStrength": scan_result.signal})
 
-        self._logger.debug(wifi_access_points)
-        self._logger.info(f"Found {len(scan_results)} WiFi for geolocation")
+        logger.debug(wifi_access_points)
+        logger.info(f"Found {len(scan_results)} WiFi for geolocation")
 
         self._wifi_access_points = wifi_access_points
 

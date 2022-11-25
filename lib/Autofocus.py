@@ -3,6 +3,9 @@ import cv2
 from queue import Queue
 import threading
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FocusState(object):
@@ -47,8 +50,7 @@ class FocusState(object):
             threadAutofocusFocusSupervisor.start()
 
         else:
-            if self._CONFIG.DEBUG:
-                print("Focus is not done yet or in standby.")
+            logger.debug("Focus is not done yet or in standby.")
 
     def isFinish(self):
         self.lock.acquire()
@@ -92,7 +94,7 @@ def statsThread(frameServer, focuser, focusState):
         frame = frameServer.wait_for_lores_frame()
 
         if frame is None:
-            print("error, got no frame, but why?!")
+            logger.warn("error, got no frame, but why?!")
             continue
 
         roi_frame = getROIFrame(focusState._CONFIG.FOCUSER_ROI, frame)
@@ -135,9 +137,7 @@ def statsThread(frameServer, focuser, focusState):
     focusState._ee.emit("publishSSE", sse_event="autofocus/sharpness",
                         sse_data=json.dumps(sharpnessList))
 
-    if focusState._CONFIG.DEBUG:
-        print(sharpnessList)
-        print("autofocus run finished")
+    logger.debug(f"autofocus run finished, sharpnessList={sharpnessList}")
 
 
 def focusThread(focuser, focusState):
@@ -149,8 +149,6 @@ def focusThread(focuser, focusState):
     while not focusState.isFinish():
 
         position, sharpness = focusState.sharpnessList.get()
-        # if focusState._CONFIG.DEBUG:
-        #    print("got stats data: {}, {}".format(position, sharpness))
 
         if lastSharpness / sharpness >= 1:
             continuousDecline += 1
@@ -173,8 +171,7 @@ def focusThread(focuser, focusState):
 
     maxItem = max(sharpnessList, key=lambda item: item[1])
 
-    if focusState._CONFIG.DEBUG:
-        print("max: {}".format(maxItem))
+    logger.debug(f"max: {maxItem}")
 
     if continuousDecline < 3:
         focuser.set(maxItem[0])

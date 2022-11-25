@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+logger = logging.getLogger(__name__)
 
 CONFIG_FILENAME = "config.json"
 
@@ -8,10 +9,6 @@ CONFIG_FILENAME = "config.json"
 class CONFIG():
 
     def __init__(self):
-        # debugging
-        self.DEBUG_LOGFILE = False
-        self.LOGGING_LEVEL = logging.DEBUG
-
         # quality
         self.CAPTURE_CAM_RESOLUTION = (4656, 3496)
         self.CAPTURE_VIDEO_RESOLUTION = (1280, 720)
@@ -61,13 +58,78 @@ class CONFIG():
         # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
         self.LOCATION_SERVICE_THRESHOLD_ACCURATE = 1000
 
+        self.LOGGING_CONFIG = {
+            'version': 1,
+            'disable_existing_loggers': True,
+            'formatters': {
+                'standard': {
+                    'format': '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s'
+                },
+                'detailed': {
+                    'format': '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s call_trace=%(pathname)s L%(lineno)-4d'
+
+                },
+            },
+            'handlers': {
+                'default': {
+                    'level': 'DEBUG',
+                    'formatter': 'standard',
+                    'class': 'logging.StreamHandler',
+                    # 'stream': 'ext://sys.stdout',  # Default is stderr
+                },
+                'file': {
+                    'class': 'logging.handlers.RotatingFileHandler',
+                    'formatter': 'detailed',
+                    'filename': 'photobooth.log',
+                    'maxBytes': 102400,
+                    'backupCount': 3,
+                },
+                'eventstream': {
+                    'class': '__main__.EventstreamLogHandler',
+                    'formatter': 'standard',
+                }
+            },
+            'loggers': {
+                '': {  # root logger
+                    'handlers': ['default', 'eventstream'],
+                    'level': 'DEBUG',
+                    'propagate': False
+                },
+                '__main__': {  # if __name__ == '__main__'
+                    'handlers': ['default', 'eventstream'],
+                    'level': 'DEBUG',
+                    'propagate': False
+                },
+                'picamera2': {
+                    'handlers': ['default'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+                'pywifi': {
+                    'handlers': ['default'],
+                    'level': 'WARNING',
+                    'propagate': False
+                },
+                'sse_starlette.sse': {
+                    'handlers': ['default'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+                'lib.Autofocus': {
+                    'handlers': ['default'],
+                    'level': 'INFO',
+                    'propagate': False
+                },
+            }
+        }
+
     def reset_default_values(self):
         self.__dict__ = vars(CONFIG())
 
         try:
             os.remove(CONFIG_FILENAME)
         except:
-            print("delete settings.json file failed.")
+            logger.info("delete settings.json file failed.")
 
         # self._publishSSE_currentconfig()
 
@@ -75,20 +137,17 @@ class CONFIG():
         try:
             with open(CONFIG_FILENAME, "r") as read_file:
                 read_settings = json.load(read_file)
-                print(read_settings)
 
                 for key in self.__dict__:
                     # check whether a setting is avail from file and update default
                     if key in read_settings:
                         self.__dict__[key] = read_settings[key]
-                        print(
-                            f"updated config[{key}] set to {read_settings[key]}")
 
+            logger.debug(f"loaded following config: {self.__dict__}")
             # self._publishSSE_currentconfig()
 
         except Exception as e:
-            print("load settings failed (no file?)")
-            print(e)
+            logger.info(f"load settings failed (no file?) {e}")
 
     def save(self):
         # save only non-default values:
@@ -98,8 +157,7 @@ class CONFIG():
         # print(set_current)
         ##save_dict = dict(set_current-set_defaults)
         save_dict = self.__dict__
-        print("saving following dict:")
-        print(save_dict)
+        logger.debug(f"saving following dict: {save_dict}")
         with open(CONFIG_FILENAME, "w") as write_file:
             json.dump(save_dict, write_file, indent=4)
 
