@@ -8,4 +8,4 @@ rm -r ./lib/__pycache__ 2> /dev/null
 rm -r ./utils/__pycache__ 2> /dev/null
 
 # start application
-python ./imageserver.py
+python3 ./imageserver.py
