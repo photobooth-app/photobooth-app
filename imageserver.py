@@ -16,7 +16,6 @@ from lib.Autofocus import FocusState
 from lib.FrameServer import FrameServer
 import cv2
 import time
-import sys
 from PIL import Image
 import piexif
 from datetime import datetime
@@ -68,10 +67,6 @@ ImageServer used to stream photos from raspberry pi camera for liveview and high
 4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
 
 """
-
-# change to files path
-os.chdir(sys.path[0])
-
 
 app = FastAPI()
 
@@ -278,7 +273,7 @@ def capture(filename):
                    quality=config_instance.HIRES_QUALITY, exif=exif_bytes)
 
         # these are copies for qPhotobooth
-        shutil.copy2(filename, "data/images/")
+        shutil.copy2(filename, "data/image/")
         basename_file = os.path.basename(filename)
         imageth = image.copy()
         imageth.thumbnail(config_instance.THUMBNAIL_SIZE)
