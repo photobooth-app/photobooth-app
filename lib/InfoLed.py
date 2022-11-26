@@ -30,8 +30,8 @@ class InfoLed():
         self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
                                                          target=self._countdownAnimationFun, daemon=True)
 
-        self._pixels = PixelStrip(CONFIG.WS2812_NUMBER_LEDS, CONFIG.WS2812_GPIO_PIN, LED_FREQ_HZ,
-                                  LED_DMA, LED_INVERT, CONFIG.WS2812_MAX_BRIGHTNESS, LED_CHANNEL, LED_STRIP_TYPE)
+        self._pixels = PixelStrip(self._CONFIG._current_config["WS2812_NUMBER_LEDS"], self._CONFIG._current_config["WS2812_GPIO_PIN"], LED_FREQ_HZ,
+                                  LED_DMA, LED_INVERT, self._CONFIG._current_config["WS2812_MAX_BRIGHTNESS"], LED_CHANNEL, LED_STRIP_TYPE)
         self._pixels.begin()
         self._fill(Color(0, 0, 0))
 
@@ -43,7 +43,7 @@ class InfoLed():
     def _countdownAnimationFun(self):
         """Loading circle animation"""
         color = Color(
-            self._CONFIG.WS2812_COLOR[0], self._CONFIG.WS2812_COLOR[1], self._CONFIG.WS2812_COLOR[2], self._CONFIG.WS2812_COLOR[3])
+            self._CONFIG._current_config["WS2812_COLOR"][0], self._CONFIG._current_config["WS2812_COLOR"][1], self._CONFIG._current_config["WS2812_COLOR"][2], self._CONFIG._current_config["WS2812_COLOR"][3])
         colorarray = [color >> 16 &
                       255, color >> 8 & 255, color >> 0 & 255, color >> 24 & 255]  # RGBW
         # print(colorarray)
@@ -63,7 +63,8 @@ class InfoLed():
                 if (self._countdownAnimationThread.stopped()):
                     break
 
-                time.sleep(self._CONFIG.WS2812_ANIMATION_UPDATE / 1000.0)
+                time.sleep(
+                    self._CONFIG._current_config["WS2812_ANIMATION_UPDATE"] / 1000.0)
 
         # turn off all led when countdown ends
         self._fill(Color(0, 0, 0))
@@ -78,14 +79,14 @@ class InfoLed():
         if self._countdownAnimationThread.is_alive():
             self._countdownAnimationThread.stop()
             self._countdownAnimationThread.join(
-                ((self._CONFIG.WS2812_ANIMATION_UPDATE+50) / 1000.0))   # wait one update run longest, afterwards continue...
+                ((self._CONFIG._current_config["WS2812_ANIMATION_UPDATE"]+50) / 1000.0))   # wait one update run longest, afterwards continue...
 
         self._fill(Color(0, 0, 0))
 
     def captureStart(self):
         self.stopCountdown()
         self._fill(Color(
-            self._CONFIG.WS2812_CAPTURE_COLOR[0], self._CONFIG.WS2812_CAPTURE_COLOR[1], self._CONFIG.WS2812_CAPTURE_COLOR[2], self._CONFIG.WS2812_CAPTURE_COLOR[3]))
+            self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][0], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][1], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][2], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][3]))
 
     def captureFinished(self):
         self.stopCountdown()

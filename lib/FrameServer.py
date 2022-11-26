@@ -37,11 +37,11 @@ class FrameServer:
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": self._config.CAPTURE_CAM_RESOLUTION}, {"size": self._config.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores")
+            {"size": self._config._current_config["CAPTURE_CAM_RESOLUTION"]}, {"size": self._config._current_config["CAPTURE_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores")
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": self._config.PREVIEW_CAM_RESOLUTION}, {"size": self._config.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores")
+            {"size": self._config._current_config["PREVIEW_CAM_RESOLUTION"]}, {"size": self._config._current_config["PREVIEW_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores")
 
         # activate preview mode on init
         self._setConfigPreview()
@@ -51,16 +51,19 @@ class FrameServer:
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        tuning = Picamera2.load_tuning_file(config.CAMERA_TUNINGFILE)
+        tuning = Picamera2.load_tuning_file(
+            self._config._current_config["CAMERA_TUNINGFILE"])
         algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
         self._availAeExposureModes = (algo["exposure_modes"].keys())
         logger.info(
             f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
 
-        self.setAeExposureMode(config.CAPTURE_EXPOSURE_MODE)
+        self.setAeExposureMode(
+            self._config._current_config["CAPTURE_EXPOSURE_MODE"])
 
         # start camera
-        self._picam2.start(show_preview=config.DEBUG_SHOWPREVIEW)
+        self._picam2.start(
+            show_preview=self._config._current_config["DEBUG_SHOWPREVIEW"])
 
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
@@ -206,7 +209,7 @@ class FrameServer:
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):
-        if self._config.DEBUG_OVERLAY:
+        if self._config._current_config["DEBUG_OVERLAY"]:
             try:
                 overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
                 overlay2 = f"{self.fps} fps"

@@ -94,14 +94,15 @@ def statsThread(frameServer, focuser, focusState):
 
         frame = frameServer.wait_for_lores_frame()
 
-        if time.time() - lastTime >= focusState._CONFIG.FOCUSER_MOVE_TIME and not focusState.isFinish():
-            roi_frame = getROIFrame(focusState._CONFIG.FOCUSER_ROI, frame)
+        if time.time() - lastTime >= focusState._CONFIG._current_config["FOCUSER_MOVE_TIME"] and not focusState.isFinish():
+            roi_frame = getROIFrame(
+                focusState._CONFIG._current_config["FOCUSER_ROI"], frame)
             buffer = jpeg.encode(
-                roi_frame, quality=focusState._CONFIG.FOCUSER_JPEG_QUALITY)
+                roi_frame, quality=focusState._CONFIG._current_config["FOCUSER_JPEG_QUALITY"])
 
             if lastPosition != maxPosition:
                 focuser.set(lastPosition +
-                            (focusState.direction*focusState._CONFIG.FOCUSER_STEP))
+                            (focusState.direction*focusState._CONFIG._current_config["FOCUSER_STEP"]))
                 lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
@@ -111,7 +112,7 @@ def statsThread(frameServer, focuser, focusState):
             focusState.sharpnessList.put(item)
 
             lastPosition += (focusState.direction *
-                             focusState._CONFIG.FOCUSER_STEP)
+                             focusState._CONFIG._current_config["FOCUSER_STEP"])
 
             if lastPosition > maxPosition:
                 break

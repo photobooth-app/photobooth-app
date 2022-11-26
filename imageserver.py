@@ -27,15 +27,17 @@ import signal
 import json
 import glob
 import shutil
-from config import CONFIG
+from lib.ConfigService import ConfigService
 import logging
-
-# setup config object
-config_instance = CONFIG()
-config_instance.load()
 
 # event system
 ee = EventEmitter()
+
+
+# setup config object
+cs = ConfigService(ee)
+cs.load()
+print(cs._current_config)
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -52,7 +54,7 @@ class EventstreamLogHandler(logging.Handler):
 
 
 # logger
-logging.config.dictConfig(config_instance.LOGGING_CONFIG)
+logging.config.dictConfig(cs._current_config["LOGGING_CONFIG"])
 logger = logging.getLogger(__name__)
 
 
@@ -151,9 +153,9 @@ async def subscribe(request: Request):
     addToQueue(sse_event="message",
                sse_data=f"Client connected {request.client}")
     addToQueue(sse_event="config/currentconfig",
-               sse_data=json.dumps(config_instance.__dict__))  # TODO: needs to be changed to initial publish as all other.
-    # all modules can register this event to send initial messages on connection
+               sse_data=json.dumps(cs._current_config))  # TODO: needs to be changed to initial publish as all other.
 
+    # all modules can register this event to send initial messages on connection
     ee.emit("publishSSE/initial")
 
     return EventSourceResponse(event_iterator(), ping=1)
@@ -175,34 +177,55 @@ async def api_debug_threads():
     return (list)
 
 
+@app.get("/config/current")
+async def api_get_config_current():
+    return (cs._current_config)
+
+
+@app.post("/config/current")
+async def api_post_config_current(request: Request):
+    sent_config_json = await request.json()
+    print(sent_config_json)
+    #cs._current_config = sent_config_json
+    cs.import_config(sent_config_json)
+
+
+""" seems not to work because we send json but it just expects a simple string... 
+@app.post("/config/current")
+async def api_post_config_current(current_config_json: str = Body()):
+    print(current_config_json)
+    cs._current_config = current_config_json
+"""
+
+
 @app.get("/cmd/{action}/{param}")
 async def api_cmd(action, param):
     logger.info("log request")
 
     if (action == "debug"):
-        config_instance.DEBUG = True if param == "on" else False
+        cs._current_config["DEBUG"] = True if param == "on" else False
     elif (action == "debugoverlay"):
-        config_instance.DEBUG_OVERLAY = True if param == "on" else False
+        cs._current_config["DEBUG_OVERLAY"] = True if param == "on" else False
     elif (action == "autofocus"):
         rt.start() if param == "on" else rt.stop()
     elif (action == "config"):
         if (param == "reset"):
-            config_instance.reset_default_values()
+            cs.reset_default_values()
         elif (param == "load"):
-            config_instance.load()
+            cs.load()
         elif (param == "save"):
-            config_instance.save()
+            cs.save()
         else:
             pass  # fail!
     elif (action == "exposuremode"):
         try:
             frameServer.setAeExposureMode(
-                config_instance.CAPTURE_EXPOSURE_MODE)
+                cs._current_config["CAPTURE_EXPOSURE_MODE"])
         except:
             pass
         else:
             # save new val only if try succeeded
-            config_instance.CAPTURE_EXPOSURE_MODE = param
+            cs._current_config["CAPTURE_EXPOSURE_MODE"] = param
     elif (action == "arm" and param == "countdown"):
         ee.emit("onCountdownTakePicture")
 
@@ -216,10 +239,10 @@ def api_cmd_capture_get():
 
 @app.post("/cmd/capture")
 def api_cmd_capture_post(filename: str = Body("capture.jpg")):
-    return capture(filename)
+    return capture(filename, True)
 
 
-def capture(filename):
+def capture(filename, copyForCompatibility=False):
 
     start_time = time.time()
 
@@ -276,11 +299,11 @@ def capture(filename):
 
         # create JPGs
         buffer_full = jpeg.encode(
-            frame, quality=config_instance.HIRES_QUALITY, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
+            frame, quality=cs._current_config["HIRES_QUALITY"], pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
         buffer_preview = (jpeg.scale_with_quality(
-            buffer_full, scaling_factor=config_instance.PREVIEW_SCALE_FACTOR, quality=config_instance.PREVIEW_QUALITY))
+            buffer_full, scaling_factor=tuple(cs._current_config["PREVIEW_SCALE_FACTOR"]), quality=cs._current_config["PREVIEW_QUALITY"]))
         buffer_thumbnail = (jpeg.scale_with_quality(
-            buffer_preview, scaling_factor=config_instance.THUMBNAIL_SCALE_FACTOR, quality=config_instance.THUMBNAIL_QUALITY))
+            buffer_preview, scaling_factor=tuple(cs._current_config["THUMBNAIL_SCALE_FACTOR"]), quality=cs._current_config["THUMBNAIL_QUALITY"]))
 
         # save to disk
         basename_file = os.path.basename(filename)
@@ -295,16 +318,17 @@ def capture(filename):
         piexif.insert(exif_bytes, f'data/image/{basename_file}')
 
         # also create a copy for photobooth compatibility
-        shutil.copy2(f'data/image/{basename_file}', f"{filename}")
+        if copyForCompatibility:
+            shutil.copy2(f'data/image/{basename_file}', f"{filename}")
 
         processing_time = round((time.time() - start_time), 1)
         logger.info(
             f"capture to file {filename} successfull, process took {processing_time}s")
         return (f'Done, frame capture successful')
     except Exception as e:
-        logger.error(f"error during capture: {e}")
-
-        return (f'error during capture: {e}')
+        logger.exception(e)
+        raise HTTPException(
+            status_code=500, detail=f"error during capture: {e}")
 
     finally:
         # turn on regular autofocus in every case
@@ -335,13 +359,14 @@ def api_gallery_images():
             output.append({
                 "caption": f"{image_basepath}",
                 "filename": f"{image_basepath}",
-                "ext_download_url": str(config_instance.EXT_DOWNLOAD_URL).format(filename=image_basepath),
+                "ext_download_url": str(cs._current_config["EXT_DOWNLOAD_URL"]).format(filename=image_basepath),
                 "thumbnail": f"{data_dir}/thumbnail/{image_basepath}",
                 "image": f"{data_dir}/image/{image_basepath}",
                 "preview": f"{data_dir}/preview/{image_basepath}",
             })
         return output
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"something went wrong, Exception: {e}")
 
@@ -353,7 +378,7 @@ def index():
 
 
 def gen_stream(frameServer):
-    skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+    skip_counter = cs._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
     jpeg = TurboJPEG()
 
     while True:
@@ -363,10 +388,11 @@ def gen_stream(frameServer):
         frame = frameServer.wait_for_lores_frame()
 
         if (skip_counter <= 1):
-            buffer = jpeg.encode(frame, quality=config_instance.LORES_QUALITY)
+            buffer = jpeg.encode(
+                frame, quality=cs._current_config["LORES_QUALITY"])
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
-            skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+            skip_counter = cs._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
         else:
             skip_counter -= 1
 
@@ -385,13 +411,13 @@ app.mount("/", StaticFiles(directory="web"), name="web")
 
 
 if __name__ == '__main__':
-    infoled = InfoLed(config_instance, ee)
-    frameServer = FrameServer(ee, config_instance)
-    focuser = Focuser(config_instance.FOCUSER_DEVICE, config_instance)
-    focusState = FocusState(frameServer, focuser, ee, config_instance)
-    rt = RepeatedTimer(config_instance.FOCUSER_REPEAT_TRIGGER,
+    infoled = InfoLed(cs, ee)
+    frameServer = FrameServer(ee, cs)
+    focuser = Focuser(cs._current_config["FOCUSER_DEVICE"], cs)
+    focusState = FocusState(frameServer, focuser, ee, cs)
+    rt = RepeatedTimer(cs._current_config["FOCUSER_REPEAT_TRIGGER"],
                        ee.emit, "onRefocus")
-    locationService = LocationService(ee, config_instance)
+    locationService = LocationService(ee, cs)
 
     frameServer.start()
 

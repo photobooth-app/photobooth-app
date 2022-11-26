@@ -21,8 +21,8 @@ class Focuser:
         self.focus_value = 0
         self._device = device
         self._CONFIG = CONFIG
-        self.MAX_VALUE = self._CONFIG.FOCUSER_MAX_VALUE
-        self.MIN_VALUE = self._CONFIG.FOCUSER_MIN_VALUE
+        self.MAX_VALUE = self._CONFIG._current_config["FOCUSER_MAX_VALUE"]
+        self.MIN_VALUE = self._CONFIG._current_config["FOCUSER_MIN_VALUE"]
 
         # if arducam drivers are not installed properly, the device might not exist and we have to fail hard here now.
         if not (file_exists(self._device)):
@@ -32,22 +32,23 @@ class Focuser:
         self.reset()
 
     def reset(self):
-        self.set(self._CONFIG.FOCUSER_DEF_VALUE)
+        self.set(self._CONFIG._current_config["FOCUSER_DEF_VALUE"])
 
     def get(self):
         return self.focus_value
 
     def set(self, value):
-        if value > self._CONFIG.FOCUSER_MAX_VALUE:
-            value = self._CONFIG.FOCUSER_MAX_VALUE
-        elif value < self._CONFIG.FOCUSER_MIN_VALUE:
-            value = self._CONFIG.FOCUSER_MIN_VALUE
+        if value > self._CONFIG._current_config["FOCUSER_MAX_VALUE"]:
+            value = self._CONFIG._current_config["FOCUSER_MAX_VALUE"]
+        elif value < self._CONFIG._current_config["FOCUSER_MIN_VALUE"]:
+            value = self._CONFIG._current_config["FOCUSER_MIN_VALUE"]
 
         value = int(value)
         try:
             os.system(
                 "v4l2-ctl -c focus_absolute={} -d {}".format(value, self._device))
         except Exception as e:
+            logger.exception(e)
             logger.error(f"Error on focus command: {e}")
 
         self.focus_value = value
