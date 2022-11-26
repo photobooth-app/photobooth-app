@@ -1,8 +1,10 @@
 /experiments
-settings.json
+/config/config.json
 config.json
 web/
 data/image/
 data/preview/
 data/thumbnail/
 data/raw/
+profile_results*
+profile_results
