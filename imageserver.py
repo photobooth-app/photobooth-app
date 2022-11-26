@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 import psutil
 from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
@@ -16,9 +17,7 @@ from lib.RepeatedTimer import RepeatedTimer
 from lib.Focuser import Focuser
 from lib.Autofocus import FocusState
 from lib.FrameServer import FrameServer
-import cv2
 import time
-from PIL import Image
 import piexif
 from datetime import datetime
 import asyncio
@@ -221,6 +220,7 @@ def api_cmd_capture_post(filename: str = Body("capture.jpg")):
 
 
 def capture(filename):
+
     start_time = time.time()
 
     if not filename:
@@ -236,6 +236,8 @@ def capture(filename):
     try:
         # turn of autofocus trigger, cam needs to be in focus at this point by regular focusing
         rt.stop()
+
+        jpeg = TurboJPEG()
 
         # triggerpic
         frameServer.trigger_hq_capture()
@@ -272,23 +274,28 @@ def capture(filename):
 
         exif_bytes = piexif.dump(exif_dict)
 
-        image = Image.fromarray(frame.astype('uint8'), 'RGB')
+        # create JPGs
+        buffer_full = jpeg.encode(
+            frame, quality=config_instance.HIRES_QUALITY, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
+        buffer_preview = (jpeg.scale_with_quality(
+            buffer_full, scaling_factor=config_instance.PREVIEW_SCALE_FACTOR, quality=config_instance.PREVIEW_QUALITY))
+        buffer_thumbnail = (jpeg.scale_with_quality(
+            buffer_preview, scaling_factor=config_instance.THUMBNAIL_SCALE_FACTOR, quality=config_instance.THUMBNAIL_QUALITY))
 
-        # this one is for photobooth
-        image.save(f"{filename}",
-                   quality=config_instance.HIRES_QUALITY, exif=exif_bytes)
-
-        # these are copies for qPhotobooth
-        shutil.copy2(filename, "data/image/")
+        # save to disk
         basename_file = os.path.basename(filename)
-        imageth = image.copy()
-        imageth.thumbnail(config_instance.THUMBNAIL_SIZE)
-        imageth.save(f'data/thumbnail/{basename_file}',
-                     quality=config_instance.THUMBNAIL_QUALITY)
-        imageprev = image.copy()
-        imageprev.thumbnail(config_instance.PREVIEW_SIZE)
-        imageprev.save(f'data/preview/{basename_file}',
-                       quality=config_instance.PREVIEW_QUALITY)
+        with open(f'data/image/{basename_file}', 'wb') as f:
+            f.write(buffer_full)
+        with open(f'data/preview/{basename_file}', 'wb') as f:
+            f.write(buffer_preview)
+        with open(f'data/thumbnail/{basename_file}', 'wb') as f:
+            f.write(buffer_thumbnail)
+
+        # insert exif data
+        piexif.insert(exif_bytes, f'data/image/{basename_file}')
+
+        # also create a copy for photobooth compatibility
+        shutil.copy2(f'data/image/{basename_file}', f"{filename}")
 
         processing_time = round((time.time() - start_time), 1)
         logger.info(
@@ -347,6 +354,7 @@ def index():
 
 def gen_stream(frameServer):
     skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+    jpeg = TurboJPEG()
 
     while True:
         if request_stop:
@@ -355,10 +363,9 @@ def gen_stream(frameServer):
         frame = frameServer.wait_for_lores_frame()
 
         if (skip_counter <= 1):
-            is_success, buffer = cv2.imencode(
-                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, config_instance.LORES_QUALITY])
+            buffer = jpeg.encode(frame, quality=config_instance.LORES_QUALITY)
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
             skip_counter = config_instance.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
         else:
             skip_counter -= 1

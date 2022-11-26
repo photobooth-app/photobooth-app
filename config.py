@@ -15,9 +15,14 @@ class CONFIG():
         self.PREVIEW_CAM_RESOLUTION = (2328, 1748)
         self.PREVIEW_VIDEO_RESOLUTION = (1280, 720)
         self.LORES_QUALITY = 80
-        self.THUMBNAIL_SIZE = (400, 400)
+        # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
+        # limitation due to turbojpeg lib usage.
+        # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
+        # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
+        # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
+        self.THUMBNAIL_SCALE_FACTOR = (1, 4)
         self.THUMBNAIL_QUALITY = 60
-        self.PREVIEW_SIZE = (1000, 1000)
+        self.PREVIEW_SCALE_FACTOR = (3, 8)
         self.PREVIEW_QUALITY = 75
         self.HIRES_QUALITY = 90
         self.PREVIEW_PREVIEW_FRAMERATE_DIVIDER = 3

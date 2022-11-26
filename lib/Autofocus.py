@@ -1,5 +1,5 @@
+from turbojpeg import TurboJPEG
 import json
-import cv2
 from queue import Queue
 import threading
 import time
@@ -85,6 +85,7 @@ def statsThread(frameServer, focuser, focusState):
     minPosition = focuser.MIN_VALUE
     lastPosition = focuser.get()
     # focuser.set(lastPosition)  # init position
+    jpeg = TurboJPEG()
     lastTime = time.time()
 
     sharpnessList = []
@@ -93,20 +94,11 @@ def statsThread(frameServer, focuser, focusState):
 
         frame = frameServer.wait_for_lores_frame()
 
-        if frame is None:
-            logger.warn("error, got no frame, but why?!")
-            continue
-
-        roi_frame = getROIFrame(focusState._CONFIG.FOCUSER_ROI, frame)
-
-        # if foscusState._CONFIG.DEBUG:
-        #    cv2.imshow("roi", roi_frame)
-
-        is_success, buffer = cv2.imencode(
-            ".jpg", roi_frame, [cv2.IMWRITE_JPEG_QUALITY, focusState._CONFIG.FOCUSER_JPEG_QUALITY])
-        #io_buf = io.BytesIO(buffer)
-
         if time.time() - lastTime >= focusState._CONFIG.FOCUSER_MOVE_TIME and not focusState.isFinish():
+            roi_frame = getROIFrame(focusState._CONFIG.FOCUSER_ROI, frame)
+            buffer = jpeg.encode(
+                roi_frame, quality=focusState._CONFIG.FOCUSER_JPEG_QUALITY)
+
             if lastPosition != maxPosition:
                 focuser.set(lastPosition +
                             (focusState.direction*focusState._CONFIG.FOCUSER_STEP))
@@ -126,6 +118,9 @@ def statsThread(frameServer, focuser, focusState):
 
             if lastPosition < minPosition:
                 break
+        else:
+            # Focus motor cannot catch up with camera fps. This is not a problem actually.
+            pass
 
     # End of stats.
     focusState.sharpnessList.put((-1, -1))
