@@ -40,6 +40,7 @@ class CONFIG():
         self.FOCUSER_MAX_VALUE = 3000
         self.FOCUSER_DEF_VALUE = 800
         self.FOCUSER_STEP = 50
+        # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
         self.FOCUSER_MOVE_TIME = 0.066
         self.FOCUSER_JPEG_QUALITY = 85
         self.FOCUSER_ROI = (0.2, 0.2, 0.6, 0.6)  # x, y, width, height
