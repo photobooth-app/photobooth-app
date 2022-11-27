@@ -37,7 +37,7 @@ class FocusState(object):
 
     def doFocus(self):
         # guard to perfom autofocus only once at a time
-        if self.isFinish() and self._standby == False:
+        if self.isFinish() and self._standby == False and self._CONFIG._current_config['FOCUSER_ENABLED']:
             self.reset()
             self.setFinish(False)
 

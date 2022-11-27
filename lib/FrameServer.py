@@ -62,8 +62,7 @@ class FrameServer:
             self._config._current_config["CAPTURE_EXPOSURE_MODE"])
 
         # start camera
-        self._picam2.start(
-            show_preview=self._config._current_config["DEBUG_SHOWPREVIEW"])
+        self._picam2.start()
 
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
@@ -74,6 +73,8 @@ class FrameServer:
         # when countdown starts change mode to HQ. after picture was taken change back.
         self._ee.on("onCountdownTakePicture",
                     self._setConfigCapture)
+
+        self._ee.on("config/changed", self.handleConfigChanged)
 
     def _setConfigCapture(self):
         self._lastmode = self._currentmode
@@ -194,6 +195,13 @@ class FrameServer:
             while True:
                 self._hq_condition.wait()
                 return self._hq_array
+
+    def handleConfigChanged(self):
+        # might want to switch modes directly if possible - otherwise latest after restart new config is applied.
+        logger.info(
+            "FrameServer detected config change, apply new cam settings")
+        self.setAeExposureMode(
+            self._config._current_config["CAPTURE_EXPOSURE_MODE"])
 
     def setAeExposureMode(self, newmode):
         logger.info(f"setAeExposureMode, try to set to {newmode}")

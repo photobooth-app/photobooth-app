@@ -30,14 +30,13 @@ import shutil
 from lib.ConfigService import ConfigService
 import logging
 
+# create early instances
 # event system
 ee = EventEmitter()
-
-
 # setup config object
 cs = ConfigService(ee)
-cs.load()
-print(cs._current_config)
+
+# setup logger
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -53,11 +52,17 @@ class EventstreamLogHandler(logging.Handler):
                 sse_data=self.format(record))
 
 
-# logger
-logging.config.dictConfig(cs._current_config["LOGGING_CONFIG"])
+logging.config.dictConfig(cs._internal_config["LOGGING_CONFIG"])
+
+# setup configservice
+cs.load()
+# print(cs._current_config)
+
+# reconfigure if any changes from config needs to be applied.
+logging.config.dictConfig(cs._internal_config["LOGGING_CONFIG"])
+
+
 logger = logging.getLogger(__name__)
-
-
 logger.info('Welcome to qPhotobooth')
 
 """
@@ -185,30 +190,15 @@ async def api_get_config_current():
 @app.post("/config/current")
 async def api_post_config_current(request: Request):
     sent_config_json = await request.json()
-    print(sent_config_json)
-    #cs._current_config = sent_config_json
     cs.import_config(sent_config_json)
-
-
-""" seems not to work because we send json but it just expects a simple string... 
-@app.post("/config/current")
-async def api_post_config_current(current_config_json: str = Body()):
-    print(current_config_json)
-    cs._current_config = current_config_json
-"""
+    cs.save()
 
 
 @app.get("/cmd/{action}/{param}")
 async def api_cmd(action, param):
-    logger.info("log request")
+    logger.info(f"cmd api requested action={action}, param={param}")
 
-    if (action == "debug"):
-        cs._current_config["DEBUG"] = True if param == "on" else False
-    elif (action == "debugoverlay"):
-        cs._current_config["DEBUG_OVERLAY"] = True if param == "on" else False
-    elif (action == "autofocus"):
-        rt.start() if param == "on" else rt.stop()
-    elif (action == "config"):
+    if (action == "config"):
         if (param == "reset"):
             cs.reset_default_values()
         elif (param == "load"):
@@ -217,15 +207,6 @@ async def api_cmd(action, param):
             cs.save()
         else:
             pass  # fail!
-    elif (action == "exposuremode"):
-        try:
-            frameServer.setAeExposureMode(
-                cs._current_config["CAPTURE_EXPOSURE_MODE"])
-        except:
-            pass
-        else:
-            # save new val only if try succeeded
-            cs._current_config["CAPTURE_EXPOSURE_MODE"] = param
     elif (action == "arm" and param == "countdown"):
         ee.emit("onCountdownTakePicture")
 
