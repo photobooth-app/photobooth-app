@@ -6,7 +6,7 @@ from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
 import threading
 from sse_starlette import EventSourceResponse, ServerSentEvent
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, Body, HTTPException
 import uvicorn
@@ -352,12 +352,6 @@ def api_gallery_images():
             status_code=500, detail=f"something went wrong, Exception: {e}")
 
 
-@app.get('')
-@app.get('/')
-def index():
-    return app.send_static_file('index.html')
-
-
 def gen_stream(frameServer):
     skip_counter = cs._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
     jpeg = TurboJPEG()
@@ -386,6 +380,11 @@ def video_stream():
 
 # serve data directory holding images, thumbnails, ...
 app.mount('/data', StaticFiles(directory='data'), name="data")
+
+
+@app.get("/")
+async def read_index():
+    return FileResponse('web/index.html')
 
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
