@@ -205,6 +205,7 @@ class ConfigService(dict):
         if (self._current_config['DEBUG_LEVEL']):
             self._internal_config['LOGGING_CONFIG']['loggers']['']['level'] = self._current_config['DEBUG_LEVEL']
             self._internal_config['LOGGING_CONFIG']['loggers']['__main__']['level'] = self._current_config['DEBUG_LEVEL']
+            self._internal_config['LOGGING_CONFIG']['loggers']['lib.Autofocus']['level'] = self._current_config['DEBUG_LEVEL']
 
     def save(self):
         logger.debug(f"saving following dict: {self._current_config}")

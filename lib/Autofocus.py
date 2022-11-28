@@ -87,7 +87,7 @@ def statsThread(frameServer, focuser, focusState):
     # focuser.set(lastPosition)  # init position
     jpeg = TurboJPEG()
     lastTime = time.time()
-
+    skippedFrameCounter = 0
     sharpnessList = []
 
     while not focusState.isFinish():
@@ -95,15 +95,19 @@ def statsThread(frameServer, focuser, focusState):
         frame = frameServer.wait_for_lores_frame()
 
         if time.time() - lastTime >= focusState._CONFIG._current_config["FOCUSER_MOVE_TIME"] and not focusState.isFinish():
+            lastTime = time.time()
+
+            nextPosition = lastPosition + \
+                (focusState.direction *
+                 focusState._CONFIG._current_config["FOCUSER_STEP"])
+
+            if nextPosition < maxPosition and nextPosition > minPosition:
+                focuser.set(nextPosition)
+
             roi_frame = getROIFrame(
                 focusState._CONFIG._current_config["FOCUSER_ROI"], frame)
             buffer = jpeg.encode(
                 roi_frame, quality=focusState._CONFIG._current_config["FOCUSER_JPEG_QUALITY"])
-
-            if lastPosition != maxPosition:
-                focuser.set(lastPosition +
-                            (focusState.direction*focusState._CONFIG._current_config["FOCUSER_STEP"]))
-                lastTime = time.time()
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
             sharpness = len(buffer)
@@ -121,7 +125,7 @@ def statsThread(frameServer, focuser, focusState):
                 break
         else:
             # Focus motor cannot catch up with camera fps. This is not a problem actually.
-            pass
+            skippedFrameCounter += 1
 
     # End of stats.
     focusState.sharpnessList.put((-1, -1))
@@ -134,11 +138,14 @@ def statsThread(frameServer, focuser, focusState):
                         sse_data=json.dumps(sharpnessList))
 
     logger.debug(f"autofocus run finished, sharpnessList={sharpnessList}")
+    if (skippedFrameCounter):
+        logger.debug(
+            f"skipped {skippedFrameCounter} frames because motor cannot catch up with FPS of camera. not a problem, could be tuned.")
 
 
 def focusThread(focuser, focusState):
     sharpnessList = []
-
+    CONTINUOUSDECLINE_REQ = 6
     continuousDecline = 0
     maxPosition = 0
     lastSharpness = 0
@@ -154,7 +161,7 @@ def focusThread(focuser, focusState):
 
         lastSharpness = sharpness
 
-        if continuousDecline >= 3:
+        if continuousDecline >= CONTINUOUSDECLINE_REQ:
             focusState.setFinish()
 
         if position == -1 and sharpness == -1:
@@ -169,7 +176,7 @@ def focusThread(focuser, focusState):
 
     logger.debug(f"max: {maxItem}")
 
-    if continuousDecline < 3:
+    if continuousDecline < CONTINUOUSDECLINE_REQ:
         focuser.set(maxItem[0])
     else:
         focuser.set(maxPosition)
