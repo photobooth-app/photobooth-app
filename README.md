@@ -26,7 +26,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 Install packages (as root because imageserver needs to run as root)
 
 ```text
-sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette
+sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn
 sudo apt install -y python3-picamera2 git
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
