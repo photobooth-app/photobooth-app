@@ -67,3 +67,80 @@ Available cameras
 
 
 """
+
+
+"""
+Result for 
+Arducam 64mp Hawkeye:
+
+[0:29:59.022302744] [2696]  INFO RPI raspberrypi.cpp:1404 Registered camera /base/soc/i2c0mux/i2c@1/arducam_64mp@1a to Unicam device /dev/media3 and ISP device /dev/media2
+[0:29:59.062776816] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 1280x720-SBGGR10_CSI2P
+[0:29:59.063721570] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 1280x720-SBGGR10_1X10 - Selected unicam format: 1280x720-pBAA
+[0:29:59.102142277] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 1920x1080-SBGGR10_CSI2P
+[0:29:59.103122605] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 1920x1080-SBGGR10_1X10 - Selected unicam format: 1920x1080-pBAA
+[0:29:59.155436029] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 2312x1736-SBGGR10_CSI2P
+[0:29:59.156404586] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 2312x1736-SBGGR10_1X10 - Selected unicam format: 2312x1736-pBAA
+[0:29:59.202887294] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 3840x2160-SBGGR10_CSI2P
+[0:29:59.204116740] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 3840x2160-SBGGR10_1X10 - Selected unicam format: 3840x2160-pBAA
+[0:29:59.309471985] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 4624x3472-SBGGR10_CSI2P
+[0:29:59.310402729] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 4624x3472-SBGGR10_1X10 - Selected unicam format: 4624x3472-pBAA
+[0:29:59.466212516] [2695]  INFO Camera camera.cpp:1035 configuring streams: (0) 640x480-XBGR8888 (1) 9152x6944-SBGGR10_CSI2P
+[0:29:59.469048185] [2696]  INFO RPI raspberrypi.cpp:765 Sensor: /base/soc/i2c0mux/i2c@1/arducam_64mp@1a - Selected sensor format: 9152x6944-SBGGR10_1X10 - Selected unicam format: 9152x6944-pBAA
+
+
+
+[{'bit_depth': 10,
+  'crop_limits': (2064, 2032, 5120, 2880),
+  'exposure_limits': (76, 71022430),
+  'format': SRGGB10_CSI2P,
+  'fps': 120.03,
+  'size': (1280, 720),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (784, 1312, 7680, 4320),
+  'exposure_limits': (107, 99944031),
+  'format': SRGGB10_CSI2P,
+  'fps': 60.04,
+  'size': (1920, 1080),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (0, 0, 9248, 6944),
+  'exposure_limits': (131, 122583595),
+  'format': SRGGB10_CSI2P,
+  'fps': 30.0,
+  'size': (2312, 1736),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (784, 1312, 7680, 4320),
+  'exposure_limits': (201, 187817977),
+  'format': SRGGB10_CSI2P,
+  'fps': 20.0,
+  'size': (3840, 2160),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (0, 0, 9248, 6944),
+  'exposure_limits': (254, 237626884),
+  'format': SRGGB10_CSI2P,
+  'fps': 10.0,
+  'size': (4624, 3472),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (0, 0, 9152, 6944),
+  'exposure_limits': (467, 435921136),
+  'format': SRGGB10_CSI2P,
+  'fps': 2.7,
+  'size': (9152, 6944),
+  'unpacked': 'SRGGB10'}]
+
+
+
+0 : arducam_64mp [9248x6944] (/base/soc/i2c0mux/i2c@1/arducam_64mp@1a)
+    Modes: 'SRGGB10_CSI2P' : 1280x720 [120.03 fps - (2064, 2032)/5120x2880 crop]
+                             1920x1080 [60.04 fps - (784, 1312)/7680x4320 crop]
+                             2312x1736 [30.00 fps - (0, 0)/9248x6944 crop]
+                             3840x2160 [20.00 fps - (784, 1312)/7680x4320 crop]
+                             4624x3472 [10.00 fps - (0, 0)/9248x6944 crop]
+                             9152x6944 [2.70 fps - (0, 0)/9152x6944 crop]
+
+
+"""
