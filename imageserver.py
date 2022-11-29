@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
+from lib.Exif import Exif
+import os
+from lib.ImageDb import ImageDb
+from turbojpeg import TurboJPEG
 import psutil
 from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
@@ -11,21 +14,17 @@ from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, Body, HTTPException
 import uvicorn
 from lib.InfoLed import InfoLed
-import os
 from lib.LocationService import LocationService
 from lib.RepeatedTimer import RepeatedTimer
 from lib.Focuser import Focuser
 from lib.Autofocus import FocusState
 from lib.FrameServer import FrameServer
 import time
-import piexif
-from datetime import datetime
 import asyncio
 import uuid
 from queue import Queue
 import signal
 import json
-import glob
 import shutil
 from lib.ConfigService import ConfigService
 import logging
@@ -209,6 +208,13 @@ async def api_cmd(action, param):
             pass  # fail!
     elif (action == "arm" and param == "countdown"):
         ee.emit("onCountdownTakePicture")
+    elif (action == "server" and param == "reboot"):
+        os.system("reboot")
+    elif (action == "server" and param == "shutdown"):
+        os.system("shutdown now")
+    else:
+        raise HTTPException(
+            500, f"invalid request action={action}, param={param}")
 
     return f"action={action}, param={param}"
 
@@ -219,23 +225,23 @@ def api_cmd_capture_get():
 
 
 @app.post("/cmd/capture")
-def api_cmd_capture_post(filename: str = Body("capture.jpg")):
-    return capture(filename, True)
+def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
+    return capture(filepath, True)
 
 
-def capture(filename, copyForCompatibility=False):
+def capture(requested_filepath, copyForCompatibility=False):
 
     start_time = time.time()
 
-    if not filename:
-        filename = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+    if not requested_filepath:
+        requested_filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
 
     #logger.debug(f"request data={request}")
 
     # decode -d "foo=bar" (application/x-www-form-urlencoded) sent by curl like:
     # curl -X POST localhost:8000/cmd/capture -H 'accept: application/json' -H 'Content-Type: application/json' -d '"%s"'
     # filename = await request.json()  # ['filename']
-    logger.debug(f"capture to filename: {filename}")
+    logger.debug(f"capture to filename: {requested_filepath}")
 
     try:
         # turn of autofocus trigger, cam needs to be in focus at this point by regular focusing
@@ -249,62 +255,27 @@ def capture(filename, copyForCompatibility=False):
         # waitforpic and store to disk
         frame = frameServer.wait_for_hq_frame()
 
-        # grab metadata and store to exif
-        now = datetime.now()
-        zero_ifd = {piexif.ImageIFD.Make: "Arducam",
-                    piexif.ImageIFD.Model: frameServer._picam2.camera.id,
-                    piexif.ImageIFD.Software: "Photobooth Imageserver"}
-        total_gain = frameServer._metadata["AnalogueGain"] * \
-            frameServer._metadata["DigitalGain"]
-        exif_ifd = {piexif.ExifIFD.ExposureTime: (frameServer._metadata["ExposureTime"], 1000000),
-                    piexif.ExifIFD.DateTimeOriginal: now.strftime("%Y:%m:%d %H:%M:%S"),
-                    piexif.ExifIFD.ISOSpeedRatings: int(total_gain * 100)}
+        # create JPGs and add to db
+        (item, id) = imageDb.createImageSetFromFrame(frame, requested_filepath)
+        actual_filepath = item['image']
 
-        exif_dict = {"0th": zero_ifd, "Exif": exif_ifd}
-
-        if (locationService.accuracy):
-            logger.info("adding GPS data to exif")
-            logger.debug(
-                f"gps location: {locationService.latitude},{locationService.longitude}")
-
-            gps_ifd = {
-                piexif.GPSIFD.GPSLatitudeRef: locationService.latitudeRef,
-                piexif.GPSIFD.GPSLatitude: locationService.latitudeDMS,
-                piexif.GPSIFD.GPSLongitudeRef: locationService.longitudeRef,
-                piexif.GPSIFD.GPSLongitude: locationService.longitudeDMS,
-            }
-            # add gps dict
-            exif_dict.update({"GPS": gps_ifd})
-
-        exif_bytes = piexif.dump(exif_dict)
-
-        # create JPGs
-        buffer_full = jpeg.encode(
-            frame, quality=cs._current_config["HIRES_QUALITY"], pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
-        buffer_preview = (jpeg.scale_with_quality(
-            buffer_full, scaling_factor=tuple(cs._current_config["PREVIEW_SCALE_FACTOR"]), quality=cs._current_config["PREVIEW_QUALITY"]))
-        buffer_thumbnail = (jpeg.scale_with_quality(
-            buffer_preview, scaling_factor=tuple(cs._current_config["THUMBNAIL_SCALE_FACTOR"]), quality=cs._current_config["THUMBNAIL_QUALITY"]))
-
-        # save to disk
-        basename_file = os.path.basename(filename)
-        with open(f'data/image/{basename_file}', 'wb') as f:
-            f.write(buffer_full)
-        with open(f'data/preview/{basename_file}', 'wb') as f:
-            f.write(buffer_preview)
-        with open(f'data/thumbnail/{basename_file}', 'wb') as f:
-            f.write(buffer_thumbnail)
-
-        # insert exif data
-        piexif.insert(exif_bytes, f'data/image/{basename_file}')
+        # add exif information
+        if cs._current_config["PROCESS_ADD_EXIF_DATA"]:
+            logger.info("add exif data to image")
+            try:
+                exif.injectExifToJpeg(actual_filepath)
+            except Exception as e:
+                logger.exception(
+                    f"something went wrong injecting the exif: {e}")
 
         # also create a copy for photobooth compatibility
         if copyForCompatibility:
-            shutil.copy2(f'data/image/{basename_file}', f"{filename}")
+            # photobooth sends a complete path, where to put the file, so copy it to requested filepath
+            shutil.copy2(actual_filepath, requested_filepath)
 
         processing_time = round((time.time() - start_time), 1)
         logger.info(
-            f"capture to file {filename} successfull, process took {processing_time}s")
+            f"capture to file {actual_filepath} successfull, process took {processing_time}s")
         return (f'Done, frame capture successful')
     except Exception as e:
         logger.exception(e)
@@ -329,27 +300,23 @@ def api_stats_locationservice():
 @app.get("/gallery/images")
 def api_gallery_images():
     try:
-        image_paths = sorted(glob.glob("data/image/*.jpg"),
-                             key=os.path.getmtime, reverse=True)
-
-        output = []
-
-        for image_path in image_paths:
-            data_dir = "data/"
-            image_basepath = os.path.basename(image_path)
-            output.append({
-                "caption": f"{image_basepath}",
-                "filename": f"{image_basepath}",
-                "ext_download_url": str(cs._current_config["EXT_DOWNLOAD_URL"]).format(filename=image_basepath),
-                "thumbnail": f"{data_dir}/thumbnail/{image_basepath}",
-                "image": f"{data_dir}/image/{image_basepath}",
-                "preview": f"{data_dir}/preview/{image_basepath}",
-            })
-        return output
+        return imageDb.dbGetImages()
     except Exception as e:
         logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"something went wrong, Exception: {e}")
+
+
+@app.get("/gallery/delete")
+def api_gallery_delete(id: str):
+    logger.info(f"gallery_delete requested, id={id}")
+    try:
+        imageDb.deleteImage(id)
+        return "OK"
+    except Exception as e:
+        logger.exception(e)
+        # print(e)
+        raise HTTPException(500, f"deleting failed: {e}")
 
 
 def gen_stream(frameServer):
@@ -389,15 +356,16 @@ async def read_index():
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
 
-
 if __name__ == '__main__':
     infoled = InfoLed(cs, ee)
     frameServer = FrameServer(ee, cs)
+    imageDb = ImageDb(cs, frameServer)
     focuser = Focuser(cs._current_config["FOCUSER_DEVICE"], cs)
     focusState = FocusState(frameServer, focuser, ee, cs)
     rt = RepeatedTimer(cs._current_config["FOCUSER_REPEAT_TRIGGER"],
                        ee.emit, "onRefocus")
     locationService = LocationService(ee, cs)
+    exif = Exif(cs, frameServer, locationService)
 
     frameServer.start()
 
