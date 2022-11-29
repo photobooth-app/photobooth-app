@@ -1,11 +1,12 @@
+from libcamera import Transform
+from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 import json
-from picamera2 import Picamera2
+from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
 from threading import Condition, Thread
 import cv2
 import time
-from picamera2 import MappedArray
 import logging
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,11 @@ class FrameServer:
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": self._config._current_config["CAPTURE_CAM_RESOLUTION"]}, {"size": self._config._current_config["CAPTURE_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores")
+            {"size": self._config._current_config["CAPTURE_CAM_RESOLUTION"]}, {"size": self._config._current_config["CAPTURE_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=self._config._current_config["CAMERA_TRANSFORM_HFLIP"], vflip=self._config._current_config["CAMERA_TRANSFORM_VFLIP"]))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": self._config._current_config["PREVIEW_CAM_RESOLUTION"]}, {"size": self._config._current_config["PREVIEW_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores")
+            {"size": self._config._current_config["PREVIEW_CAM_RESOLUTION"]}, {"size": self._config._current_config["PREVIEW_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=self._config._current_config["CAMERA_TRANSFORM_HFLIP"], vflip=self._config._current_config["CAMERA_TRANSFORM_VFLIP"]))
 
         # activate preview mode on init
         self._setConfigPreview()
@@ -263,3 +264,34 @@ class FrameServer:
     def _publishSSE_metadata(self):
         self._ee.emit("publishSSE", sse_event="frameserver/metadata",
                       sse_data=json.dumps(self._metadata))
+
+
+# helper functions to convert framees (arrays) to jpeg buffer
+def getJpegByHiresFrame(frame, quality):
+    jpeg = TurboJPEG()
+
+    jpeg_buffer = jpeg.encode(
+        frame, quality=quality, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
+
+    return jpeg_buffer
+
+
+def getJpegByLoresFrame(frame, quality):
+    jpeg = TurboJPEG()
+
+    jpeg_buffer = jpeg.encode(
+        frame, quality=quality)
+
+    return jpeg_buffer
+
+
+def getScaledJpegByJpeg(buffer_in, quality, scaling_factor):
+    jpeg = TurboJPEG()
+    buffer_out = (jpeg.scale_with_quality(
+        buffer_in, scaling_factor=tuple(scaling_factor), quality=quality))
+    return buffer_out
+
+
+def writeJpegToFile(buffer, filepath):
+    with open(filepath, 'wb') as f:
+        f.write(buffer)
