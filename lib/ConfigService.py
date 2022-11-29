@@ -28,7 +28,7 @@ class ConfigService(dict):
                 # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
                 # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
                 "THUMBNAIL_SCALE_FACTOR": (1, 4),
-                "PREVIEW_SCALE_FACTOR": (3, 8),
+                "PREVIEW_SCALE_FACTOR": (1, 8),
 
                 "PREVIEW_PREVIEW_FRAMERATE_DIVIDER": 3,
 
@@ -37,7 +37,13 @@ class ConfigService(dict):
                 # capture
                 # Normal/Short(/Long/Custom)
                 "CAPTURE_EXPOSURE_MODE": "short",
+                # tuning file location: /usr/share/libcamera/ipa/raspberrypi
+                # arducam 16mp imx519: "imx519.json"
+                # arducam 64mp hawkeye: "arducam_64mp.json"
                 "CAMERA_TUNINGFILE": "imx519.json",
+                # flip camera source horizontal/vertical
+                "CAMERA_TRANSFORM_HFLIP": False,
+                "CAMERA_TRANSFORM_VFLIP": False,
 
                 # autofocus
                 # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
@@ -81,6 +87,7 @@ class ConfigService(dict):
                 "PROCESS_TAKEPIC_MSG": "CHEEESE!",
                 "PROCESS_TAKEPIC_MSG_TIMER": 0.5,
                 "PROCESS_AUTOCLOSE_TIMER": 10,
+                "PROCESS_ADD_EXIF_DATA": True,
 
                 "POSTPROCESS_OVERLAY_ENABLE": "",
                 "POSTPROCESS_OVERLAY_TEXT": "",
