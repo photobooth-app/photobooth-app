@@ -1,4 +1,5 @@
 
+import shutil
 import hashlib
 from lib.FrameServer import getJpegByHiresFrame, getScaledJpegByJpeg, writeJpegToFile
 from pathlib import Path
@@ -47,13 +48,17 @@ def _dbImageItem(filepath: str, caption: str = ""):
 class ImageDb():
     """Handle all image related stuff"""
 
-    def __init__(self, cs, frameServer):
+    def __init__(self, cs, ee, frameServer, exif):
         self._cs = cs
-        # self._frameServer = frameServer
+        self._ee = ee
+        self._frameServer = frameServer
+        self._exif = exif
 
         self._db = {}  # Dict of Images with unique identifier as key
 
         # TODO: check all directory exist and are writeable - otherwise raise exception.
+
+        self._ee.on("statemachine/capture", self.captureHqImage)
 
         self._init_db()
 
@@ -118,6 +123,50 @@ class ImageDb():
     """
     processing logic below
     """
+
+    def captureHqImage(self, requested_filepath=None, copyForCompatibility=False):
+
+        start_time = time.time()
+
+        if not requested_filepath:
+            requested_filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+
+        logger.debug(f"capture to filename: {requested_filepath}")
+
+        try:
+
+            # at this point it's assumed, a HQ image was requested by statemachine.
+            # seems to not make sense now, maybe revert hat...
+            self._frameServer.trigger_hq_capture()
+
+            # waitforpic and store to disk
+            frame = self._frameServer.wait_for_hq_frame()
+
+            # create JPGs and add to db
+            (item, id) = self.createImageSetFromFrame(
+                frame, requested_filepath)
+            actual_filepath = item['image']
+
+            # add exif information
+            if self._cs._current_config["PROCESS_ADD_EXIF_DATA"]:
+                logger.info("add exif data to image")
+                try:
+                    self._exif.injectExifToJpeg(actual_filepath)
+                except Exception as e:
+                    logger.exception(
+                        f"something went wrong injecting the exif: {e}")
+
+            # also create a copy for photobooth compatibility
+            if copyForCompatibility:
+                # photobooth sends a complete path, where to put the file, so copy it to requested filepath
+                shutil.copy2(actual_filepath, requested_filepath)
+
+            processing_time = round((time.time() - start_time), 1)
+            logger.info(
+                f"capture to file {actual_filepath} successfull, process took {processing_time}s")
+            return (f'Done, frame capture successful')
+        except Exception as e:
+            logger.exception(e)
 
     def createScaledImages(self, buffer_full, filepath):
         filename = os.path.basename(filepath)

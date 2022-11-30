@@ -12,13 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class FrameServer:
-    def __init__(self, ee, config):
+    def __init__(self, cs, ee):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = Picamera2()
-        self._config = config
+        self._config = cs
+        self._ee = ee
 
         self._hq_array = None
         self._lores_array = None
@@ -34,7 +35,6 @@ class FrameServer:
                               target=self._thread_func, daemon=True)
         self._statsthread = Thread(
             name='FrameServerStatsThread', target=self._statsthread_func, daemon=True)
-        self._ee = ee
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
@@ -64,7 +64,7 @@ class FrameServer:
 
         # start camera
         self._picam2.start()
-
+        self._picam2.set_controls({"AnalogueGain": 6})
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
 
@@ -72,8 +72,11 @@ class FrameServer:
         self._ee.on("publishSSE/initial", self._publishSSEInitial)
 
         # when countdown starts change mode to HQ. after picture was taken change back.
-        self._ee.on("onCountdownTakePicture",
+        self._ee.on("statemachine/armed",
                     self._setConfigCapture)
+
+        self._ee.on("onCaptureMode", self._setConfigCapture)
+        self._ee.on("onPreviewMode", self._setConfigPreview)
 
         self._ee.on("config/changed", self.handleConfigChanged)
 
@@ -165,14 +168,14 @@ class FrameServer:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
 
-                self._ee.emit("onTakePicture")
+                self._ee.emit("frameserver/onCapture")
 
                 # capture hq picture
                 (array,), self._metadata = self._picam2.capture_arrays(
                     ["main"])
                 logger.debug(self._metadata)
 
-                self._ee.emit("onTakePictureFinished")
+                self._ee.emit("frameserver/onCaptureFinished")
 
                 with self._hq_condition:
                     self._hq_array = array
@@ -196,6 +199,22 @@ class FrameServer:
             while True:
                 self._hq_condition.wait()
                 return self._hq_array
+
+    def gen_stream(self):
+        skip_counter = self._config._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
+        jpeg = TurboJPEG()
+
+        while self._running:
+            frame = self.wait_for_lores_frame()
+
+            if (skip_counter <= 1):
+                buffer = jpeg.encode(
+                    frame, quality=self._config._current_config["LORES_QUALITY"])
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
+                skip_counter = self._config._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
+            else:
+                skip_counter -= 1
 
     def handleConfigChanged(self):
         # might want to switch modes directly if possible - otherwise latest after restart new config is applied.

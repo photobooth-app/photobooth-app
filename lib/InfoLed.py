@@ -23,9 +23,9 @@ class InfoLed():
         self.kwargs = kwargs
 
         self._ee = ee
-        self._ee.on("onCountdownTakePicture", self.startCountdown)
-        self._ee.on("onTakePicture", self.captureStart)
-        self._ee.on("onTakePictureFinished", self.captureFinished)
+        self._ee.on("statemachine/armed", self.startCountdown)
+        self._ee.on("frameserver/onCapture", self.captureStart)
+        self._ee.on("frameserver/onCaptureFinished", self.captureFinished)
 
         self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
                                                          target=self._countdownAnimationFun, daemon=True)

@@ -17,9 +17,12 @@ class FocusState(object):
         self._ee = ee
         self._ee.on("onRefocus", self.doFocus)
         self._ee.on(
-            "onCountdownTakePicture", self.setIgnoreFocusRequests)
+            "statemachine/armed", self.setIgnoreFocusRequests)
         self._ee.on(
-            "onTakePictureFinished", self.setAllowFocusRequests)
+            "statemachine/finished", self.setAllowFocusRequests)
+
+        self._ee.on("onCaptureMode", self.setIgnoreFocusRequests)
+        self._ee.on("onPreviewMode", self.setAllowFocusRequests)
 
         self._lastRunResult = []
         self.sharpnessList = Queue()
