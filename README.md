@@ -27,7 +27,7 @@ Install packages (as root because imageserver needs to run as root)
 
 ```text
 sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn
-sudo apt install -y python3-picamera2 git
+sudo apt install -y python3-picamera2 git fonts-noto-color-emoji
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
 
