@@ -1,5 +1,5 @@
 /experiments
-/config/config.json
+/config/*.json
 web/
 data/
 profile_results*
