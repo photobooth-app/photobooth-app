@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        
+
+        {
+            "name": "Python: Run On Remote",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "${config:sshEndpoint}",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/imageserver_backend",
+                    "remoteRoot": "~/imageserver"
+                }
+            ],
+            "preLaunchTask": "copyAndStartOnPi",
+            "postDebugTask": "cleanupOnPi"
+        }
+    ]
+
+}
+

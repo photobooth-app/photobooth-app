@@ -1,10 +1,6 @@
 /experiments
 /config/config.json
-config.json
 web/
-data/image/
-data/preview/
-data/thumbnail/
-data/raw/
+data/
 profile_results*
-profile_results
+__pycache__
