@@ -27,10 +27,10 @@ class ConfigService(dict):
                 # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
                 # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
                 # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
-                "THUMBNAIL_SCALE_FACTOR": (1, 4),
-                "PREVIEW_SCALE_FACTOR": (1, 8),
+                "PREVIEW_SCALE_FACTOR": (1, 4),
+                "THUMBNAIL_SCALE_FACTOR": (1, 8),
 
-                "PREVIEW_PREVIEW_FRAMERATE_DIVIDER": 3,
+                "PREVIEW_PREVIEW_FRAMERATE_DIVIDER": 1,
 
                 "EXT_DOWNLOAD_URL": "http://dl.qbooth.net/{filename}",
 
@@ -53,7 +53,7 @@ class ConfigService(dict):
                 "FOCUSER_DEF_VALUE": 800,
                 "FOCUSER_STEP": 50,
                 # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
-                "FOCUSER_MOVE_TIME": 0.066,
+                "FOCUSER_MOVE_TIME": 0.028,
                 "FOCUSER_JPEG_QUALITY": 80,
                 "FOCUSER_ROI": (0.2, 0.2, 0.6, 0.6),  # x, y, width, height
                 "FOCUSER_DEVICE": "/dev/v4l-subdev1",
@@ -82,8 +82,8 @@ class ConfigService(dict):
                 # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
                 "LOCATION_SERVICE_THRESHOLD_ACCURATE": 1000,
 
-                "PROCESS_COUNTDOWN_TIMER": 5,
-                "PROCESS_COUNTDOWN_OFFSET": 0.5,
+                "PROCESS_COUNTDOWN_TIMER": 3,
+                "PROCESS_COUNTDOWN_OFFSET": 0.25,
                 "PROCESS_TAKEPIC_MSG": "CHEEESE!",
                 "PROCESS_TAKEPIC_MSG_TIMER": 0.5,
                 "PROCESS_AUTOCLOSE_TIMER": 10,
@@ -162,6 +162,11 @@ class ConfigService(dict):
                         'propagate': False
                     },
                     'lib.Autofocus': {
+                        'handlers': ['default'],
+                        'level': 'INFO',
+                        'propagate': False
+                    },
+                    'transitions.core': {
                         'handlers': ['default'],
                         'level': 'INFO',
                         'propagate': False
