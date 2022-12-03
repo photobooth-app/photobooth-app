@@ -20,6 +20,9 @@ class TakePictureMachineModel(Thread):
         # has to be called whenever something inherits from Thread
         super(TakePictureMachineModel, self).__init__()
 
+        # register to send initial data SSE
+        self._ee.on("publishSSE/initial", self._publishSSEInitial)
+
     def invokeProcess(self, transition):
 
         if self.lock.locked():
@@ -76,6 +79,10 @@ class TakePictureMachineModel(Thread):
     """
     some business logic
     """
+
+    def _publishSSEInitial(self):
+        self._publishSSE(
+            "statemachine/processinfo", self.SSE_processinfo())
 
     def SSE_processinfo(self, additionalData={}):
         processinfo = {
