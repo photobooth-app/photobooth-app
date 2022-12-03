@@ -96,7 +96,7 @@ class ConfigService(dict):
                 "GALLERY_EMPTY_MSG": "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
 
 
-                "HW_KEYCODE_TAKEPIC": None,
+                "HW_KEYCODE_TAKEPIC": "down",
                 "HW_KEYCODE_TAKEWIGGLEPIC": None,
 
 

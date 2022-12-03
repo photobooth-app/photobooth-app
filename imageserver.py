@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from lib.KeyboardService import KeyboardService
 from lib.CamStateMachine import TakePictureMachineModel, states, transitions
 from transitions import Machine
 from lib.Exif import Exif
@@ -244,11 +245,19 @@ CAM STATE MACHINE CONTROLS triggered by client ui
 def api_chose_1pic_get():
     try:
         model.invokeProcess("arm")
-        return
+        return "OK"
     except Exception as e:
         logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"something went wrong, Exception: {e}")
+
+
+@ee.on("triggerprocess/chose_1pic")
+def evt_chose_1pic_get():
+    try:
+        model.invokeProcess("arm")
+    except Exception as e:
+        logger.exception(e)
 
 
 @app.get("/stats/focuser")
@@ -310,6 +319,7 @@ if __name__ == '__main__':
     focusState = FocusState(frameServer, focuser, ee, cs)
     rt = RepeatedTimer(cs._current_config["FOCUSER_REPEAT_TRIGGER"],
                        ee.emit, "onRefocus")
+    ks = KeyboardService(cs, ee)
 
     # model, machine and fire.
     model = TakePictureMachineModel(cs, ee)
