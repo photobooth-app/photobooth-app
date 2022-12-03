@@ -190,9 +190,9 @@ class ConfigService(dict):
         try:
             with open(CONFIG_FILENAME, "r") as read_file:
                 import_config = json.load(read_file)
-                logger.debug(f"import_config {import_config}")
                 self.import_config(import_config)
 
+                logger.debug(f"config loaded.")
         except Exception as e:
             logger.exception(e)
             logger.info(f"load settings failed (no file?) {e}")
@@ -202,8 +202,6 @@ class ConfigService(dict):
             # check whether a setting is avail from file and update default
             if key in import_config:
                 self._current_config[key] = import_config[key]
-
-        logger.debug(f"_current_config {self._current_config}")
 
         self.update_internal_config()
 
