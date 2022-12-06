@@ -1,4 +1,3 @@
-import piexif
 from pynput import keyboard
 import logging
 logger = logging.getLogger(__name__)
