@@ -1,6 +1,5 @@
 /experiments
 /config/*.json
-web/
 data/*/*
 !.empty
 profile_results*
