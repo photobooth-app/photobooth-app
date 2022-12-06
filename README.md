@@ -1,3 +1,8 @@
+
+# WORK IN PROGRESS
+
+This is in dev currently. Not for production.
+
 # Photobooth Imageserver
 
 This small python imageserver allows to use an arducam autofocus camera in the protobooth project.
@@ -26,7 +31,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 Install packages (as root because imageserver needs to run as root)
 
 ```text
-sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions
+sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions pynput
 sudo apt install -y python3-picamera2 git fonts-noto-color-emoji
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
