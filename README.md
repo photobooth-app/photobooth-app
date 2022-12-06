@@ -55,11 +55,13 @@ sudo systemctl status imageserver.service
 
 ### Integrate with ImageServer
 
+Replace <http://photobooth> by the actual hostname or localhost if on same server.
+
 ```text
-take_picture_cmd: curl -X POST localhost:8000/capture -d 'filename=%s'
+take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -H 'accept: application/json' -H 'Content-Type: application/json' -d '"%s"'
 take_picture_msg: Done
-pre_photo_cmd: curl localhost:8000/cmd/capturePrepare
-post_photo_cmd: curl localhost:8000/cmd/autofocus/on
+pre_photo_cmd: curl http://photobooth:8000/cmd/frameserver/capturemode
+post_photo_cmd: curl http://photobooth:8000/cmd/frameserver/previewmode
 preview_url: url(<http://photobooth:8000/stream.mjpg>)
 background_defaults: url(<http://photobooth:8000/stream.mjpg>)
 ```
