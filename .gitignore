@@ -1,6 +1,7 @@
 /experiments
 /config/*.json
 web/
-data/
+data/*/*
+!.empty
 profile_results*
 __pycache__
