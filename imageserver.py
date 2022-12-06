@@ -284,7 +284,7 @@ def api_gallery_images():
 def api_gallery_delete(id: str):
     logger.info(f"gallery_delete requested, id={id}")
     try:
-        imageDb.deleteImage(id)
+        imageDb.deleteImageById(id)
     except Exception as e:
         logger.exception(e)
         # print(e)

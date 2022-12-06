@@ -1,4 +1,5 @@
 
+import json
 import shutil
 import hashlib
 from lib.FrameServer import getJpegByHiresFrame, getScaledJpegByJpeg, writeJpegToFile
@@ -30,6 +31,7 @@ def _dbImageItem(filepath: str, caption: str = ""):
     datetime = os.path.getmtime(f"{DATA_PATH}{PATH_IMAGE}{filename}")
 
     item = {
+        'id': hashlib.md5(filename.encode('utf-8')).hexdigest(),
         'caption': caption,
         'filename': filename,
         'datetime': datetime,
@@ -54,7 +56,7 @@ class ImageDb():
         self._frameServer = frameServer
         self._exif = exif
 
-        self._db = {}  # Dict of Images with unique identifier as key
+        self._db = []  # sorted array. always newest image first in list.
 
         # TODO: check all directory exist and are writeable - otherwise raise exception.
 
@@ -97,28 +99,34 @@ class ImageDb():
                 f"{counterFailedImages} some files have errors, go and check the data dir for problems")
 
     def _dbAddItem(self, item):
-        id = hashlib.md5(item['filename'].encode('utf-8')).hexdigest()
-        self._db[id] = item
-        return id
+        self._db.insert(0, item)  # insert at first position (prepend)
+        return item['id']
 
-    def _dbDeleteItem(self, id):
-        del self._db[id]
+    def _dbDeleteItemByItem(self, item):
+        #self._db = [item for item in self._db if item['id'] != id]
+        self._db.remove(item)
+        #del self._db[id]
 
     def _dbDeleteItems(self):
-        self._db = {}
+        self._db.clear()
 
     @property
     def numberOfImages(self):
         return len(self._db)
 
     def dbGetImages(self, sortByKey="datetime", reverse=True):
-        return dict(sorted(self._db.items(), key=lambda x: x[1][sortByKey], reverse=reverse))
+        return sorted(self._db, key=lambda x: x[sortByKey], reverse=reverse)
+        # return dict(sorted(self._db.items(), key=lambda x: x[1][sortByKey], reverse=reverse))
 
-    def dbGetImage(self, id):
-        try:
-            return self._db[id]
-        except Exception as e:
-            logger.exception(f"image {id} not found{e}")
+    def dbGetImageById(self, id):
+        # https://stackoverflow.com/a/7125547
+        item = next((x for x in self._db if x['id'] == id), None)
+
+        if item == None:
+            logger.debug(f"image {id} not found!")
+            raise Exception(f"image {id} not found!")
+
+        return item
 
     """
     processing logic below
@@ -164,6 +172,11 @@ class ImageDb():
             processing_time = round((time.time() - start_time), 1)
             logger.info(
                 f"capture to file {actual_filepath} successfull, process took {processing_time}s")
+
+            # to inform frontend about new image to display
+            self._ee.emit("publishSSE", sse_event="imagedb/newarrival",
+                          sse_data=json.dumps(item))
+
             return (f'Done, frame capture successful')
         except Exception as e:
             logger.exception(e)
@@ -212,14 +225,18 @@ class ImageDb():
 
         return item, id
 
-    def deleteImage(self, id):
+    def deleteImageById(self, id):
         """ delete single file and it's related thumbnails """
         logger.info(f"request delete item id {id}")
+
         try:
-            os.remove(self._db[id]['image'])
-            os.remove(self._db[id]['preview'])
-            os.remove(self._db[id]['thumbnail'])
-            self._dbDeleteItem(id)
+            item = self.dbGetImageById(id)
+            logger.debug(f"found item={item}")
+
+            os.remove(item['image'])
+            os.remove(item['preview'])
+            os.remove(item['thumbnail'])
+            self._dbDeleteItemByItem(item)
         except Exception as e:
             logger.exception(f"error deleting item id={id}, error {e}")
             raise
