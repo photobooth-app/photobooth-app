@@ -1,35 +1,37 @@
-from sshkeyboard import listen_keyboard
-import asyncio
-#from pynput import keyboard
 import logging
+import asyncio
+from sshkeyboard import listen_keyboard
+import threading
+
+#from pynput import keyboard
 logger = logging.getLogger(__name__)
 
 
-class KeyboardService():
-    """Handles keyboard actions"""
+class KeyboardService(threading.Thread):
 
-    def __init__(self, cs, ee):
+    def __init__(self, cs, ee, name='keyboard-input-thread'):
         self._cs = cs
         self._ee = ee
 
-        listen_keyboard(
-            on_release=self.on_release, until=None
-        )
-        #self._listener = keyboard.Listener(on_release=self.on_release)
-        # separate thread
-        # self._listener.start()
+        self._stop = threading.Event()
 
-    async def on_release(self, key):
-        # two types of "keys", Key/KeyCode. KeyCode is normal ASCII Code, Key is special example for arrow up on keyboard.
-        # check the keycode with debug log on browser console.
-        # if isinstance(key, keyboard.Key):
-        # special key, identified by terms in this enum: https://github.com/moses-palmer/pynput/blob/078491edf7025033c22a364ee76fb9e79db65fcc/lib/pynput/keyboard/_base.py#L162
-        #print('Key:', key.name, key.value.vk)
-        #    name = key.name
-        # elif isinstance(key, keyboard.KeyCode):
-        #print('KeyCode:', key.char, key.vk)
-        #    name = key.char
+        super(KeyboardService, self).__init__(name=name)
+        self.start()
 
+    # function using _stop function
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        while not self.stopped():
+            listen_keyboard(
+                on_press=self.on_key_callback, until=None, lower=False
+            )
+
+    async def on_key_callback(self, key):
         logger.debug(f"key '{key}' triggered.")
 
         if key == self._cs._current_config["HW_KEYCODE_TAKEPIC"]:
