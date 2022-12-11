@@ -31,7 +31,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 Install packages (as root because imageserver needs to run as root)
 
 ```text
-sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions pynput
+sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions keyboard
 sudo apt install -y python3-picamera2 git fonts-noto-color-emoji
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
@@ -53,7 +53,7 @@ sudo systemctl start imageserver.service
 sudo systemctl status imageserver.service
 ```
 
-### Integrate with ImageServer
+### Integrate Photobooth and ImageServer
 
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
@@ -62,8 +62,8 @@ take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -H 'accept: ap
 take_picture_msg: Done
 pre_photo_cmd: curl http://photobooth:8000/cmd/frameserver/capturemode
 post_photo_cmd: curl http://photobooth:8000/cmd/frameserver/previewmode
-preview_url: url(<http://photobooth:8000/stream.mjpg>)
-background_defaults: url(<http://photobooth:8000/stream.mjpg>)
+preview_url: url("http://photobooth:8000/stream.mjpg")
+background_defaults: url("http://photobooth:8000/stream.mjpg")
 ```
 
 ### Sync Online (for file downloads via QR Code)
@@ -114,6 +114,16 @@ network={
   - rclone to sync photos online for easier download
   - store exif data to images
   - changed to exposure mode short as per default
+
+## Troubleshooting
+
+Check following commands and files for error messages:
+
+```text
+journalctl --unit=imageserver -n 100 --no-pager
+```
+
+~/imageserver/log/qbooth.log
 
 ### :copyright: License
 
