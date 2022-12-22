@@ -26,6 +26,7 @@ import uuid
 from queue import Queue
 import signal
 import json
+from lib.ConfigSettings import settings
 from lib.ConfigService import ConfigService
 import logging
 
@@ -51,14 +52,14 @@ class EventstreamLogHandler(logging.Handler):
                 sse_data=self.format(record))
 
 
-logging.config.dictConfig(cs._internal_config["LOGGING_CONFIG"])
+logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
 
 # setup configservice
 cs.load()
-# print(cs._current_config)
+# print(settings.dict())
 
 # reconfigure if any changes from config needs to be applied.
-logging.config.dictConfig(cs._internal_config["LOGGING_CONFIG"])
+logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
 
 
 logger = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ async def subscribe(request: Request):
     addToQueue(sse_event="message",
                sse_data=f"Client connected {request.client}")
     addToQueue(sse_event="config/currentconfig",
-               sse_data=json.dumps(cs._current_config))  # TODO: needs to be changed to initial publish as all other.
+               sse_data=settings.json())  # TODO: needs to be changed to initial publish as all other.
 
     # all modules can register this event to send initial messages on connection
     ee.emit("publishSSE/initial")
@@ -183,7 +184,7 @@ async def api_debug_threads():
 
 @app.get("/config/current")
 async def api_get_config_current():
-    return (cs._current_config)
+    return (settings.dict())
 
 
 @app.post("/config/current")
@@ -310,19 +311,19 @@ app.mount("/", StaticFiles(directory="web"), name="web")
 
 
 if __name__ == '__main__':
-    infoled = InfoLed(cs, ee)
-    frameServer = FrameServer(cs, ee)
-    locationService = LocationService(ee, cs)
-    exif = Exif(cs, frameServer, locationService)
-    imageDb = ImageDb(cs, ee, frameServer, exif)
-    focuser = Focuser(cs._current_config["FOCUSER_DEVICE"], cs)
-    focusState = FocusState(frameServer, focuser, ee, cs)
-    rt = RepeatedTimer(cs._current_config["FOCUSER_REPEAT_TRIGGER"],
+    infoled = InfoLed(ee)
+    frameServer = FrameServer(ee)
+    locationService = LocationService(ee)
+    exif = Exif(frameServer, locationService)
+    imageDb = ImageDb(ee, frameServer, exif)
+    focuser = Focuser()
+    focusState = FocusState(frameServer, focuser, ee)
+    rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
                        ee.emit, "onRefocus")
-    ks = KeyboardService(cs, ee)
+    ks = KeyboardService(ee)
 
     # model, machine and fire.
-    model = TakePictureMachineModel(cs, ee)
+    model = TakePictureMachineModel(ee)
     machine = Machine(model, states=states,
                       transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
     model.start()

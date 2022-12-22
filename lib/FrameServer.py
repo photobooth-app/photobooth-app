@@ -1,3 +1,4 @@
+from .ConfigSettings import settings
 from libcamera import Transform
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 import json
@@ -12,13 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class FrameServer:
-    def __init__(self, cs, ee):
+    def __init__(self, ee):
         """A simple class that can serve up frames from one of the Picamera2's configured
         streams to multiple other threads.
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = Picamera2()
-        self._config = cs
         self._ee = ee
 
         self._hq_array = None
@@ -38,11 +38,11 @@ class FrameServer:
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": self._config._current_config["CAPTURE_CAM_RESOLUTION"]}, {"size": self._config._current_config["CAPTURE_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=self._config._current_config["CAMERA_TRANSFORM_HFLIP"], vflip=self._config._current_config["CAMERA_TRANSFORM_VFLIP"]))
+            {"size": settings.common.CAPTURE_CAM_RESOLUTION}, {"size": settings.common.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": self._config._current_config["PREVIEW_CAM_RESOLUTION"]}, {"size": self._config._current_config["PREVIEW_VIDEO_RESOLUTION"]}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=self._config._current_config["CAMERA_TRANSFORM_HFLIP"], vflip=self._config._current_config["CAMERA_TRANSFORM_VFLIP"]))
+            {"size": settings.common.PREVIEW_CAM_RESOLUTION}, {"size": settings.common.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # activate preview mode on init
         self._setConfigPreview()
@@ -53,14 +53,13 @@ class FrameServer:
         logger.info(f"controls: {self._picam2.controls}")
 
         tuning = Picamera2.load_tuning_file(
-            self._config._current_config["CAMERA_TUNINGFILE"])
+            settings.common.CAMERA_TUNINGFILE)
         algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
         self._availAeExposureModes = (algo["exposure_modes"].keys())
         logger.info(
             f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
 
-        self.setAeExposureMode(
-            self._config._current_config["CAPTURE_EXPOSURE_MODE"])
+        self.setAeExposureMode(settings.common.CAPTURE_EXPOSURE_MODE)
 
         # start camera
         self._picam2.start()
@@ -201,7 +200,7 @@ class FrameServer:
                 return self._hq_array
 
     def gen_stream(self):
-        skip_counter = self._config._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
+        skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
         jpeg = TurboJPEG()
 
         while self._running:
@@ -209,10 +208,10 @@ class FrameServer:
 
             if (skip_counter <= 1):
                 buffer = jpeg.encode(
-                    frame, quality=self._config._current_config["LORES_QUALITY"])
+                    frame, quality=settings.common.LORES_QUALITY)
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
-                skip_counter = self._config._current_config["PREVIEW_PREVIEW_FRAMERATE_DIVIDER"]
+                skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
             else:
                 skip_counter -= 1
 
@@ -221,7 +220,7 @@ class FrameServer:
         logger.info(
             "FrameServer detected config change, apply new cam settings")
         self.setAeExposureMode(
-            self._config._current_config["CAPTURE_EXPOSURE_MODE"])
+            settings.common.CAPTURE_EXPOSURE_MODE)
 
     def setAeExposureMode(self, newmode):
         logger.info(f"setAeExposureMode, try to set to {newmode}")
@@ -237,7 +236,7 @@ class FrameServer:
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):
-        if self._config._current_config["DEBUG_OVERLAY"]:
+        if settings.debugging.DEBUG_OVERLAY:
             try:
                 overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
                 overlay2 = f"{self.fps} fps"

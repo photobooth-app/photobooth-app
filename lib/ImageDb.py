@@ -3,6 +3,7 @@ import json
 import shutil
 import hashlib
 from lib.FrameServer import getJpegByHiresFrame, getScaledJpegByJpeg, writeJpegToFile
+from lib.ConfigSettings import settings
 from pathlib import Path
 import time
 import glob
@@ -50,8 +51,7 @@ def _dbImageItem(filepath: str, caption: str = ""):
 class ImageDb():
     """Handle all image related stuff"""
 
-    def __init__(self, cs, ee, frameServer, exif):
-        self._cs = cs
+    def __init__(self, ee, frameServer, exif):
         self._ee = ee
         self._frameServer = frameServer
         self._exif = exif
@@ -156,7 +156,7 @@ class ImageDb():
             actual_filepath = item['image']
 
             # add exif information
-            if self._cs._current_config["PROCESS_ADD_EXIF_DATA"]:
+            if settings.common.PROCESS_ADD_EXIF_DATA:
                 logger.info("add exif data to image")
                 try:
                     self._exif.injectExifToJpeg(actual_filepath)
@@ -187,7 +187,7 @@ class ImageDb():
         # preview version
         prev_filepath = f"{DATA_PATH}{PATH_PREVIEW}{filename}"
         buffer_preview = getScaledJpegByJpeg(
-            buffer_full, self._cs._current_config["PREVIEW_QUALITY"], self._cs._current_config["PREVIEW_SCALE_FACTOR"])
+            buffer_full, settings.common.PREVIEW_QUALITY, settings.common.PREVIEW_SCALE_FACTOR)
         writeJpegToFile(
             buffer_preview, prev_filepath)
         logger.info(f"created and saved preview image {prev_filepath}")
@@ -195,7 +195,7 @@ class ImageDb():
         # thumbnail version
         thumb_filepath = f"{DATA_PATH}{PATH_THUMBNAIL}{filename}"
         buffer_thumbnail = getScaledJpegByJpeg(
-            buffer_full, self._cs._current_config["THUMBNAIL_QUALITY"], self._cs._current_config["THUMBNAIL_SCALE_FACTOR"])
+            buffer_full, settings.common.THUMBNAIL_QUALITY, settings.common.THUMBNAIL_SCALE_FACTOR)
         writeJpegToFile(
             buffer_thumbnail, thumb_filepath)
         logger.info(f"created and saved thumbnail image {thumb_filepath}")
@@ -211,7 +211,7 @@ class ImageDb():
 
         # create JPGs
         buffer_full = getJpegByHiresFrame(
-            hires_frame, self._cs._current_config["HIRES_QUALITY"])
+            hires_frame, settings.common.HIRES_QUALITY)
 
         # save to disk
         writeJpegToFile(

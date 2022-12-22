@@ -1,6 +1,7 @@
 from os.path import exists as file_exists
 import os
 import logging
+from lib.ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 ###
@@ -17,12 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 class Focuser:
-    def __init__(self, device, CONFIG):
+    def __init__(self):
         self.focus_value = 0
-        self._device = device
-        self._CONFIG = CONFIG
-        self.MAX_VALUE = self._CONFIG._current_config["FOCUSER_MAX_VALUE"]
-        self.MIN_VALUE = self._CONFIG._current_config["FOCUSER_MIN_VALUE"]
+        self._device = settings.common.FOCUSER_DEVICE
+        self.MAX_VALUE = settings.common.FOCUSER_MAX_VALUE
+        self.MIN_VALUE = settings.common.FOCUSER_MIN_VALUE
 
         # if arducam drivers are not installed properly, the device might not exist and we have to fail hard here now.
         if not (file_exists(self._device)):
@@ -32,16 +32,16 @@ class Focuser:
         self.reset()
 
     def reset(self):
-        self.set(self._CONFIG._current_config["FOCUSER_DEF_VALUE"])
+        self.set(settings.common.FOCUSER_DEF_VALUE)
 
     def get(self):
         return self.focus_value
 
     def set(self, value):
-        if value > self._CONFIG._current_config["FOCUSER_MAX_VALUE"]:
-            value = self._CONFIG._current_config["FOCUSER_MAX_VALUE"]
-        elif value < self._CONFIG._current_config["FOCUSER_MIN_VALUE"]:
-            value = self._CONFIG._current_config["FOCUSER_MIN_VALUE"]
+        if value > settings.common.FOCUSER_MAX_VALUE:
+            value = settings.common.FOCUSER_MAX_VALUE
+        elif value < settings.common.FOCUSER_MIN_VALUE:
+            value = settings.common.FOCUSER_MIN_VALUE
 
         value = int(value)
         try:

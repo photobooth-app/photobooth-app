@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 class Exif():
     """Handle all image related stuff"""
 
-    def __init__(self, cs, frameServer, locationservice):
-        self._cs = cs
+    def __init__(self, frameServer, locationservice):
         self._frameServer = frameServer
         self._locationservice = locationservice
 

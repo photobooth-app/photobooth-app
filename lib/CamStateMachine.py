@@ -4,6 +4,7 @@ import json
 from threading import Thread, Lock
 import time
 from queue import Queue
+from lib.ConfigSettings import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 class TakePictureMachineModel(Thread):
 
-    def __init__(self, cs, ee):
-        self._cs = cs  # config
+    def __init__(self, ee):
         self._ee = ee  # eventemitter
 
         self.event_queue = Queue()
@@ -93,14 +93,14 @@ class TakePictureMachineModel(Thread):
         return processinfo
 
     def countdown(self):
-        countdown = self._cs._current_config['PROCESS_COUNTDOWN_TIMER'] + \
-            self._cs._current_config['PROCESS_COUNTDOWN_OFFSET']
+        countdown = settings.common.PROCESS_COUNTDOWN_TIMER + \
+            settings.common.PROCESS_COUNTDOWN_OFFSET
         while True:
             self._publishSSE(
                 "statemachine/processinfo", self.SSE_processinfo({"countdown": round(countdown, 1)}))
             time.sleep(0.1)
             countdown -= 0.1
-            if (countdown <= self._cs._current_config['PROCESS_COUNTDOWN_OFFSET']):
+            if (countdown <= settings.common.PROCESS_COUNTDOWN_OFFSET):
                 break
 
     """

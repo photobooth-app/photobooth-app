@@ -5,6 +5,7 @@ import time
 from lib.StoppableThread import StoppableThread
 import time
 from rpi_ws281x import PixelStrip, Color, WS2812_STRIP
+from .ConfigSettings import settings
 
 # LED strip configuration:
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -16,9 +17,7 @@ LED_STRIP_TYPE = WS2812_STRIP  # or WS2811_STRIP_GRB
 
 
 class InfoLed():
-    def __init__(self, CONFIG, ee, *args, **kwargs):
-        self._CONFIG = CONFIG
-
+    def __init__(self, ee, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
@@ -30,8 +29,8 @@ class InfoLed():
         self._countdownAnimationThread = StoppableThread(name="countdownAnimationThread",
                                                          target=self._countdownAnimationFun, daemon=True)
 
-        self._pixels = PixelStrip(self._CONFIG._current_config["WS2812_NUMBER_LEDS"], self._CONFIG._current_config["WS2812_GPIO_PIN"], LED_FREQ_HZ,
-                                  LED_DMA, LED_INVERT, self._CONFIG._current_config["WS2812_MAX_BRIGHTNESS"], LED_CHANNEL, LED_STRIP_TYPE)
+        self._pixels = PixelStrip(settings.colorled.NUMBER_LEDS, settings.colorled.GPIO_PIN, LED_FREQ_HZ,
+                                  LED_DMA, LED_INVERT, settings.colorled.MAX_BRIGHTNESS, LED_CHANNEL, LED_STRIP_TYPE)
         self._pixels.begin()
         self._fill(Color(0, 0, 0))
 
@@ -43,7 +42,7 @@ class InfoLed():
     def _countdownAnimationFun(self):
         """Loading circle animation"""
         color = Color(
-            self._CONFIG._current_config["WS2812_COLOR"][0], self._CONFIG._current_config["WS2812_COLOR"][1], self._CONFIG._current_config["WS2812_COLOR"][2], self._CONFIG._current_config["WS2812_COLOR"][3])
+            settings.colorled.COLOR[0], settings.colorled.COLOR[1], settings.colorled.COLOR[2], settings.colorled.COLOR[3])
         colorarray = [color >> 16 &
                       255, color >> 8 & 255, color >> 0 & 255, color >> 24 & 255]  # RGBW
         # print(colorarray)
@@ -64,7 +63,7 @@ class InfoLed():
                     break
 
                 time.sleep(
-                    self._CONFIG._current_config["WS2812_ANIMATION_UPDATE"] / 1000.0)
+                    settings.colorled.ANIMATION_UPDATE / 1000.0)
 
         # turn off all led when countdown ends
         self._fill(Color(0, 0, 0))
@@ -79,14 +78,14 @@ class InfoLed():
         if self._countdownAnimationThread.is_alive():
             self._countdownAnimationThread.stop()
             self._countdownAnimationThread.join(
-                ((self._CONFIG._current_config["WS2812_ANIMATION_UPDATE"]+50) / 1000.0))   # wait one update run longest, afterwards continue...
+                ((settings.colorled.ANIMATION_UPDATE+50) / 1000.0))   # wait one update run longest, afterwards continue...
 
         self._fill(Color(0, 0, 0))
 
     def captureStart(self):
         self.stopCountdown()
         self._fill(Color(
-            self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][0], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][1], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][2], self._CONFIG._current_config["WS2812_CAPTURE_COLOR"][3]))
+            settings.colorled.CAPTURE_COLOR[0], settings.colorled.CAPTURE_COLOR[1], settings.colorled.CAPTURE_COLOR[2], settings.colorled.CAPTURE_COLOR[3]))
 
     def captureFinished(self):
         self.stopCountdown()

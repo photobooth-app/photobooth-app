@@ -4,14 +4,13 @@ from queue import Queue
 import threading
 import time
 import logging
+from lib.ConfigSettings import settings
 
 logger = logging.getLogger(__name__)
 
 
 class FocusState(object):
-    def __init__(self, frameServer, focuser, ee, CONFIG):
-        self._CONFIG = CONFIG
-
+    def __init__(self, frameServer, focuser, ee):
         self._frameServer = frameServer
         self._focuser = focuser
         self._ee = ee
@@ -40,7 +39,7 @@ class FocusState(object):
 
     def doFocus(self):
         # guard to perfom autofocus only once at a time
-        if self.isFinish() and self._standby == False and self._CONFIG._current_config['FOCUSER_ENABLED']:
+        if self.isFinish() and self._standby == False and settings.common.FOCUSER_ENABLED:
             self.reset()
             self.setFinish(False)
 
@@ -97,20 +96,20 @@ def statsThread(frameServer, focuser, focusState):
 
         frame = frameServer.wait_for_lores_frame()
 
-        if time.time() - lastTime >= focusState._CONFIG._current_config["FOCUSER_MOVE_TIME"] and not focusState.isFinish():
+        if time.time() - lastTime >= settings.common.FOCUSER_MOVE_TIME and not focusState.isFinish():
             lastTime = time.time()
 
             nextPosition = lastPosition + \
                 (focusState.direction *
-                 focusState._CONFIG._current_config["FOCUSER_STEP"])
+                 settings.common.FOCUSER_STEP)
 
             if nextPosition < maxPosition and nextPosition > minPosition:
                 focuser.set(nextPosition)
 
             roi_frame = getROIFrame(
-                focusState._CONFIG._current_config["FOCUSER_ROI"], frame)
+                settings.common.FOCUSER_ROI, frame)
             buffer = jpeg.encode(
-                roi_frame, quality=focusState._CONFIG._current_config["FOCUSER_JPEG_QUALITY"])
+                roi_frame, quality=settings.common.FOCUSER_JPEG_QUALITY)
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
             sharpness = len(buffer)
@@ -119,7 +118,7 @@ def statsThread(frameServer, focuser, focusState):
             focusState.sharpnessList.put(item)
 
             lastPosition += (focusState.direction *
-                             focusState._CONFIG._current_config["FOCUSER_STEP"])
+                             settings.common.FOCUSER_STEP)
 
             if lastPosition > maxPosition:
                 break

@@ -5,15 +5,14 @@ import googlemaps
 import pywifi
 from threading import Thread
 import logging
+from lib.ConfigSettings import settings
 logger = logging.getLogger(__name__)
 # using google geolocation api for positioning
 # might add a gps receiver and pynmea2 in future also, but mostly systems inside so no gps avail
 
 
 class LocationService:
-    def __init__(self, ee, CONFIG):
-
-        self._CONFIG = CONFIG
+    def __init__(self, ee):
         self._ee = ee
 
         self._thread = Thread(name="LocationServiceThread",
@@ -32,9 +31,9 @@ class LocationService:
         try:
             self._wifi = pywifi.PyWiFi()
             self._iface = self._wifi.interfaces(
-            )[self._CONFIG._current_config["LOCATION_SERVICE_WIFI_INTERFACE_NO"]]
+            )[settings.common.LOCATION_SERVICE_WIFI_INTERFACE_NO]
             self._client = googlemaps.Client(
-                self._CONFIG._current_config["LOCATION_SERVICE_API_KEY"])
+                settings.common.LOCATION_SERVICE_API_KEY)
         except Exception as e:
             logger.exception(e)
             logger.error(
@@ -45,7 +44,7 @@ class LocationService:
 
     def start(self):
         if (self._init_successful):
-            if (self._CONFIG._current_config["LOCATION_SERVICE_ENABLED"]):
+            if (settings.common.LOCATION_SERVICE_ENABLED):
                 self._running = True
                 self._thread.start()
             else:
@@ -60,11 +59,10 @@ class LocationService:
         self._thread.join(1)
 
     def _thread_func(self):
-        CALC_EVERY = self._CONFIG._current_config["LOCATION_SERVICE_FORCED_UPDATE"] * \
+        CALC_EVERY = settings.common.LOCATION_SERVICE_FORCED_UPDATE * \
             60  # update every x seconds only
         last_forced_update_time = time.time()  # last time force updated
-        max_retries_high_frequency = self._CONFIG._current_config[
-            "LOCATION_SERVICE_HIGH_FREQ_UPDATE"]
+        max_retries_high_frequency = settings.common.LOCATION_SERVICE_HIGH_FREQ_UPDATE
 
         while self._running:
             # forced update by time
@@ -78,7 +76,7 @@ class LocationService:
                 last_forced_update_time = time.time()
 
             # higher frequency retry initial after bootup. if fails still forced update every hour or so above.
-            elif (self.accuracy == None or self.accuracy > self._CONFIG._current_config["LOCATION_SERVICE_THRESHOLD_ACCURATE"]) and max_retries_high_frequency > 0:
+            elif (self.accuracy == None or self.accuracy > settings.common.LOCATION_SERVICE_THRESHOLD_ACCURATE) and max_retries_high_frequency > 0:
                 logger.info(
                     f"no or inaccurate location result, retry {max_retries_high_frequency} times again")
 
@@ -156,7 +154,7 @@ class LocationService:
         # use api key to request via nearby wifis
         try:
             results = self._client.geolocate(
-                consider_ip=self._CONFIG._current_config["LOCATION_SERVICE_CONSIDER_IP"], wifi_access_points=self._wifi_access_points)
+                consider_ip=settings.common.LOCATION_SERVICE_CONSIDER_IP, wifi_access_points=self._wifi_access_points)
 
             logger.info(f"geolocation results: {results}")
 
