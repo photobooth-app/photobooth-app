@@ -18,7 +18,7 @@ class TakePictureMachineModel(Thread):
         self.event_queue = Queue()
         self.lock = Lock()
         # has to be called whenever something inherits from Thread
-        super(TakePictureMachineModel, self).__init__()
+        super(TakePictureMachineModel, self).__init__(daemon=True)
 
         # register to send initial data SSE
         self._ee.on("publishSSE/initial", self._publishSSEInitial)
