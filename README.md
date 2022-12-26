@@ -121,7 +121,7 @@ Develop on Windows or Linux using VScode.
 Additional requirements
 
 - backend development
-  - TODO
+  - pip install pipreqs
 - frontend development
   - nodejs 16 (nodejs 18 fails proxying the devServer)
   - yarn
