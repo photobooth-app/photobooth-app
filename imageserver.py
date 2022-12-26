@@ -34,10 +34,9 @@ import logging
 # create early instances
 # event system
 ee = EventEmitter()
-# setup config object
-# cs = ConfigService(settings, ee)
 
-# setup logger
+# constants
+SERVICE_NAME = "imageserver"
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -180,7 +179,16 @@ async def api_get_config_current():
 async def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
-    # os.system("systemctl restart imageserver")
+
+    status = os.system(f'systemctl is-active --quiet {SERVICE_NAME}')
+    # will return 0 for active else inactive.
+
+    if (status == 0):
+        logger.info(f"service {SERVICE_NAME} currently active, restarting")
+        os.system(f"systemctl restart {SERVICE_NAME}")
+    else:
+        logger.warning(
+            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
