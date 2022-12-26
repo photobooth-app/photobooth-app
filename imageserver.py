@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+from lib.ConfigSettings import ConfigSettings
+import lib.ConfigSettings
 from lib.KeyboardService import KeyboardService
 from lib.CamStateMachine import TakePictureMachineModel, states, transitions
 from transitions import Machine
@@ -27,14 +29,13 @@ from queue import Queue
 import signal
 import json
 from lib.ConfigSettings import settings
-from lib.ConfigService import ConfigService
 import logging
 
 # create early instances
 # event system
 ee = EventEmitter()
 # setup config object
-cs = ConfigService(ee)
+# cs = ConfigService(settings, ee)
 
 # setup logger
 
@@ -52,29 +53,12 @@ class EventstreamLogHandler(logging.Handler):
                 sse_data=self.format(record))
 
 
-logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
-
-# setup configservice
-cs.load()
-# print(settings.dict())
-
 # reconfigure if any changes from config needs to be applied.
 logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
 
 
 logger = logging.getLogger(__name__)
 logger.info('Welcome to qPhotobooth')
-
-"""
-ImageServer used to stream photos from raspberry pi camera for liveview and high quality capture while maintaining the stream
-
-# TODO / Improvements
-1) idea: cv2 face detection to autofocus on faces (might be to high load on RP)
-2) add a way to change camera controls (sport mode, ...) to adapt for different lighting
-3) improve autofocus algorithm
-4) check tuning file: https://github.com/raspberrypi/picamera2/blob/main/examples/tuning_file.py
-
-"""
 
 app = FastAPI()
 
@@ -158,7 +142,7 @@ async def subscribe(request: Request):
     addToQueue(sse_event="message",
                sse_data=f"Client connected {request.client}")
     addToQueue(sse_event="config/currentconfig",
-               sse_data=settings.json())  # TODO: needs to be changed to initial publish as all other.
+               sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
     ee.emit("publishSSE/initial")
@@ -188,26 +172,24 @@ async def api_get_config_current():
 
 
 @app.post("/config/current")
-async def api_post_config_current(request: Request):
-    sent_config_json = await request.json()
-    cs.import_config(sent_config_json)
-    cs.save()
-
-
-# photobooth compatibility
+async def api_post_config_current(updatedSettings: ConfigSettings):
+    updatedSettings.persist()
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
+# photobooth compatibility
 def api_cmd_framserver_capturemode_get():
     ee.emit("onCaptureMode")
 
 
 @app.get("/cmd/frameserver/previewmode", status_code=status.HTTP_204_NO_CONTENT)
+# photobooth compatibility
 def api_cmd_frameserver_previewmode_get():
     ee.emit("onPreviewMode")
 
 
 @app.post("/cmd/capture", status_code=status.HTTP_200_OK)
+# photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
     return imageDb.captureHqImage(filepath, True)
 
@@ -218,11 +200,7 @@ async def api_cmd(action, param):
 
     if (action == "config"):
         if (param == "reset"):
-            cs.reset_default_values()
-        elif (param == "load"):
-            cs.load()
-        elif (param == "save"):
-            cs.save()
+            settings.deleteconfig()
         else:
             pass  # fail!
     elif (action == "server" and param == "reboot"):

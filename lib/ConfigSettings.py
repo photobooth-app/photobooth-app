@@ -1,11 +1,15 @@
+from pydantic import BaseSettings
+from typing import Any
+from pathlib import Path
+from datetime import datetime
 from typing import Annotated
-from pydantic import BaseModel, BaseSettings, Field
+from pydantic import BaseModel, BaseSettings, Field, PrivateAttr
 import os
 import json
 import logging
 logger = logging.getLogger(__name__)
 
-CONFIG_FILENAME = "./config/config_pydantic.json"
+CONFIG_FILENAME = "./config/config.json"
 
 
 class GroupCommon(BaseModel):
@@ -180,48 +184,91 @@ class GroupColorled(BaseModel):
     ANIMATION_UPDATE: int = 70    # update circle animation every XX ms
 
 
-class ConfigSettings(BaseSettings):
+class ConfigSettings(BaseModel):
     '''Settings class glueing all together'''
 
-    #v0: Annotated[str, Field(description="test123")] = 'Bar'
-    #test1: Annotated[str, Field(description="test123")] = 'Bar123'
+    _processed_at: datetime = PrivateAttr(
+        default_factory=datetime.now)  # private attributes
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     camera: GroupCamera = GroupCamera()
-
     colorled: GroupColorled = GroupColorled()
-
     debugging: GroupDebugging = GroupDebugging()
 
-    class Config:
-        env_file = '.env', '.env.prod'
+    def load(self):
+        return
+        # this is not working properly yet. instead only on instanciation import json like ConfigSettings(**dict)
+
+        with open(CONFIG_FILENAME, "r") as read_file:
+            loadedConfig = json.load(read_file)
+            print(loadedConfig)
+            # self = self.parse_obj(loadedConfig)
+            # self.__dict__.update(loadedConfig)
+            # self = self.copy(update=loadedConfig)
+            self = ConfigSettings(**loadedConfig)
 
     def persist(self):
         '''Persist settings to file'''
-        print("persisting")
+        logger.debug(f"persist settings to json file")
+
         with open(CONFIG_FILENAME, "w") as write_file:
             write_file.write(self.json(indent=2))
 
-    def reset(self):
+    def deleteconfig(self):
         '''Reset to defaults'''
-        print("resetting TODO")
+        logger.debug(f"settings reset to default")
 
         try:
             os.remove(CONFIG_FILENAME)
+            logger.debug(f"deleted {CONFIG_FILENAME} file.")
         except:
             logger.info(f"delete {CONFIG_FILENAME} file failed.")
 
-        # TODO self._publishSSE_currentconfig()
 
-    def load(self):
-        '''Load from json file'''
-        self.parse_file(CONFIG_FILENAME)
-
-    def get_schema(self):
-        '''get json schema for UI'''
-        return (self.schema_json(indent=2))
-
-
-# our singleton that can be imported throughout the app like # from lib.ConfigService import settings
+# our settings that can be imported throughout the app like # from lib.ConfigService import settings
+# TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
+try:
+    with open(CONFIG_FILENAME, "r") as read_file:
+        loadedConfig = json.load(read_file)
+    settings = ConfigSettings(**loadedConfig)
+except:
+    logger.error(
+        f"config file {CONFIG_FILENAME} could not be read, using defaults")
+
+    # load defaults and persist if no file found
+    settings.persist()
+
+
+if __name__ == '__main__':
+
+    settings.debugging.DEBUG_OVERLAY = True
+    assert settings.debugging.DEBUG_OVERLAY is True
+    settings.persist()
+    with open(CONFIG_FILENAME, "r") as read_file:
+        loadedConfig = json.load(read_file)
+    settings = ConfigSettings(**loadedConfig)  # reread config
+    assert settings.debugging.DEBUG_OVERLAY is True
+
+    settings.debugging.DEBUG_OVERLAY = False
+    settings.persist()
+    with open(CONFIG_FILENAME, "r") as read_file:
+        loadedConfig = json.load(read_file)
+    settings = ConfigSettings(**loadedConfig)  # reread config
+    assert settings.debugging.DEBUG_OVERLAY is False
+
+    settings.debugging.DEBUG_OVERLAY = True
+    settings.persist()
+    with open(CONFIG_FILENAME, "r") as read_file:
+        loadedConfig = json.load(read_file)
+    settings = ConfigSettings(**loadedConfig)  # reread config
+    assert settings.debugging.DEBUG_OVERLAY is True
+
+    settings.deleteconfig()
+    # reread config, this one is default now
+    settings = ConfigSettings()
+    settings.persist()
+    assert settings == ConfigSettings()  # is all default?
+
+    # print(settings)

@@ -31,7 +31,7 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 Install packages (as root because imageserver needs to run as root)
 
 ```text
-sudo pip install pymitter opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions keyboard
+sudo pip install pymitter pydantic piexif opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions keyboard
 sudo apt install -y python3-picamera2 git fonts-noto-color-emoji
 git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 ```
@@ -114,6 +114,18 @@ network={
   - rclone to sync photos online for easier download
   - store exif data to images
   - changed to exposure mode short as per default
+
+## Contribute
+
+Develop on Windows or Linux using VScode.
+Additional requirements
+
+- backend development
+  - TODO
+- frontend development
+  - nodejs 16 (nodejs 18 fails proxying the devServer)
+  - yarn
+  - quasar cli <https://quasar.dev/start/quasar-cli>
 
 ## Troubleshooting
 
