@@ -328,6 +328,8 @@ if __name__ == '__main__':
                                 port=8000, log_level="info")
         server = uvicorn.Server(config)
         server.force_exit = True
+        # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
+        # Otherwise the stream.mjpg if open will block shutdown of the server
         server.run()
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
