@@ -52,18 +52,21 @@ class FrameServer:
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        tuning = Picamera2.load_tuning_file(
-            settings.common.CAMERA_TUNINGFILE)
-        algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
-        self._availAeExposureModes = (algo["exposure_modes"].keys())
-        logger.info(
-            f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
+        useTuningFile = False
+        # TODO: remove later or use actually. Arducams only support "normal" and "short". All other cameras should support at least that also.
+        # disable loading tuning file currently because wrong file has negative impact on picture quality and seems actually not to be necessary in current state of imageserver.
+        if (useTuningFile == True):
+            tuning = Picamera2.load_tuning_file(
+                settings.common.CAMERA_TUNINGFILE)
+            algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
+            self._availAeExposureModes = (algo["exposure_modes"].keys())
+            logger.info(
+                f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
 
         self.setAeExposureMode(settings.common.CAPTURE_EXPOSURE_MODE)
 
         # start camera
         self._picam2.start()
-        self._picam2.set_controls({"AnalogueGain": 6})
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
 
