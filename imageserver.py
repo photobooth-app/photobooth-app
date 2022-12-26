@@ -79,6 +79,8 @@ def signal_handler(sig, frame):
 
 # signal CTRL-C and systemctl stop
 signal.signal(signal.SIGINT, signal_handler)
+# this is not working, because uvicorn is eating up signal handler definitions currently: https://github.com/encode/uvicorn/issues/1579
+# as workaround currently we set force_exit to True to shutdown the server
 
 
 @app.get("/eventstream")
@@ -322,8 +324,11 @@ if __name__ == '__main__':
     # serve files forever
     try:
         # log_level="trace", default info
-        uvicorn.run(app, host="0.0.0.0", port=8000,
-                    log_level="info")
+        config = uvicorn.Config(app=app, host="0.0.0.0",
+                                port=8000, log_level="info")
+        server = uvicorn.Server(config)
+        server.force_exit = True
+        server.run()
     finally:
         rt.stop()  # better in a try/finally block to make sure the program ends!
         frameServer.stop()
