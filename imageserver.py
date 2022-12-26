@@ -55,6 +55,9 @@ class EventstreamLogHandler(logging.Handler):
 
 # reconfigure if any changes from config needs to be applied.
 logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
+for handles in logging.getLogger().handlers:
+    # after configure, set all handlers level to global requested level:
+    handles.setLevel(settings.debugging.DEBUG_LEVEL)
 
 
 logger = logging.getLogger(__name__)
@@ -175,7 +178,9 @@ async def api_get_config_current():
 
 @app.post("/config/current")
 async def api_post_config_current(updatedSettings: ConfigSettings):
-    updatedSettings.persist()
+    updatedSettings.persist()  # save settings to disc
+    # restart service to load new config
+    # os.system("systemctl restart imageserver")
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
@@ -200,15 +205,19 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
 async def api_cmd(action, param):
     logger.info(f"cmd api requested action={action}, param={param}")
 
-    if (action == "config"):
-        if (param == "reset"):
-            settings.deleteconfig()
-        else:
-            pass  # fail!
+    if (action == "config" and param == "reset"):
+        settings.deleteconfig()
     elif (action == "server" and param == "reboot"):
         os.system("reboot")
     elif (action == "server" and param == "shutdown"):
         os.system("shutdown now")
+    elif (action == "service" and param == "restart"):
+        os.system("systemctl restart imageserver")
+    elif (action == "service" and param == "stop"):
+        os.system("systemctl stop imageserver")
+    elif (action == "service" and param == "start"):
+        os.system("systemctl start imageserver")
+
     else:
         raise HTTPException(
             500, f"invalid request action={action}, param={param}")

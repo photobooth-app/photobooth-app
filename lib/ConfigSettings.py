@@ -127,10 +127,12 @@ class GroupDebugging(BaseModel):
                 'filename': './log/qbooth.log',
                 'maxBytes': 1024**2,
                 'backupCount': 10,
+                'level': 'DEBUG',
             },
             'eventstream': {
                 'class': '__main__.EventstreamLogHandler',
                 'formatter': 'standard',
+                'level': 'DEBUG',
             }
         },
         'loggers': {
