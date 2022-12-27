@@ -227,6 +227,11 @@ class GroupLogger(BaseModel):
                 'level': 'INFO',
                 'propagate': False
             },
+            'PIL.PngImagePlugin': {
+                'handlers': ['default'],
+                'level': 'INFO',
+                'propagate': False
+            },
         }
     }
 

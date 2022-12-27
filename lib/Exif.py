@@ -14,12 +14,13 @@ class Exif():
     def createExifBytes(self):
         # grab metadata from frameserver
         now = datetime.datetime.now()
-        zero_ifd = {piexif.ImageIFD.Make: "Arducam",
-                    piexif.ImageIFD.Model: self._frameServer._picam2.camera.id,
+        zero_ifd = {piexif.ImageIFD.Make: self._frameServer.exif_make,
+                    # self._frameServer._picam2.camera.id,
+                    piexif.ImageIFD.Model: self._frameServer.exif_model,
                     piexif.ImageIFD.Software: "Photobooth Imageserver"}
-        total_gain = self._frameServer._metadata["AnalogueGain"] * \
-            self._frameServer._metadata["DigitalGain"]
-        exif_ifd = {piexif.ExifIFD.ExposureTime: (self._frameServer._metadata["ExposureTime"], 1000000),
+        total_gain = getattr(self._frameServer, "metadata.AnalogueGain", 0) * \
+            getattr(self._frameServer, "metadata.DigitalGain", 0)
+        exif_ifd = {piexif.ExifIFD.ExposureTime: (getattr(self._frameServer, "metadata.ExposureTime", 0), 1000000),
                     piexif.ExifIFD.DateTimeOriginal: now.strftime("%Y:%m:%d %H:%M:%S"),
                     piexif.ExifIFD.ISOSpeedRatings: int(total_gain * 100)}
 

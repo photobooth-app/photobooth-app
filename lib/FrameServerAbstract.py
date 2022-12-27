@@ -6,10 +6,13 @@ logger = logging.getLogger(__name__)
 class FrameServerAbstract(ABC):
     @abstractmethod
     def __init__(self, ee):
+        # public
+        self.exif_make = "FrameServerAbstract-Make"
+        self.exif_model = "FrameServerAbstract-Device"
+        self.metadata = {}
 
+        # private
         self._ee = ee
-        print("init abstract")
-        # when countdown starts change mode to HQ. after picture was taken change back.
         self._ee.on("statemachine/armed",
                     self._onCaptureMode)
 
@@ -20,24 +23,41 @@ class FrameServerAbstract(ABC):
 
     @abstractmethod
     def gen_stream(self):
+        """
+        yield jpeg images to stream to client (if not created otherwise)
+        """
         pass
 
     @abstractmethod
     def trigger_hq_capture(self):
+        """
+        trigger one time capture of high quality image
+        """
         pass
 
     @abstractmethod
     def wait_for_hq_image(self):
-        pass
-
-    @abstractmethod
-    def get_metadata(self):
+        """
+        function blocks until high quality image is available
+        """
         pass
 
     @abstractmethod
     def _onCaptureMode(self):
+        """called externally via events and used to change to a capture mode if necessary"""
         pass
 
     @abstractmethod
     def _onPreviewMode(self):
+        """called externally via events and used to change to a preview mode if necessary"""
+        pass
+
+    @abstractmethod
+    def start(self):
+        """To start the backend to serve"""
+        pass
+
+    @abstractmethod
+    def stop(self):
+        """To stop the backend to serve"""
         pass

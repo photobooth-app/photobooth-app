@@ -175,11 +175,11 @@ class ImageDb():
             self._frameServer.trigger_hq_capture()
 
             # waitforpic and store to disk
-            frame = self._frameServer.wait_for_hq_frame()
+            jpeg_buffer = self._frameServer.wait_for_hq_image()
 
             # create JPGs and add to db
-            (item, id) = self.createImageSetFromFrame(
-                frame, requested_filepath)
+            (item, id) = self.createImageSetFromImage(
+                jpeg_buffer, requested_filepath)
             actual_filepath = item['image']
 
             # add exif information
@@ -227,7 +227,7 @@ class ImageDb():
             buffer_thumbnail, thumb_filepath)
         logger.info(f"created and saved thumbnail image {thumb_filepath}")
 
-    def createImageSetFromFrame(self, hires_frame, filepath):
+    def createImageSetFromImage(self, hires_image, filepath):
         """
         A newly captured frame was taken by camera, now its up to this class to create the thumbnail, preview
         finally event is sent when processing is finished
@@ -237,8 +237,7 @@ class ImageDb():
         filename = os.path.basename(filepath)
 
         # create JPGs
-        buffer_full = getJpegByHiresFrame(
-            hires_frame, settings.common.HIRES_QUALITY)
+        buffer_full = hires_image
 
         # save to disk
         writeJpegToFile(

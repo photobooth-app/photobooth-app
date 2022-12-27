@@ -22,7 +22,7 @@ from lib.LocationService import LocationService
 from lib.RepeatedTimer import RepeatedTimer
 from lib.Focuser import Focuser
 from lib.Autofocus import FocusState
-from lib.FrameServer import FrameServer
+from lib.FrameServerBackendSimulate import FrameServerSimulate
 import asyncio
 import uuid
 from queue import Queue
@@ -314,7 +314,7 @@ app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
     infoled = InfoLed(ee)
-    frameServer = FrameServer(ee)
+    frameServer = FrameServerSimulate(ee)
     locationService = LocationService(ee)
     exif = Exif(frameServer, locationService)
     imageDb = ImageDb(ee, frameServer, exif)

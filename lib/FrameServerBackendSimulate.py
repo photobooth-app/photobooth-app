@@ -1,69 +1,68 @@
-from PIL import ImageDraw
-from PIL import ImageFont
-from ConfigSettings import settings, ConfigSettingsInternal
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
-import json
-import psutil
-import threading
-from threading import Condition, Thread
-import cv2
-import PIL
+import numpy as np
+from PIL import Image, ImageDraw
+from io import BytesIO
+from threading import Condition
 import time
 import logging
-import FrameServerAbstract
 from pymitter import EventEmitter
-from StoppableThread import StoppableThread
+import lib.FrameServerAbstract
+import lib.StoppableThread
 logger = logging.getLogger(__name__)
 
 
-class FrameServerSimulate(FrameServerAbstract.FrameServerAbstract):
+class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
     def __init__(self, ee):
+        # public props (defined in abstract class also)
+        self.exif_make = "Photobooth FrameServer Simulate"
+        self.exif_model = "Custom"
+        self.metadata = None
 
+        # private props
         self._hq_array = None
         self._lores_array = None
-        self._metadata = None
         self._hq_condition = Condition()
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
 
         super().__init__(ee)
 
-        self._generateImagesThread = StoppableThread(name="_generateImagesThread",
-                                                     target=self._GenerateImagesFun, daemon=True)
+        self._generateImagesThread = lib.StoppableThread.StoppableThread(name="_generateImagesThread",
+                                                                         target=self._GenerateImagesFun, daemon=True)
 
+    def start(self):
+        """To start the FrameServer"""
         self._generateImagesThread.start()
 
-    def wait_for_lores_frame(self):
-        """for other threads to receive a lores frame"""
+    def stop(self):
+        """To stop the FrameServer"""
+        self._generateImagesThread.stop()
+
+    def wait_for_lores_image(self):
+        """for other threads to receive a lores JPEG image"""
         with self._lores_condition:
             while True:
                 self._lores_condition.wait()
-                return self._lores_array
+                return self._lores_array.getvalue()
 
-    def wait_for_hq_frame(self):
-        """for other threads to receive a hq frame"""
+    def wait_for_hq_image(self):
+        """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
                 self._hq_condition.wait()
-                return self._hq_array
+                return self._hq_array.getvalue()
 
     def gen_stream(self):
         while not self._generateImagesThread.stopped():
-            frame = self.wait_for_lores_frame()
-
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + self.wait_for_lores_image() + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
         self._onCaptureMode()
 
-    def wait_for_hq_image(self):
-        # img.save("result.jpg")
-        pass
-
-    def get_metadata(self):
-        return {}
+    """
+    INTERNAL FUNCTIONS
+    """
 
     def _onCaptureMode(self):
         logger.debug(
@@ -75,23 +74,33 @@ class FrameServerSimulate(FrameServerAbstract.FrameServerAbstract):
             "change to preview mode - means doing nothing in simulate")
         pass
 
-    ####
+    """
+    INTERNAL IMAGE GENERATOR
+    """
+
     def _GenerateImagesFun(self):
         counter = 0
+        img_array = None
 
         while not self._generateImagesThread.stopped():  # repeat until stopped
             counter += 1
             # print(counter)
 
             # create PIL image
-            img = PIL.Image.new(mode="RGB", size=(600, 500))
-
+            img = Image.new(mode="RGB", size=(2000, 1200), color="green")
             # add text
             I1 = ImageDraw.Draw(img)
-            I1.text((28, 36), str(counter), fill=(255, 0, 0))
+            I1.text((100, 150), str(counter), fill=(
+                200, 200, 200))
+            I1.text((50, 100), "simulated image backend",
+                    fill=(200, 200, 200))
+
+            # create jpeg
+            jpeg_buffer = BytesIO()
+            img.save(jpeg_buffer, format="jpeg", quality=90)
 
             if not self._trigger_hq_capture:
-                _lores_data = img
+                _lores_data = jpeg_buffer
 
                 with self._lores_condition:
                     self._lores_array = _lores_data
@@ -104,22 +113,21 @@ class FrameServerSimulate(FrameServerAbstract.FrameServerAbstract):
 
                 self._ee.emit("frameserver/onCapture")
 
-                # capture hq picture
-                _hires_data = img
-                logger.debug(f"metadata={self._metadata}")
+                # virtual delay for camera to create picture
+                time.sleep(0.3)
 
                 self._ee.emit("frameserver/onCaptureFinished")
 
+                logger.debug(f"metadata={self.metadata}")
+
                 with self._hq_condition:
-                    self._hq_array = _hires_data
+                    self._hq_array = jpeg_buffer
                     self._hq_condition.notify_all()
 
                 # switch back to preview mode
                 self._onPreviewMode()
 
             time.sleep(33/1000.)
-
-            # img.show()
         return
 
 
