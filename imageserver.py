@@ -170,6 +170,11 @@ async def api_debug_threads():
     return (list)
 
 
+@app.get("/config/schema")
+async def api_get_config_schema():
+    return (settings.schema())
+
+
 @app.get("/config/current")
 async def api_get_config_current():
     return (settings.dict())
