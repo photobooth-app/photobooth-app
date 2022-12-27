@@ -306,10 +306,25 @@ def getJpegByLoresFrame(frame, quality):
     return jpeg_buffer
 
 
-def getScaledJpegByJpeg(buffer_in, quality, scaling_factor):
+def getScaledJpegByJpeg(buffer_in, quality, scaling_percent):
+    # TurboJPEG only allows for decent factors. To keep it simple, config allows freely to adjust the size from 10...100% and find the real factor here:
+    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
+    # limitation due to turbojpeg lib usage.
+    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
+    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
+    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
+    scaling_factor = scaling_percent/100
+    allowed_list = [(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4),
+                    (5, 8), (5, 4), (1, 1), (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)]
+    factor_list = [item[0]/item[1] for item in allowed_list]
+    scale_factor_turboJPEG = min(enumerate(factor_list),
+                                 key=lambda x: abs(x[1]-scaling_factor))
+    logger.debug(
+        f"determined scale factor: {scale_factor_turboJPEG[1]}, index {scale_factor_turboJPEG[0]}, tuple {allowed_list[scale_factor_turboJPEG[0]]}")
+
     jpeg = TurboJPEG()
     buffer_out = (jpeg.scale_with_quality(
-        buffer_in, scaling_factor=tuple(scaling_factor), quality=quality))
+        buffer_in, scaling_factor=allowed_list[scale_factor_turboJPEG[0]], quality=quality))
     return buffer_out
 
 
