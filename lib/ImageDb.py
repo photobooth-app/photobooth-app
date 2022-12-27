@@ -71,7 +71,6 @@ class ImageDb():
         counterFailedImages = 0
 
         for image_path in image_paths:
-            logger.debug(f"processing {image_path}")
 
             try:
                 id = self._dbAddItem(_dbImageItem(image_path))
@@ -103,9 +102,9 @@ class ImageDb():
         return item['id']
 
     def _dbDeleteItemByItem(self, item):
-        #self._db = [item for item in self._db if item['id'] != id]
+        # self._db = [item for item in self._db if item['id'] != id]
         self._db.remove(item)
-        #del self._db[id]
+        # del self._db[id]
 
     def _dbDeleteItems(self):
         self._db.clear()
