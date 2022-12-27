@@ -1,3 +1,5 @@
+from pydantic import ValidationError
+from enum import Enum, IntEnum
 from pydantic import BaseSettings
 from typing import Any
 from pathlib import Path
@@ -18,31 +20,22 @@ class GroupCommon(BaseModel):
     CAPTURE_VIDEO_RESOLUTION:   tuple[int, int] = (1280, 720)
     PREVIEW_CAM_RESOLUTION:     tuple[int, int] = (2328, 1748)
     PREVIEW_VIDEO_RESOLUTION:   tuple[int, int] = (1280, 720)
-    LORES_QUALITY:              int = 80
-    THUMBNAIL_QUALITY:          int = 60
-    PREVIEW_QUALITY:            int = 75
-    HIRES_QUALITY:              int = 90
-    PREVIEW_SCALE_FACTOR:       tuple[int, int] = (1, 4)
-    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-    # limitation due to turbojpeg lib usage.
-    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
-    THUMBNAIL_SCALE_FACTOR:     tuple[int, int] = (1, 8)
-    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-    # limitation due to turbojpeg lib usage.
-    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
+    LORES_QUALITY:              int = Field(default=80, ge=10, le=100)
+    THUMBNAIL_QUALITY:          int = Field(default=60, ge=10, le=100)
+    PREVIEW_QUALITY:            int = Field(default=75, ge=10, le=100)
+    HIRES_QUALITY:              int = Field(default=90, ge=10, le=100)
+    PREVIEW_SCALE_FACTOR:       int = Field(default=25, ge=10, le=100)
+    THUMBNAIL_SCALE_FACTOR:     int = Field(default=12.5, ge=10, le=100)
 
-    PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = 1
-    EXT_DOWNLOAD_URL: str = "http://dl.qbooth.net/{filename}"
+    PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
+    EXT_DOWNLOAD_URL: str = Field(
+        default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
 
     CAPTURE_EXPOSURE_MODE: str = "short"
     # tuning file location: /usr/share/libcamera/ipa/raspberrypi
     # arducam 16mp imx519: "imx519.json"
     # arducam 64mp hawkeye: "arducam_64mp.json"
-    CAMERA_TUNINGFILE: str = "imx519.json"
+    # CAMERA_TUNINGFILE: str = "imx519.json"
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
@@ -235,13 +228,13 @@ try:
     with open(CONFIG_FILENAME, "r") as read_file:
         loadedConfig = json.load(read_file)
     settings = ConfigSettings(**loadedConfig)
-except:
+except FileNotFoundError as e:
     logger.error(
-        f"config file {CONFIG_FILENAME} could not be read, using defaults")
-
-    # load defaults and persist if no file found
-    settings.persist()
-
+        f"config file {CONFIG_FILENAME} could not be read, using defaults, error {e}")
+except ValidationError as e:
+    logger.exception(
+        f"config file {CONFIG_FILENAME} validation error! program stopped, please fix config {e}")
+    quit()
 
 if __name__ == '__main__':
 
