@@ -132,10 +132,19 @@ Additional requirements
 Check following commands and files for error messages:
 
 ```text
-journalctl --unit=imageserver -n 100 --no-pager
+# logfiles from service (last 200 lines)
+journalctl --unit=imageserver -n 200 --no-pager
+# logfiles created by photobooth
+cat ~/imageserver/log/qbooth.log
+# check CmaFree especially for Arducams if low:
+cat /proc/meminfo
 ```
 
-~/imageserver/log/qbooth.log
+If service crashed, kill the python process:
+
+```text
+sudo pkill -9 python3
+```
 
 ### :copyright: License
 
