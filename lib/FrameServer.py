@@ -52,19 +52,6 @@ class FrameServer:
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        useTuningFile = False
-        # TODO: remove later or use actually. Arducams only support "normal" and "short". All other cameras should support at least that also.
-        # disable loading tuning file currently because wrong file has negative impact on picture quality and seems actually not to be necessary in current state of imageserver.
-        if (useTuningFile == True):
-            tuning = Picamera2.load_tuning_file(
-                settings.common.CAMERA_TUNINGFILE)
-            algo = self._picam2.find_tuning_algo(tuning, "rpi.agc")
-            self._availAeExposureModes = (algo["exposure_modes"].keys())
-            logger.info(
-                f"AeExposureModes found in tuningfile: {self._availAeExposureModes}")
-
-        self.setAeExposureMode(settings.common.CAPTURE_EXPOSURE_MODE)
-
         # start camera
         self._picam2.start()
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
@@ -80,7 +67,7 @@ class FrameServer:
         self._ee.on("onCaptureMode", self._setConfigCapture)
         self._ee.on("onPreviewMode", self._setConfigPreview)
 
-        self._ee.on("config/changed", self.handleConfigChanged)
+        self.setAeExposureMode(settings.common.PICAM2_AE_EXPOSURE_MODE)
 
     def _setConfigCapture(self):
         self._lastmode = self._currentmode
@@ -218,19 +205,11 @@ class FrameServer:
             else:
                 skip_counter -= 1
 
-    def handleConfigChanged(self):
-        # might want to switch modes directly if possible - otherwise latest after restart new config is applied.
-        logger.info(
-            "FrameServer detected config change, apply new cam settings")
-        self.setAeExposureMode(
-            settings.common.CAPTURE_EXPOSURE_MODE)
-
     def setAeExposureMode(self, newmode):
         logger.info(f"setAeExposureMode, try to set to {newmode}")
         try:
-            newmode_Int = (
-                list(self._availAeExposureModes).index(newmode.lower()))
-            self._picam2.set_controls({"AeExposureMode": newmode_Int})
+            self._picam2.set_controls(
+                {"AeExposureMode": newmode})
         except:
             logger.error(
                 f"setAeExposureMode failed! Mode {newmode} not available")
@@ -304,30 +283,3 @@ def getJpegByLoresFrame(frame, quality):
         frame, quality=quality)
 
     return jpeg_buffer
-
-
-def getScaledJpegByJpeg(buffer_in, quality, scaling_percent):
-    # TurboJPEG only allows for decent factors. To keep it simple, config allows freely to adjust the size from 10...100% and find the real factor here:
-    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-    # limitation due to turbojpeg lib usage.
-    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to the full resolution picture
-    scaling_factor = scaling_percent/100
-    allowed_list = [(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4),
-                    (5, 8), (5, 4), (1, 1), (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)]
-    factor_list = [item[0]/item[1] for item in allowed_list]
-    scale_factor_turboJPEG = min(enumerate(factor_list),
-                                 key=lambda x: abs(x[1]-scaling_factor))
-    logger.debug(
-        f"determined scale factor: {scale_factor_turboJPEG[1]}, index {scale_factor_turboJPEG[0]}, tuple {allowed_list[scale_factor_turboJPEG[0]]}")
-
-    jpeg = TurboJPEG()
-    buffer_out = (jpeg.scale_with_quality(
-        buffer_in, scaling_factor=allowed_list[scale_factor_turboJPEG[0]], quality=quality))
-    return buffer_out
-
-
-def writeJpegToFile(buffer, filepath):
-    with open(filepath, 'wb') as f:
-        f.write(buffer)

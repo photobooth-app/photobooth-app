@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from lib.ConfigSettings import ConfigSettings
+from lib.ConfigSettings import ConfigSettings, ConfigSettingsInternal
 import lib.ConfigSettings
 from lib.KeyboardService import KeyboardService
 from lib.CamStateMachine import TakePictureMachineModel, states, transitions
@@ -53,7 +53,7 @@ class EventstreamLogHandler(logging.Handler):
 
 
 # reconfigure if any changes from config needs to be applied.
-logging.config.dictConfig(settings.debugging.LOGGER_CONFIG)
+logging.config.dictConfig(ConfigSettingsInternal().logger.LOGGER_CONFIG)
 for handles in logging.getLogger().handlers:
     # after configure, set all handlers level to global requested level:
     handles.setLevel(settings.debugging.DEBUG_LEVEL)

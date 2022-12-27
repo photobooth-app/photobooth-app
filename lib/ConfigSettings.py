@@ -31,11 +31,8 @@ class GroupCommon(BaseModel):
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
 
-    CAPTURE_EXPOSURE_MODE: str = "short"
-    # tuning file location: /usr/share/libcamera/ipa/raspberrypi
-    # arducam 16mp imx519: "imx519.json"
-    # arducam 64mp hawkeye: "arducam_64mp.json"
-    # CAMERA_TUNINGFILE: str = "imx519.json"
+    PICAM2_AE_EXPOSURE_MODE: int = Field(
+        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
@@ -55,17 +52,6 @@ class GroupCommon(BaseModel):
     FOCUSER_DEVICE: str = "/dev/v4l-subdev1"
     FOCUSER_REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
-    # location service
-    LOCATION_SERVICE_ENABLED: bool = False
-    LOCATION_SERVICE_API_KEY: str = ""
-    LOCATION_SERVICE_CONSIDER_IP: bool = True
-    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
-    LOCATION_SERVICE_FORCED_UPDATE: int = 60  # every x minutes
-    # retries after program start to get more accurate data
-    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
-    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
-    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
-
     PROCESS_COUNTDOWN_TIMER: float = 3
     PROCESS_COUNTDOWN_OFFSET: float = 0.25
     PROCESS_TAKEPIC_MSG: str = "CHEEESE!"
@@ -73,11 +59,24 @@ class GroupCommon(BaseModel):
     PROCESS_AUTOCLOSE_TIMER: int = 10
     PROCESS_ADD_EXIF_DATA: bool = True
 
-    GALLERY_ENABLE: bool = True
-    GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
 
+class GroupHardwareInput(BaseModel):
+    '''Docstring for LocationService'''
     HW_KEYCODE_TAKEPIC: str = "down"
-    HW_KEYCODE_TAKEWIGGLEPIC: str = None
+
+
+class GroupLocationService(BaseModel):
+    '''Docstring for LocationService'''
+    LOCATION_SERVICE_ENABLED: bool = False
+    LOCATION_SERVICE_API_KEY: str = ""
+    LOCATION_SERVICE_CONSIDER_IP: bool = True
+    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
+    LOCATION_SERVICE_FORCED_UPDATE: int = 60
+    # every x minutes
+    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
+    # retries after program start to get more accurate data
+    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
+    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
 class GroupCamera(BaseModel):
@@ -89,11 +88,75 @@ class GroupPersonalize(BaseModel):
     '''Docstring for Personalization'''
     UI_FRONTPAGE_TEXT: str = "Hey! Lets take some pictures! :)"
 
+    GALLERY_ENABLE: bool = True
+    GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
+
 
 class GroupDebugging(BaseModel):
     # dont change following defaults. If necessary change via argument
     DEBUG_LEVEL: str = "DEBUG"
     DEBUG_OVERLAY: bool = False
+
+
+class GroupColorled(BaseModel):
+    '''Colorled settings for neopixel and these elements'''
+    # infoled / ws2812b ring settings
+    NUMBER_LEDS: int = 12
+    GPIO_PIN: int = 18
+    COLOR: tuple[int, int, int, int] = (255, 255, 255, 255)    # RGBW
+    CAPTURE_COLOR: tuple[int, int, int, int] = (0, 125, 125, 0)  # RGBW
+    MAX_BRIGHTNESS: int = 50
+    ANIMATION_UPDATE: int = 70    # update circle animation every XX ms
+
+
+class ConfigSettings(BaseModel):
+    '''Settings class glueing all together'''
+
+    _processed_at: datetime = PrivateAttr(
+        default_factory=datetime.now)  # private attributes
+
+    # groups -> setting items
+    common: GroupCommon = GroupCommon()
+    camera: GroupCamera = GroupCamera()
+    colorled: GroupColorled = GroupColorled()
+    debugging: GroupDebugging = GroupDebugging()
+    locationservice: GroupLocationService = GroupLocationService()
+
+    def persist(self):
+        '''Persist settings to file'''
+        logger.debug(f"persist settings to json file")
+
+        with open(CONFIG_FILENAME, "w") as write_file:
+            write_file.write(self.json(indent=2))
+
+    def deleteconfig(self):
+        '''Reset to defaults'''
+        logger.debug(f"settings reset to default")
+
+        try:
+            os.remove(CONFIG_FILENAME)
+            logger.debug(f"deleted {CONFIG_FILENAME} file.")
+        except:
+            logger.info(f"delete {CONFIG_FILENAME} file failed.")
+
+
+# our settings that can be imported throughout the app like # from lib.ConfigService import settings
+# TODO: might wanna use LROcache functools.
+settings = ConfigSettings()
+try:
+    with open(CONFIG_FILENAME, "r") as read_file:
+        loadedConfig = json.load(read_file)
+    settings = ConfigSettings(**loadedConfig)
+except FileNotFoundError as e:
+    logger.error(
+        f"config file {CONFIG_FILENAME} could not be read, using defaults, error {e}")
+except ValidationError as e:
+    logger.exception(
+        f"config file {CONFIG_FILENAME} validation error! program stopped, please fix config {e}")
+    quit()
+
+
+class GroupLogger(BaseModel):
 
     LOGGER_CONFIG = {
         'version': 1,
@@ -168,73 +231,9 @@ class GroupDebugging(BaseModel):
     }
 
 
-class GroupColorled(BaseModel):
-    '''Colorled settings for neopixel and these elements'''
-    # infoled / ws2812b ring settings
-    NUMBER_LEDS: int = 12
-    GPIO_PIN: int = 18
-    COLOR: tuple[int, int, int, int] = (255, 255, 255, 255)    # RGBW
-    CAPTURE_COLOR: tuple[int, int, int, int] = (0, 125, 125, 0)  # RGBW
-    MAX_BRIGHTNESS: int = 50
-    ANIMATION_UPDATE: int = 70    # update circle animation every XX ms
+class ConfigSettingsInternal(BaseModel):
+    logger: GroupLogger = GroupLogger()
 
-
-class ConfigSettings(BaseModel):
-    '''Settings class glueing all together'''
-
-    _processed_at: datetime = PrivateAttr(
-        default_factory=datetime.now)  # private attributes
-
-    # groups -> setting items
-    common: GroupCommon = GroupCommon()
-    camera: GroupCamera = GroupCamera()
-    colorled: GroupColorled = GroupColorled()
-    debugging: GroupDebugging = GroupDebugging()
-
-    def load(self):
-        return
-        # this is not working properly yet. instead only on instanciation import json like ConfigSettings(**dict)
-
-        with open(CONFIG_FILENAME, "r") as read_file:
-            loadedConfig = json.load(read_file)
-            print(loadedConfig)
-            # self = self.parse_obj(loadedConfig)
-            # self.__dict__.update(loadedConfig)
-            # self = self.copy(update=loadedConfig)
-            self = ConfigSettings(**loadedConfig)
-
-    def persist(self):
-        '''Persist settings to file'''
-        logger.debug(f"persist settings to json file")
-
-        with open(CONFIG_FILENAME, "w") as write_file:
-            write_file.write(self.json(indent=2))
-
-    def deleteconfig(self):
-        '''Reset to defaults'''
-        logger.debug(f"settings reset to default")
-
-        try:
-            os.remove(CONFIG_FILENAME)
-            logger.debug(f"deleted {CONFIG_FILENAME} file.")
-        except:
-            logger.info(f"delete {CONFIG_FILENAME} file failed.")
-
-
-# our settings that can be imported throughout the app like # from lib.ConfigService import settings
-# TODO: might wanna use LROcache functools.
-settings = ConfigSettings()
-try:
-    with open(CONFIG_FILENAME, "r") as read_file:
-        loadedConfig = json.load(read_file)
-    settings = ConfigSettings(**loadedConfig)
-except FileNotFoundError as e:
-    logger.error(
-        f"config file {CONFIG_FILENAME} could not be read, using defaults, error {e}")
-except ValidationError as e:
-    logger.exception(
-        f"config file {CONFIG_FILENAME} validation error! program stopped, please fix config {e}")
-    quit()
 
 if __name__ == '__main__':
 
