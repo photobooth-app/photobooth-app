@@ -1,9 +1,6 @@
 #!/usr/bin/python3
 from importlib import import_module
-# from lib.ImageServerPicam2 import ImageServerPicam2
-# from lib.ImageServerSimulated import ImageServerSimulated
-from lib.ConfigSettings import ConfigSettings, ConfigSettingsInternal
-import lib.ConfigSettings
+from lib.ConfigSettings import ConfigSettings, ConfigSettingsInternal, settings
 from lib.KeyboardService import KeyboardService
 from lib.CamStateMachine import TakePictureMachineModel, states, transitions
 from transitions import Machine
@@ -21,15 +18,11 @@ from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
 from lib.InfoLed import InfoLed
 from lib.LocationService import LocationService
-from lib.RepeatedTimer import RepeatedTimer
 from lib.Autofocus import FocusState
-
 import asyncio
 import uuid
 from queue import Queue
 import signal
-import json
-from lib.ConfigSettings import settings
 import logging
 
 # create early instances
@@ -329,8 +322,7 @@ if __name__ == '__main__':
     if (True):
         # autofocus system enable
         focusState = FocusState(frameServer, ee)
-        rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
-                           ee.emit, "onRefocus")
+
     if (True):
         ks = KeyboardService(ee)
 
@@ -341,11 +333,6 @@ if __name__ == '__main__':
     model.start()
 
     frameServer.start()
-
-    # focuser.reset()
-
-    # first time focus
-    ee.emit("onRefocus")
 
     # first time try to get location
     locationService.start()
@@ -364,5 +351,5 @@ if __name__ == '__main__':
         # Otherwise the stream.mjpg if open will block shutdown of the server
         server.run()
     finally:
-        rt.stop()  # better in a try/finally block to make sure the program ends!
+
         frameServer.stop()

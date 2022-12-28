@@ -8,6 +8,7 @@ import time
 import logging
 from lib.ConfigSettings import settings
 from lib.ImageServerAbstract import ImageServerAbstract
+from lib.RepeatedTimer import RepeatedTimer
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +33,17 @@ class FocusState(object):
 
         self.setAllowFocusRequests()
         self.reset()
+
+        self._rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
+                                 self.doFocus)
+
+        self.startRegularAutofocusTimer()
+
+    def startRegularAutofocusTimer(self):
+        self._rt.start()
+
+    def stopRegularAutofocusTimer(self):
+        self._rt.stop()
 
     def setIgnoreFocusRequests(self):
         self._standby = True
