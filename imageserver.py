@@ -290,7 +290,7 @@ def api_gallery_delete(id: str):
 
 @app.get('/stream.mjpg')
 def video_stream():
-    return StreamingResponse(frameServer.gen_stream(),
+    return StreamingResponse(imageServer.gen_stream(),
                              media_type='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -313,15 +313,14 @@ if __name__ == '__main__':
     imageserverModule = import_module(
         f"lib.{settings.common.IMAGESERVER_BACKEND}")
     cls = getattr(imageserverModule, settings.common.IMAGESERVER_BACKEND)
-    frameServer = cls(ee)
+    imageServer = cls(ee)
 
-    # frameServer = ImageServerSimulate(ee)
     locationService = LocationService(ee)
-    exif = Exif(frameServer, locationService)
-    imageDb = ImageDb(ee, frameServer, exif)
+    exif = Exif(imageServer, locationService)
+    imageDb = ImageDb(ee, imageServer, exif)
     if (True):
         # autofocus system enable
-        focusState = FocusState(frameServer, ee)
+        focusState = FocusState(imageServer, ee)
 
     if (True):
         ks = KeyboardService(ee)
@@ -332,7 +331,7 @@ if __name__ == '__main__':
                       transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
     model.start()
 
-    frameServer.start()
+    imageServer.start()
 
     # first time try to get location
     locationService.start()
@@ -352,4 +351,4 @@ if __name__ == '__main__':
         server.run()
     finally:
 
-        frameServer.stop()
+        imageServer.stop()
