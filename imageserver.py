@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 from importlib import import_module
-
 # from lib.ImageServerPicam2 import ImageServerPicam2
-from lib.ImageServerSimulated import ImageServerSimulated
+# from lib.ImageServerSimulated import ImageServerSimulated
 from lib.ConfigSettings import ConfigSettings, ConfigSettingsInternal
 import lib.ConfigSettings
 from lib.KeyboardService import KeyboardService
@@ -23,8 +22,7 @@ import uvicorn
 from lib.InfoLed import InfoLed
 from lib.LocationService import LocationService
 from lib.RepeatedTimer import RepeatedTimer
-# from lib.Focuser import Focuser
-# from lib.Autofocus import FocusState
+from lib.Autofocus import FocusState
 
 import asyncio
 import uuid
@@ -328,11 +326,13 @@ if __name__ == '__main__':
     locationService = LocationService(ee)
     exif = Exif(frameServer, locationService)
     imageDb = ImageDb(ee, frameServer, exif)
-    # focuser = Focuser()
-    # focusState = FocusState(frameServer, focuser, ee)
-    rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
-                       ee.emit, "onRefocus")
-    ks = KeyboardService(ee)
+    if (True):
+        # autofocus system enable
+        focusState = FocusState(frameServer, ee)
+        rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
+                           ee.emit, "onRefocus")
+    if (True):
+        ks = KeyboardService(ee)
 
     # model, machine and fire.
     model = TakePictureMachineModel(ee)
