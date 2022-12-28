@@ -3,15 +3,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class FrameServerAbstract(ABC):
+class ImageServerAbstract(ABC):
     @abstractmethod
     def __init__(self, ee):
         # public
-        self.exif_make = "FrameServerAbstract-Make"
-        self.exif_model = "FrameServerAbstract-Device"
+        self.exif_make = "ImageServerAbstract-Make"
+        self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
 
         # private
+        self._fps = 0
+
         self._ee = ee
         self._ee.on("statemachine/armed",
                     self._onCaptureMode)
@@ -60,4 +62,10 @@ class FrameServerAbstract(ABC):
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
+        pass
+
+    @property
+    @abstractmethod
+    def fps(self):
+        """frames per second"""
         pass

@@ -2,7 +2,6 @@
 import json
 import shutil
 import hashlib
-from lib.FrameServer import getJpegByHiresFrame
 from turbojpeg import TurboJPEG
 from lib.ConfigSettings import settings
 from pathlib import Path

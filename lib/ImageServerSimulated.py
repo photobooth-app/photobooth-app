@@ -5,24 +5,26 @@ from threading import Condition
 import time
 import logging
 from pymitter import EventEmitter
-import lib.FrameServerAbstract
+import lib.ImageServerAbstract
 import lib.StoppableThread
 logger = logging.getLogger(__name__)
 
 
-class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
+class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth FrameServer Simulate"
         self.exif_model = "Custom"
-        self.metadata = None
+        self.metadata = {}
 
         # private props
-        self._hq_array = None
-        self._lores_array = None
+        self._hq_img_buffer = None
+        self._lores_img_buffer = None
         self._hq_condition = Condition()
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
+
+        self.CYCLE_WAIT = 33  # generate image every XX ms
 
         super().__init__(ee)
 
@@ -42,14 +44,14 @@ class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
         with self._lores_condition:
             while True:
                 self._lores_condition.wait()
-                return self._lores_array.getvalue()
+                return self._lores_img_buffer.getvalue()
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
                 self._hq_condition.wait()
-                return self._hq_array.getvalue()
+                return self._hq_img_buffer.getvalue()
 
     def gen_stream(self):
         while not self._generateImagesThread.stopped():
@@ -59,6 +61,10 @@ class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
         self._onCaptureMode()
+
+    @property
+    def fps(self):
+        return round((1/self.CYCLE_WAIT)*1000, 1)
 
     """
     INTERNAL FUNCTIONS
@@ -90,11 +96,12 @@ class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
             img = Image.new(mode="RGB", size=(2000, 1200), color="green")
             # add text
             I1 = ImageDraw.Draw(img)
+            I1.text((100, 100), "simulated image backend",
+                    fill=(200, 200, 200))
             I1.text((100, 150), str(counter), fill=(
                 200, 200, 200))
-            I1.text((50, 100), "simulated image backend",
+            I1.text((100, 200), str((self.fps)),
                     fill=(200, 200, 200))
-
             # create jpeg
             jpeg_buffer = BytesIO()
             img.save(jpeg_buffer, format="jpeg", quality=90)
@@ -103,7 +110,7 @@ class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
                 _lores_data = jpeg_buffer
 
                 with self._lores_condition:
-                    self._lores_array = _lores_data
+                    self._lores_img_buffer = _lores_data
                     self._lores_condition.notify_all()
             else:
                 logger.debug(
@@ -121,13 +128,13 @@ class FrameServerSimulate(lib.FrameServerAbstract.FrameServerAbstract):
                 logger.debug(f"metadata={self.metadata}")
 
                 with self._hq_condition:
-                    self._hq_array = jpeg_buffer
+                    self._hq_img_buffer = jpeg_buffer
                     self._hq_condition.notify_all()
 
                 # switch back to preview mode
                 self._onPreviewMode()
 
-            time.sleep(33/1000.)
+            time.sleep(self.CYCLE_WAIT/1000.)
         return
 
 
