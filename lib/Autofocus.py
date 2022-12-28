@@ -7,13 +7,13 @@ import threading
 import time
 import logging
 from lib.ConfigSettings import settings
-
+from lib.ImageServerAbstract import ImageServerAbstract
 logger = logging.getLogger(__name__)
 
 
 class FocusState(object):
-    def __init__(self, frameServer, ee):
-        self._frameServer = frameServer
+    def __init__(self, imageServer, ee):
+        self._imageServer: ImageServerAbstract = imageServer
         self._focuser = Focuser()
         self._ee = ee
         self._ee.on("onRefocus", self.doFocus)
@@ -46,7 +46,7 @@ class FocusState(object):
             self.setFinish(False)
 
             threadAutofocusStats = threading.Thread(name='AutofocusStats', target=statsThread, args=(
-                self._frameServer, self._focuser, self), daemon=True)
+                self._imageServer, self._focuser, self), daemon=True)
             threadAutofocusStats.start()
 
             threadAutofocusFocusSupervisor = threading.Thread(name='AutofocusSupervisor', target=focusThread, args=(
@@ -84,7 +84,7 @@ def getROIFrame(roi, frame):
     return roi_frame
 
 
-def statsThread(frameServer, focuser, focusState):
+def statsThread(imageServer, focuser, focusState):
     maxPosition = focuser.MAX_VALUE
     minPosition = focuser.MIN_VALUE
     lastPosition = focuser.get()
@@ -96,7 +96,7 @@ def statsThread(frameServer, focuser, focusState):
 
     while not focusState.isFinish():
 
-        frame = frameServer._wait_for_lores_frame()
+        frame = imageServer._wait_for_lores_frame()
 
         if time.time() - lastTime >= settings.common.FOCUSER_MOVE_TIME and not focusState.isFinish():
             lastTime = time.time()
