@@ -1,25 +1,39 @@
 # Simple test for NeoPixels on Raspberry Pi
-#import board
-#import neopixel
+# import board
+# import neopixel
+from .ConfigSettings import settings
 import time
 from lib.StoppableThread import StoppableThread
 import time
-from rpi_ws281x import PixelStrip, Color, WS2812_STRIP
-from .ConfigSettings import settings
 
-# LED strip configuration:
-LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
-LED_DMA = 10          # DMA channel to use for generating signal (try 10)
-# True to invert the signal (when using NPN transistor level shift)
-LED_INVERT = False
-LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
-LED_STRIP_TYPE = WS2812_STRIP  # or WS2811_STRIP_GRB
+enable = False
+try:
+    from rpi_ws281x import PixelStrip, Color, WS2812_STRIP
+
+    # LED strip configuration:
+    LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
+    LED_DMA = 10          # DMA channel to use for generating signal (try 10)
+    # True to invert the signal (when using NPN transistor level shift)
+    LED_INVERT = False
+    LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
+    LED_STRIP_TYPE = WS2812_STRIP  # or WS2811_STRIP_GRB
+
+    enable = True
+except ModuleNotFoundError as e:
+    print("module only avail on rpi; disabled module because not avail.")
+
+    def Color(a, b, c, d=''):
+        pass
 
 
 class InfoLed():
     def __init__(self, ee, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+
+        if not enable == True:
+            print("infoled module disabled")
+            return
 
         self._ee = ee
         self._ee.on("statemachine/armed", self.startCountdown)
