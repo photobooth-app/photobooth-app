@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
+        super().__init__(ee)
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth Picamera2 Integration"
         self.exif_model = "Custom"
@@ -72,8 +73,6 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
 
         self.setAeExposureMode(settings.common.PICAM2_AE_EXPOSURE_MODE)
 
-        super().__init__(ee)
-
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         # start camera
@@ -86,6 +85,9 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
+        self._generateImagesThread.stop()
+        self._statsThread.stop()
+
         self._generateImagesThread.join(1)
         self._statsThread.join(1)
 
@@ -108,6 +110,20 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
                 buffer = self._getJpegByHiresFrame(
                     frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
                 return buffer
+
+    def wait_for_lores_frame(self):
+        """for other threads to receive a lores frame"""
+        with self._lores_condition:
+            while True:
+                self._lores_condition.wait()
+                return self._lores_array
+
+    def wait_for_hq_frame(self):
+        """for other threads to receive a hq frame"""
+        with self._hq_condition:
+            while True:
+                self._hq_condition.wait()
+                return self._hq_array
 
     def gen_stream(self):
         skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
@@ -132,20 +148,6 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
     """
     INTERNAL FUNCTIONS
     """
-
-    def _wait_for_lores_frame(self):
-        """for other threads to receive a lores frame"""
-        with self._lores_condition:
-            while True:
-                self._lores_condition.wait()
-                return self._lores_array
-
-    def _wait_for_hq_frame(self):
-        """for other threads to receive a hq frame"""
-        with self._hq_condition:
-            while True:
-                self._hq_condition.wait()
-                return self._hq_array
 
     def _onCaptureMode(self):
         logger.debug(

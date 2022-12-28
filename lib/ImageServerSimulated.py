@@ -1,5 +1,6 @@
+import os
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from threading import Condition
 import time
@@ -7,11 +8,14 @@ import logging
 from pymitter import EventEmitter
 import lib.ImageServerAbstract
 import lib.StoppableThread
+from .ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
 class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
+        super().__init__(ee)
+
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth FrameServer Simulate"
         self.exif_model = "Custom"
@@ -25,8 +29,6 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
         self._trigger_hq_capture = False
 
         self.CYCLE_WAIT = 33  # generate image every XX ms
-
-        super().__init__(ee)
 
         self._generateImagesThread = lib.StoppableThread.StoppableThread(name="_generateImagesThread",
                                                                          target=self._GenerateImagesFun, daemon=True)
@@ -52,6 +54,12 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
             while True:
                 self._hq_condition.wait()
                 return self._hq_img_buffer.getvalue()
+
+    def wait_for_lores_frame(self):
+        raise NotImplementedError()
+
+    def wait_for_hq_frame(self):
+        raise NotImplementedError()
 
     def gen_stream(self):
         while not self._generateImagesThread.stopped():
@@ -86,31 +94,41 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
 
     def _GenerateImagesFun(self):
         counter = 0
-        img_array = None
 
         while not self._generateImagesThread.stopped():  # repeat until stopped
             counter += 1
-            # print(counter)
 
             # create PIL image
-            img = Image.new(mode="RGB", size=(2000, 1200), color="green")
+            img = Image.new(
+                mode="RGB",
+                size=settings.common.CAPTURE_VIDEO_RESOLUTION,
+                color="green")
+
             # add text
             I1 = ImageDraw.Draw(img)
-            I1.text((100, 100), "simulated image backend",
-                    fill=(200, 200, 200))
-            I1.text((100, 150), str(counter), fill=(
-                200, 200, 200))
-            I1.text((100, 200), str((self.fps)),
-                    fill=(200, 200, 200))
+            font = ImageFont.truetype(
+                font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
+                size=50)
+            I1.text((200, 200),
+                    f"simulated image backend",
+                    fill=(200, 200, 200),
+                    font=font)
+            I1.text((200, 250),
+                    f"img no counter: {counter}",
+                    fill=(200, 200, 200),
+                    font=font)
+            I1.text((200, 300),
+                    f"framerate: {self.fps}",
+                    fill=(200, 200, 200),
+                    font=font)
+
             # create jpeg
             jpeg_buffer = BytesIO()
             img.save(jpeg_buffer, format="jpeg", quality=90)
 
             if not self._trigger_hq_capture:
-                _lores_data = jpeg_buffer
-
                 with self._lores_condition:
-                    self._lores_img_buffer = _lores_data
+                    self._lores_img_buffer = jpeg_buffer
                     self._lores_condition.notify_all()
             else:
                 logger.debug(
@@ -143,7 +161,7 @@ if __name__ == '__main__':
     logging.basicConfig()
     logger.setLevel("DEBUG")
 
-    framserverSimulate = FrameServerSimulate(EventEmitter())
+    framserverSimulate = ImageServerSimulated(EventEmitter())
 
     while (True):
         time.sleep(2)

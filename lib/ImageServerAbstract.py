@@ -38,6 +38,13 @@ class ImageServerAbstract(ABC):
         pass
 
     @abstractmethod
+    def wait_for_lores_image(self):
+        """
+        function blocks until high quality image is available
+        """
+        pass
+
+    @abstractmethod
     def wait_for_hq_image(self):
         """
         function blocks until high quality image is available
@@ -45,13 +52,17 @@ class ImageServerAbstract(ABC):
         pass
 
     @abstractmethod
-    def _onCaptureMode(self):
-        """called externally via events and used to change to a capture mode if necessary"""
+    def wait_for_lores_frame(self):
+        """
+        function blocks until lores quality frame is available
+        """
         pass
 
     @abstractmethod
-    def _onPreviewMode(self):
-        """called externally via events and used to change to a preview mode if necessary"""
+    def wait_for_hq_frame(self):
+        """
+        function blocks until high quality frame is available
+        """
         pass
 
     @abstractmethod
@@ -68,4 +79,17 @@ class ImageServerAbstract(ABC):
     @abstractmethod
     def fps(self):
         """frames per second"""
+        pass
+
+    """
+    INTERNAL FUNCTIONS TO BE IMPLEMENTED
+    """
+    @abstractmethod
+    def _onCaptureMode(self):
+        """called externally via events and used to change to a capture mode if necessary"""
+        pass
+
+    @abstractmethod
+    def _onPreviewMode(self):
+        """called externally via events and used to change to a preview mode if necessary"""
         pass

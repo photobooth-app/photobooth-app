@@ -209,13 +209,18 @@ class ImageDb():
 
     def createScaledImages(self, buffer_full, filepath):
         filename = os.path.basename(filepath)
-        # print(buffer_full)
+
+        logger.debug(
+            f"filesize full image: {round(len(buffer_full)/1024,1)}")
+
         # preview version
         prev_filepath = f"{DATA_PATH}{PATH_PREVIEW}{filename}"
         buffer_preview = getScaledJpegByJpeg(
             buffer_full, settings.common.PREVIEW_QUALITY, settings.common.PREVIEW_SCALE_FACTOR)
         writeJpegToFile(
             buffer_preview, prev_filepath)
+        logger.debug(
+            f"filesize preview: {round(len(buffer_preview)/1024,1)}")
         logger.info(f"created and saved preview image {prev_filepath}")
 
         # thumbnail version
@@ -224,6 +229,8 @@ class ImageDb():
             buffer_full, settings.common.THUMBNAIL_QUALITY, settings.common.THUMBNAIL_SCALE_FACTOR)
         writeJpegToFile(
             buffer_thumbnail, thumb_filepath)
+        logger.debug(
+            f"filesize thumbnail: {round(len(buffer_thumbnail)/1024,1)}")
         logger.info(f"created and saved thumbnail image {thumb_filepath}")
 
     def createImageSetFromImage(self, hires_image, filepath):
