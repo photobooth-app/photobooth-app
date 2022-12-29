@@ -18,16 +18,17 @@ from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
 from lib.InfoLed import InfoLed
 from lib.LocationService import LocationService
-from lib.Autofocus import FocusState
 import asyncio
 import uuid
 from queue import Queue
 import signal
 import logging
+import platform
+
 
 # create early instances
 # event system
-ee = EventEmitter()
+ee: EventEmitter = EventEmitter()
 
 # constants
 SERVICE_NAME = "imageserver"
@@ -55,10 +56,16 @@ for handles in logging.getLogger().handlers:
 
 logger = logging.getLogger(__name__)
 logger.info('Welcome to qPhotobooth')
+logger.info(f"platform.system={platform.system()}")
+logger.info(f"platform.release={platform.release()}")
+logger.info(f"platform.machine={platform.machine()}")
+logger.info(f"platform.python_version={platform.python_version()}")
+logger.info(f"hostname={platform.node()}")
+
 
 app = FastAPI()
 
-
+"""
 request_stop = False
 
 
@@ -77,6 +84,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 # this is not working, because uvicorn is eating up signal handler definitions currently: https://github.com/encode/uvicorn/issues/1579
 # as workaround currently we set force_exit to True to shutdown the server
+"""
 
 
 @app.get("/eventstream")
@@ -108,9 +116,9 @@ async def subscribe(request: Request):
                 if await request.is_disconnected():
                     logger.info(f"request.is_disconnected() true")
                     break
-                if request_stop:
-                    logger.info(f"event_iterator stop requested")
-                    break
+                # if request_stop:
+                #    logger.info(f"event_iterator stop requested")
+                #    break
 
                 try:
                     # try to get a event/message off the queue. timeout after 1 second to allow while loop break if client disconnected
@@ -259,7 +267,8 @@ def evt_chose_1pic_get():
 
 @app.get("/stats/focuser")
 def api_stats_focuser():
-    return (focusState._lastRunResult)
+    pass
+    # return (focusState._lastRunResult)
 
 
 @app.get("/stats/locationservice")
@@ -318,9 +327,6 @@ if __name__ == '__main__':
     locationService = LocationService(ee)
     exif = Exif(imageServer, locationService)
     imageDb = ImageDb(ee, imageServer, exif)
-    if (True):
-        # autofocus system enable
-        focusState = FocusState(imageServer, ee)
 
     if (True):
         ks = KeyboardService(ee)
