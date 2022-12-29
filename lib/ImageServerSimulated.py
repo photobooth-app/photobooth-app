@@ -1,3 +1,5 @@
+import threading
+import psutil
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from threading import Condition
@@ -120,6 +122,14 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
                     font=font)
             I1.text((200, 300),
                     f"framerate: {self.fps}",
+                    fill=(200, 200, 200),
+                    font=font)
+            I1.text((200, 350),
+                    f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
+                    fill=(200, 200, 200),
+                    font=font)
+            I1.text((200, 400),
+                    f"active threads #{threading.active_count()}",
                     fill=(200, 200, 200),
                     font=font)
 

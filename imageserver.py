@@ -61,6 +61,16 @@ logger.info(f"platform.release={platform.release()}")
 logger.info(f"platform.machine={platform.machine()}")
 logger.info(f"platform.python_version={platform.python_version()}")
 logger.info(f"hostname={platform.node()}")
+logger.info(f"psutil.cpu_count logical={psutil.cpu_count()}")
+logger.info(f"psutil.cpu_count cores={psutil.cpu_count(logical=False)}")
+logger.info(f"psutil.disk_partitions={psutil.disk_partitions()}")
+if platform.system() == "Linux":
+    logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
+elif platform.system() == "Windows":
+    logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
+logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
+logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
+logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
 
 
 app = FastAPI()
