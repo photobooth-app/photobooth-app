@@ -6,13 +6,13 @@ from threading import Condition
 import time
 import logging
 from pymitter import EventEmitter
-import lib.ImageServerAbstract
-import lib.StoppableThread
-from .ConfigSettings import settings
+import ImageServerAbstract
+import StoppableThread
+from ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
-class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
+class ImageServerCmd(ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
         super().__init__(ee)
 
@@ -26,34 +26,26 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
         self._hq_condition = Condition()
         self._trigger_hq_capture = False
 
-        self._generateImagesThread = lib.StoppableThread.StoppableThread(name="_generateImagesThread",
-                                                                         target=self._GenerateImagesFun, daemon=True)
+        self._generateImagesThread = StoppableThread.StoppableThread(name="_generateImagesThread",
+                                                                     target=self._GenerateImagesFun, daemon=True)
 
     def start(self):
         """To start the FrameServer"""
         self._generateImagesThread.start()
         self._onPreviewMode()
+        logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer"""
-        pass
-
-    def wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-        raise NotImplementedError()
+        logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
-                self._hq_condition.wait()
+                if not self._hq_condition.wait(1):
+                    raise IOError("timeout receiving frames")
                 return self._hq_img_buffer.getvalue()
-
-    def wait_for_lores_frame(self):
-        raise NotImplementedError()
-
-    def wait_for_hq_frame(self):
-        raise NotImplementedError()
 
     def gen_stream(self):
         raise NotImplementedError(
@@ -70,6 +62,14 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
     """
     INTERNAL FUNCTIONS
     """
+
+    def _wait_for_lores_image(self):
+        """for other threads to receive a lores JPEG image"""
+        raise NotImplementedError()
+
+    def _wait_for_autofocus_frame(self):
+        """autofocus not supported by this backend"""
+        raise NotImplementedError()
 
     def _onCaptureMode(self):
         logger.debug(
@@ -108,6 +108,9 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
                 return_value = os.system(f'"{cmd_capture}"')
                 # if 0 OK, if different (-1) error
                 logger.debug(f"cmd_capture return value: {return_value}")
+                if (return_value != 0):
+                    logger.error(f"cmd_capture failed! {return_value}")
+                    raise IOError(f"cmd_capture failed! {return_value}")
 
                 logger.info(f"saved camera file to {tmp_filepath}")
                 with open(tmp_filepath, "rb") as fh:

@@ -1,32 +1,30 @@
-import io
-import lib.StoppableThread
+from StoppableThread import StoppableThread
 from pymitter import EventEmitter
 from threading import Condition
-from io import BytesIO
-from PIL import Image, ImageDraw
-import numpy as np
-from .ConfigSettings import settings
+from ConfigSettings import settings
 from libcamera import Transform
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 import json
 from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
-from threading import Condition, Thread
+from threading import Condition
+from ImageServerAddonAutofocus import ImageServerAddonAutofocus
 import cv2
 import time
 import logging
-import lib.ImageServerAbstract
+import ImageServerAbstract
 logger = logging.getLogger(__name__)
 
 
-class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
+class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
         super().__init__(ee)
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth Picamera2 Integration"
         self.exif_model = "Custom"
         self.metadata = {}
+        self.providesStream = True
 
         # private props
         """A simple class that can serve up frames from one of the Picamera2's configured
@@ -35,6 +33,7 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
         to serve up frames."""
         self._picam2 = Picamera2()
         self._turboJPEG = TurboJPEG()
+        self._addonAutofocus = ImageServerAddonAutofocus(self, ee)
         self._ee = ee
 
         self._hq_array = None
@@ -47,18 +46,18 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
         self._fps = 0
 
         # worker threads
-        self._generateImagesThread = lib.StoppableThread.StoppableThread(name="_generateImagesThread",
-                                                                         target=self._GenerateImagesFun, daemon=True)
-        self._statsThread = lib.StoppableThread.StoppableThread(name="_statsThread",
-                                                                target=self._StatsFun, daemon=True)
+        self._generateImagesThread = StoppableThread(name="_generateImagesThread",
+                                                     target=self._GenerateImagesFun, daemon=True)
+        self._statsThread = StoppableThread(name="_statsThread",
+                                            target=self._StatsFun, daemon=True)
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": settings.common.CAPTURE_CAM_RESOLUTION}, {"size": settings.common.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": settings.common.CAPTURE_CAM_RESOLUTION}, {"size": settings.common.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": settings.common.PREVIEW_CAM_RESOLUTION}, {"size": settings.common.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=3, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": settings.common.PREVIEW_CAM_RESOLUTION}, {"size": settings.common.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # activate preview mode on init
         self._onPreviewMode()
@@ -81,10 +80,14 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
         self._generateImagesThread.start()
         self._statsThread.start()
 
+        logger.debug(f"{self.__module__} started")
+
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
+        self._addonAutofocus.abortOngoingFocusThread()
+
         self._generateImagesThread.stop()
         self._statsThread.stop()
 
@@ -93,43 +96,24 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
 
         self._picam2.stop()
 
-    def wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-        with self._lores_condition:
-            while True:
-                self._lores_condition.wait()
-                buffer = self._getJpegByLoresFrame(
-                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
-                return buffer
+        logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
-                self._hq_condition.wait()
+                # TODO: timout to make it continue and do not block threads completely
+                if not self._hq_condition.wait(1):
+                    raise IOError("timeout receiving frames")
                 buffer = self._getJpegByHiresFrame(
                     frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
                 return buffer
-
-    def wait_for_lores_frame(self):
-        """for other threads to receive a lores frame"""
-        with self._lores_condition:
-            while True:
-                self._lores_condition.wait()
-                return self._lores_array
-
-    def wait_for_hq_frame(self):
-        """for other threads to receive a hq frame"""
-        with self._hq_condition:
-            while True:
-                self._hq_condition.wait()
-                return self._hq_array
 
     def gen_stream(self):
         skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
 
         while not self._generateImagesThread.stopped():
-            buffer = self.wait_for_lores_image()
+            buffer = self._wait_for_lores_image()
 
             if (skip_counter <= 1):
                 yield (b'--frame\r\n'
@@ -148,6 +132,26 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
     """
     INTERNAL FUNCTIONS
     """
+
+    def _wait_for_lores_image(self):
+        """for other threads to receive a lores JPEG image"""
+        with self._lores_condition:
+            while True:
+                # TODO: timout to make it continue and do not block threads completely
+                if not self._lores_condition.wait(1):
+                    raise IOError("timeout receiving frames")
+                buffer = self._getJpegByLoresFrame(
+                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
+                return buffer
+
+    def _wait_for_autofocus_frame(self):
+        """for other threads to receive a lores frame"""
+        with self._lores_condition:
+            while True:
+                # TODO: timout to make it continue and do not block threads completely
+                if not self._lores_condition.wait(1):
+                    raise IOError("timeout receiving frames")
+                return self._lores_array
 
     def _onCaptureMode(self):
         logger.debug(
@@ -307,13 +311,36 @@ class ImageServerPicam2(lib.ImageServerAbstract.ImageServerAbstract):
             self._count += 1
 
 
-if __name__ == '__main__':
+# Test function for module
+def _test():
     # setup for testing.
+    from PIL import Image
+    import io
     logging.basicConfig()
     logger.setLevel("DEBUG")
 
-    framserverSimulate = ImageServerPicam2(EventEmitter())
+    imageServer = ImageServerPicam2(EventEmitter())
+    imageServer.start()
 
-    while (True):
-        time.sleep(2)
-        framserverSimulate.trigger_hq_capture()
+    time.sleep(1)
+
+    try:
+        with Image.open(io.BytesIO(imageServer._wait_for_lores_image())) as im:
+            im.verify()
+    except:
+        raise AssertionError("backend did not return valid image bytes")
+
+    imageServer.trigger_hq_capture()
+    # time.sleep(1) #TODO: race condition?!
+
+    try:
+        with Image.open(io.BytesIO(imageServer.wait_for_hq_image())) as im:
+            im.verify()
+    except:
+        raise AssertionError("backend did not return valid image bytes")
+
+    logger.info("testing finished.")
+
+
+if __name__ == '__main__':
+    _test()

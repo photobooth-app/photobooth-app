@@ -1,18 +1,16 @@
-import os
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 from threading import Condition
 import time
 import logging
 from pymitter import EventEmitter
-import lib.ImageServerAbstract
-import lib.StoppableThread
-from .ConfigSettings import settings
+import ImageServerAbstract
+import StoppableThread
+from ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
-class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
+class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
     def __init__(self, ee):
         super().__init__(ee)
 
@@ -20,6 +18,7 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
         self.exif_make = "Photobooth FrameServer Simulate"
         self.exif_model = "Custom"
         self.metadata = {}
+        self.providesStream = True
 
         # private props
         self._hq_img_buffer = None
@@ -30,41 +29,31 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
 
         self.CYCLE_WAIT = 33  # generate image every XX ms
 
-        self._generateImagesThread = lib.StoppableThread.StoppableThread(name="_generateImagesThread",
-                                                                         target=self._GenerateImagesFun, daemon=True)
+        self._generateImagesThread = StoppableThread.StoppableThread(name="_generateImagesThread",
+                                                                     target=self._GenerateImagesFun, daemon=True)
 
     def start(self):
         """To start the FrameServer"""
         self._generateImagesThread.start()
+        logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer"""
         self._generateImagesThread.stop()
-
-    def wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-        with self._lores_condition:
-            while True:
-                self._lores_condition.wait()
-                return self._lores_img_buffer.getvalue()
+        logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
-                self._hq_condition.wait()
+                if not self._hq_condition.wait(1):
+                    raise IOError("timeout receiving frames")
                 return self._hq_img_buffer.getvalue()
-
-    def wait_for_lores_frame(self):
-        raise NotImplementedError()
-
-    def wait_for_hq_frame(self):
-        raise NotImplementedError()
 
     def gen_stream(self):
         while not self._generateImagesThread.stopped():
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + self.wait_for_lores_image() + b'\r\n\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + self._wait_for_lores_image() + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
@@ -77,6 +66,18 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
     """
     INTERNAL FUNCTIONS
     """
+
+    def _wait_for_lores_image(self):
+        """for other threads to receive a lores JPEG image"""
+        with self._lores_condition:
+            while True:
+                if not self._lores_condition.wait(1):
+                    raise IOError("timeout receiving frames")
+                return self._lores_img_buffer.getvalue()
+
+    def _wait_for_autofocus_frame(self):
+        """autofocus not supported by this backend"""
+        raise NotImplementedError()
 
     def _onCaptureMode(self):
         logger.debug(
@@ -156,13 +157,36 @@ class ImageServerSimulated(lib.ImageServerAbstract.ImageServerAbstract):
         return
 
 
-if __name__ == '__main__':
+# Test function for module
+def _test():
     # setup for testing.
+    from PIL import Image
+    import io
     logging.basicConfig()
     logger.setLevel("DEBUG")
 
-    framserverSimulate = ImageServerSimulated(EventEmitter())
+    imageServer = ImageServerSimulated(EventEmitter())
+    imageServer.start()
 
-    while (True):
-        time.sleep(2)
-        framserverSimulate.trigger_hq_capture()
+    time.sleep(1)
+
+    try:
+        with Image.open(io.BytesIO(imageServer._wait_for_lores_image())) as im:
+            im.verify()
+    except:
+        raise AssertionError("backend did not return valid image bytes")
+
+    imageServer.trigger_hq_capture()
+    # time.sleep(1) #TODO: race condition?!
+
+    try:
+        with Image.open(io.BytesIO(imageServer.wait_for_hq_image())) as im:
+            im.verify()
+    except:
+        raise AssertionError("backend did not return valid image bytes")
+
+    logger.info("testing finished.")
+
+
+if __name__ == '__main__':
+    _test()

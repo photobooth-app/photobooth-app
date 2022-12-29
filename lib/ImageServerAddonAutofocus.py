@@ -7,61 +7,17 @@ from queue import Queue
 import threading
 import time
 import logging
-from lib.ConfigSettings import settings
-from lib.ImageServerAbstract import ImageServerAbstract
-from lib.RepeatedTimer import RepeatedTimer
+from ConfigSettings import settings
+from ImageServerAbstract import ImageServerAbstract
+from ImageServerAddonAutofocusFocuser import ImageServerAddonAutofocusFocuser
+from RepeatedTimer import RepeatedTimer
 logger = logging.getLogger(__name__)
-
-
-class Focuser:
-    """
-    # This script works after installing the driver for 16mp imx519 driver from arducam
-    # only driver necessary, not the libcamera apps
-    # How to install the driver
-    # https://www.arducam.com/docs/cameras-for-raspberry-pi/raspberry-pi-libcamera-guide/how-to-use-arducam-16mp-camera-on-rapberry-pi/
-    # You can use our auto-install script to install the driver for arducam 64MP camera:
-    # wget - O install_pivariety_pkgs.sh https: // github.com/ArduCAM/Arducam-Pivariety-V4L2-Driver/releases/download/install_script/install_pivariety_pkgs.sh
-    # chmod + x install_pivariety_pkgs.sh
-    # ./install_pivariety_pkgs.sh - p imx519_kernel_driver_low_speed
-    #
-    # driver may have to be reinstalled after system updates!
-    """
-
-    def __init__(self):
-        self.focus_value = 0
-        self._device = settings.common.FOCUSER_DEVICE
-        self.MAX_VALUE = settings.common.FOCUSER_MAX_VALUE
-        self.MIN_VALUE = settings.common.FOCUSER_MIN_VALUE
-
-        self.reset()
-
-    def reset(self):
-        self.set(settings.common.FOCUSER_DEF_VALUE)
-
-    def get(self):
-        return self.focus_value
-
-    def set(self, value):
-        if value > settings.common.FOCUSER_MAX_VALUE:
-            value = settings.common.FOCUSER_MAX_VALUE
-        elif value < settings.common.FOCUSER_MIN_VALUE:
-            value = settings.common.FOCUSER_MIN_VALUE
-
-        value = int(value)
-        try:
-            os.system(
-                "v4l2-ctl -c focus_absolute={} -d {}".format(value, self._device))
-        except Exception as e:
-            logger.exception(e)
-            logger.error(f"Error on focus command: {e}")
-
-        self.focus_value = value
 
 
 class ImageServerAddonAutofocus(object):
     def __init__(self, imageServer: ImageServerAbstract, ee: EventEmitter):
-        self._imageServer = imageServer
-        self._focuser = Focuser()
+        self._imageServer: ImageServerAbstract = imageServer
+        self._focuser = ImageServerAddonAutofocusFocuser()
         self._ee = ee
         self._ee.on("onRefocus",
                     self.doFocus)
@@ -83,7 +39,7 @@ class ImageServerAddonAutofocus(object):
         self.reset()
 
         self._rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
-                                 self.doFocus)
+                                 self.triggerRegularTimedFocus)
 
         self.startRegularAutofocusTimer()
 
@@ -93,11 +49,19 @@ class ImageServerAddonAutofocus(object):
     def stopRegularAutofocusTimer(self):
         self._rt.stop()
 
+    def abortOngoingFocusThread(self):
+        logger.debug("abort ongoing focus thread")
+        self.setFinish(True)
+
     def setIgnoreFocusRequests(self):
         self._standby = True
 
     def setAllowFocusRequests(self):
         self._standby = False
+
+    def triggerRegularTimedFocus(self):
+        if not self._standby:
+            self.doFocus()
 
     def doFocus(self):
         # guard to perfom autofocus only once at a time
@@ -114,7 +78,7 @@ class ImageServerAddonAutofocus(object):
             threadAutofocusFocusSupervisor.start()
 
         else:
-            logger.debug("Focus is not done yet or in standby.")
+            logger.warn("Focus is not done yet or in standby.")
 
     def isFinish(self):
         self.lock.acquire()
@@ -129,7 +93,7 @@ class ImageServerAddonAutofocus(object):
 
     def reset(self):
         self.sharpnessList = Queue()
-        self.finish = True
+        self.setFinish(True)
 
 
 def getROIFrame(roi, frame):
@@ -144,35 +108,41 @@ def getROIFrame(roi, frame):
     return roi_frame
 
 
-def statsThread(imageServer: ImageServerAbstract, focuser: Focuser, focusState: Autofocus):
-    maxPosition = focuser.MAX_VALUE
-    minPosition = focuser.MIN_VALUE
-    lastPosition = focuser.get()
+def statsThread(imageServer: ImageServerAbstract, imageServerAddonAutofocusFocuser: ImageServerAddonAutofocusFocuser, imageServerAddonAutofocus: ImageServerAddonAutofocus):
+    maxPosition = imageServerAddonAutofocusFocuser.MAX_VALUE
+    minPosition = imageServerAddonAutofocusFocuser.MIN_VALUE
+    lastPosition = imageServerAddonAutofocusFocuser.get()
     # focuser.set(lastPosition)  # init position
     jpeg = TurboJPEG()
     lastTime = time.time()
     skippedFrameCounter = 0
     sharpnessList = []
 
-    while not focusState.isFinish():
+    while not imageServerAddonAutofocus.isFinish():
         try:
-            frame = imageServer.wait_for_lores_frame()
-        except NotImplementedError as e:
+            frame = imageServer._wait_for_autofocus_frame()
+        except NotImplementedError:
             logger.error(
                 f"imageserver backend not to deliver lores frames for autofocus - please disable autofocus")
-            focusState.stopRegularAutofocusTimer()
-            focusState.reset()
+            imageServerAddonAutofocus.stopRegularAutofocusTimer()
+            imageServerAddonAutofocus.reset()
+            break
+        except IOError:
+            logger.warning(
+                f"imageserver did not deliver frames, aborting cycle (should occur only if service stopped!)")
+            imageServerAddonAutofocus.stopRegularAutofocusTimer()
+            imageServerAddonAutofocus.reset()
             break
 
-        if time.time() - lastTime >= settings.common.FOCUSER_MOVE_TIME and not focusState.isFinish():
+        if time.time() - lastTime >= settings.common.FOCUSER_MOVE_TIME and not imageServerAddonAutofocus.isFinish():
             lastTime = time.time()
 
             nextPosition = lastPosition + \
-                (focusState.direction *
+                (imageServerAddonAutofocus.direction *
                  settings.common.FOCUSER_STEP)
 
             if nextPosition < maxPosition and nextPosition > minPosition:
-                focuser.set(nextPosition)
+                imageServerAddonAutofocusFocuser.set(nextPosition)
 
             roi_frame = getROIFrame(
                 settings.common.FOCUSER_ROI, frame)
@@ -183,9 +153,9 @@ def statsThread(imageServer: ImageServerAbstract, focuser: Focuser, focusState: 
             sharpness = len(buffer)
             item = (lastPosition, sharpness)
             sharpnessList.append(item)
-            focusState.sharpnessList.put(item)
+            imageServerAddonAutofocus.sharpnessList.put(item)
 
-            lastPosition += (focusState.direction *
+            lastPosition += (imageServerAddonAutofocus.direction *
                              settings.common.FOCUSER_STEP)
 
             if lastPosition > maxPosition:
@@ -198,14 +168,14 @@ def statsThread(imageServer: ImageServerAbstract, focuser: Focuser, focusState: 
             skippedFrameCounter += 1
 
     # End of stats.
-    focusState.sharpnessList.put((-1, -1))
-    focusState._lastRunResult = sharpnessList
+    imageServerAddonAutofocus.sharpnessList.put((-1, -1))
+    imageServerAddonAutofocus._lastRunResult = sharpnessList
 
     # reverse search direction next time.
-    focusState.direction *= -1
+    imageServerAddonAutofocus.direction *= -1
 
-    focusState._ee.emit("publishSSE", sse_event="autofocus/sharpness",
-                        sse_data=json.dumps(sharpnessList))
+    imageServerAddonAutofocus._ee.emit("publishSSE", sse_event="autofocus/sharpness",
+                                       sse_data=json.dumps(sharpnessList))
 
     logger.debug(f"autofocus run finished, sharpnessList={sharpnessList}")
     if (skippedFrameCounter):
