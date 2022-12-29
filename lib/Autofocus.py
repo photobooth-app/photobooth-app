@@ -1,3 +1,4 @@
+from pymitter import EventEmitter
 import os
 from os.path import exists as file_exists
 from turbojpeg import TurboJPEG
@@ -14,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 class Focuser:
     """
-    ###
     # This script works after installing the driver for 16mp imx519 driver from arducam
     # only driver necessary, not the libcamera apps
     # How to install the driver
@@ -58,19 +58,21 @@ class Focuser:
         self.focus_value = value
 
 
-class FocusState(object):
-    def __init__(self, imageServer, ee):
-        self._imageServer: ImageServerAbstract = imageServer
+class ImageServerAddonAutofocus(object):
+    def __init__(self, imageServer: ImageServerAbstract, ee: EventEmitter):
+        self._imageServer = imageServer
         self._focuser = Focuser()
         self._ee = ee
-        self._ee.on("onRefocus", self.doFocus)
-        self._ee.on(
-            "statemachine/armed", self.setIgnoreFocusRequests)
-        self._ee.on(
-            "statemachine/finished", self.setAllowFocusRequests)
-
-        self._ee.on("onCaptureMode", self.setIgnoreFocusRequests)
-        self._ee.on("onPreviewMode", self.setAllowFocusRequests)
+        self._ee.on("onRefocus",
+                    self.doFocus)
+        self._ee.on("statemachine/armed",
+                    self.setIgnoreFocusRequests)
+        self._ee.on("statemachine/finished",
+                    self.setAllowFocusRequests)
+        self._ee.on("onCaptureMode",
+                    self.setIgnoreFocusRequests)
+        self._ee.on("onPreviewMode",
+                    self.setAllowFocusRequests)
 
         self._lastRunResult = []
         self.sharpnessList = Queue()
@@ -142,7 +144,7 @@ def getROIFrame(roi, frame):
     return roi_frame
 
 
-def statsThread(imageServer: ImageServerAbstract, focuser: Focuser, focusState: FocusState):
+def statsThread(imageServer: ImageServerAbstract, focuser: Focuser, focusState: Autofocus):
     maxPosition = focuser.MAX_VALUE
     minPosition = focuser.MIN_VALUE
     lastPosition = focuser.get()
