@@ -1,3 +1,5 @@
+from PIL import Image, ImageGrab
+import tempfile
 import os
 from io import BytesIO
 from threading import Condition
@@ -29,6 +31,7 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
 
     def start(self):
         """To start the FrameServer"""
+        self._generateImagesThread.start()
         self._onPreviewMode()
 
     def stop(self):
@@ -53,7 +56,8 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
         raise NotImplementedError()
 
     def gen_stream(self):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "CMD backend does not support native livestreaming.")
 
     def trigger_hq_capture(self):
         self._onCaptureMode()
@@ -96,10 +100,18 @@ class ImageServerCmd(lib.ImageServerAbstract.ImageServerAbstract):
 
                 self._ee.emit("frameserver/onCapture")
 
-                # virtual delay for camera to create picture
                 # capture request, afterwards read file to buffer
-                os.system("")
-                jpeg_buffer = BytesIO()  # dummy
+                tmp_filepath = f"{tempfile.mktemp(prefix='booth_',suffix='.jpg')}"
+                cmd_capture = settings.common.CMD_CAPTURE.format(
+                    filepath=tmp_filepath)
+                logger.info(f"capture cmd: {cmd_capture}")
+                return_value = os.system(f'"{cmd_capture}"')
+                # if 0 OK, if different (-1) error
+                logger.debug(f"cmd_capture return value: {return_value}")
+
+                logger.info(f"saved camera file to {tmp_filepath}")
+                with open(tmp_filepath, "rb") as fh:
+                    jpeg_buffer = BytesIO(fh.read())
 
                 self._ee.emit("frameserver/onCaptureFinished")
 
