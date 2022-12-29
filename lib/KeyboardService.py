@@ -15,6 +15,7 @@ class KeyboardService():
     def on_key_callback(self, key):
         logger.debug(f"key '{key.name}' triggered.")
 
-        if key.name == settings.common.HW_KEYCODE_TAKEPIC:
-            logger.info("triggered by keyboard input HW_KEYCODE_TAKEPIC")
+        if key.name == settings.hardwareinput.HW_KEYCODE_TAKEPIC:
+            logger.info(
+                f"triggered by keyboard input HW_KEYCODE_TAKEPIC={settings.hardwareinput.HW_KEYCODE_TAKEPIC}")
             self._ee.emit("triggerprocess/chose_1pic")
