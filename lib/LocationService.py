@@ -18,7 +18,6 @@ class LocationService:
         self._thread = Thread(name="LocationServiceThread",
                               target=self._thread_func, daemon=True)
         self._running = True
-        self._init_successful = True
 
         # request data
         self._wifi_access_points = []
@@ -28,41 +27,45 @@ class LocationService:
         # https://developers.google.com/maps/documentation/geolocation/overview#responses
         self._setGeolocation({})
 
-        try:
-            self._wifi = pywifi.PyWiFi()
-            self._iface = self._wifi.interfaces(
-            )[settings.common.LOCATION_SERVICE_WIFI_INTERFACE_NO]
-            self._client = googlemaps.Client(
-                settings.common.LOCATION_SERVICE_API_KEY)
-        except Exception as e:
-            logger.exception(e)
-            logger.error(
-                f"geolocation setup failed, stopping thread, error {e}")
-            self._init_successful = False   # thread cannot be enabled.
+        self._init_successful = False   # thread cannot be enabled.
+        if (settings.locationservice.LOCATION_SERVICE_ENABLED):
+            logger.debug("geolocation api enabled, trying to setup")
+            try:
+                self._wifi = pywifi.PyWiFi()
+                self._iface = self._wifi.interfaces(
+                )[settings.locationservice.LOCATION_SERVICE_WIFI_INTERFACE_NO]
+                self._client = googlemaps.Client(
+                    settings.locationservice.LOCATION_SERVICE_API_KEY)
+                self._init_successful = True
+            except Exception as e:
+                logger.error(
+                    f"geolocation setup failed, stopping thread, error: {e}")
+        else:
+            logger.debug("geolocation api disabled, skipping setup")
 
         self._ee.on("publishSSE/initial", self._publishSSEInitial)
 
     def start(self):
-        if (self._init_successful):
-            if (settings.common.LOCATION_SERVICE_ENABLED):
+        if (settings.locationservice.LOCATION_SERVICE_ENABLED):
+            if (self._init_successful):
                 self._running = True
                 self._thread.start()
             else:
-                logger.info(
-                    "LocationService started but not actually enabled in config")
+                logger.error(
+                    "LocationService enabled but cannot be started since not initialized properly!")
         else:
-            logger.error(
-                "LocationService cannot be started since not initialized properly!")
+            logger.info(
+                "LocationService started but not actually enabled in config")
 
     def stop(self):
         self._running = False
         self._thread.join(1)
 
     def _thread_func(self):
-        CALC_EVERY = settings.common.LOCATION_SERVICE_FORCED_UPDATE * \
+        CALC_EVERY = settings.locationservice.LOCATION_SERVICE_FORCED_UPDATE * \
             60  # update every x seconds only
         last_forced_update_time = time.time()  # last time force updated
-        max_retries_high_frequency = settings.common.LOCATION_SERVICE_HIGH_FREQ_UPDATE
+        max_retries_high_frequency = settings.locationservice.LOCATION_SERVICE_HIGH_FREQ_UPDATE
 
         while self._running:
             # forced update by time
@@ -76,7 +79,7 @@ class LocationService:
                 last_forced_update_time = time.time()
 
             # higher frequency retry initial after bootup. if fails still forced update every hour or so above.
-            elif (self.accuracy == None or self.accuracy > settings.common.LOCATION_SERVICE_THRESHOLD_ACCURATE) and max_retries_high_frequency > 0:
+            elif (self.accuracy == None or self.accuracy > settings.locationservice.LOCATION_SERVICE_THRESHOLD_ACCURATE) and max_retries_high_frequency > 0:
                 logger.info(
                     f"no or inaccurate location result, retry {max_retries_high_frequency} times again")
 
@@ -154,7 +157,7 @@ class LocationService:
         # use api key to request via nearby wifis
         try:
             results = self._client.geolocate(
-                consider_ip=settings.common.LOCATION_SERVICE_CONSIDER_IP, wifi_access_points=self._wifi_access_points)
+                consider_ip=settings.locationservice.LOCATION_SERVICE_CONSIDER_IP, wifi_access_points=self._wifi_access_points)
 
             logger.info(f"geolocation results: {results}")
 
