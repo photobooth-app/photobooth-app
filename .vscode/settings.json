@@ -1,5 +1,10 @@
 {
     "sshUser": "pi",
-    "sshEndpoint": "photobooth"
+    "sshEndpoint": "photobooth",
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
 
