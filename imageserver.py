@@ -1,6 +1,7 @@
 #!/usr/bin/python3
+from lib.LoggingService import EventstreamLogHandler
 from importlib import import_module
-from lib.ConfigSettings import ConfigSettings, ConfigSettingsInternal, settings
+from lib.ConfigSettings import ConfigSettings, settings
 from lib.KeyboardService import KeyboardService
 from lib.CamStateMachine import TakePictureMachineModel, states, transitions
 from transitions import Machine
@@ -21,37 +22,18 @@ from lib.LocationService import LocationService
 import asyncio
 import uuid
 from queue import Queue
-import signal
 import logging
+from lib.LoggingService import LoggingService
 import platform
 
 
 # create early instances
 # event system
 ee: EventEmitter = EventEmitter()
+ls: LoggingService = LoggingService(ee=ee)
 
 # constants
 SERVICE_NAME = "imageserver"
-
-
-class EventstreamLogHandler(logging.Handler):
-    """
-    Logging handler to emit events to eventstream; to be displayed in console.log on browser frontend
-    """
-
-    def __init__(self):
-        logging.Handler.__init__(self)
-
-    def emit(self, record):
-        ee.emit("publishSSE", sse_event="message",
-                sse_data=self.format(record))
-
-
-# reconfigure if any changes from config needs to be applied.
-logging.config.dictConfig(ConfigSettingsInternal().logger.LOGGER_CONFIG)
-for handles in logging.getLogger().handlers:
-    # after configure, set all handlers level to global requested level:
-    handles.setLevel(settings.debugging.DEBUG_LEVEL)
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +53,8 @@ elif platform.system() == "Windows":
 logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
 logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
 logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
+# run python with -O (optimized) sets debug to false and disables asserts from bytecode
+logger.info(f"__debug__={__debug__}")
 
 
 app = FastAPI()

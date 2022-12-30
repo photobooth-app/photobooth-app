@@ -105,6 +105,7 @@ class GroupDebugging(BaseModel):
 class GroupColorled(BaseModel):
     '''Colorled settings for neopixel and these elements'''
     # infoled / ws2812b ring settings
+    ENABLED: bool = True
     NUMBER_LEDS: int = 12
     GPIO_PIN: int = 18
     COLOR: tuple[int, int, int, int] = (255, 255, 255, 255)    # RGBW
@@ -159,90 +160,6 @@ except ValidationError as e:
     logger.exception(
         f"config file {CONFIG_FILENAME} validation error! program stopped, please fix config {e}")
     quit()
-
-
-class GroupLogger(BaseModel):
-
-    LOGGER_CONFIG = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'formatters': {
-            'standard': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s'
-            },
-            'detailed': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s call_trace=%(pathname)s L%(lineno)-4d'
-
-            },
-        },
-        'handlers': {
-            'default': {
-                'level': 'DEBUG',
-                'formatter': 'standard',
-                'class': 'logging.StreamHandler',
-                # 'stream': 'ext://sys.stdout',  # Default is stderr
-            },
-            'file': {
-                'class': 'logging.handlers.RotatingFileHandler',
-                'formatter': 'detailed',
-                'filename': './log/qbooth.log',
-                'maxBytes': 1024**2,
-                'backupCount': 10,
-                'level': 'DEBUG',
-            },
-            'eventstream': {
-                'class': '__main__.EventstreamLogHandler',
-                'formatter': 'standard',
-                'level': 'DEBUG',
-            }
-        },
-        'loggers': {
-            '': {  # root logger
-                'handlers': ['default', 'eventstream', 'file'],
-                'level': 'DEBUG',
-                'propagate': False
-            },
-            '__main__': {  # if __name__ == '__main__'
-                'handlers': ['default', 'eventstream', 'file'],
-                'level': 'DEBUG',
-                'propagate': False
-            },
-            'picamera2': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': False
-            },
-            'pywifi': {
-                'handlers': ['default'],
-                'level': 'WARNING',
-                'propagate': False
-            },
-            'sse_starlette.sse': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': False
-            },
-            'lib.Autofocus': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': False
-            },
-            'transitions.core': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': False
-            },
-            'PIL.PngImagePlugin': {
-                'handlers': ['default'],
-                'level': 'INFO',
-                'propagate': False
-            },
-        }
-    }
-
-
-class ConfigSettingsInternal(BaseModel):
-    logger: GroupLogger = GroupLogger()
 
 
 if __name__ == '__main__':

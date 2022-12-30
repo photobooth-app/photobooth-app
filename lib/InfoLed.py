@@ -4,7 +4,9 @@
 from .ConfigSettings import settings
 import time
 from lib.StoppableThread import StoppableThread
-import time
+import logging
+from pymitter import EventEmitter
+logger = logging.getLogger(__name__)
 
 enable = False
 try:
@@ -18,21 +20,24 @@ try:
     LED_CHANNEL = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
     LED_STRIP_TYPE = WS2812_STRIP  # or WS2811_STRIP_GRB
 
-    enable = True
+    enable = True and settings.colorled.ENABLED
 except ModuleNotFoundError as e:
-    print("module only avail on rpi; disabled module because not avail.")
+    logger.error(
+        "module only avail on rpi; disabled module because not avail.")
+    logger.error(e)
 
+    # polyfill for color to make the app work even if module not avail
     def Color(a, b, c, d=''):
         pass
 
 
 class InfoLed():
-    def __init__(self, ee, *args, **kwargs):
+    def __init__(self, ee: EventEmitter, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
         if not enable == True:
-            print("infoled module disabled")
+            logger.info("infoled module disabled")
             return
 
         self._ee = ee

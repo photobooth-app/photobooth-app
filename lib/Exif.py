@@ -14,11 +14,11 @@ class Exif():
         self._locationservice = locationservice
 
     def createExifBytes(self):
-        print(self._imageServer.metadata)
+        logger.info(
+            f"making up exif data from imageserver metadata={self._imageServer.metadata}")
         # grab metadata from frameserver
         now = datetime.datetime.now()
         zero_ifd = {piexif.ImageIFD.Make: self._imageServer.exif_make,
-                    # self._frameServer._picam2.camera.id,
                     piexif.ImageIFD.Model: self._imageServer.exif_model,
                     piexif.ImageIFD.Software: "Photobooth Imageserver"}
         total_gain = (self._imageServer.metadata.get("AnalogueGain", 0) *
