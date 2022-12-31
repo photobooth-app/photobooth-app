@@ -62,10 +62,3 @@ def test_getImages():
                 f"backend did not return valid image bytes {e}")
 
         imageServerBackend.stop()
-
-
-if __name__ == '__main__':
-    # setup for testing.
-
-    # test()
-    pass

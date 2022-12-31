@@ -130,15 +130,3 @@ class ImageServerCmd(ImageServerAbstract.ImageServerAbstract):
             # wait for trigger...
             time.sleep(0.05)
         return
-
-
-if __name__ == '__main__':
-    # setup for testing.
-    logging.basicConfig()
-    logger.setLevel("DEBUG")
-
-    framserverSimulate = ImageServerCmd(EventEmitter())
-
-    while (True):
-        time.sleep(2)
-        framserverSimulate.trigger_hq_capture()

@@ -165,38 +165,3 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
             time.sleep(self.CYCLE_WAIT/1000.)
         return
-
-
-# Test function for module
-def _test():
-    # setup for testing.
-    from PIL import Image
-    import io
-    logging.basicConfig()
-    logger.setLevel("DEBUG")
-
-    imageServer = ImageServerSimulated(EventEmitter())
-    imageServer.start()
-
-    time.sleep(1)
-
-    try:
-        with Image.open(io.BytesIO(imageServer._wait_for_lores_image())) as im:
-            im.verify()
-    except:
-        raise AssertionError("backend did not return valid image bytes")
-
-    imageServer.trigger_hq_capture()
-    # time.sleep(1) #TODO: race condition?!
-
-    try:
-        with Image.open(io.BytesIO(imageServer.wait_for_hq_image())) as im:
-            im.verify()
-    except:
-        raise AssertionError("backend did not return valid image bytes")
-
-    logger.info("testing finished.")
-
-
-if __name__ == '__main__':
-    _test()
