@@ -6,10 +6,9 @@
 cd "${0%/*}"
 
 
-# remove cache files
-rm -r ./__pycache__ 2> /dev/null
-rm -r ./lib/__pycache__ 2> /dev/null
-rm -r ./utils/__pycache__ 2> /dev/null
+# remove cache files to avoid using old bytecode during dev
+python3 -Bc "for p in __import__('pathlib').Path('.').rglob('*.py[co]'): p.unlink()"
+python3 -Bc "for p in __import__('pathlib').Path('.').rglob('__pycache__'): p.rmdir()"
 
 # start application
 # -O for optimized, means all "assert" statement are removed from bytecode
