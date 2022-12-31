@@ -12,7 +12,7 @@ logger.setLevel("DEBUG")
 logger.info("testing finished.")
 
 
-def test_getImages():
+def getImages(backend: ImageServerAbstract):
     from pymitter import EventEmitter
     from PIL import Image
     import io
