@@ -24,7 +24,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self.exif_make = "Photobooth Picamera2 Integration"
         self.exif_model = "Custom"
         self.metadata = {}
-        self.providesStream = True
 
         # private props
         """A simple class that can serve up frames from one of the Picamera2's configured

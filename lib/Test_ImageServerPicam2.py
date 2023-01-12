@@ -1,10 +1,13 @@
-import Test_ImageServer
+import lib.test_ImageServer as test_ImageServer
 from pymitter import EventEmitter
-
-# ImageServerSimulated backend: test on linux/rpi only
-from ImageServerPicam2 import ImageServerPicam2
-backend = (ImageServerPicam2(EventEmitter()))
+import platform
+import pytest
 
 
 def test_getImages():
-    Test_ImageServer.getImages(backend)
+    if not platform.system() == "Linux":
+        pytest.skip("not on linux, test of Picam2 backend skipped")
+
+    from ImageServerPicam2 import ImageServerPicam2
+    backend = (ImageServerPicam2(EventEmitter()))
+    test_ImageServer.getImages(backend)

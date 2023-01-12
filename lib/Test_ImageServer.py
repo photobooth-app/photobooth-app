@@ -18,47 +18,25 @@ def getImages(backend: ImageServerAbstract):
     import io
     import platform
 
-    testbackends: list[ImageServerAbstract] = []
+    logger.info(f"testing backend {backend.__module__}")
+    backend.start()
 
-    # ImageServerSimulated backend: test on every platform
-    from ImageServerSimulated import ImageServerSimulated
-    testbackends.append(ImageServerSimulated(EventEmitter()))
-
-    # ImageServerSimulated backend: test on every platform but with specific settings for windows (digicamcontrol)/linux(gphoto2)
-    from ImageServerCmd import ImageServerCmd
-    # TODO: find way to inject test settings to imgservcmd
-    # testbackends.append(ImageServerCmd(EventEmitter()))
-    logger.warning(
-        "Currently not testing CMD backend, needs additional work!")
-
-    # ImageServerPicam2 backend: test on linux/raspberry pi only:
-    if platform.system() == "Linux":
-        from ImageServerPicam2 import ImageServerPicam2
-        testbackends.append(ImageServerPicam2(EventEmitter()))
-    else:
-        logger.warning("not on linux, test of Picam2 backend skipped")
-
-    logger.debug(f"testing following backends: {testbackends}")
-    for imageServerBackend in testbackends:
-        logger.info(f"testing backend {imageServerBackend.__module__}")
-        imageServerBackend.start()
-
-        if imageServerBackend.providesStream:
-            try:
-                with Image.open(io.BytesIO(imageServerBackend._wait_for_lores_image())) as im:
-                    im.verify()
-            except NotImplementedError:
-                raise AssertionError(
-                    "backend did not return valid image bytes")
-
-        imageServerBackend.trigger_hq_capture()
-        # time.sleep(1) #TODO: race condition?!
-
+    if backend.providesStream:
         try:
-            with Image.open(io.BytesIO(imageServerBackend.wait_for_hq_image())) as im:
+            with Image.open(io.BytesIO(backend._wait_for_lores_image())) as im:
                 im.verify()
-        except Exception as e:
+        except NotImplementedError:
             raise AssertionError(
-                f"backend did not return valid image bytes {e}")
+                "backend did not return valid image bytes")
 
-        imageServerBackend.stop()
+    backend.trigger_hq_capture()
+    # time.sleep(1) #TODO: race condition?!
+
+    try:
+        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as im:
+            im.verify()
+    except Exception as e:
+        raise AssertionError(
+            f"backend did not return valid image bytes {e}")
+
+    backend.stop()

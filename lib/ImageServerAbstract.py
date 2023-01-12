@@ -10,7 +10,6 @@ class ImageServerAbstract(ABC):
         self.exif_make = "ImageServerAbstract-Make"
         self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
-        self.providesStream = False
 
         # private
         self._fps = 0
@@ -30,6 +29,14 @@ class ImageServerAbstract(ABC):
         yield jpeg images to stream to client (if not created otherwise)
         """
         pass
+
+    # @property
+    # @abstractmethod
+    # def stream_url(self):
+    #    """
+    #    get the default backend stream
+    #    """
+    #    pass
 
     @abstractmethod
     def trigger_hq_capture(self):

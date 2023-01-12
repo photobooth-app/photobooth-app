@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from lib.ImageServers import ImageServers
 from lib.LoggingService import EventstreamLogHandler
 from importlib import import_module
 from lib.ConfigSettings import ConfigSettings, settings
@@ -293,7 +294,7 @@ def api_gallery_delete(id: str):
 
 @app.get('/stream.mjpg')
 def video_stream():
-    return StreamingResponse(imageServer.gen_stream(),
+    return StreamingResponse(imageServers.gen_stream(),
                              media_type='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -308,19 +309,15 @@ async def read_index():
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
 
-
 if __name__ == '__main__':
     infoled = InfoLed(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-    imageserverModule = import_module(
-        f"lib.{settings.common.IMAGESERVER_BACKEND}")
-    cls = getattr(imageserverModule, settings.common.IMAGESERVER_BACKEND)
-    imageServer = cls(ee)
+    imageServers = ImageServers(ee)
 
     locationService = LocationService(ee)
-    exif = Exif(imageServer, locationService)
-    imageDb = ImageDb(ee, imageServer, exif)
+    exif = Exif(imageServers.main, locationService)
+    imageDb = ImageDb(ee, imageServers.main, exif)
 
     if (True):
         ks = KeyboardService(ee)
@@ -331,7 +328,7 @@ if __name__ == '__main__':
                       transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
     model.start()
 
-    imageServer.start()
+    imageServers.start()
 
     # first time try to get location
     locationService.start()
@@ -351,4 +348,4 @@ if __name__ == '__main__':
         server.run()
     finally:
 
-        imageServer.stop()
+        imageServers.stop()

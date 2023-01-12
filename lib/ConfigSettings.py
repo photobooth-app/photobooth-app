@@ -31,7 +31,7 @@ class GroupCommon(BaseModel):
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
 
-    IMAGESERVER_BACKEND:        str = "ImageServerSimulated"
+    IMAGESERVER_BACKEND:        str = "ImageServerWebcam"
     PICAM2_AE_EXPOSURE_MODE: int = Field(
         default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
     CMD_CAPTURE = '"C:/Program Files (x86)/digiCamControl/CameraControlRemoteCmd.exe" /c capture "{filepath}"'
