@@ -4,6 +4,50 @@ picam2 = Picamera2()
 pprint(picam2.sensor_modes)
 
 """
+
+Result for 
+Raspberry Pi Camera Module 3 (imx708):
+
+[0:07:17.296134597] [1656]  INFO Camera camera_manager.cpp:299 libcamera v0.0.2+55-5df5b72c
+[0:07:17.456542125] [1659]  INFO RPI raspberrypi.cpp:1425 Registered camera /base/soc/i2c0mux/i2c@1/imx708@1a to Unicam device /dev/media3 and ISP device /dev/media0
+[0:07:17.470058500] [1656]  INFO Camera camera.cpp:1026 configuring streams: (0) 640x480-XBGR8888 (1) 1536x864-SBGGR10_CSI2P
+[0:07:17.470762514] [1659]  INFO RPI raspberrypi.cpp:805 Sensor: /base/soc/i2c0mux/i2c@1/imx708@1a - Selected sensor format: 1536x864-SBGGR10_1X10 - Selected unicam format: 1536x864-pBAA
+[0:07:17.508738135] [1656]  INFO Camera camera.cpp:1026 configuring streams: (0) 640x480-XBGR8888 (1) 2304x1296-SBGGR10_CSI2P
+[0:07:17.509996839] [1659]  INFO RPI raspberrypi.cpp:805 Sensor: /base/soc/i2c0mux/i2c@1/imx708@1a - Selected sensor format: 2304x1296-SBGGR10_1X10 - Selected unicam format: 2304x1296-pBAA
+[0:07:17.563098739] [1656]  INFO Camera camera.cpp:1026 configuring streams: (0) 640x480-XBGR8888 (1) 4608x2592-SBGGR10_CSI2P
+[0:07:17.563771034] [1659]  INFO RPI raspberrypi.cpp:805 Sensor: /base/soc/i2c0mux/i2c@1/imx708@1a - Selected sensor format: 4608x2592-SBGGR10_1X10 - Selected unicam format: 4608x2592-pBAA
+[{'bit_depth': 10,
+  'crop_limits': (0, 0, 4608, 2592),
+  'exposure_limits': (9, 603302, None),
+  'format': SRGGB10_CSI2P,
+  'fps': 120.13,
+  'size': (1536, 864),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (0, 0, 4608, 2592),
+  'exposure_limits': (13, 875283, None),
+  'format': SRGGB10_CSI2P,
+  'fps': 56.03,
+  'size': (2304, 1296),
+  'unpacked': 'SRGGB10'},
+ {'bit_depth': 10,
+  'crop_limits': (0, 0, 4608, 2592),
+  'exposure_limits': (26, 1722331, None),
+  'format': SRGGB10_CSI2P,
+  'fps': 14.35,
+  'size': (4608, 2592),
+  'unpacked': 'SRGGB10'}]
+
+pi@photobooth:~ $ libcamera-hello --list-cameras
+0 : imx708 [4608x2592] (/base/soc/i2c0mux/i2c@1/imx708@1a)
+    Modes: 'SRGGB10_CSI2P' : 1536x864 [120.13 fps - (0, 0)/4608x2592 crop]
+                             2304x1296 [56.03 fps - (0, 0)/4608x2592 crop]
+                             4608x2592 [14.35 fps - (0, 0)/4608x2592 crop]
+
+
+
+
+
 Result for 
 Arducam imx519 16mp:
 
@@ -53,6 +97,8 @@ Arducam imx519 16mp:
   'fps': 9.0,
   'size': (4656, 3496),
   'unpacked': 'SRGGB10'}]
+
+
 
 
 pi@photobooth:~ $ libcamera-hello --list-cameras
