@@ -39,7 +39,9 @@ git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
 Test run the server by issuing
 
 ```text
-sudo python ~/imageserver/imageserver.py
+cd ~/imageserver
+chmod u+x start.sh
+sudo ./start.sh
 ```
 
 Browse to <http://photobooth:8000> (replace photobooth by actual hostname) and see that it is working
