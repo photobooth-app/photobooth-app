@@ -21,13 +21,12 @@ def getImages(backend: ImageServerAbstract):
     logger.info(f"testing backend {backend.__module__}")
     backend.start()
 
-    if backend.providesStream:
-        try:
-            with Image.open(io.BytesIO(backend._wait_for_lores_image())) as im:
-                im.verify()
-        except NotImplementedError:
-            raise AssertionError(
-                "backend did not return valid image bytes")
+    try:
+        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as im:
+            im.verify()
+    except NotImplementedError:
+        raise AssertionError(
+            "backend did not return valid image bytes")
 
     backend.trigger_hq_capture()
     # time.sleep(1) #TODO: race condition?!

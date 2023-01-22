@@ -1,49 +1,47 @@
+import ImageServerAbstract
+import logging
+import platform
+if platform.system() == "Windows":
+    raise OSError("backend v4l2py not supported on windows platform")
+from v4l2py import Device
+import platform
 from StoppableThread import StoppableThread
 from pymitter import EventEmitter
 from threading import Condition
 from ConfigSettings import settings
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 import json
 from threading import Condition
-import cv2
-import logging
-import ImageServerAbstract
+
+
 logger = logging.getLogger(__name__)
 
 
-class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee: EventEmitter):
-        super().__init__(ee)
+class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
+    def __init__(self, ee: EventEmitter, enableStream):
+        super().__init__(ee, enableStream)
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth Webcam"
+        self.exif_make = "Photobooth WebcamV4l"
         self.exif_model = "Custom"
         self.metadata = {}
-        self.providesStream = True
 
         # private props
-        self._video = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        self._turboJPEG = TurboJPEG()
         self._ee = ee
 
-        self._hq_array = None
-        self._lores_array = None
+        self._hq_buffer = None
+        self._lores_buffer = None
         self._hq_condition = Condition()
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
         self._count = 0
         self._fps = 0
 
+        if platform.system() == "Windows":
+            raise OSError("backend v4l not supported on windows platform")
+
         # worker threads
         self._generateImagesThread = StoppableThread(name="_generateImagesThread",
                                                      target=self._GenerateImagesFun, daemon=True)
 
-        # activate preview mode on init
-        self._video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        self._video.set(cv2.CAP_PROP_FPS, 30.0)
-        self._video.set(cv2.CAP_PROP_FRAME_WIDTH,
-                        settings.common.CAPTURE_CAM_RESOLUTION[0])
-        self._video.set(cv2.CAP_PROP_FRAME_HEIGHT,
-                        settings.common.CAPTURE_CAM_RESOLUTION[1])
         self._onPreviewMode()
 
     def start(self):
@@ -63,8 +61,6 @@ class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
 
         self._generateImagesThread.join(1)
 
-        self._video.release()
-
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
@@ -74,9 +70,8 @@ class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
                 # TODO: timout to make it continue and do not block threads completely
                 if not self._hq_condition.wait(5):
                     raise IOError("timeout receiving frames")
-                buffer = self._getJpegByHiresFrame(
-                    frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
-                return buffer
+
+                return self._hq_buffer
 
     def gen_stream(self):
         skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
@@ -113,9 +108,8 @@ class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
                 # TODO: timout to make it continue and do not block threads completely
                 if not self._lores_condition.wait(5):
                     raise IOError("timeout receiving frames")
-                buffer = self._getJpegByLoresFrame(
-                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
-                return buffer
+
+                return self._lores_buffer
 
     def _onCaptureMode(self):
         logger.debug(
@@ -124,18 +118,6 @@ class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
     def _onPreviewMode(self):
         logger.debug(
             "change to preview mode requested - currently no way for webcam to switch within reasonable time")
-
-    def _getJpegByHiresFrame(self, frame, quality):
-        jpeg_buffer = self._turboJPEG.encode(
-            frame, quality=quality)
-
-        return jpeg_buffer
-
-    def _getJpegByLoresFrame(self, frame, quality):
-        jpeg_buffer = self._turboJPEG.encode(
-            frame, quality=quality)
-
-        return jpeg_buffer
 
     def _publishSSEInitial(self):
         self._publishSSE_metadata()
@@ -158,36 +140,37 @@ class ImageServerWebcam(ImageServerAbstract.ImageServerAbstract):
                     f"force switchmode to capture config right before taking picture (no countdown?!)")
                 self._onCaptureMode()
 
-            if not self._trigger_hq_capture:
-                ret, array = self._video.read()
-                # ret? # metdadata?
+            with Device.from_id(settings.backends.webcamV4l.device_index) as cam:
+                logger.info(
+                    f"webcam devices index {settings.backends.webcamV4l.device_index} opened")
+                try:
+                    cam.video_capture.set_format(
+                        settings.common.CAPTURE_CAM_RESOLUTION[0], settings.common.CAPTURE_CAM_RESOLUTION[1], 'MJPG')
+                except Exception as e:
+                    logger.exception(e)
 
-                with self._lores_condition:
-                    self._lores_array = array
-                    self._lores_condition.notify_all()
-            else:
-                # only capture one pic and return to lores streaming afterwards
-                self._trigger_hq_capture = False
+                for frame in cam:
 
-                self._ee.emit("frameserver/onCapture")
+                    if not self._trigger_hq_capture:
 
-                # capture hq picture
-                ret, array = self._video.read()
-                # ret? # metdadata?
+                        with self._lores_condition:
+                            self._lores_buffer = frame
+                            self._lores_condition.notify_all()
+                    else:
+                        # only capture one pic and return to lores streaming afterwards
+                        self._trigger_hq_capture = False
 
-                # optional denoise?
-                array = cv2.fastNlMeansDenoisingColored(
-                    array, None, 2, 2, 3, 9)
+                        self._ee.emit("frameserver/onCapture")
 
-                logger.debug(self.metadata)
+                        # capture hq picture
 
-                self._ee.emit("frameserver/onCaptureFinished")
+                        with self._hq_condition:
+                            self._hq_buffer = frame
+                            self._hq_condition.notify_all()
 
-                with self._hq_condition:
-                    self._hq_array = array
-                    self._hq_condition.notify_all()
+                        self._ee.emit("frameserver/onCaptureFinished")
 
-                # switch back to preview mode
-                self._onPreviewMode()
+                        # switch back to preview mode
+                        self._onPreviewMode()
 
-            self._count += 1
+                    self._count += 1

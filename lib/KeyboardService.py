@@ -10,7 +10,11 @@ class KeyboardService():
     def __init__(self, ee):
         self._ee = ee
 
-        keyboard.on_press(self.on_key_callback)
+        if settings.hardwareinput.ENABLED:
+            keyboard.on_press(self.on_key_callback)
+        else:
+            logger.info(
+                "keyboardservice not enabled - enable for keyboard triggers")
 
     def on_key_callback(self, key):
         logger.debug(f"key '{key.name}' triggered.")

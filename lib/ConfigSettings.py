@@ -24,37 +24,19 @@ class GroupCommon(BaseModel):
     THUMBNAIL_QUALITY:          int = Field(default=60, ge=10, le=100)
     PREVIEW_QUALITY:            int = Field(default=75, ge=10, le=100)
     HIRES_QUALITY:              int = Field(default=90, ge=10, le=100)
-    PREVIEW_SCALE_FACTOR:       int = Field(default=25, ge=10, le=100)
-    THUMBNAIL_SCALE_FACTOR:     int = Field(default=12.5, ge=10, le=100)
+    PREVIEW_MIN_WIDTH:          int = Field(default=900, ge=200, le=2000)
+    THUMBNAIL_MIN_WIDTH:        int = Field(default=400, ge=100, le=1000)
 
     PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
 
-    IMAGESERVER_BACKEND:        str = "ImageServerWebcam"
     PICAM2_AE_EXPOSURE_MODE: int = Field(
         default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
-    CMD_CAPTURE = '"C:/Program Files (x86)/digiCamControl/CameraControlRemoteCmd.exe" /c capture "{filepath}"'
-    CMD_ON_PREVIEWMODE = ""
-    CMD_ON_CAPTUREMODE = ""
+
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
-
-    # autofocus
-    # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    FOCUSER_ENABLED: bool = True
-    FOCUSER_MIN_VALUE: int = 300
-    FOCUSER_MAX_VALUE: int = 3000
-    FOCUSER_DEF_VALUE: int = 800
-    FOCUSER_STEP: int = 50
-    # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
-    FOCUSER_MOVE_TIME: float = 0.028
-    FOCUSER_JPEG_QUALITY: int = 80
-    FOCUSER_ROI: tuple[float, float, float, float] = (
-        0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
-    FOCUSER_DEVICE: str = "/dev/v4l-subdev1"
-    FOCUSER_REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
     PROCESS_COUNTDOWN_TIMER: float = 3
     PROCESS_COUNTDOWN_OFFSET: float = 0.25
@@ -64,9 +46,68 @@ class GroupCommon(BaseModel):
     PROCESS_ADD_EXIF_DATA: bool = True
 
 
+class GroupFocuser(BaseModel):
+    # autofocus
+    # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
+    ENABLED: bool = False
+    MIN_VALUE: int = 300
+    MAX_VALUE: int = 3000
+    DEF_VALUE: int = 800
+    STEP: int = 50
+    # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
+    MOVE_TIME: float = 0.028
+    JPEG_QUALITY: int = 80
+    ROI: tuple[float, float, float, float] = (
+        0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
+    DEVICE: str = "/dev/v4l-subdev1"
+    REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
+
+
+class GroupBackendDigicamcontrol(BaseModel):
+    pass  # not yet implemented!
+
+
+class GroupBackendGphoto2(BaseModel):
+    pass  # not yet implemented!
+
+
+class GroupBackendPicam2(BaseModel):
+    pass  # not yet implemented!
+
+
+class GroupBackendSimulated(BaseModel):
+    pass  # not yet implemented!
+
+
+class GroupBackendWebcamCv2(BaseModel):
+    # None=first found device, otherwise index 0...
+    device_index:                       int = 2
+
+
+class GroupBackendWebcamV4l(BaseModel):
+    # None=first found device, otherwise index 0...
+    device_index:                       int = 2
+
+
+class GroupBackends(BaseModel):
+    '''Settings for specific backends'''
+    MAIN_BACKEND:                       str = "ImageServerPicam2"
+    LIVE_BACKEND:                       str = None
+    LIVEPREVIEW_ENABLED:               bool = True
+
+    digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
+    gphoto2: GroupBackendGphoto2 = GroupBackendGphoto2()
+    picam2: GroupBackendPicam2 = GroupBackendPicam2()
+    simulated: GroupBackendSimulated = GroupBackendSimulated()
+    webcamCv2: GroupBackendWebcamCv2 = GroupBackendWebcamCv2()
+    webcamV4l: GroupBackendWebcamV4l = GroupBackendWebcamV4l()
+
+
 class GroupHardwareInput(BaseModel):
     '''Docstring for LocationService'''
-    HW_KEYCODE_TAKEPIC: str = "down"
+    ENABLED:                        bool = False
+
+    HW_KEYCODE_TAKEPIC:              str = "down"
 
 
 class GroupLocationService(BaseModel):
@@ -83,11 +124,6 @@ class GroupLocationService(BaseModel):
     # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
-class GroupCamera(BaseModel):
-    '''Docstring for GroupCamera'''
-    settings: Annotated[str, Field(description="test123")] = 'Bar'
-
-
 class GroupPersonalize(BaseModel):
     '''Docstring for Personalization'''
     UI_FRONTPAGE_TEXT: str = "Hey! Lets take some pictures! :)"
@@ -99,7 +135,7 @@ class GroupPersonalize(BaseModel):
 class GroupDebugging(BaseModel):
     # dont change following defaults. If necessary change via argument
     DEBUG_LEVEL: str = "DEBUG"
-    DEBUG_OVERLAY: bool = False
+    DEBUG_OVERLAY: bool = True
 
 
 class GroupColorled(BaseModel):
@@ -122,7 +158,8 @@ class ConfigSettings(BaseModel):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
-    camera: GroupCamera = GroupCamera()
+    backends: GroupBackends = GroupBackends()
+    focuser: GroupFocuser = GroupFocuser()
     colorled: GroupColorled = GroupColorled()
     debugging: GroupDebugging = GroupDebugging()
     locationservice: GroupLocationService = GroupLocationService()

@@ -5,13 +5,14 @@ logger = logging.getLogger(__name__)
 
 class ImageServerAbstract(ABC):
     @abstractmethod
-    def __init__(self, ee):
+    def __init__(self, ee, enableStream):
         # public
         self.exif_make = "ImageServerAbstract-Make"
         self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
 
         # private
+        self._enableStream = enableStream
         self._fps = 0
 
         self._ee = ee

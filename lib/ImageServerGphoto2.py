@@ -20,8 +20,8 @@ class ImageServerDigicamcontrol(ImageServerAbstract.ImageServerAbstract):
 
     """
 
-    def __init__(self, ee):
-        super().__init__(ee)
+    def __init__(self, ee, enableStream):
+        super().__init__(ee, enableStream)
 
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth Imageserver Gphoto2"

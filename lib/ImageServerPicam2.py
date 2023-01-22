@@ -9,7 +9,8 @@ from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
 from threading import Condition
-from ImageServerAddonAutofocus import ImageServerAddonAutofocus
+from lib.ImageServerPicam2AddonAutofocus import ImageServerPicam2AddonAutofocus
+from lib.ImageServerPicam2AddonLibcamAufocous import ImageServerPicam2AddonLibcamAutofocus
 import cv2
 import time
 import logging
@@ -18,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee):
-        super().__init__(ee)
+    def __init__(self, ee, enableStream):
+        super().__init__(ee, enableStream)
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth Picamera2 Integration"
         self.exif_model = "Custom"
@@ -32,8 +33,13 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         to serve up frames."""
         self._picam2 = Picamera2()
         self._turboJPEG = TurboJPEG()
-        self._addonAutofocus = ImageServerAddonAutofocus(self, ee)
         self._ee = ee
+        if (settings.focuser.ENABLED):
+            # custom autofocus (has ROI, ... might be removed in future if libcam support for autofocus is well)
+            self._addonAutofocus = ImageServerPicam2AddonAutofocus(self, ee)
+        else:
+            self._addonAutofocus = ImageServerPicam2AddonLibcamAutofocus(
+                self, ee)
 
         self._hq_array = None
         self._lores_array = None
@@ -137,7 +143,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         with self._lores_condition:
             while True:
                 # TODO: timout to make it continue and do not block threads completely
-                if not self._lores_condition.wait(1):
+                if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByLoresFrame(
                     frame=self._lores_array, quality=settings.common.LORES_QUALITY)
@@ -148,7 +154,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         with self._lores_condition:
             while True:
                 # TODO: timout to make it continue and do not block threads completely
-                if not self._lores_condition.wait(1):
+                if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 return self._lores_array
 

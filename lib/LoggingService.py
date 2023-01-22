@@ -1,3 +1,4 @@
+import os
 import logging
 from logging.handlers import RotatingFileHandler
 from pymitter import EventEmitter
@@ -79,3 +80,5 @@ class LoggingService():
             lgr = logging.getLogger(name=name)
             lgr.setLevel(logging.INFO)
             lgr.propagate = False
+
+        os.environ["OPENCV_LOG_LEVEL"] = "ERROR"

@@ -5,7 +5,7 @@ from ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
-class ImageServerAddonAutofocusFocuser:
+class ImageServerPicam2AddonAutofocusFocuser:
     """
     This script works after installing the driver for 16mp imx519 driver from arducam
     only driver necessary, not the libcamera apps
@@ -20,23 +20,23 @@ class ImageServerAddonAutofocusFocuser:
 
     def __init__(self):
         self.focus_value = 0
-        self._device = settings.common.FOCUSER_DEVICE
-        self.MAX_VALUE = settings.common.FOCUSER_MAX_VALUE
-        self.MIN_VALUE = settings.common.FOCUSER_MIN_VALUE
+        self._device = settings.focuser.DEVICE
+        self.MAX_VALUE = settings.focuser.MAX_VALUE
+        self.MIN_VALUE = settings.focuser.MIN_VALUE
 
         self.reset()
 
     def reset(self):
-        self.set(settings.common.FOCUSER_DEF_VALUE)
+        self.set(settings.focuser.DEF_VALUE)
 
     def get(self):
         return self.focus_value
 
     def set(self, value):
-        if value > settings.common.FOCUSER_MAX_VALUE:
-            value = settings.common.FOCUSER_MAX_VALUE
-        elif value < settings.common.FOCUSER_MIN_VALUE:
-            value = settings.common.FOCUSER_MIN_VALUE
+        if value > settings.focuser.MAX_VALUE:
+            value = settings.focuser.MAX_VALUE
+        elif value < settings.focuser.MIN_VALUE:
+            value = settings.focuser.MIN_VALUE
 
         value = int(value)
         try:

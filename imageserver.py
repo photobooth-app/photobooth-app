@@ -26,7 +26,7 @@ from queue import Queue
 import logging
 from lib.LoggingService import LoggingService
 import platform
-
+import os
 
 # create early instances
 # event system
@@ -51,7 +51,6 @@ if platform.system() == "Linux":
     logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
 elif platform.system() == "Windows":
     logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
-logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
 logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
 logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
 # run python with -O (optimized) sets debug to false and disables asserts from bytecode
@@ -288,14 +287,20 @@ def api_gallery_delete(id: str):
         imageDb.deleteImageById(id)
     except Exception as e:
         logger.exception(e)
-        # print(e)
         raise HTTPException(500, f"deleting failed: {e}")
 
 
 @app.get('/stream.mjpg')
 def video_stream():
-    return StreamingResponse(imageServers.gen_stream(),
-                             media_type='multipart/x-mixed-replace; boundary=frame')
+    if not settings.backends.LIVEPREVIEW_ENABLED:
+        raise HTTPException(405, f"preview not enabled")
+
+    try:
+        return StreamingResponse(imageServers.gen_stream(),
+                                 media_type='multipart/x-mixed-replace; boundary=frame')
+    except Exception as e:
+        logger.exception(e)
+        raise HTTPException(500, f"preview failed: {e}")
 
 
 # serve data directory holding images, thumbnails, ...
@@ -316,8 +321,8 @@ if __name__ == '__main__':
     imageServers = ImageServers(ee)
 
     locationService = LocationService(ee)
-    exif = Exif(imageServers.main, locationService)
-    imageDb = ImageDb(ee, imageServers.main, exif)
+    exif = Exif(imageServers.primaryBackend, locationService)
+    imageDb = ImageDb(ee, imageServers.primaryBackend, exif)
 
     if (True):
         ks = KeyboardService(ee)

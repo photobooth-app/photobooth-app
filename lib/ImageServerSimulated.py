@@ -13,14 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee):
-        super().__init__(ee)
+    def __init__(self, ee, enableStream):
+        super().__init__(ee, enableStream)
 
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth FrameServer Simulate"
         self.exif_model = "Custom"
         self.metadata = {}
-        self.providesStream = True
 
         # private props
         self._hq_img_buffer = None
@@ -150,7 +149,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
                 self._ee.emit("frameserver/onCapture")
 
                 # virtual delay for camera to create picture
-                time.sleep(0.3)
+                time.sleep(0.1)
 
                 self._ee.emit("frameserver/onCaptureFinished")
 

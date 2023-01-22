@@ -9,32 +9,34 @@ class ImageServers():
 
     def __init__(self, ee):
         # public
-        self.main: ImageServerAbstract = None
-        self.live: ImageServerAbstract = None
+        self.primaryBackend: ImageServerAbstract = None
+        self.secondaryBackend: ImageServerAbstract = None
 
         self.metadata = {}
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-        imageserverModule = import_module(
-            f"lib.{settings.common.IMAGESERVER_BACKEND}")
-        cls = getattr(imageserverModule, settings.common.IMAGESERVER_BACKEND)
-        self.main = cls(ee)
+        imageserverPrimaryBackendModule = import_module(
+            f"lib.{settings.backends.MAIN_BACKEND}")
+        clsPrimary = getattr(imageserverPrimaryBackendModule,
+                             settings.backends.MAIN_BACKEND)
+        self.primaryBackend = clsPrimary(ee, False)
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-        imageserverLiveviewModule = import_module(
-            f"lib.ImageServerSimulated")
-        clsLiveview = getattr(imageserverLiveviewModule,
-                              "ImageServerSimulated")
-        self.live = clsLiveview(ee)
+        if not settings.backends.LIVE_BACKEND == None:
+            imageserverSecondaryBackendModule = import_module(
+                f"lib.{settings.backends.LIVE_BACKEND}")
+            clsSecondary = getattr(imageserverSecondaryBackendModule,
+                                   settings.backends.LIVE_BACKEND)
+            self.secondaryBackend = clsSecondary(ee, True)
 
     def gen_stream(self):
-        if self.live and self.live._providesStream:
-            return self.live.gen_stream()
-        elif self.main and self.main._providesStream:
-            return self.main.gen_stream()
+        if settings.backends.LIVEPREVIEW_ENABLED:
+            if self.secondaryBackend:
+                return self.secondaryBackend.gen_stream()
+            else:
+                return self.primaryBackend.gen_stream()
         else:
-            raise Exception("no livestream available")
-
+            raise Exception("livepreview not enabled")
     # @property
     # @abstractmethod
     # def stream_url(self):
@@ -56,13 +58,13 @@ class ImageServers():
         pass
 
     def start(self):
-        self.main.start()
+        self.primaryBackend.start()
 
-        if self.live:
-            self.live.start()
+        if self.secondaryBackend:
+            self.secondaryBackend.start()
 
     def stop(self):
-        self.main.stop()
+        self.primaryBackend.stop()
 
-        if self.live:
-            self.live.stop()
+        if self.secondaryBackend:
+            self.secondaryBackend.stop()

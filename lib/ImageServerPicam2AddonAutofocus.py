@@ -9,15 +9,15 @@ import time
 import logging
 from ConfigSettings import settings
 from ImageServerAbstract import ImageServerAbstract
-from ImageServerAddonAutofocusFocuser import ImageServerAddonAutofocusFocuser
+from lib.ImageServerPicam2AddonAutofocusFocuser import ImageServerPicam2AddonAutofocusFocuser
 from RepeatedTimer import RepeatedTimer
 logger = logging.getLogger(__name__)
 
 
-class ImageServerAddonAutofocus(object):
+class ImageServerPicam2AddonAutofocus(object):
     def __init__(self, imageServer: ImageServerAbstract, ee: EventEmitter):
         self._imageServer: ImageServerAbstract = imageServer
-        self._focuser = ImageServerAddonAutofocusFocuser()
+        self._focuser = ImageServerPicam2AddonAutofocusFocuser()
         self._ee = ee
         self._ee.on("onRefocus",
                     self.doFocus)
@@ -38,7 +38,7 @@ class ImageServerAddonAutofocus(object):
         self.setAllowFocusRequests()
         self.reset()
 
-        self._rt = RepeatedTimer(settings.common.FOCUSER_REPEAT_TRIGGER,
+        self._rt = RepeatedTimer(settings.focuser.REPEAT_TRIGGER,
                                  self.triggerRegularTimedFocus)
 
         self.startRegularAutofocusTimer()
@@ -65,7 +65,7 @@ class ImageServerAddonAutofocus(object):
 
     def doFocus(self):
         # guard to perfom autofocus only once at a time
-        if self.isFinish() and self._standby == False and settings.common.FOCUSER_ENABLED:
+        if self.isFinish() and self._standby == False and settings.focuser.ENABLED:
             self.reset()
             self.setFinish(False)
 
@@ -108,7 +108,7 @@ def getROIFrame(roi, frame):
     return roi_frame
 
 
-def statsThread(imageServer: ImageServerAbstract, imageServerAddonAutofocusFocuser: ImageServerAddonAutofocusFocuser, imageServerAddonAutofocus: ImageServerAddonAutofocus):
+def statsThread(imageServer: ImageServerAbstract, imageServerAddonAutofocusFocuser: ImageServerPicam2AddonAutofocusFocuser, imageServerAddonAutofocus: ImageServerPicam2AddonAutofocus):
     maxPosition = imageServerAddonAutofocusFocuser.MAX_VALUE
     minPosition = imageServerAddonAutofocusFocuser.MIN_VALUE
     lastPosition = imageServerAddonAutofocusFocuser.get()
@@ -134,20 +134,20 @@ def statsThread(imageServer: ImageServerAbstract, imageServerAddonAutofocusFocus
             imageServerAddonAutofocus.reset()
             break
 
-        if time.time() - lastTime >= settings.common.FOCUSER_MOVE_TIME and not imageServerAddonAutofocus.isFinish():
+        if time.time() - lastTime >= settings.focuser.MOVE_TIME and not imageServerAddonAutofocus.isFinish():
             lastTime = time.time()
 
             nextPosition = lastPosition + \
                 (imageServerAddonAutofocus.direction *
-                 settings.common.FOCUSER_STEP)
+                 settings.focuser.STEP)
 
             if nextPosition < maxPosition and nextPosition > minPosition:
                 imageServerAddonAutofocusFocuser.set(nextPosition)
 
             roi_frame = getROIFrame(
-                settings.common.FOCUSER_ROI, frame)
+                settings.focuser.ROI, frame)
             buffer = jpeg.encode(
-                roi_frame, quality=settings.common.FOCUSER_JPEG_QUALITY)
+                roi_frame, quality=settings.focuser.JPEG_QUALITY)
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
             sharpness = len(buffer)
@@ -156,7 +156,7 @@ def statsThread(imageServer: ImageServerAbstract, imageServerAddonAutofocusFocus
             imageServerAddonAutofocus.sharpnessList.put(item)
 
             lastPosition += (imageServerAddonAutofocus.direction *
-                             settings.common.FOCUSER_STEP)
+                             settings.focuser.STEP)
 
             if lastPosition > maxPosition:
                 break
