@@ -6,7 +6,7 @@ import platform
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
-INSTALL_DIR = f'{str(Path.home())}/imageserver/'
+INSTALL_DIR = './imageserver/'
 
 print(INSTALL_DIR)
 
