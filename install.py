@@ -181,8 +181,8 @@ if platform.system() == "Linux":
             "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh")
         _syscall(
             "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env")
-        _syscall("chmod +x gphoto2-updater.sh --stable")
-        _syscall("./gphoto2-updater.sh")
+        _syscall("chmod +x gphoto2-updater.sh")
+        _syscall("./gphoto2-updater.sh --stable")
 
 # install booth software
 if query_yes_no("Install booth software?", "yes"):
