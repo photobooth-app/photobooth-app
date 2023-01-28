@@ -211,6 +211,16 @@ except Exception as e:
 else:
     print_green("TurboJpeg detected.")
 
+
+# check gphoto2 installed properly
+if platform.system() == "Linux":
+    if not _syscall("gphoto2 --version") == 0:
+        print_red(
+            "gphoto2 command not found, error during installation or installation not selected")
+    else:
+        print_green("Gphoto2 installed properly")
+
+
 """
 FINISH
 """
