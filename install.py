@@ -6,7 +6,7 @@ import platform
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
-INSTALL_DIR = f'{str(Path.home())}\\imageserver\\'
+INSTALL_DIR = f'{str(Path.home())}/imageserver/'
 
 print(INSTALL_DIR)
 
@@ -187,8 +187,15 @@ if platform.system() == "Linux":
 # install booth software
 if query_yes_no("Install booth software?", "yes"):
     print("Installing qBooth to ~/imageserver/")
+    if query_yes_no("install dev preview? if no install stable", "no"):
+        _syscall(
+            f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+    else:
+        _syscall(
+            f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+
     _syscall(
-        f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+        f"chmod +x {INSTALL_DIR}start.sh")
 
 # install booth service
 if query_yes_no("Install booth service?", "yes"):
