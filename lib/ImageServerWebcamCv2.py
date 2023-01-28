@@ -49,18 +49,18 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
             logger.info(
                 "force VideoCapture to DSHOW backend on windows (MSMF is buggy with OpenCv and crashes app)")
             self._video = cv2.VideoCapture(
-                settings.backends.webcamV4l.device_index, cv2.CAP_DSHOW)
+                settings.backends.webcamCv2.device_index, cv2.CAP_DSHOW)
         else:
             self._video = cv2.VideoCapture(
-                settings.backends.webcamV4l.device_index)
+                settings.backends.webcamCv2.device_index)
 
         if not self._video.isOpened():
             raise IOError(
-                f"cannot open camera index {settings.backends.webcamV4l.device_index}")
+                f"cannot open camera index {settings.backends.webcamCv2.device_index}")
 
         if not self._video.read()[0]:
             raise IOError(
-                f"cannot read camera index {settings.backends.webcamV4l.device_index}")
+                f"cannot read camera index {settings.backends.webcamCv2.device_index}")
 
         logger.info(f"webcam cv2 using backend {self._video.getBackendName()}")
 
