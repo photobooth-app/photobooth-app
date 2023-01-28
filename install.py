@@ -17,7 +17,7 @@ def install_system_packages_win():
 
 def install_system_packages_linux():
     _syscall(
-        'apt install -y python3-picamera2 git fonts-noto-color-emoji libturbojpeg')
+        'apt install -y python3-picamera2 git fonts-noto-color-emoji libturbojpeg0')
     _syscall('apt install -y rclone inotify-tools')
 
 
