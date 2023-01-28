@@ -141,7 +141,7 @@ class GroupDebugging(BaseModel):
 class GroupColorled(BaseModel):
     '''Colorled settings for neopixel and these elements'''
     # infoled / ws2812b ring settings
-    ENABLED: bool = True
+    ENABLED: bool = False
     NUMBER_LEDS: int = 12
     GPIO_PIN: int = 18
     COLOR: tuple[int, int, int, int] = (255, 255, 255, 255)    # RGBW
