@@ -29,7 +29,8 @@ def install_pip_packages():
     with open("requirements.txt") as fp:
         for line in fp:
             package = line.strip()
-            retval = _syscall(f"pip install --upgrade {package}")
+            retval = _syscall(
+                f"python3 -m pip install --upgrade {package}")
             if retval == 0:
                 pip_OK.append(package)
             else:
@@ -51,7 +52,7 @@ HELPER
 def _syscall(cmd):
     print(f"execute command '{cmd}'")
     if platform.system() == "Linux":
-        result = subprocess.call(
+        result = subprocess.run(
             cmd,
             capture_output=True,
             shell=True,
