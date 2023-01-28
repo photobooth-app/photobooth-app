@@ -91,7 +91,7 @@ class GroupBackendWebcamV4l(BaseModel):
 
 class GroupBackends(BaseModel):
     '''Settings for specific backends'''
-    MAIN_BACKEND:                       str = "ImageServerPicam2"
+    MAIN_BACKEND:                       str = "ImageServerSimulated"
     LIVE_BACKEND:                       str = None
     LIVEPREVIEW_ENABLED:               bool = True
 
@@ -150,8 +150,29 @@ class GroupColorled(BaseModel):
     ANIMATION_UPDATE: int = 70    # update circle animation every XX ms
 
 
-class ConfigSettings(BaseModel):
-    '''Settings class glueing all together'''
+def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
+    encoding = settings.__config__.env_file_encoding
+    try:
+        json_config = json.loads(Path(CONFIG_FILENAME).read_text(encoding))
+    except:
+        json_config = {}
+
+    return json_config
+
+
+class ConfigSettings(BaseSettings):
+    '''
+    Settings class glueing all together
+
+    In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows (in descending order of priority):
+
+    1 Arguments passed to the Settings class initialiser.
+    2 Environment variables, e.g. my_prefix_special_function as described above.
+    3 Variables loaded from a dotenv (.env) file.
+    4 Variables loaded from the secrets directory.
+    5 The default field values for the Settings model.
+    '''
+    test: str = "default"
 
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
@@ -164,6 +185,27 @@ class ConfigSettings(BaseModel):
     debugging: GroupDebugging = GroupDebugging()
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
+
+    class Config:
+        env_file_encoding = 'utf-8'
+        # `.env.prod` takes priority over `.env`
+        env_file = '.env', '.env.prod'
+        env_nested_delimiter = '__'
+        case_sensitive = True
+
+        @classmethod
+        def customise_sources(
+            cls,
+            init_settings,
+            env_settings,
+            file_secret_settings,
+        ):
+            return (
+                init_settings,
+                json_config_settings_source,
+                env_settings,
+                file_secret_settings,
+            )
 
     def persist(self):
         '''Persist settings to file'''
@@ -186,17 +228,6 @@ class ConfigSettings(BaseModel):
 # our settings that can be imported throughout the app like # from lib.ConfigService import settings
 # TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
-try:
-    with open(CONFIG_FILENAME, "r") as read_file:
-        loadedConfig = json.load(read_file)
-    settings = ConfigSettings(**loadedConfig)
-except FileNotFoundError as e:
-    logger.error(
-        f"config file {CONFIG_FILENAME} could not be read, using defaults, error {e}")
-except ValidationError as e:
-    logger.exception(
-        f"config file {CONFIG_FILENAME} validation error! program stopped, please fix config {e}")
-    quit()
 
 
 if __name__ == '__main__':
