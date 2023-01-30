@@ -1,45 +1,53 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "startBoothPi",
-            "type": "shell",
-            "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"
-        },
-        {
-            "label": "stopBoothServicePi",
-            "type": "shell",
-            "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo systemctl stop imageserver.service > /dev/null 2>&1 &'"
-        },
-        {
-            "label": "wait",
-            "type": "shell",
-            "command": "timeout 1"
-        },
-        {
-            "label": "copyAndStartOnPi",
-            "dependsOrder": "sequence",
-            "dependsOn": ["stopBoothServicePi", "startBoothPi", "wait"]
-        },
-        {
-            "label": "cleanupOnPi",
-            "type": "shell",
-            "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'sudo pkill -9 python3'"
-        },
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "startBoothPi",
+      "type": "shell",
+      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"
+    },
+    {
+      "label": "stopBoothServicePi",
+      "type": "shell",
+      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo systemctl stop imageserver.service > /dev/null 2>&1 &'"
+    },
+    {
+      "label": "wait",
+      "type": "shell",
+      "command": "timeout 1"
+    },
+    {
+      "label": "copyAndStartOnPi",
+      "dependsOrder": "sequence",
+      "dependsOn": ["stopBoothServicePi", "startBoothPi", "wait"]
+    },
+    {
+      "label": "cleanupOnPi",
+      "type": "shell",
+      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'sudo pkill -9 python3'"
+    },
 
-        
-        {
-            "label": "copyOneFileOnPi(unusedRef)",
-            "type": "shell",
-            "command": "scp ${file} ${config:sshUser}@${config:sshEndpoint}:~/imageserver/${fileBasename}"
-        },
-        {
-            "label": "startOnPi(unusedRef)",
-            "type": "shell",
-            "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'nohup python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/${fileBasename} > /dev/null 2>&1 &'"
-        },
-        
-    ]    
+    {
+      "label": "copyOneFileOnPi(unusedRef)",
+      "type": "shell",
+      "command": "scp ${file} ${config:sshUser}@${config:sshEndpoint}:~/imageserver/${fileBasename}"
+    },
+    {
+      "label": "startOnPi(unusedRef)",
+      "type": "shell",
+      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'nohup python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/${fileBasename} > /dev/null 2>&1 &'"
+    },
 
+    {
+      "label": "list outdated pip packages",
+      "type": "shell",
+      "command": "pip list --outdated"
+    },
+
+    {
+      "label": "gather requirements.txt pip packages",
+      "type": "shell",
+      "command": "pipreqs.exe --ignore experiments --encoding utf8 --force"
+    }
+  ]
 }
-

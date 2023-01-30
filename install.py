@@ -8,6 +8,44 @@ from pathlib import Path
 MIN_PYTHON_VERSION = (3, 9)
 INSTALL_DIR = './imageserver/'
 
+PIP_PACKAGES_COMMON = [
+    "fastapi==0.89.1",
+    "googlemaps==4.10.0",
+    "keyboard==0.13.5",
+    "opencv_python==4.7.0.68",
+    "piexif==1.1.3",
+    "Pillow==9.4.0",
+    "psutil==5.9.4",
+    "pydantic==1.10.4",
+    "pymitter==0.4.0",
+    "PyTurboJPEG==1.7.0",
+    "pywifi==1.1.12",
+    "requests==2.28.2",
+    "sse_starlette==1.2.1",
+    "transitions==0.9.0",
+    "uvicorn==0.20.0",
+    "pydantic[dotenv]",
+]
+
+PIP_PACKAGES_LINUXONLY = [
+    "v4l2py==0.6.2",
+    "rpi_ws281x==4.3.4",
+    "gpiozero==1.6.2",
+]
+
+PIP_PACKAGES_WINONLY = [
+
+]
+
+SYSTEM_PACKAGES_LINUX = [
+    "python3-picamera2",
+    "git",
+    "fonts-noto-color-emoji",
+    "libturbojpeg0",
+    "rclone",
+    "inotify-tools"
+]
+
 print(INSTALL_DIR)
 
 
@@ -17,8 +55,7 @@ def install_system_packages_win():
 
 def install_system_packages_linux():
     _syscall(
-        'apt install -y python3-picamera2 git fonts-noto-color-emoji libturbojpeg0')
-    _syscall('apt install -y rclone inotify-tools')
+        f'apt install -y {" ".join(SYSTEM_PACKAGES_LINUX)}')
 
 
 def install_pip_packages():
@@ -26,15 +63,22 @@ def install_pip_packages():
     print(f"Installing pip packages")
     pip_OK = []
     pip_FAIL = []
-    with open("requirements.txt") as fp:
-        for line in fp:
-            package = line.strip()
-            retval = _syscall(
-                f"python3 -m pip install --upgrade {package}")
-            if retval == 0:
-                pip_OK.append(package)
-            else:
-                pip_FAIL.append(package)
+    pip_install_packages = PIP_PACKAGES_COMMON
+
+    if platform.system() == "Linux":
+        pip_install_packages += (PIP_PACKAGES_LINUXONLY)
+    if platform.system() == "Windows":
+        pip_install_packages += (PIP_PACKAGES_WINONLY)
+
+    print(pip_install_packages)
+
+    for package in pip_install_packages:
+        retval = _syscall(
+            f"python3 -m pip install --upgrade {package}")
+        if retval == 0:
+            pip_OK.append(package)
+        else:
+            pip_FAIL.append(package)
     print("pip install summary:")
     print_green("packages successfully installed:")
     print_green(pip_OK)
@@ -54,21 +98,21 @@ def _syscall(cmd):
     if platform.system() == "Linux":
         result = subprocess.run(
             cmd,
-            capture_output=True,
+            # capture_output=True,
             shell=True,
             text=True)
     elif platform.system() == "Windows":
         result = subprocess.run(
             ["powershell", "-Command", cmd],
-            capture_output=True,
+            # capture_output=True,
             shell=True,
             text=True)
     else:
         print("unsupported platform, exit")
         quit(-1)
     print("commands stdout/stderr output:")
-    print(result.stdout)
-    print(result.stderr)
+    # print(result.stdout)
+    # print(result.stderr)
     print('returned value:', result.returncode)
     return result.returncode
 
