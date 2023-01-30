@@ -35,4 +35,5 @@ def isValidIndex(index):
         return True
 
 
-print(availableCameraIndexes())
+if __name__ == '__main__':
+    print(availableCameraIndexes())

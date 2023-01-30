@@ -19,4 +19,5 @@ def availableCameraIndexes():
     return arr
 
 
-print(availableCameraIndexes())
+if __name__ == '__main__':
+    print(availableCameraIndexes())

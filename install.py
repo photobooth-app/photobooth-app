@@ -1,3 +1,4 @@
+import os.path
 import os
 import ctypes
 import sys
@@ -34,7 +35,7 @@ PIP_PACKAGES_LINUXONLY = [
 ]
 
 PIP_PACKAGES_WINONLY = [
-
+    "comtypes",  # for pywifi; pywifi misses to install required package comtypes
 ]
 
 SYSTEM_PACKAGES_LINUX = [
@@ -46,11 +47,12 @@ SYSTEM_PACKAGES_LINUX = [
     "inotify-tools"
 ]
 
-print(INSTALL_DIR)
-
 
 def install_system_packages_win():
-    print("nothing to install actually")
+    print("... not supported. Please manually install whats necessary.")
+    print("Consider: digicamcontrol, python3, turbojpeg")
+    print("see manual how to install packages on windows platform")
+    print()
 
 
 def install_system_packages_linux():
@@ -60,7 +62,7 @@ def install_system_packages_linux():
 
 def install_pip_packages():
     # install total requirements line by line to continue if some packages fail (linux/win use different packages)
-    print(f"Installing pip packages")
+    print_spacer(f"Installing pip packages")
     pip_OK = []
     pip_FAIL = []
     pip_install_packages = PIP_PACKAGES_COMMON
@@ -79,7 +81,7 @@ def install_pip_packages():
             pip_OK.append(package)
         else:
             pip_FAIL.append(package)
-    print("pip install summary:")
+    print_spacer("pip install summary:")
     print_green("packages successfully installed:")
     print_green(pip_OK)
     print_red("packages failed to install:")
@@ -95,13 +97,13 @@ HELPER
 
 def _syscall(cmd):
     print(f"execute command '{cmd}'")
-    if platform.system() == "Linux":
+    if _is_linux():
         result = subprocess.run(
             cmd,
             # capture_output=True,
             shell=True,
             text=True)
-    elif platform.system() == "Windows":
+    elif _is_windows():
         result = subprocess.run(
             ["powershell", "-Command", cmd],
             # capture_output=True,
@@ -110,15 +112,32 @@ def _syscall(cmd):
     else:
         print("unsupported platform, exit")
         quit(-1)
-    print("commands stdout/stderr output:")
+    # print("commands stdout/stderr output:")
     # print(result.stdout)
     # print(result.stderr)
     print('returned value:', result.returncode)
     return result.returncode
 
 
-def _is_admin():
+def print_spacer(msg=None):
+    print()
+    if msg:
+        print("╔══════════════════════════")
+        print(f"║ {msg}")
+        print("╚══════════════════════════")
+    else:
+        print("═══════════════════════════")
 
+
+def _is_windows():
+    return platform.system() == "Windows"
+
+
+def _is_linux():
+    return platform.system() == "Linux"
+
+
+def _is_admin():
     try:
         is_admin = os.getuid() == 0
     except AttributeError:
@@ -181,24 +200,36 @@ class _style():
 """
 # check prerequisites
 """
-
+print_spacer("checking for admin rights")
 # need sudo/admin
-if platform.system() == "Linux" and not _is_admin():
-    print_red("please start installer with admin priviliges")
+if _is_linux() and not _is_admin():
+    print_red("Error, please start installer with admin priviliges")
     quit(-1)
+else:
+    print_green("OK")
 
-# - digicamcontrol
+if _is_windows():
+    print_spacer("checking for digicamcontrol")
+    if os.path.isfile("C:\Program Files (x86)\digiCamControl\CameraControlCmd.exe"):
+        print_green("OK, executable found")
+    else:
+        print_blue(
+            "Info, digicamcontrol not found - please install if digicamintegration shall be used.")
 
+
+print_spacer(f"python version > {MIN_PYTHON_VERSION}?")
 print_blue(f"Python version {sys.version}")
 if sys.version_info < MIN_PYTHON_VERSION:
     print_red(f"error, need at least python version {MIN_PYTHON_VERSION}")
     quit(-1)
+else:
+    print_green("OK")
 
 
 """
 installation procedure
 """
-
+print()
 
 # install system dependencies
 if query_yes_no("Install system packages?", "no"):
@@ -217,7 +248,7 @@ if query_yes_no("Install pip packages?", "no"):
     install_pip_packages()
 
 # install gphoto2
-if platform.system() == "Linux":
+if _is_linux():
     if query_yes_no("Install gphoto2 using gphoto2-updater?", "no"):
         # adds missing packages on debian buster that are not covered by the updater script
         _syscall("apt install -y libpopt0 libpopt-dev libexif-dev")
@@ -238,19 +269,27 @@ if query_yes_no("Install booth software?", "yes"):
         _syscall(
             f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
 
-    _syscall(
-        f"chmod +x {INSTALL_DIR}start.sh")
+    if platform.system() == "Linux":
+        _syscall(
+            f"chmod +x {INSTALL_DIR}start.sh")
 
 # install booth service
 if query_yes_no("Install booth service?", "yes"):
-    pass
+    if _is_linux():
+        _syscall("cp imageserver.service /etc/systemd/system/")
+        _syscall("systemctl enable imageserver.service")
+        _syscall("systemctl start imageserver.service")
+        _syscall("systemctl status imageserver.service")
 
+    if _is_windows():
+        print_red(
+            "not yet supported. pls start imageserver manually and browse to photobooth website.")
 
 """
 Post install checks
 """
 
-# check turbojpeg installed properly
+print_spacer("check turbojpeg installed properly")
 try:
     from turbojpeg import TurboJPEG
     TurboJPEG()  # instancing throws error if lib not present (usually a problem on windows only)
@@ -258,23 +297,36 @@ except Exception as e:
     print_red(e)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
     print_red(
-        "On Windows ensure its located in this path: C:/libjpeg-turbo64/bin/turbojpeg.dll")
+        "On Windows use VC version and ensure its located in this path: C:/libjpeg-turbo64/bin/turbojpeg.dll")
     quit(-1)
 else:
-    print_green("TurboJpeg detected.")
+    print_green("OK, turboJpeg detected.")
 
 
 # check gphoto2 installed properly
-if platform.system() == "Linux":
+if _is_linux():
+    print_spacer("check gphoto2 properly installed")
     if not _syscall("gphoto2 --version") == 0:
         print_red(
-            "gphoto2 command not found, error during installation or installation not selected")
+            "Error, gphoto2 command not found, error during installation or installation not selected")
     else:
-        print_green("Gphoto2 installed properly")
+        print_green("OK, Gphoto2 installed properly")
 
+if _is_linux() or _is_windows():
+    print_spacer("checking opencv2 camera indexes")
+    from scripts.available_webcams_cv2 import availableCameraIndexes
+    print(availableCameraIndexes())
+
+
+if _is_linux():
+    print_spacer("checking v4l camera indexes")
+    from scripts.available_webcams_v4l import availableCameraIndexes
+    print(availableCameraIndexes())
 
 """
 FINISH
 """
 
-print("Install script finished")
+print_spacer("Installer finished")
+print("start imageserver (start.sh/start.bat) and")
+print("browse to localhost:8000")
