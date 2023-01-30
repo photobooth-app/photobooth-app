@@ -231,6 +231,12 @@ installation procedure
 """
 print()
 
+# update system
+if platform.system() == "Linux":
+    _syscall('apt update')
+    if query_yes_no("Update system packages?", "no"):
+        _syscall('apt upgrade -y')
+
 # install system dependencies
 if query_yes_no("Install system packages?", "no"):
     if platform.system() == "Linux":
@@ -253,14 +259,14 @@ if _is_linux():
         # adds missing packages on debian buster that are not covered by the updater script
         _syscall("apt install -y libpopt0 libpopt-dev libexif-dev")
         _syscall(
-            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh")
+            "mkdir tmp_gphoto2_install; cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh")
         _syscall(
-            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env")
-        _syscall("chmod +x gphoto2-updater.sh")
-        _syscall("./gphoto2-updater.sh --stable")
+            "cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env")
+        _syscall("cd tmp_gphoto2_install; chmod +x gphoto2-updater.sh")
+        _syscall("cd tmp_gphoto2_install; ./gphoto2-updater.sh --stable")
 
 # install booth software
-if query_yes_no("Install booth software?", "yes"):
+if query_yes_no("Install booth software?", "no"):
     print("Installing qBooth to ~/imageserver/")
     if query_yes_no("install dev preview? if no install stable", "no"):
         _syscall(
@@ -272,11 +278,18 @@ if query_yes_no("Install booth software?", "yes"):
     if platform.system() == "Linux":
         _syscall(
             f"chmod +x {INSTALL_DIR}start.sh")
-
+print()
 # install booth service
-if query_yes_no("Install booth service?", "yes"):
+if query_yes_no("Install booth service?", "no"):
     if _is_linux():
-        _syscall("cp imageserver.service /etc/systemd/system/")
+
+        with open("imageserver.service", "rt") as fin:
+            with open("/etc/systemd/system/imageserver.service", "wt") as fout:
+                for line in fin:
+                    fout.write(line.replace('##install_dir##',
+                               os.path.normpath(f"{Path.cwd()}/{INSTALL_DIR}")))
+
+        # _syscall("cp imageserver.service /etc/systemd/system/")
         _syscall("systemctl enable imageserver.service")
         _syscall("systemctl start imageserver.service")
         _syscall("systemctl status imageserver.service")

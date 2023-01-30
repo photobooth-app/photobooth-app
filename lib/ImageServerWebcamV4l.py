@@ -145,7 +145,7 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
                     f"webcam devices index {settings.backends.webcamV4l.device_index} opened")
                 try:
                     cam.video_capture.set_format(
-                        settings.common.CAPTURE_CAM_RESOLUTION[0], settings.common.CAPTURE_CAM_RESOLUTION[1], 'MJPG')
+                        settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')
                 except Exception as e:
                     logger.exception(e)
 

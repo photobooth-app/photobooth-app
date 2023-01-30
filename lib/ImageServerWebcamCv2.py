@@ -68,9 +68,9 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         self._video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self._video.set(cv2.CAP_PROP_FPS, 30.0)
         self._video.set(cv2.CAP_PROP_FRAME_WIDTH,
-                        settings.common.CAPTURE_CAM_RESOLUTION[0])
+                        settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
         self._video.set(cv2.CAP_PROP_FRAME_HEIGHT,
-                        settings.common.CAPTURE_CAM_RESOLUTION[1])
+                        settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""

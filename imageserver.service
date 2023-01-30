@@ -6,7 +6,7 @@ After=multi-user.target
 Type=simple
 Restart=always
 #Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_imageserver.py_FILE
-WordkingDirectory=/home/pi/imageserver/
+WorkingDirectory=##install_dir##
 ExecStart=/usr/bin/python -O imageserver.py
 
 [Install]

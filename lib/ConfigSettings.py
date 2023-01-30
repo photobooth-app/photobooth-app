@@ -16,10 +16,14 @@ CONFIG_FILENAME = "./config/config.json"
 
 class GroupCommon(BaseModel):
     '''Docstring for SubModelCommon'''
-    CAPTURE_CAM_RESOLUTION:     tuple[int, int] = (4656, 3496)
-    CAPTURE_VIDEO_RESOLUTION:   tuple[int, int] = (1280, 720)
-    PREVIEW_CAM_RESOLUTION:     tuple[int, int] = (2328, 1748)
-    PREVIEW_VIDEO_RESOLUTION:   tuple[int, int] = (1280, 720)
+    CAPTURE_CAM_RESOLUTION_WIDTH:           int = 4656
+    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = 3496
+    CAPTURE_VIDEO_RESOLUTION_WIDTH:           int = 1280
+    CAPTURE_VIDEO_RESOLUTION_HEIGHT:          int = 720
+    PREVIEW_CAM_RESOLUTION_WIDTH:           int = 2328
+    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = 1748
+    PREVIEW_VIDEO_RESOLUTION_WIDTH:           int = 1280
+    PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
     LORES_QUALITY:              int = Field(default=80, ge=10, le=100)
     THUMBNAIL_QUALITY:          int = Field(default=60, ge=10, le=100)
     PREVIEW_QUALITY:            int = Field(default=75, ge=10, le=100)
@@ -228,7 +232,7 @@ class ConfigSettings(BaseSettings):
 # our settings that can be imported throughout the app like # from lib.ConfigService import settings
 # TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
-
+print(settings.dict())
 
 if __name__ == '__main__':
 

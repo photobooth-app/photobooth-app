@@ -58,11 +58,11 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": settings.common.CAPTURE_CAM_RESOLUTION}, {"size": settings.common.CAPTURE_VIDEO_RESOLUTION}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.CAPTURE_VIDEO_RESOLUTION_WIDTH, settings.common.CAPTURE_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": settings.common.PREVIEW_CAM_RESOLUTION}, {"size": settings.common.PREVIEW_VIDEO_RESOLUTION}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.PREVIEW_VIDEO_RESOLUTION_WIDTH, settings.common.PREVIEW_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # activate preview mode on init
         self._onPreviewMode()
