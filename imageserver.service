@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 #Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_imageserver.py_FILE
 WordkingDirectory=/home/pi/imageserver/
-ExecStart=/usr/bin/python3 -O imageserver.py
+ExecStart=/usr/bin/python -O imageserver.py
 
 [Install]
 WantedBy=multi-user.target
