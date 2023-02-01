@@ -5,7 +5,7 @@ import json
 import shutil
 import hashlib
 from turbojpeg import TurboJPEG
-from lib.ConfigSettings import settings
+from src.ConfigSettings import settings
 from pathlib import Path
 import time
 import glob

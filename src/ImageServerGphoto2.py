@@ -1,4 +1,4 @@
-import urllib.parse
+import urlsrc.parse
 import requests
 from PIL import Image, ImageGrab
 import tempfile
@@ -122,12 +122,12 @@ class ImageServerDigicamcontrol(ImageServerAbstract.ImageServerAbstract):
                 logger.info(f"tmp_dir={tmp_dir}, tmp_filename={tmp_filename}")
                 session = requests.Session()
                 r = session.get(
-                    f"http://127.0.0.1:5513/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}")
+                    f"http://127.0.0.1:5513/?slc=set&param1=session.folder&param2={urlsrc.parse.quote(tmp_dir, safe='')}")
                 if not r.text == "OK":
                     raise IOError(f"error setting directory {r.text}")
 
                 r = session.get(
-                    f"http://127.0.0.1:5513/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename, safe='')}")
+                    f"http://127.0.0.1:5513/?slc=set&param1=session.filenametemplate&param2={urlsrc.parse.quote(tmp_filename, safe='')}")
                 if not r.text == "OK":
                     raise IOError(f"error setting filename {r.text}")
 

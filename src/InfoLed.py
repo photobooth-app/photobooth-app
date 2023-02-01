@@ -3,7 +3,7 @@
 # import neopixel
 from .ConfigSettings import settings
 import time
-from lib.StoppableThread import StoppableThread
+from src.StoppableThread import StoppableThread
 import logging
 from pymitter import EventEmitter
 logger = logging.getLogger(__name__)

@@ -1,14 +1,14 @@
 #!/usr/bin/python3
-from lib.ImageServers import ImageServers
-from lib.LoggingService import EventstreamLogHandler
+from src.ImageServers import ImageServers
+from src.LoggingService import EventstreamLogHandler
 from importlib import import_module
-from lib.ConfigSettings import ConfigSettings, settings
-from lib.KeyboardService import KeyboardService
-from lib.CamStateMachine import TakePictureMachineModel, states, transitions
+from src.ConfigSettings import ConfigSettings, settings
+from src.KeyboardService import KeyboardService
+from src.CamStateMachine import TakePictureMachineModel, states, transitions
 from transitions import Machine
-from lib.Exif import Exif
+from src.Exif import Exif
 import os
-from lib.ImageDb import ImageDb
+from src.ImageDb import ImageDb
 import psutil
 from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
@@ -18,13 +18,13 @@ from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
-from lib.InfoLed import InfoLed
-from lib.LocationService import LocationService
+from src.InfoLed import InfoLed
+from src.LocationService import LocationService
 import asyncio
 import uuid
 from queue import Queue
 import logging
-from lib.LoggingService import LoggingService
+from src.LoggingService import LoggingService
 import platform
 import os
 

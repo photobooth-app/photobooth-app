@@ -4,7 +4,7 @@ import json
 from threading import Thread, Lock
 import time
 from queue import Queue
-from lib.ConfigSettings import settings
+from src.ConfigSettings import settings
 import logging
 
 logger = logging.getLogger(__name__)

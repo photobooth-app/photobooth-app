@@ -1,4 +1,4 @@
-import lib.test_ImageServer as test_ImageServer
+import src.test_ImageServer as test_ImageServer
 from pymitter import EventEmitter
 
 # ImageServerCmd backend: test on every platform but needs preparement. (digicamcontrol/gphoto, ...)

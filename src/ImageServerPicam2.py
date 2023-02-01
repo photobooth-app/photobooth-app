@@ -9,8 +9,8 @@ from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
 from threading import Condition
-from lib.ImageServerPicam2AddonAutofocus import ImageServerPicam2AddonAutofocus
-from lib.ImageServerPicam2AddonLibcamAufocous import ImageServerPicam2AddonLibcamAutofocus
+from src.ImageServerPicam2AddonAutofocus import ImageServerPicam2AddonAutofocus
+from src.ImageServerPicam2AddonLibcamAufocous import ImageServerPicam2AddonLibcamAutofocus
 import cv2
 import time
 import logging

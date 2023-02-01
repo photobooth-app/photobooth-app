@@ -9,7 +9,7 @@ import time
 import logging
 from ConfigSettings import settings
 from ImageServerAbstract import ImageServerAbstract
-from lib.ImageServerPicam2AddonAutofocusFocuser import ImageServerPicam2AddonAutofocusFocuser
+from src.ImageServerPicam2AddonAutofocusFocuser import ImageServerPicam2AddonAutofocusFocuser
 from RepeatedTimer import RepeatedTimer
 logger = logging.getLogger(__name__)
 

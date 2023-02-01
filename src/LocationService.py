@@ -5,7 +5,7 @@ import googlemaps
 import pywifi
 from threading import Thread
 import logging
-from lib.ConfigSettings import settings
+from src.ConfigSettings import settings
 logger = logging.getLogger(__name__)
 # using google geolocation api for positioning
 # might add a gps receiver and pynmea2 in future also, but mostly systems inside so no gps avail

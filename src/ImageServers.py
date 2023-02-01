@@ -16,7 +16,7 @@ class ImageServers():
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
         imageserverPrimaryBackendModule = import_module(
-            f"lib.{settings.backends.MAIN_BACKEND}")
+            f"src.{settings.backends.MAIN_BACKEND}")
         clsPrimary = getattr(imageserverPrimaryBackendModule,
                              settings.backends.MAIN_BACKEND)
         self.primaryBackend = clsPrimary(ee, False)
@@ -24,7 +24,7 @@ class ImageServers():
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
         if not settings.backends.LIVE_BACKEND == None:
             imageserverSecondaryBackendModule = import_module(
-                f"lib.{settings.backends.LIVE_BACKEND}")
+                f"src.{settings.backends.LIVE_BACKEND}")
             clsSecondary = getattr(imageserverSecondaryBackendModule,
                                    settings.backends.LIVE_BACKEND)
             self.secondaryBackend = clsSecondary(ee, True)

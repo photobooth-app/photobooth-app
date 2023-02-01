@@ -75,7 +75,7 @@ class LoggingService():
         self.otherLoggers()
 
     def otherLoggers(self):
-        for name in ["picamera2", "pywifi", "sse_starlette.sse", "lib.Autofocus", "transitions.core", "PIL.PngImagePlugin"]:
+        for name in ["picamera2", "pywifi", "sse_starlette.sse", "src.Autofocus", "transitions.core", "PIL.PngImagePlugin"]:
             # mute some other logger
             lgr = logging.getLogger(name=name)
             lgr.setLevel(logging.INFO)

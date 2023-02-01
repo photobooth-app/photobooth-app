@@ -229,7 +229,7 @@ class ConfigSettings(BaseSettings):
             logger.info(f"delete {CONFIG_FILENAME} file failed.")
 
 
-# our settings that can be imported throughout the app like # from lib.ConfigService import settings
+# our settings that can be imported throughout the app like # from src.ConfigService import settings
 # TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
 

@@ -1,8 +1,8 @@
 import piexif
 import datetime
 import logging
-from lib.ImageServerAbstract import ImageServerAbstract
-from lib.LocationService import LocationService
+from src.ImageServerAbstract import ImageServerAbstract
+from src.LocationService import LocationService
 logger = logging.getLogger(__name__)
 
 

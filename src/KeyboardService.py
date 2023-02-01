@@ -1,6 +1,6 @@
 import logging
 import keyboard
-from lib.ConfigSettings import settings
+from src.ConfigSettings import settings
 
 logger = logging.getLogger(__name__)
 

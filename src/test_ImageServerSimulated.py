@@ -1,4 +1,4 @@
-import lib.test_ImageServer as test_ImageServer
+import src.test_ImageServer as test_ImageServer
 from pymitter import EventEmitter
 
 # ImageServerSimulated backend: test on every platform
