@@ -1,3 +1,5 @@
+import requests.packages.urllib3.util.connection as urllib3_cn
+import socket
 import urllib.parse
 import requests
 from PIL import Image, ImageGrab
@@ -14,6 +16,14 @@ from ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
+def allowed_gai_family():
+    family = socket.AF_INET    # force IPv4
+    return family
+
+
+urllib3_cn.allowed_gai_family = allowed_gai_family
+
+
 class ImageServerDigicamcontrol(ImageServerAbstract.ImageServerAbstract):
     """
     # Backend for Digicamcontrol.
@@ -21,7 +31,8 @@ class ImageServerDigicamcontrol(ImageServerAbstract.ImageServerAbstract):
       - enable webserver, ...
       - TODO.
     ## Quirks:
-      - using webfrontend only possible via IPv4! Sending requests first to localhost(IPV6) results in timeout, retry and log delay via requests
+      - using digicamera webfrontend only possible via IPv4! Sending requests first to localhost(IPV6) results in timeout, retry and log delay via requests
+
 
     ## How to use Livestream
       - URL: http://localhost:5513/liveview.jpg

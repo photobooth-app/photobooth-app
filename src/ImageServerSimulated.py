@@ -103,7 +103,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
             # create PIL image
             img = Image.new(
                 mode="RGB",
-                size=settings.common.CAPTURE_VIDEO_RESOLUTION,
+                size=(settings.common.CAPTURE_VIDEO_RESOLUTION_WIDTH,
+                      settings.common.CAPTURE_VIDEO_RESOLUTION_HEIGHT),
                 color="green")
 
             # add text

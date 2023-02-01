@@ -232,7 +232,6 @@ class ConfigSettings(BaseSettings):
 # our settings that can be imported throughout the app like # from lib.ConfigService import settings
 # TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
-print(settings.dict())
 
 if __name__ == '__main__':
 
