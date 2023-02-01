@@ -7,7 +7,16 @@ import platform
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
-INSTALL_DIR = './imageserver/'
+
+if os.path.isfile("imageserver.py"):
+    # if imageserver.py is detected, assume the sourcecode was already copied to target computer
+    # useful if just want to enable service, install desktop shortcut, ...
+    INSTALL_DIR = './'
+    SUPPRESS_INSTALLATION = True
+else:
+    # default install in subdirectory of current workingdir:
+    INSTALL_DIR = './imageserver/'
+    SUPPRESS_INSTALLATION = False
 
 PIP_PACKAGES_COMMON = [
     "fastapi==0.89.1",
@@ -28,23 +37,28 @@ PIP_PACKAGES_COMMON = [
     "pydantic[dotenv]",
 ]
 
-PIP_PACKAGES_LINUXONLY = [
+PIP_PACKAGES_LINUX = [
     "v4l2py==0.6.2",
+]
+
+PIP_PACKAGES_WIN = [
+    "comtypes",  # for pywifi; pywifi misses to install required package comtypes
+]
+
+PIP_PACKAGES_RPI = [
     "rpi_ws281x==4.3.4",
     "gpiozero==1.6.2",
 ]
 
-PIP_PACKAGES_WINONLY = [
-    "comtypes",  # for pywifi; pywifi misses to install required package comtypes
-]
-
 SYSTEM_PACKAGES_LINUX = [
-    "python3-picamera2",
     "git",
     "fonts-noto-color-emoji",
     "libturbojpeg0",
     "rclone",
     "inotify-tools"
+]
+SYSTEM_PACKAGES_RPI = [
+    "python3-picamera2",
 ]
 
 
@@ -58,6 +72,9 @@ def install_system_packages_win():
 def install_system_packages_linux():
     _syscall(
         f'apt install -y {" ".join(SYSTEM_PACKAGES_LINUX)}')
+    if _is_rpi():
+        _syscall(
+            f'apt install -y {" ".join(SYSTEM_PACKAGES_RPI)}')
 
 
 def install_pip_packages():
@@ -68,9 +85,11 @@ def install_pip_packages():
     pip_install_packages = PIP_PACKAGES_COMMON
 
     if platform.system() == "Linux":
-        pip_install_packages += (PIP_PACKAGES_LINUXONLY)
+        pip_install_packages += PIP_PACKAGES_LINUX
+        if _is_rpi():
+            pip_install_packages += PIP_PACKAGES_RPI
     if platform.system() == "Windows":
-        pip_install_packages += (PIP_PACKAGES_WINONLY)
+        pip_install_packages += PIP_PACKAGES_WIN
 
     print(pip_install_packages)
 
@@ -135,6 +154,17 @@ def _is_windows():
 
 def _is_linux():
     return platform.system() == "Linux"
+
+
+def _is_rpi():
+    is_rpi = False
+    if platform.system() == "Linux":
+        if os.path.isfile("/proc/device-tree/model"):
+            with open('/proc/device-tree/model', 'r') as f:
+                model = f.read()
+                is_rpi = "Raspberry" in model
+
+    return is_rpi
 
 
 def _is_admin():
@@ -226,6 +256,13 @@ else:
     print_green("OK")
 
 
+print_spacer(f"Is Raspberry Pi?")
+if _is_rpi():
+    print_blue("OK, Pi detected")
+else:
+    print_blue("No Pi, will not install Pi specific features")
+
+
 """
 installation procedure
 """
@@ -266,18 +303,20 @@ if _is_linux():
         _syscall("cd tmp_gphoto2_install; ./gphoto2-updater.sh --stable")
 
 # install booth software
-if query_yes_no("Install booth software?", "no"):
-    print("Installing qBooth to ~/imageserver/")
-    if query_yes_no("install dev preview? if no install stable", "no"):
-        _syscall(
-            f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
-    else:
-        _syscall(
-            f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+if not SUPPRESS_INSTALLATION:
+    if query_yes_no("Install booth software?", "no"):
+        print("Installing qBooth to ~/imageserver/")
+        if query_yes_no("install dev preview? if no install stable", "no"):
+            _syscall(
+                f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+        else:
+            _syscall(
+                f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
 
-    if platform.system() == "Linux":
-        _syscall(
-            f"chmod +x {INSTALL_DIR}start.sh")
+if platform.system() == "Linux":
+    _syscall(
+        f"chmod +x {INSTALL_DIR}start.sh")
+
 print()
 # install booth service
 if query_yes_no("Install booth service?", "no"):
@@ -289,10 +328,9 @@ if query_yes_no("Install booth service?", "no"):
                     fout.write(line.replace('##install_dir##',
                                os.path.normpath(f"{Path.cwd()}/{INSTALL_DIR}")))
 
-        # _syscall("cp imageserver.service /etc/systemd/system/")
         _syscall("systemctl enable imageserver.service")
-        _syscall("systemctl start imageserver.service")
-        _syscall("systemctl status imageserver.service")
+        # _syscall("systemctl start imageserver.service")
+        # _syscall("systemctl status imageserver.service")
 
     if _is_windows():
         print_red(
