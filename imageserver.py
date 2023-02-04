@@ -118,7 +118,7 @@ async def subscribe(request: Request):
                     # attention: queue.get(timeout=1) is blocking for 1sec - this blocks also other webserver threads!
                     # workaround is very small timeout
                     # event = queue.get(timeout=1)
-                    event = queue.get(timeout=0.005)  # TODO optimize
+                    event = queue.get(timeout=0.5)  # TODO optimize
                     # event = queue.get_nowait()  # not an option as this slows down the process (100% load for 1 cpu core)
                 except:
                     continue
