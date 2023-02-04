@@ -5,7 +5,7 @@ This is in dev currently. Not for production.
 
 # Photobooth Imageserver
 
-This small python imageserver allows to use an arducam autofocus camera in the protobooth project.
+This small python imageserver allows to use an arducam autofocus camera in the photobooth project.
 The imageserver controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
 The booth is made from 3d printed parts, [see the documentation over here](https://github.com/mgrl/photobooth-3d).
