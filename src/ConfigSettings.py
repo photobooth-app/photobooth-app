@@ -109,7 +109,7 @@ class GroupBackends(BaseModel):
 
 class GroupHardwareInput(BaseModel):
     '''Docstring for LocationService'''
-    ENABLED:                        bool = False
+    ENABLED:                        bool = True
 
     HW_KEYCODE_TAKEPIC:              str = "down"
 

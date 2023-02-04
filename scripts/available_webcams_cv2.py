@@ -3,7 +3,7 @@ import cv2
 
 def availableCameraIndexes():
     # checks the first 10 indexes.
-    print(f"probing available webcams")
+
     index = 0
     arr = []
     i = 10
@@ -15,9 +15,10 @@ def availableCameraIndexes():
         index += 1
         i -= 1
 
-    print(f"available webcam devices indexes: {arr}")
     return arr
 
 
 if __name__ == '__main__':
+    print(f"probing available webcams")
+    print(f"available webcam devices indexes: {arr}")
     print(availableCameraIndexes())

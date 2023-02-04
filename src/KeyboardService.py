@@ -4,6 +4,16 @@ from src.ConfigSettings import settings
 
 logger = logging.getLogger(__name__)
 
+"""
+tested following libs:
+keyboard: works seamless in win/linux but needs sudo on linux, not maintained actually
+pynput: works seamless in win/linux but needs sudo on linux, not working when started as service
+pygame: seems to rely on x11/video for input (not avail in service on linux)
+hid: untested, needs additional libraries on win/linux to be installed
+evdev: linux only
+sshkeyboard: ?
+"""
+
 
 class KeyboardService():
 

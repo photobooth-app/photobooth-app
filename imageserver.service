@@ -1,6 +1,7 @@
 [Unit]
-Description=Photobooth Imageserver
-After=multi-user.target
+Description=qBooth
+#After=multi-user.target #only for system units
+After=default.target
 
 [Service]
 Type=simple
@@ -10,10 +11,12 @@ WorkingDirectory=##install_dir##
 ExecStart=/usr/bin/python -O imageserver.py
 
 [Install]
-WantedBy=multi-user.target
+#WantedBy=multi-user.target #only for system units
+WantedBy=default.target
 
 ## enable service and autostart on system startup:
-#1 sudo cp ~/imageserver/imageserver.service /etc/systemd/system/
-#2 sudo systemctl enable imageserver.service
-#3 sudo systemctl start imageserver.service
-#4 sudo systemctl status imageserver.service
+#1 cp imageserver.service ~/.local/share/systemd/user
+#1b systemctl --user daemon-reload 
+#2 systemctl --user enable imageserver.service
+#3 systemctl start imageserver.service
+#4 systemctl status imageserver.service
