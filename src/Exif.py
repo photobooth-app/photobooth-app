@@ -1,17 +1,17 @@
 import piexif
 import datetime
 import logging
+from ConfigSettings import settings
 from src.ImageServerAbstract import ImageServerAbstract
-from src.LocationService import LocationService
+
 logger = logging.getLogger(__name__)
 
 
 class Exif():
     """Handle all image related stuff"""
 
-    def __init__(self, imageServer: ImageServerAbstract, locationservice: LocationService):
+    def __init__(self, imageServer: ImageServerAbstract):
         self._imageServer = imageServer
-        self._locationservice = locationservice
 
     def createExifBytes(self):
         logger.info(
@@ -29,10 +29,13 @@ class Exif():
 
         exif_dict = {"0th": zero_ifd, "Exif": exif_ifd}
 
-        if (self._locationservice.accuracy):
+        if (settings.personalize.exif_enable_geolocation):
+            raise NotImplementedError(
+                "TODO: This needs to be reimplemented now.")
+
             logger.info("adding GPS data to exif")
             logger.debug(
-                f"gps location: {self._locationservice.latitude},{self._locationservice.longitude}")
+                f"location: {settings.personalize.geolocation_latitude},{settings.personalize.geolocation_longitude}")
 
             gps_ifd = {
                 piexif.GPSIFD.GPSLatitudeRef: self._locationservice.latitudeRef,

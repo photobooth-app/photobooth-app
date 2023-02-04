@@ -108,24 +108,10 @@ class GroupBackends(BaseModel):
 
 
 class GroupHardwareInput(BaseModel):
-    '''Docstring for LocationService'''
+    '''Docstring for Hardwareinput'''
     ENABLED:                        bool = True
 
     HW_KEYCODE_TAKEPIC:              str = "down"
-
-
-class GroupLocationService(BaseModel):
-    '''Docstring for LocationService'''
-    LOCATION_SERVICE_ENABLED: bool = False
-    LOCATION_SERVICE_API_KEY: str = ""
-    LOCATION_SERVICE_CONSIDER_IP: bool = True
-    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
-    LOCATION_SERVICE_FORCED_UPDATE: int = 60
-    # every x minutes
-    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
-    # retries after program start to get more accurate data
-    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
-    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
 class GroupPersonalize(BaseModel):
@@ -134,6 +120,10 @@ class GroupPersonalize(BaseModel):
 
     GALLERY_ENABLE: bool = True
     GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
+
+    exif_enable_geolocation: bool = False
+    geolocation_latitude: str = ""
+    geolocation_longitude: str = ""
 
 
 class GroupDebugging(BaseModel):
@@ -183,11 +173,11 @@ class ConfigSettings(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    personalize: GroupPersonalize = GroupPersonalize()
     backends: GroupBackends = GroupBackends()
     focuser: GroupFocuser = GroupFocuser()
     colorled: GroupColorled = GroupColorled()
     debugging: GroupDebugging = GroupDebugging()
-    locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
     class Config:

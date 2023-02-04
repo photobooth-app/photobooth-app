@@ -19,7 +19,6 @@ from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
 from src.InfoLed import InfoLed
-from src.LocationService import LocationService
 import asyncio
 import uuid
 from queue import Queue
@@ -265,11 +264,6 @@ def api_stats_focuser():
     # return (focusState._lastRunResult)
 
 
-@app.get("/stats/locationservice")
-def api_stats_locationservice():
-    return (locationService._geolocation_response)
-
-
 @app.get("/gallery/images")
 def api_gallery_images():
     try:
@@ -320,8 +314,7 @@ if __name__ == '__main__':
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
 
-    locationService = LocationService(ee)
-    exif = Exif(imageServers.primaryBackend, locationService)
+    exif = Exif(imageServers.primaryBackend)
     imageDb = ImageDb(ee, imageServers.primaryBackend, exif)
 
     if (True):
@@ -334,9 +327,6 @@ if __name__ == '__main__':
     model.start()
 
     imageServers.start()
-
-    # first time try to get location
-    locationService.start()
 
     # log all registered listener
     logger.debug(ee.listeners_all())
