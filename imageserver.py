@@ -248,7 +248,7 @@ def api_chose_1pic_get():
             status_code=500, detail=f"something went wrong, Exception: {e}")
 
 
-@ee.on("triggerprocess/chose_1pic")
+@ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
     try:
         model.invokeProcess("arm")

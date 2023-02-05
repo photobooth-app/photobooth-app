@@ -32,4 +32,4 @@ class KeyboardService():
         if key.name == settings.hardwareinput.HW_KEYCODE_TAKEPIC:
             logger.info(
                 f"triggered by keyboard input HW_KEYCODE_TAKEPIC={settings.hardwareinput.HW_KEYCODE_TAKEPIC}")
-            self._ee.emit("triggerprocess/chose_1pic")
+            self._ee.emit("keyboardservice/chose_1pic")
