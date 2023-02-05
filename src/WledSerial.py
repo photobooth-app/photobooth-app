@@ -1,4 +1,4 @@
-# Simple test for NeoPixels on Raspberry Pi
+# WLED Integration
 import json
 import time
 import serial
@@ -33,11 +33,15 @@ class WledSerial():
 
         wled_detected = self.initWledDevice()
 
-        if (wled_detected):
-            logger.info("register events for WLED")
-            self._ee.on("statemachine/armed", self.preset_countdown)
-            self._ee.on("frameserver/onCapture", self.preset_shoot)
-            self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
+        if not wled_detected:
+            # abort init due to problems
+            # program continues this way, but no light integration available, use error log to find out how to solve
+            return
+
+        logger.info("register events for WLED")
+        self._ee.on("statemachine/armed", self.preset_countdown)
+        self._ee.on("frameserver/onCapture", self.preset_shoot)
+        self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
 
         self.preset_standby()
 
@@ -46,10 +50,10 @@ class WledSerial():
 
         try:
             self._serial = serial.Serial(
-                port=settings.wled.SERIAL_PORT, baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
+                port=settings.wled.SERIAL_PORT, baudrate=115200, bytesize=8, timeout=1, write_timeout=1, stopbits=serial.STOPBITS_ONE, rtscts=False, dsrdtr=False
             )
         except serial.SerialException as e:
-            logger.exception(e)
+            logger.error(e)
             logger.error(
                 "failed to open WLED module, ESP flashed correctly and correct serial port set in config?")
 
@@ -76,16 +80,24 @@ class WledSerial():
         return wled_detected
 
     def preset_standby(self):
-        logger.debug("WledSerial startCountdown triggered")
-        self._serial.write(_request_preset(PRESET_ID_STANDBY))
+        logger.debug("WledSerial preset_standby triggered")
+        self._write_request(_request_preset(PRESET_ID_STANDBY))
 
     def preset_countdown(self):
-        logger.debug("WledSerial startCountdown triggered")
-        self._serial.write(_request_preset(PRESET_ID_COUNTDOWN))
+        logger.debug("WledSerial preset_countdown triggered")
+        self._write_request(_request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):
-        logger.debug("WledSerial startCountdown triggered")
-        self._serial.write(_request_preset(PRESET_ID_SHOOT))
+        logger.debug("WledSerial preset_shoot triggered")
+        self._write_request(_request_preset(PRESET_ID_SHOOT))
+
+    def _write_request(self, request):
+        try:
+            self._serial.write(request)
+        except serial.SerialException as e:
+            logger.fatal(
+                "error accessing WLED device, connection loss? device unpowered?")
+            # TODO: future improvement would be autorecover.
 
 
 def _request_preset(preset_id: int = -1):
