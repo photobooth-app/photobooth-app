@@ -129,8 +129,16 @@ class GroupDebugging(BaseModel):
 
 
 class GroupWled(BaseModel):
-    '''Colorled settings for neopixel and these elements'''
-    # WledSerial settings
+    '''
+    WLED integration for countdown led / shoot animation
+    needs WLED module connected via USB serial port and
+    three presets:
+    1: standby (usually LEDs off)
+    2: countdown (animates countdown)
+    3: shoot (imitate a flash)
+    Please define presets on your own in WLED webfrontend
+    '''
+    # WledService settings
     ENABLED: bool = False
     SERIAL_PORT: str = None
 

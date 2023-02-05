@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
-from src.WledSerial import WledSerial
+from src.WledService import WledService
 import asyncio
 import uuid
 from queue import Queue
@@ -307,7 +307,7 @@ async def read_index():
 app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
-    wledserial = WledSerial(ee)
+    wledservice = WledService(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)

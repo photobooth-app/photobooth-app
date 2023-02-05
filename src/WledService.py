@@ -13,7 +13,7 @@ PRESET_ID_COUNTDOWN = 2
 PRESET_ID_SHOOT = 3
 
 
-class WledSerial():
+class WledService():
     def __init__(self, ee: EventEmitter):
         self._ee = ee
         self._serial = None
@@ -22,13 +22,13 @@ class WledSerial():
         if settings.wled.ENABLED == True:
             if settings.wled.SERIAL_PORT:
                 logger.info(
-                    f"WledSerial setup, connecting port {settings.wled.SERIAL_PORT}")
+                    f"WledService setup, connecting port {settings.wled.SERIAL_PORT}")
             else:
                 logger.error(
-                    f"WledSerial setup abort, invalid serial port {settings.wled.SERIAL_PORT}")
+                    f"WledService setup abort, invalid serial port {settings.wled.SERIAL_PORT}")
                 return
         else:
-            logger.info(f"WledSerial disabled")
+            logger.info(f"WledService disabled")
             return
 
         wled_detected = self.initWledDevice()
@@ -80,15 +80,15 @@ class WledSerial():
         return wled_detected
 
     def preset_standby(self):
-        logger.debug("WledSerial preset_standby triggered")
+        logger.debug("WledService preset_standby triggered")
         self._write_request(_request_preset(PRESET_ID_STANDBY))
 
     def preset_countdown(self):
-        logger.debug("WledSerial preset_countdown triggered")
+        logger.debug("WledService preset_countdown triggered")
         self._write_request(_request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):
-        logger.debug("WledSerial preset_shoot triggered")
+        logger.debug("WledService preset_shoot triggered")
         self._write_request(_request_preset(PRESET_ID_SHOOT))
 
     def _write_request(self, request):
