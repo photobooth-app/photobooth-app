@@ -204,7 +204,8 @@ def api_cmd_frameserver_previewmode_get():
 @app.post("/cmd/capture", status_code=status.HTTP_200_OK)
 # photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
-    return imageDb.captureHqImage(filepath, True)
+    imageDb.captureHqImage(filepath, True)
+    return "Done"
 
 
 @app.get("/cmd/{action}/{param}")

@@ -5,7 +5,14 @@ This is in dev currently. Not for production.
 
 # Photobooth Imageserver
 
-This small python imageserver allows to use an arducam autofocus camera in the photobooth project.
+This small python imageserver allows to use
+
+- picameras (with or without autofocus)
+- arducams (with or without autofocus)
+- DSLR cameras (via gphoto2 or digicamcontrol) and
+- webcams (via opencv2 or v4l)
+to be used for high quality still photos and for livestream.
+
 The imageserver controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
 The booth is made from 3d printed parts, [see the documentation over here](https://github.com/mgrl/photobooth-3d).
@@ -15,45 +22,27 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 - camera live preview
 - permanent video live view in background
 - contant autofocus based on the live preview
-- utilizes arducam 16mp imx519 camera module
+- several camera backends supported for still/livestream
 - led ring signaling photo countdown and when the photo is actually taken
 
 ## :gear: Prerequisites
 
 - Python 3.9
-- Arducam 16MP imx519 with autofocus motor
-- Arducam drivers/libcamera apps properly installed
+- Camera supported by one of the backends
 - [photobooth installed](https://photoboothproject.github.io/)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
 ## :wrench: Installation
 
-Install packages (as root because imageserver needs to run as root)
+An installer is available, helping to setup a linux or windows system.
+Download the installer and start it as follows:
 
 ```text
-sudo pip install pymitter pydantic psutil piexif opencv-python rpi_ws281x googlemaps pywifi fastapi sse_starlette pyturbojpeg uvicorn transitions keyboard gpiozero pydantic[dotenv]
-sudo apt install -y python3-picamera2 git fonts-noto-color-emoji libturbojpeg0
-git clone https://github.com/mgrl/photobooth-imageserver.git ~/imageserver
-```
-
-Test run the server by issuing
-
-```text
-cd ~/imageserver
-chmod u+x start.sh
-sudo ./start.sh
+wget https://raw.githubusercontent.com/mgrl/photobooth-imageserver/dev/install.py
+python install.py
 ```
 
 Browse to <http://photobooth:8000> (replace photobooth by actual hostname) and see that it is working
-
-Now install the service:
-
-```text
-sudo cp ~/imageserver/imageserver.service /etc/systemd/system/
-sudo systemctl enable imageserver.service
-sudo systemctl start imageserver.service
-sudo systemctl status imageserver.service
-```
 
 ### Integrate Photobooth and ImageServer
 
@@ -109,6 +98,12 @@ network={
 
 ## :mag: Changelog
 
+- 2023-02-05
+  - added several camera backends (working: v4l, opencv, simulated, picamera2; not yet working: gphoto2, digicamcontrol)
+  - added installer
+  - removed rpiws2811 and integrated WLED to be platform independent
+  - keyboard reads without root permission - whole app now runs as normal user
+  - pydantic config management via json and env files
 - 2022-10-03
   - introduced led ring
 - 2022-11-06
@@ -135,7 +130,7 @@ Check following commands and files for error messages:
 
 ```text
 # logfiles from service (last 200 lines)
-journalctl --unit=imageserver -n 200 --no-pager
+journalctl --user --unit=imageserver -n 200 --no-pager
 # logfiles created by photobooth
 cat ~/imageserver/log/qbooth.log
 # check CmaFree especially for Arducams if low:
