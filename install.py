@@ -297,7 +297,7 @@ if query_yes_no("Install system packages required for booth?", "no"):
 if _is_linux():
     print_spacer(
         f"add '{USERNAME}' to tty and input groups for keyboard access")
-    _syscall(f'usermod -a -G tty,input {USERNAME}', True)
+    _syscall(f'usermod --append --groups tty,input {USERNAME}', True)
 
 
 # install pip packages
@@ -354,6 +354,14 @@ if query_yes_no("Install booth service?", "no"):
     if _is_windows():
         print_red(
             "not yet supported. pls start imageserver manually and browse to photobooth website.")
+
+
+# compatibility for photobooth? photobooth runs as www-data; the imageserver needs to write the image to given location - only possible with www-data rights:
+if _is_linux():
+    if query_yes_no(f"Fix permissions to be compatible to https://photoboothproject.github.io/", "no"):
+        _syscall(f'usermod --append --groups www-data {USERNAME}', True)
+        _syscall(f'chmod -R 775 /var/www/html', True)
+
 
 """
 Post install checks
