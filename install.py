@@ -40,6 +40,7 @@ PIP_PACKAGES_COMMON = [
     "transitions==0.9.0",
     "uvicorn==0.20.0",
     "pydantic[dotenv]",
+    "pyserial==3.5"
 ]
 
 PIP_PACKAGES_LINUX = [
@@ -51,7 +52,6 @@ PIP_PACKAGES_WIN = [
 ]
 
 PIP_PACKAGES_RPI = [
-    "rpi_ws281x==4.3.4",
     "gpiozero==1.6.2",
 ]
 
@@ -381,6 +381,9 @@ if _is_linux():
             "Error, gphoto2 command not found, error during installation or installation not selected")
     else:
         print_green("OK, Gphoto2 installed properly")
+
+print_spacer("list available serial ports (use for WLED integration)")
+_syscall("python -m serial.tools.list_ports")
 
 if _is_linux() or _is_windows():
     print_spacer("checking for available opencv2 cameras")

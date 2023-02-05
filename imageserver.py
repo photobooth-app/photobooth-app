@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
 import uvicorn
-from src.InfoLed import InfoLed
+from src.WledSerial import WledSerial
 import asyncio
 import uuid
 from queue import Queue
@@ -113,13 +113,11 @@ async def subscribe(request: Request):
                 #    logger.info(f"event_iterator stop requested")
                 #    break
 
+                # throttle the iterator a little down using asyncio to not block the webserver thread but lower cpu usage.
+                await asyncio.sleep(0.01)
                 try:
-                    # try to get a event/message off the queue. timeout after 1 second to allow while loop break if client disconnected
-                    # attention: queue.get(timeout=1) is blocking for 1sec - this blocks also other webserver threads!
-                    # workaround is very small timeout
-                    # event = queue.get(timeout=1)
-                    event = queue.get(timeout=0.5)  # TODO optimize
-                    # event = queue.get_nowait()  # not an option as this slows down the process (100% load for 1 cpu core)
+                    # try to get a event/message off the queue
+                    event = queue.get_nowait()
                 except:
                     continue
 
@@ -309,7 +307,7 @@ async def read_index():
 app.mount("/", StaticFiles(directory="web"), name="web")
 
 if __name__ == '__main__':
-    infoled = InfoLed(ee)
+    wledserial = WledSerial(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)

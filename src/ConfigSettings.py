@@ -1,11 +1,7 @@
-from pydantic import ValidationError
-from enum import Enum, IntEnum
-from pydantic import BaseSettings
 from typing import Any
 from pathlib import Path
 from datetime import datetime
-from typing import Annotated
-from pydantic import BaseModel, BaseSettings, Field, PrivateAttr
+from pydantic import BaseModel, BaseSettings, Field, PrivateAttr, Extra
 import os
 import json
 import logging
@@ -132,16 +128,11 @@ class GroupDebugging(BaseModel):
     DEBUG_OVERLAY: bool = True
 
 
-class GroupColorled(BaseModel):
+class GroupWled(BaseModel):
     '''Colorled settings for neopixel and these elements'''
-    # infoled / ws2812b ring settings
+    # WledSerial settings
     ENABLED: bool = False
-    NUMBER_LEDS: int = 12
-    GPIO_PIN: int = 18
-    COLOR: tuple[int, int, int, int] = (255, 255, 255, 255)    # RGBW
-    CAPTURE_COLOR: tuple[int, int, int, int] = (0, 125, 125, 0)  # RGBW
-    MAX_BRIGHTNESS: int = 50
-    ANIMATION_UPDATE: int = 70    # update circle animation every XX ms
+    SERIAL_PORT: str = None
 
 
 def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
@@ -176,7 +167,7 @@ class ConfigSettings(BaseSettings):
     personalize: GroupPersonalize = GroupPersonalize()
     backends: GroupBackends = GroupBackends()
     focuser: GroupFocuser = GroupFocuser()
-    colorled: GroupColorled = GroupColorled()
+    wled: GroupWled = GroupWled()
     debugging: GroupDebugging = GroupDebugging()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
@@ -186,6 +177,7 @@ class ConfigSettings(BaseSettings):
         env_file = '.env', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
+        extra = Extra.ignore
 
         @classmethod
         def customise_sources(
