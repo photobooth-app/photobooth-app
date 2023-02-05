@@ -33,4 +33,10 @@ class ImageServerPicam2AddonLibcamAutofocus(object):
 
     def setAllowFocusRequests(self):
         self._imageServer._picam2.set_controls(
-            {"AfMode": controls.AfModeEnum.Continuous, "AfSpeed": controls.AfSpeedEnum.Fast})
+            {"AfMode": controls.AfModeEnum.Continuous})
+        try:
+            self._imageServer._picam2.set_controls(
+                {"AfSpeed": controls.AfSpeedEnum.Fast})
+        except Exception as e:
+            logger.info(e)
+            logger.info("control not available on all cameras - can ignore")
