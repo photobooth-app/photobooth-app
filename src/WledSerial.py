@@ -35,9 +35,11 @@ class WledSerial():
 
         if (wled_detected):
             logger.info("register events for WLED")
-            self._ee.on("statemachine/armed", self.startCountdown)
-            self._ee.on("frameserver/onCapture", self.captureStart)
-            self._ee.on("frameserver/onCaptureFinished", self.captureFinished)
+            self._ee.on("statemachine/armed", self.preset_countdown)
+            self._ee.on("frameserver/onCapture", self.preset_shoot)
+            self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
+
+        self.preset_standby()
 
     def initWledDevice(self):
         wled_detected = False
@@ -73,21 +75,17 @@ class WledSerial():
 
         return wled_detected
 
-    def startCountdown(self):
+    def preset_standby(self):
+        logger.debug("WledSerial startCountdown triggered")
+        self._serial.write(_request_preset(PRESET_ID_STANDBY))
+
+    def preset_countdown(self):
         logger.debug("WledSerial startCountdown triggered")
         self._serial.write(_request_preset(PRESET_ID_COUNTDOWN))
 
-    def stopCountdown(self):
-        logger.debug("WledSerial startCountdown triggered")
-        self._serial.write(_request_preset(PRESET_ID_STANDBY))
-
-    def captureStart(self):
+    def preset_shoot(self):
         logger.debug("WledSerial startCountdown triggered")
         self._serial.write(_request_preset(PRESET_ID_SHOOT))
-
-    def captureFinished(self):
-        logger.debug("WledSerial startCountdown triggered")
-        self._serial.write(_request_preset(PRESET_ID_STANDBY))
 
 
 def _request_preset(preset_id: int = -1):
