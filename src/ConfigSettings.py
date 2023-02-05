@@ -50,16 +50,16 @@ class GroupFocuser(BaseModel):
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
     ENABLED: bool = False
-    MIN_VALUE: int = 300
-    MAX_VALUE: int = 3000
-    DEF_VALUE: int = 800
-    STEP: int = 50
+    MODEL: str = None
+    MIN_VALUE: int = 50
+    MAX_VALUE: int = 950
+    DEF_VALUE: int = 300
+    STEP: int = 10
     # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
     MOVE_TIME: float = 0.028
     JPEG_QUALITY: int = 80
     ROI: tuple[float, float, float, float] = (
         0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
-    DEVICE: str = "/dev/v4l-subdev1"
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 

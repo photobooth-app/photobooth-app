@@ -9,8 +9,8 @@ from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
 from threading import Condition
-from src.ImageServerPicam2AddonAutofocus import ImageServerPicam2AddonAutofocus
-from src.ImageServerPicam2AddonLibcamAufocous import ImageServerPicam2AddonLibcamAutofocus
+from src.ImageServerPicam2AddonCustomAutofocus import ImageServerPicam2AddonCustomAutofocus
+from src.ImageServerPicam2AddonLibcamAutofocus import ImageServerPicam2AddonLibcamAutofocus
 import cv2
 import time
 import logging
@@ -36,7 +36,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self._ee = ee
         if (settings.focuser.ENABLED):
             # custom autofocus (has ROI, ... might be removed in future if libcam support for autofocus is well)
-            self._addonAutofocus = ImageServerPicam2AddonAutofocus(self, ee)
+            self._addonAutofocus = ImageServerPicam2AddonCustomAutofocus(
+                self, ee)
         else:
             self._addonAutofocus = ImageServerPicam2AddonLibcamAutofocus(
                 self, ee)
