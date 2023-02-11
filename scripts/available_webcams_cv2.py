@@ -20,5 +20,5 @@ def availableCameraIndexes():
 
 if __name__ == '__main__':
     print(f"probing available webcams")
-    print(f"available webcam devices indexes: {arr}")
+    print(f"available webcam devices indexes")
     print(availableCameraIndexes())
