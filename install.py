@@ -67,16 +67,16 @@ SYSTEM_PACKAGES_RPI = [
 ]
 
 STARTER_CONFIGURATIONS = [
-    ("rpi_picam2_cameramodule3",
+    ("rpi_picam2_cameramodule3_native_libcamera",
      """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
-common__PREVIEW_CAM_RESOLUTION_WIDTH="1536"
-common__PREVIEW_CAM_RESOLUTION_HEIGHT="864"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2304"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
 """
      ),
-    ("rpi_picam2_arducam_imx477",
+    ("rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
      """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
@@ -85,9 +85,14 @@ common__PREVIEW_CAM_RESOLUTION_WIDTH="2028"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1520"
 focuser__ENABLED="True"
 focuser__MODEL="arducam_imx477"
+focuser__MIN_VALUE="50"
+focuser__MAX_VALUE="950"
+focuser__DEF_VALUE="300"
+focuser__STEP="10"
+focuser__MOVE_TIME="0.028"
 """
      ),
-    ("rpi_picam2_arducam_imx519",
+    ("rpi_picam2_arducam_imx519_arducams_libcamera",
      """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
@@ -96,9 +101,14 @@ common__PREVIEW_CAM_RESOLUTION_WIDTH="2328"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1748"
 focuser__ENABLED="True"
 focuser__MODEL="arducam_imx519"
+focuser__MIN_VALUE="100"
+focuser__MAX_VALUE="3900"
+focuser__DEF_VALUE="800"
+focuser__STEP="25"
+focuser__MOVE_TIME="0.028"
 """
      ),
-    ("rpi_picam2_arducam_64mp",
+    ("rpi_picam2_arducam_64mp_arducams_libcamera",
      """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4624"
@@ -107,6 +117,11 @@ common__PREVIEW_CAM_RESOLUTION_WIDTH="2312"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1736"
 focuser__ENABLED="True"
 focuser__MODEL="arducam_64mp"
+focuser__MIN_VALUE="50"
+focuser__MAX_VALUE="950"
+focuser__DEF_VALUE="300"
+focuser__STEP="10"
+focuser__MOVE_TIME="0.028"
 """
      ),
 ]
@@ -468,13 +483,13 @@ for idx, x in enumerate(choices):
     print(idx, x)
 
 chosen_starter_configuration_str = input(
-    "Choose number of starter configuration [leave empty to skip]:\n")
+    "Choose number of starter configuration [leave empty to skip]: ")
 if (chosen_starter_configuration_str):
     chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
 
     print_blue(
         f"chosen starter configuration number {chosen_starter_configuration_idx}: {STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][0]}")
-    print_blue(
+    print(
         f"{STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1]}")
     with open(str(".env.installer"), "wt") as fout:
         fout.writelines(
