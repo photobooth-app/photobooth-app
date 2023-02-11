@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# needs sudo rights
-
 # change working directory to where this script lives in https://stackoverflow.com/questions/6393551/what-is-the-meaning-of-0-in-a-bash-script
 cd "${0%/*}"
 
