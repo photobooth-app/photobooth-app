@@ -190,6 +190,12 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 if not ret:
                     raise IOError("error reading camera frame")
 
+                # apply flip image to stream only:
+                if settings.common.CAMERA_TRANSFORM_HFLIP:
+                    array = cv2.flip(array, 1)
+                if settings.common.CAMERA_TRANSFORM_VFLIP:
+                    array = cv2.flip(array, 0)
+
                 with self._lores_condition:
                     self._lores_array = array
                     self._lores_condition.notify_all()
