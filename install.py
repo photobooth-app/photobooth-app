@@ -66,6 +66,51 @@ SYSTEM_PACKAGES_RPI = [
     "python3-picamera2",
 ]
 
+STARTER_CONFIGURATIONS = [
+    ("rpi_picam2_cameramodule3",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="1536"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="864"
+"""
+     ),
+    ("rpi_picam2_arducam_imx477",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3040"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2028"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1520"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_imx477"
+"""
+     ),
+    ("rpi_picam2_arducam_imx519",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3496"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2328"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1748"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_imx519"
+"""
+     ),
+    ("rpi_picam2_arducam_64mp",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4624"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3472"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2312"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1736"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_64mp"
+"""
+     ),
+]
+
 
 def install_system_packages_win():
     print("... not supported. Please manually install whats necessary.")
@@ -415,6 +460,30 @@ if _is_linux():
         print(ind)
     else:
         print_red("no webcamera found")
+
+print_spacer("Apply starter configuration for popular hardware choices?")
+print("Choose from following list:")
+choices = (list(zip(*STARTER_CONFIGURATIONS))[0])
+for idx, x in enumerate(choices):
+    print(idx, x)
+
+chosen_starter_configuration_str = input(
+    "Choose number of starter configuration [leave empty to skip]:\n")
+if (chosen_starter_configuration_str):
+    chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
+
+    print_blue(
+        f"chosen starter configuration number {chosen_starter_configuration_idx}: {STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][0]}")
+    print_blue(
+        f"{STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1]}")
+    with open(str(".env.installer"), "wt") as fout:
+        fout.writelines(
+            STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1])
+    print_blue("start configuration written to .env.installer")
+
+else:
+    print_blue("skipping starter configuration")
+
 
 """
 FINISH
