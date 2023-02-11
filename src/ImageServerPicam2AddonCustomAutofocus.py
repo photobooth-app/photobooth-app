@@ -1,3 +1,4 @@
+from smbus import SMBus
 from pymitter import EventEmitter
 import os
 from os.path import exists as file_exists
@@ -242,13 +243,18 @@ def set_focus_position(position):
 
 
 def arducam_imx477_focuser(position):
+    bus = 10
+    i2caddress = 0x0c
+
     value = (position << 4) & 0x3ff0
     dat1 = (value >> 8) & 0x3f
     dat2 = value & 0xf0
 
-    bus = 10
+    i2cbus = SMBus(bus)
+    i2cbus.write_byte_data(i2caddress, dat1, dat2)
 
-    os.system("i2cset -y %d 0x0c %d %d" % (bus, dat1, dat2))
+    # i2c bus above same as in arducam libs:
+    # os.system("i2cset -y %d 0x0c %d %d" % (bus, dat1, dat2))
 
 
 def arducam_imx519_64mp_focuser(position):
