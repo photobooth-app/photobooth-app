@@ -40,6 +40,7 @@ class WledService():
 
         logger.info("register events for WLED")
         self._ee.on("statemachine/armed", self.preset_countdown)
+        self._ee.on("httprequest/armed", self.preset_countdown)
         self._ee.on("frameserver/onCapture", self.preset_shoot)
         self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
 
