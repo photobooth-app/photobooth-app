@@ -188,6 +188,7 @@ async def api_post_config_current(updatedSettings: ConfigSettings):
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
 # photobooth compatibility
 def api_cmd_framserver_capturemode_get():
+    ee.emit("httprequest/armed")
     ee.emit("onCaptureMode")
 
 
