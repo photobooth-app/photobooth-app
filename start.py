@@ -1,30 +1,27 @@
 #!/usr/bin/python3
+import os
+import platform
+import psutil
+import threading
+import uvicorn
+import asyncio
+import uuid
+import logging
 from src.ImageServers import ImageServers
-from importlib import import_module
 from src.ConfigSettings import ConfigSettings, settings
 from src.KeyboardService import KeyboardService
 from src.CamStateMachine import TakePictureMachineModel, states, transitions
-from transitions import Machine
-from src.Exif import Exif
-import os
+from src.WledService import WledService
 from src.ImageDb import ImageDb
-import psutil
+from src.LoggingService import LoggingService
+from transitions import Machine
 from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
-import threading
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
-import uvicorn
-from src.WledService import WledService
-import asyncio
-import uuid
 from queue import Queue
-import logging
-from src.LoggingService import LoggingService
-import platform
-import os
 
 # create early instances
 # event system
@@ -312,8 +309,7 @@ if __name__ == '__main__':
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
 
-    exif = Exif(imageServers.primaryBackend)
-    imageDb = ImageDb(ee, imageServers.primaryBackend, exif)
+    imageDb = ImageDb(ee, imageServers.primaryBackend)
 
     if (True):
         ks = KeyboardService(ee)
