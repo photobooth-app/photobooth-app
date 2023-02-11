@@ -6,9 +6,9 @@ After=default.target
 [Service]
 Type=simple
 Restart=always
-#Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_imageserver.py_FILE
+#Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_start.py_FILE
 WorkingDirectory=##install_dir##
-ExecStart=/usr/bin/python -O imageserver.py
+ExecStart=/usr/bin/python -O start.py
 
 [Install]
 #WantedBy=multi-user.target #only for system units

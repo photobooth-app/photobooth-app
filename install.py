@@ -11,7 +11,7 @@ from pathlib import Path
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
 
-if os.path.isfile("imageserver.py"):
+if os.path.isfile("start.py"):
     # if imageserver.py is detected, assume the sourcecode was already copied to target computer
     # useful if just want to enable service, install desktop shortcut, ...
     INSTALL_DIR = './'
@@ -337,7 +337,7 @@ if platform.system() == "Linux":
 if query_yes_no("Install booth service?", "no"):
     if _is_linux():
 
-        with open("imageserver.service", "rt") as fin:
+        with open("./misc/installer/imageserver.service", "rt") as fin:
             compiled_service_file = Path(
                 f"{str(Path.home())}/.local/share/systemd/user/imageserver.service")
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)

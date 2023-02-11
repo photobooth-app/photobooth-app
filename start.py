@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 from src.ImageServers import ImageServers
-from src.LoggingService import EventstreamLogHandler
 from importlib import import_module
 from src.ConfigSettings import ConfigSettings, settings
 from src.KeyboardService import KeyboardService
