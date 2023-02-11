@@ -181,8 +181,8 @@ class ConfigSettings(BaseSettings):
 
     class Config:
         env_file_encoding = 'utf-8'
-        # `.env.prod` takes priority over `.env`
-        env_file = '.env', '.env.prod'
+        # .env.prod takes priority over .env, .env.installer least important
+        env_file = '.env.installer', '.env', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
         extra = Extra.ignore
