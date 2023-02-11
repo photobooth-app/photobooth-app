@@ -76,7 +76,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
 
-        self.setAeExposureMode(settings.common.PICAM2_AE_EXPOSURE_MODE)
+        self.setAeExposureMode(
+            settings.backends.picam2.PICAM2_AE_EXPOSURE_MODE)
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
