@@ -12,12 +12,12 @@ CONFIG_FILENAME = "./config/config.json"
 
 class GroupCommon(BaseModel):
     '''Docstring for SubModelCommon'''
-    CAPTURE_CAM_RESOLUTION_WIDTH:           int = 4656
-    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = 3496
+    CAPTURE_CAM_RESOLUTION_WIDTH:           int = 1280
+    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = 720
     CAPTURE_VIDEO_RESOLUTION_WIDTH:           int = 1280
     CAPTURE_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    PREVIEW_CAM_RESOLUTION_WIDTH:           int = 2328
-    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = 1748
+    PREVIEW_CAM_RESOLUTION_WIDTH:           int = 1280
+    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = 720
     PREVIEW_VIDEO_RESOLUTION_WIDTH:           int = 1280
     PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
     LORES_QUALITY:              int = Field(default=80, ge=10, le=100)
@@ -30,14 +30,9 @@ class GroupCommon(BaseModel):
     PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
-
-    PICAM2_AE_EXPOSURE_MODE: int = Field(
-        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
-
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
-
     PROCESS_COUNTDOWN_TIMER: float = 3
     PROCESS_COUNTDOWN_OFFSET: float = 0.25
     PROCESS_TAKEPIC_MSG: str = "CHEEESE!"
@@ -72,7 +67,8 @@ class GroupBackendGphoto2(BaseModel):
 
 
 class GroupBackendPicam2(BaseModel):
-    pass  # not yet implemented!
+    PICAM2_AE_EXPOSURE_MODE: int = Field(
+        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
 
 class GroupBackendSimulated(BaseModel):
@@ -181,8 +177,8 @@ class ConfigSettings(BaseSettings):
 
     class Config:
         env_file_encoding = 'utf-8'
-        # .env.prod takes priority over .env, .env.installer least important
-        env_file = '.env.installer', '.env', '.env.prod'
+        # first in following list is least important; last .env file overwrites the other.
+        env_file = '.env.installer', '.env.dev', '.env', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
         extra = Extra.ignore
