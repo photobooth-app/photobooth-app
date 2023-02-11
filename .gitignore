@@ -5,4 +5,6 @@ profile_results*
 __pycache__
 log/*.log*
 .env
+.env.*
 requirements.txt
+
