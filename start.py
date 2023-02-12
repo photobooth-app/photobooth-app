@@ -330,11 +330,13 @@ if __name__ == '__main__':
     try:
         # log_level="trace", default info
         config = uvicorn.Config(app=app, host="0.0.0.0",
-                                port=8000, log_level="info")
+                                port=settings.common.webserver_port, log_level="info")
         server = uvicorn.Server(config)
-        server.force_exit = True
+
         # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
         # Otherwise the stream.mjpg if open will block shutdown of the server
+        server.force_exit = True
+
         server.run()
     finally:
 

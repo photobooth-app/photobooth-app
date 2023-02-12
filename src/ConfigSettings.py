@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any
 from pathlib import Path
 from datetime import datetime
@@ -39,6 +40,8 @@ class GroupCommon(BaseModel):
     PROCESS_TAKEPIC_MSG_TIMER: float = 0.5
     PROCESS_AUTOCLOSE_TIMER: int = 10
     PROCESS_ADD_EXIF_DATA: bool = True
+
+    webserver_port: int = 8080
 
 
 class GroupFocuser(BaseModel):
@@ -149,6 +152,13 @@ def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
     return json_config
 
 
+class TestEnum(str, Enum):
+    male = 'male'
+    female = 'female'
+    other = 'other'
+    not_given = 'not_given'
+
+
 class ConfigSettings(BaseSettings):
     '''
     Settings class glueing all together
@@ -162,6 +172,7 @@ class ConfigSettings(BaseSettings):
     5 The default field values for the Settings model.
     '''
     test: str = "default"
+    testEnum: TestEnum = Field(None, alias='TestEnum')
 
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
