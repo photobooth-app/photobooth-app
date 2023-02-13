@@ -40,7 +40,8 @@ PIP_PACKAGES_COMMON = [
     "transitions==0.9.0",
     "uvicorn==0.20.0",
     "pydantic[dotenv]",
-    "pyserial==3.5"
+    "pyserial==3.5",
+    "jsonref==1.1.0"
 ]
 
 PIP_PACKAGES_LINUX = [

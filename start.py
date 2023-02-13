@@ -160,13 +160,20 @@ async def api_debug_threads():
 
 
 @app.get("/config/schema")
-async def api_get_config_schema():
-    return (settings.schema())
+async def api_get_config_schema(type: str = "default"):
+    return (settings.getSchema(type=type))
+
+
+@app.get("/config/currentActive")
+async def api_get_config_current():
+    # returns currently cached and active settings
+    return (settings.dict())
 
 
 @app.get("/config/current")
 async def api_get_config_current():
-    return (settings.dict())
+    # read settings from drive and return
+    return (ConfigSettings().dict())
 
 
 @app.post("/config/current")
@@ -211,6 +218,8 @@ async def api_cmd(action, param):
 
     if (action == "config" and param == "reset"):
         settings.deleteconfig()
+    elif (action == "config" and param == "restore"):
+        os.system("reboot")
     elif (action == "server" and param == "reboot"):
         os.system("reboot")
     elif (action == "server" and param == "shutdown"):

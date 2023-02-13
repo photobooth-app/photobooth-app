@@ -1,3 +1,5 @@
+from pydantic import BaseModel, Field
+import jsonref
 from enum import Enum
 from typing import Any
 from pathlib import Path
@@ -41,7 +43,7 @@ class GroupCommon(BaseModel):
     PROCESS_AUTOCLOSE_TIMER: int = 10
     PROCESS_ADD_EXIF_DATA: bool = True
 
-    webserver_port: int = 8080
+    webserver_port: int = 8000
 
 
 class GroupFocuser(BaseModel):
@@ -142,6 +144,26 @@ class GroupWled(BaseModel):
     SERIAL_PORT: str = None
 
 
+class TestEnum(str, Enum):
+    male = 'male'
+    female = 'female'
+    other = 'other'
+    not_given = 'not_given'
+
+
+class GroupTestTemp(BaseModel):
+    test: str = "default"
+    testEnum: TestEnum = Field(None)
+    LIVE_BACKEND:                       str = None
+    LIVEPREVIEW_ENABLED:               bool = True
+    PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
+    FLOATTEST:                        float = 123.123456
+    LORES_QUALITY1:                        int = Field(
+        default=80, ge=10, le=100,)
+    LORES_QUALITY2:                        int = Field(
+        default=5, ge=10, le=100)
+
+
 def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
     encoding = settings.__config__.env_file_encoding
     try:
@@ -150,13 +172,6 @@ def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
         json_config = {}
 
     return json_config
-
-
-class TestEnum(str, Enum):
-    male = 'male'
-    female = 'female'
-    other = 'other'
-    not_given = 'not_given'
 
 
 class ConfigSettings(BaseSettings):
@@ -171,13 +186,12 @@ class ConfigSettings(BaseSettings):
     4 Variables loaded from the secrets directory.
     5 The default field values for the Settings model.
     '''
-    test: str = "default"
-    testEnum: TestEnum = Field(None, alias='TestEnum')
 
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
 
     # groups -> setting items
+    test_temp: GroupTestTemp = GroupTestTemp()
     common: GroupCommon = GroupCommon()
     personalize: GroupPersonalize = GroupPersonalize()
     backends: GroupBackends = GroupBackends()
@@ -207,6 +221,14 @@ class ConfigSettings(BaseSettings):
                 env_settings,
                 file_secret_settings,
             )
+
+    def getSchema(self, type: str = "default"):
+        '''Get schema to build UI. Schema is polished to the needs of UI'''
+        if (type == "dereferenced"):
+            # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
+            return jsonref.loads(settings.schema_json())
+        else:
+            return settings.schema()
 
     def persist(self):
         '''Persist settings to file'''
