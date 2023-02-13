@@ -15,20 +15,30 @@ CONFIG_FILENAME = "./config/config.json"
 
 class GroupCommon(BaseModel):
     '''Docstring for SubModelCommon'''
-    CAPTURE_CAM_RESOLUTION_WIDTH:           int = 1280
-    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = 720
-    CAPTURE_VIDEO_RESOLUTION_WIDTH:           int = 1280
-    CAPTURE_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    PREVIEW_CAM_RESOLUTION_WIDTH:           int = 1280
-    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = 720
-    PREVIEW_VIDEO_RESOLUTION_WIDTH:           int = 1280
-    PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    LORES_QUALITY:              int = Field(default=80, ge=10, le=100)
-    THUMBNAIL_QUALITY:          int = Field(default=60, ge=10, le=100)
-    PREVIEW_QUALITY:            int = Field(default=75, ge=10, le=100)
-    HIRES_QUALITY:              int = Field(default=90, ge=10, le=100)
-    PREVIEW_MIN_WIDTH:          int = Field(default=900, ge=200, le=2000)
-    THUMBNAIL_MIN_WIDTH:        int = Field(default=400, ge=100, le=1000)
+    CAPTURE_CAM_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="camera resolution width for still photos on supported backends (eg. picam2, webcam)")
+    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="camera resolution height for still photos on supported backends (eg. picam2, webcam)")
+    PREVIEW_CAM_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="camera resolution width for liveview on supported backends (eg. picam2, webcam)")
+    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="camera resolution height for liveview on supported backends (eg. picam2, webcam)")
+    LIVEVIEW_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="Resolution width liveview is streamed (eg. picam2, webcam)")
+    LIVEVIEW_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="Resolution height liveview is streamed (eg. picam2, webcam)")
+    LIVEPREVIEW_QUALITY:              int = Field(
+        default=80, ge=10, le=100, description="Livepreview stream JPEG image quality on supported backends")
+    THUMBNAIL_STILL_QUALITY:          int = Field(
+        default=60, ge=10, le=100, description="Still JPEG thumbnail quality (thumbs used in gallery list)")
+    PREVIEW_STILL_QUALITY:            int = Field(
+        default=75, ge=10, le=100, description="Still JPEG preview quality (image shown in gallery detail)")
+    HIRES_STILL_QUALITY:              int = Field(
+        default=90, ge=10, le=100, description="Still JPEG full resolution quality (downloaded photo)")
+    PREVIEW_STILL_WIDTH:          int = Field(
+        default=900, ge=200, le=2000, description="Width of resized preview image, height is automatically calculated to keep aspect ratio")
+    THUMBNAIL_STILL_WIDTH:        int = Field(
+        default=400, ge=100, le=1000, description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio")
 
     PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
     EXT_DOWNLOAD_URL: str = Field(
@@ -63,45 +73,30 @@ class GroupFocuser(BaseModel):
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
-class GroupBackendDigicamcontrol(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendGphoto2(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendPicam2(BaseModel):
-    PICAM2_AE_EXPOSURE_MODE: int = Field(
-        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
-
-
-class GroupBackendSimulated(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendWebcamCv2(BaseModel):
-    # None=first found device, otherwise index 0...
-    device_index:                       int = 2
-
-
-class GroupBackendWebcamV4l(BaseModel):
-    # None=first found device, otherwise index 0...
-    device_index:                       int = 2
+class EnumImageServers(str, Enum):
+    ImageServerSimulated = 'ImageServerSimulated'
+    ImageServerPicam2 = 'ImageServerPicam2'
+    ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
+    ImageServerWebcamV4l = 'ImageServerWebcamV4l'
+    ImageServerGphoto2 = 'ImageServerGphoto2'
+    ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
 
 
 class GroupBackends(BaseModel):
     '''Settings for specific backends'''
-    MAIN_BACKEND:                       str = "ImageServerSimulated"
-    LIVE_BACKEND:                       str = None
-    LIVEPREVIEW_ENABLED:               bool = True
+    MAIN_BACKEND: EnumImageServers = Field(
+        default='ImageServerSimulated', description="Choose a backend to use for high quality still captures")
+    LIVE_BACKEND: EnumImageServers = Field(
+        default=None, description="Choose secondary backend used for live streaming only")
+    LIVEPREVIEW_ENABLED:               bool = Field(
+        default=True, description="Enable livestream (if possible)")
 
-    digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
-    gphoto2: GroupBackendGphoto2 = GroupBackendGphoto2()
-    picam2: GroupBackendPicam2 = GroupBackendPicam2()
-    simulated: GroupBackendSimulated = GroupBackendSimulated()
-    webcamCv2: GroupBackendWebcamCv2 = GroupBackendWebcamCv2()
-    webcamV4l: GroupBackendWebcamV4l = GroupBackendWebcamV4l()
+    cv2_device_index:                       int = 2
+
+    v4l_device_index:                       int = 2
+
+    picam2_AE_EXPOSURE_MODE: int = Field(
+        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
 
 class GroupHardwareInput(BaseModel):
@@ -144,26 +139,6 @@ class GroupWled(BaseModel):
     SERIAL_PORT: str = None
 
 
-class TestEnum(str, Enum):
-    male = 'male'
-    female = 'female'
-    other = 'other'
-    not_given = 'not_given'
-
-
-class GroupTestTemp(BaseModel):
-    test: str = "default"
-    testEnum: TestEnum = Field(None)
-    LIVE_BACKEND:                       str = None
-    LIVEPREVIEW_ENABLED:               bool = True
-    PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    FLOATTEST:                        float = 123.123456
-    LORES_QUALITY1:                        int = Field(
-        default=80, ge=10, le=100,)
-    LORES_QUALITY2:                        int = Field(
-        default=5, ge=10, le=100)
-
-
 def json_config_settings_source(settings: BaseSettings) -> dict[str, Any]:
     encoding = settings.__config__.env_file_encoding
     try:
@@ -191,7 +166,6 @@ class ConfigSettings(BaseSettings):
         default_factory=datetime.now)  # private attributes
 
     # groups -> setting items
-    test_temp: GroupTestTemp = GroupTestTemp()
     common: GroupCommon = GroupCommon()
     personalize: GroupPersonalize = GroupPersonalize()
     backends: GroupBackends = GroupBackends()

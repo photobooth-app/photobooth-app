@@ -223,7 +223,7 @@ class ImageDb():
         # preview version
         prev_filepath = f"{DATA_PATH}{PATH_PREVIEW}{filename}"
         buffer_preview = getScaledJpegByJpeg(
-            buffer_full, settings.common.PREVIEW_QUALITY, settings.common.PREVIEW_MIN_WIDTH)
+            buffer_full, settings.common.PREVIEW_STILL_QUALITY, settings.common.PREVIEW_STILL_WIDTH)
         writeJpegToFile(
             buffer_preview, prev_filepath)
         logger.debug(
@@ -233,7 +233,7 @@ class ImageDb():
         # thumbnail version
         thumb_filepath = f"{DATA_PATH}{PATH_THUMBNAIL}{filename}"
         buffer_thumbnail = getScaledJpegByJpeg(
-            buffer_full, settings.common.THUMBNAIL_QUALITY, settings.common.THUMBNAIL_MIN_WIDTH)
+            buffer_full, settings.common.THUMBNAIL_STILL_QUALITY, settings.common.THUMBNAIL_STILL_WIDTH)
         writeJpegToFile(
             buffer_thumbnail, thumb_filepath)
         logger.debug(

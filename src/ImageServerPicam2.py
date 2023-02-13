@@ -59,11 +59,11 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.CAPTURE_VIDEO_RESOLUTION_WIDTH, settings.common.CAPTURE_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.PREVIEW_VIDEO_RESOLUTION_WIDTH, settings.common.PREVIEW_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # activate preview mode on init
         self._onPreviewMode()
@@ -77,7 +77,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self._picam2.pre_callback = self._pre_callback_overlay
 
         self.setAeExposureMode(
-            settings.backends.picam2.PICAM2_AE_EXPOSURE_MODE)
+            settings.backends.picam2_AE_EXPOSURE_MODE)
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
@@ -113,7 +113,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 if not self._hq_condition.wait(1):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByHiresFrame(
-                    frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
+                    frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY)
                 return buffer
 
     def gen_stream(self):
@@ -148,7 +148,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByLoresFrame(
-                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
+                    frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 return buffer
 
     def _wait_for_autofocus_frame(self):
