@@ -103,32 +103,32 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
             # create PIL image
             img = Image.new(
                 mode="RGB",
-                size=(settings.common.CAPTURE_VIDEO_RESOLUTION_WIDTH,
-                      settings.common.CAPTURE_VIDEO_RESOLUTION_HEIGHT),
+                size=(640,
+                      480),
                 color="green")
 
             # add text
             I1 = ImageDraw.Draw(img)
             font = ImageFont.truetype(
                 font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
-                size=50)
-            I1.text((200, 200),
+                size=30)
+            I1.text((100, 100),
                     f"simulated image backend",
                     fill=(200, 200, 200),
                     font=font)
-            I1.text((200, 250),
+            I1.text((100, 140),
                     f"img no counter: {counter}",
                     fill=(200, 200, 200),
                     font=font)
-            I1.text((200, 300),
+            I1.text((100, 180),
                     f"framerate: {self.fps}",
                     fill=(200, 200, 200),
                     font=font)
-            I1.text((200, 350),
+            I1.text((100, 220),
                     f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
                     fill=(200, 200, 200),
                     font=font)
-            I1.text((200, 400),
+            I1.text((100, 260),
                     f"active threads #{threading.active_count()}",
                     fill=(200, 200, 200),
                     font=font)
