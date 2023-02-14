@@ -1,8 +1,12 @@
 import os
 import logging
+import json
 from logging.handlers import RotatingFileHandler
+from logging import LogRecord
 from pymitter import EventEmitter
 from ConfigSettings import settings
+
+import datetime
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -14,9 +18,18 @@ class EventstreamLogHandler(logging.Handler):
         self._ee = ee
         logging.Handler.__init__(self)
 
-    def emit(self, record):
-        self._ee.emit("publishSSE", sse_event="message",
-                      sse_data=self.format(record))
+    def emit(self, record: LogRecord):
+
+        logrecord = {
+            "time": datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
+            'level': record.levelname,
+            'message': record.getMessage(),
+            'name': record.name,
+            'funcName': record.funcName,
+            'lineno': record.lineno,
+        }
+        self._ee.emit("publishSSE", sse_event="logrecord",
+                      sse_data=json.dumps(logrecord))
 
 
 class LoggingService():
