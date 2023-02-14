@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exception_handlers import (
+    http_exception_handler,
+    request_validation_exception_handler,
+)
+from fastapi.exceptions import RequestValidationError
 import os
 import platform
 import psutil
@@ -312,6 +318,18 @@ async def read_index():
 
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request, exc):
+    logger.error(f"http StarletteHTTPException: {repr(exc)}")
+    return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"http RequestValidationError: {exc}")
+    return await request_validation_exception_handler(request, exc)
 
 if __name__ == '__main__':
     wledservice = WledService(ee)
