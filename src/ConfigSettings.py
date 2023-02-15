@@ -108,7 +108,7 @@ class GroupHardwareInput(BaseModel):
 
 class GroupPersonalize(BaseModel):
     '''Docstring for Personalization'''
-    UI_FRONTPAGE_TEXT: str = "Hey! Lets take some pictures! :)"
+    UI_FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
 
     GALLERY_ENABLE: bool = True
     GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
