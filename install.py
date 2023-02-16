@@ -21,6 +21,7 @@ else:
     # default install in subdirectory of current workingdir:
     INSTALL_DIR = './imageserver/'
     SUPPRESS_INSTALLATION = False
+    sys.path.append(INSTALL_DIR)
 
 PIP_PACKAGES_COMMON = [
     "fastapi==0.89.1",
@@ -394,7 +395,7 @@ if not SUPPRESS_INSTALLATION:
         else:
             print("Updating qBooth in subdir ./imageserver/")
             _syscall(
-                f"cd ./imageserver; git pull")
+                f"cd {INSTALL_DIR}; git pull")
 
 
 if platform.system() == "Linux":
@@ -406,7 +407,7 @@ if platform.system() == "Linux":
 if query_yes_no("Install booth service?", "no"):
     if _is_linux():
 
-        with open("./misc/installer/imageserver.service", "rt") as fin:
+        with open(f"{INSTALL_DIR}/misc/installer/imageserver.service", "rt") as fin:
             compiled_service_file = Path(
                 f"{str(Path.home())}/.local/share/systemd/user/imageserver.service")
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
@@ -500,7 +501,7 @@ if (chosen_starter_configuration_str):
         f"chosen starter configuration number {chosen_starter_configuration_idx}: {STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][0]}")
     print(
         f"{STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1]}")
-    with open(str(".env.installer"), "wt") as fout:
+    with open(str(f"{INSTALL_DIR}.env.installer"), "wt") as fout:
         fout.writelines(
             STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1])
     print_blue("start configuration written to .env.installer")
