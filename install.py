@@ -1,3 +1,4 @@
+from subprocess import call, STDOUT
 import socket
 import getpass
 import os.path
@@ -380,14 +381,21 @@ if _is_linux():
 
 # install booth software
 if not SUPPRESS_INSTALLATION:
-    if query_yes_no("Install booth software?", "no"):
-        print("Installing qBooth to ./imageserver/")
-        if query_yes_no("install dev preview? if no install stable", "no"):
-            _syscall(
-                f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+    if query_yes_no("Install booth software to ./imageserver/ or update if exists?", "no"):
+        if call(["git", "branch"], cwd="./imageserver/", stderr=STDOUT, stdout=open(os.devnull, 'w')) != 0:
+            # subdir has no git repo yet - considered as new installation
+            print("Installing qBooth to ./imageserver/")
+            if query_yes_no("install dev preview? if no install stable", "no"):
+                _syscall(
+                    f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+            else:
+                _syscall(
+                    f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
         else:
+            print("Updating qBooth in subdir ./imageserver/")
             _syscall(
-                f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+                f"cd ./imageserver; git pull")
+
 
 if platform.system() == "Linux":
     _syscall(
