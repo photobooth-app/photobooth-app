@@ -161,7 +161,7 @@ def install_pip_packages():
 
     for package in pip_install_packages:
         retval = _syscall(
-            f"python3 -m pip install --upgrade {package}")
+            f"python -m pip install --upgrade {package}")
         if retval == 0:
             pip_OK.append(package)
         else:
