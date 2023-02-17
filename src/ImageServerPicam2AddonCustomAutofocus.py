@@ -144,8 +144,12 @@ def statsThread(imageServer: ImageServerAbstract, imageServerAddonCustomAutofocu
             if nextPosition < maxPosition and nextPosition > minPosition:
                 set_focus_position(nextPosition)
 
-            roi_frame = getROIFrame(
-                settings.focuser.ROI, frame)
+            # calc window x, y, width, height
+            roi = (settings.focuser.ROI/100,
+                   (settings.focuser.ROI/100),
+                   (1-(2*settings.focuser.ROI/100),
+                    1-(2*settings.focuser.ROI/100)))
+            roi_frame = getROIFrame(roi, frame)
             buffer = jpeg.encode(
                 roi_frame, quality=80)
 
@@ -227,7 +231,7 @@ def focusThread(imageServerAddonCustomAutofocus: ImageServerPicam2AddonCustomAut
 def set_focus_position(position):
     value = int(position)
     try:
-        focuser = settings.focuser.MODEL
+        focuser = settings.focuser.focuser_backend
         if focuser == "arducam_imx477":
             arducam_imx477_focuser(value)
         elif focuser == "arducam_imx519":

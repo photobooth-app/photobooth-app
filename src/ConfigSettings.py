@@ -48,6 +48,7 @@ class GroupCommon(BaseModel):
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
+
     PROCESS_COUNTDOWN_TIMER: float = 3
     PROCESS_COUNTDOWN_OFFSET: float = 0.25
     PROCESS_TAKEPIC_MSG: str = "CHEEESE!"
@@ -58,6 +59,12 @@ class GroupCommon(BaseModel):
     webserver_port: int = 8000
 
 
+class EnumFocuserBackends(str, Enum):
+    arducam_imx477 = 'arducam_imx477'
+    arducam_imx519 = 'arducam_imx519'
+    arducam_64mp = 'arducam_64mp'
+
+
 class GroupFocuser(BaseModel):
     """
     Focuser is to autofocus motorized focus cameras. Use for cameras that do not have their own focus algorithm integrated.
@@ -66,15 +73,15 @@ class GroupFocuser(BaseModel):
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
     ENABLED: bool = False
-    MODEL: str = None
+    focuser_backend: EnumFocuserBackends = EnumFocuserBackends.arducam_imx477
     MIN_VALUE: int = 50
     MAX_VALUE: int = 950
     DEF_VALUE: int = 300
     STEP: int = 10
     # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
     MOVE_TIME: float = 0.028
-    ROI: tuple[float, float, float, float] = (
-        0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
+    ROI: int = Field(
+        default=20, ge=0, le=30, description="remove x% from every side of image to consider for autofocus")
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
@@ -132,10 +139,6 @@ class GroupPersonalize(BaseModel):
 
     GALLERY_ENABLE: bool = True
     GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
-
-    exif_enable_geolocation: bool = False
-    geolocation_latitude: str = ""
-    geolocation_longitude: str = ""
 
 
 class GroupWled(BaseModel):
