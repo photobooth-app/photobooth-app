@@ -21,7 +21,7 @@ from src.WledService import WledService
 from src.ImageDb import ImageDb
 from src.LoggingService import LoggingService
 from transitions import Machine
-from gpiozero import CPUTemperature, LoadAverage
+#from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse, FileResponse
@@ -148,14 +148,14 @@ async def subscribe(request: Request):
 
     return EventSourceResponse(event_iterator(), ping=1)
 
-
+"""
 @app.get("/debug/health")
 async def api_debug_health():
     la = LoadAverage(
         minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
     cpu_temperature = round(CPUTemperature().temperature, 1)
     return ({"cpu_current_load": la.value, "cpu_above_threshold": la.is_active, "cpu_temperature": cpu_temperature})
-
+"""
 
 @app.get("/debug/threads")
 async def api_debug_threads():
