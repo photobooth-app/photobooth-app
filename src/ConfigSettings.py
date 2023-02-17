@@ -14,7 +14,7 @@ CONFIG_FILENAME = "./config/config.json"
 
 
 class GroupCommon(BaseModel):
-    '''Docstring for SubModelCommon'''
+    '''Common settings for photobooth.'''
     CAPTURE_CAM_RESOLUTION_WIDTH:           int = Field(
         default=1280, description="camera resolution width for still photos on supported backends (eg. picam2, webcam)")
     CAPTURE_CAM_RESOLUTION_HEIGHT:          int = Field(
@@ -40,6 +40,8 @@ class GroupCommon(BaseModel):
     THUMBNAIL_STILL_WIDTH:        int = Field(
         default=400, ge=100, le=1000, description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio")
 
+    DEBUG_LEVEL: str = "DEBUG"
+
     PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
@@ -57,6 +59,10 @@ class GroupCommon(BaseModel):
 
 
 class GroupFocuser(BaseModel):
+    """
+    Focuser is to autofocus motorized focus cameras. Use for cameras that do not have their own focus algorithm integrated.
+    Currently supported cameras are arducam imx477, imx519 and 64mp hawkeye.
+    """
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
     ENABLED: bool = False
@@ -67,7 +73,6 @@ class GroupFocuser(BaseModel):
     STEP: int = 10
     # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
     MOVE_TIME: float = 0.028
-    JPEG_QUALITY: int = 80
     ROI: tuple[float, float, float, float] = (
         0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
@@ -83,31 +88,46 @@ class EnumImageServers(str, Enum):
 
 
 class GroupBackends(BaseModel):
-    '''Settings for specific backends'''
-    MAIN_BACKEND: EnumImageServers = Field(
-        default='ImageServerSimulated', description="Choose a backend to use for high quality still captures")
-    LIVE_BACKEND: EnumImageServers = Field(
-        default=None, description="Choose secondary backend used for live streaming only")
+    '''
+    Choose backends for still images/high quality images captured on main backend.
+    If the livepreview is enabled, the video is captured from live backend (if configured) or main backend.
+    '''
+    MAIN_BACKEND: EnumImageServers = Field(title="Main Backend",
+                                           default=EnumImageServers.ImageServerSimulated, description="Choose a backend to use for high quality still captures")
+    LIVE_BACKEND: EnumImageServers = Field(title="Live Backend",
+                                           default=None, description="Choose secondary backend used for live streaming only")
     LIVEPREVIEW_ENABLED:               bool = Field(
         default=True, description="Enable livestream (if possible)")
 
     cv2_device_index:                       int = 2
-
     v4l_device_index:                       int = 2
-
+    picam2_stats_overlay:                   bool = False
     picam2_AE_EXPOSURE_MODE: int = Field(
         default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
 
 class GroupHardwareInput(BaseModel):
-    '''Docstring for Hardwareinput'''
-    ENABLED:                        bool = True
+    '''Hardware related settings'''
+    keyboard_input_enabled:                        bool = True
+    keyboard_input_keycode_takepic:              str = "down"
 
-    HW_KEYCODE_TAKEPIC:              str = "down"
+
+class GroupLocationService(BaseModel):
+    '''Embed GPS coordinates in picam2 images using googles geolocation api. Register and obtain a key here https://developers.google.com/maps/documentation/geolocation/get-api-key'''
+    LOCATION_SERVICE_ENABLED: bool = False
+    LOCATION_SERVICE_API_KEY: str = ""
+    LOCATION_SERVICE_CONSIDER_IP: bool = True
+    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
+    LOCATION_SERVICE_FORCED_UPDATE: int = 60
+    # every x minutes
+    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
+    # retries after program start to get more accurate data
+    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
+    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
 class GroupPersonalize(BaseModel):
-    '''Docstring for Personalization'''
+    '''Personalize your photobooth.'''
     UI_FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
 
     GALLERY_ENABLE: bool = True
@@ -116,12 +136,6 @@ class GroupPersonalize(BaseModel):
     exif_enable_geolocation: bool = False
     geolocation_latitude: str = ""
     geolocation_longitude: str = ""
-
-
-class GroupDebugging(BaseModel):
-    # dont change following defaults. If necessary change via argument
-    DEBUG_LEVEL: str = "DEBUG"
-    DEBUG_OVERLAY: bool = True
 
 
 class GroupWled(BaseModel):
@@ -171,7 +185,7 @@ class ConfigSettings(BaseSettings):
     backends: GroupBackends = GroupBackends()
     focuser: GroupFocuser = GroupFocuser()
     wled: GroupWled = GroupWled()
-    debugging: GroupDebugging = GroupDebugging()
+    locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
     class Config:

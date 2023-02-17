@@ -43,11 +43,11 @@ class LoggingService():
         # Remove all handlers associated with the root logger object.
         # for handler in logging.root.handlers[:]:
         #    logging.root.removeHandler(handler)
-        rootLogger.setLevel(settings.debugging.DEBUG_LEVEL)
+        rootLogger.setLevel(settings.common.DEBUG_LEVEL)
 
         # our default logger (not root, root would be None)
         mainLogger = logging.getLogger(name="__main__")
-        mainLogger.setLevel(settings.debugging.DEBUG_LEVEL)
+        mainLogger.setLevel(settings.common.DEBUG_LEVEL)
         # stop propagating here, so root does not receive __main__'s messages avoiding duplicates
         # mainLogger.propagate = False
 
@@ -82,7 +82,7 @@ class LoggingService():
         logging.config.dictConfig(ConfigSettingsInternal().logger.LOGGER_CONFIG)
         for handles in logging.getLogger().handlers:
             # after configure, set all handlers level to global requested level:
-            handles.setLevel(settings.debugging.DEBUG_LEVEL)
+            handles.setLevel(settings.common.DEBUG_LEVEL)
             print(handles)
         """
         self.otherLoggers()

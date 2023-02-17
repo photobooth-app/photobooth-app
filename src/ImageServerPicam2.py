@@ -197,15 +197,15 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):
-        if settings.debugging.DEBUG_OVERLAY:
+        if settings.debugging.picam2_stats_overlay:
             try:
-                overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
+                overlay1 = f""
                 overlay2 = f"{self.fps} fps"
                 overlay3 = f"Exposure: {round(self.metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self.metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self.metadata['ExposureTime']*1000*1000,1)}"
                 overlay4 = f"Lux: {round(self.metadata['Lux'],1)}"
                 overlay5 = f"Ae locked: {self.metadata['AeLocked']}, analogue gain {round(self.metadata['AnalogueGain'],1)}"
                 overlay6 = f"Colour Temp: {self.metadata['ColourTemperature']}"
-                overlay7 = f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%, active threads #{threading.active_count()}"
+                overlay7 = f""
                 colour = (210, 210, 210)
                 origin1 = (30, 200)
                 origin2 = (30, 230)
@@ -237,13 +237,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
                 pass
 
-    def _publishSSEInitial(self):
-        self._publishSSE_metadata()
-
-    def _publishSSE_metadata(self):
-        self._ee.emit("publishSSE", sse_event="frameserver/metadata",
-                      sse_data=json.dumps(self.metadata))
-
     """
     INTERNAL IMAGE GENERATOR
     """
@@ -263,9 +256,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # reset
                 self._count = 0
                 start_time = time.time()
-
-                # send metadata
-                self._publishSSE_metadata()
 
             # thread wait otherwise 100% load ;)
             time.sleep(0.1)
@@ -304,7 +294,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # capture hq picture
                 (array,), self.metadata = self._picam2.capture_arrays(
                     ["main"])
-                logger.debug(self.metadata)
+                logger.info(self.metadata)
 
                 self._ee.emit("frameserver/onCaptureFinished")
 

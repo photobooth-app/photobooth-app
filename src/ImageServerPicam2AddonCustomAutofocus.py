@@ -147,7 +147,7 @@ def statsThread(imageServer: ImageServerAbstract, imageServerAddonCustomAutofocu
             roi_frame = getROIFrame(
                 settings.focuser.ROI, frame)
             buffer = jpeg.encode(
-                roi_frame, quality=settings.focuser.JPEG_QUALITY)
+                roi_frame, quality=80)
 
             # frame is a jpeg; len is the size of the jpeg. the more contrast, the sharper the picture is and thus the bigger the size.
             sharpness = len(buffer)

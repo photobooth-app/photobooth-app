@@ -3,6 +3,7 @@ import datetime
 import logging
 from ConfigSettings import settings
 from src.ImageServerAbstract import ImageServerAbstract
+from src.LocationService import LocationService
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,8 @@ class Exif():
 
     def __init__(self, imageServer: ImageServerAbstract):
         self._imageServer = imageServer
+        self._locationservice = LocationService()
+        self._locationservice.start()
 
     def createExifBytes(self):
         logger.info(
@@ -29,13 +32,10 @@ class Exif():
 
         exif_dict = {"0th": zero_ifd, "Exif": exif_ifd}
 
-        if (settings.personalize.exif_enable_geolocation):
-            raise NotImplementedError(
-                "TODO: This needs to be reimplemented now.")
-
+        if (self._locationservice.accuracy):
             logger.info("adding GPS data to exif")
             logger.debug(
-                f"location: {settings.personalize.geolocation_latitude},{settings.personalize.geolocation_longitude}")
+                f"gps location: {self._locationservice.latitude},{self._locationservice.longitude}")
 
             gps_ifd = {
                 piexif.GPSIFD.GPSLatitudeRef: self._locationservice.latitudeRef,
@@ -51,7 +51,7 @@ class Exif():
         return exif_bytes
 
     def injectExifToJpeg(self, filepath):
-        # gater data
+        # gather data
         exif_bytes = self.createExifBytes()
         # insert exif data
         piexif.insert(exif_bytes, filepath)
