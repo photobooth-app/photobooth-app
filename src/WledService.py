@@ -40,6 +40,7 @@ class WledService():
 
         logger.info("register events for WLED")
         self._ee.on("statemachine/armed", self.preset_countdown)
+        self._ee.on("httprequest/armed", self.preset_countdown)
         self._ee.on("frameserver/onCapture", self.preset_shoot)
         self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
 
@@ -60,7 +61,13 @@ class WledService():
             return wled_detected
 
         # ask WLED module for version (format: WLED YYYYMMDD)
-        self._serial.write(b"v")
+        try:
+            self._serial.write(b"v")
+        except serial.SerialTimeoutException as e:
+            logger.error(e)
+            logger.error(
+                "error sending request to identify WLED module - wrong port?")
+            return wled_detected
 
         # wait for answer being available
         time.sleep(0.2)

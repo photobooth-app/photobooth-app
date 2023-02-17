@@ -140,9 +140,9 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
                     f"force switchmode to capture config right before taking picture (no countdown?!)")
                 self._onCaptureMode()
 
-            with Device.from_id(settings.backends.webcamV4l.device_index) as cam:
+            with Device.from_id(settings.backends.v4l_device_index) as cam:
                 logger.info(
-                    f"webcam devices index {settings.backends.webcamV4l.device_index} opened")
+                    f"webcam devices index {settings.backends.v4l_device_index} opened")
                 try:
                     cam.video_capture.set_format(
                         settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')

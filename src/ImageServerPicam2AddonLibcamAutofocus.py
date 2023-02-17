@@ -3,7 +3,7 @@ from libcamera import controls
 import logging
 from ConfigSettings import settings
 from ImageServerAbstract import ImageServerAbstract
-from src.ImageServerPicam2AddonAutofocusFocuser import ImageServerPicam2AddonAutofocusFocuser
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,4 +33,12 @@ class ImageServerPicam2AddonLibcamAutofocus(object):
 
     def setAllowFocusRequests(self):
         self._imageServer._picam2.set_controls(
-            {"AfMode": controls.AfModeEnum.Continuous, "AfSpeed": controls.AfSpeedEnum.Fast})
+            {"AfMode": controls.AfModeEnum.Continuous})
+        self._imageServer._picam2.set_controls(
+            {"AfTrigger": controls.AfTriggerEnum.Start})
+        try:
+            self._imageServer._picam2.set_controls(
+                {"AfSpeed": controls.AfSpeedEnum.Fast})
+        except Exception as e:
+            logger.info(e)
+            logger.info("control not available on all cameras - can ignore")

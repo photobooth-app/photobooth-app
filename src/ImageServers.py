@@ -16,17 +16,17 @@ class ImageServers():
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
         imageserverPrimaryBackendModule = import_module(
-            f"src.{settings.backends.MAIN_BACKEND}")
+            f"src.{settings.backends.MAIN_BACKEND.value}")
         clsPrimary = getattr(imageserverPrimaryBackendModule,
-                             settings.backends.MAIN_BACKEND)
+                             settings.backends.MAIN_BACKEND.value)
         self.primaryBackend = clsPrimary(ee, False)
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-        if not settings.backends.LIVE_BACKEND == None:
+        if settings.backends.LIVE_BACKEND and settings.backends.LIVE_BACKEND.value:
             imageserverSecondaryBackendModule = import_module(
-                f"src.{settings.backends.LIVE_BACKEND}")
+                f"src.{settings.backends.LIVE_BACKEND.value}")
             clsSecondary = getattr(imageserverSecondaryBackendModule,
-                                   settings.backends.LIVE_BACKEND)
+                                   settings.backends.LIVE_BACKEND.value)
             self.secondaryBackend = clsSecondary(ee, True)
 
     def gen_stream(self):

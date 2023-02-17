@@ -49,24 +49,24 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
             logger.info(
                 "force VideoCapture to DSHOW backend on windows (MSMF is buggy with OpenCv and crashes app)")
             self._video = cv2.VideoCapture(
-                settings.backends.webcamCv2.device_index, cv2.CAP_DSHOW)
+                settings.backends.cv2_device_index, cv2.CAP_DSHOW)
         else:
             self._video = cv2.VideoCapture(
-                settings.backends.webcamCv2.device_index)
+                settings.backends.cv2_device_index)
 
         if not self._video.isOpened():
             raise IOError(
-                f"cannot open camera index {settings.backends.webcamCv2.device_index}")
+                f"cannot open camera index {settings.backends.cv2_device_index}")
 
         if not self._video.read()[0]:
             raise IOError(
-                f"cannot read camera index {settings.backends.webcamCv2.device_index}")
+                f"cannot read camera index {settings.backends.cv2_device_index}")
 
         logger.info(f"webcam cv2 using backend {self._video.getBackendName()}")
 
         # activate preview mode on init
         self._video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        self._video.set(cv2.CAP_PROP_FPS, 30.0)
+        # self._video.set(cv2.CAP_PROP_FPS, 30.0)
         self._video.set(cv2.CAP_PROP_FRAME_WIDTH,
                         settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
         self._video.set(cv2.CAP_PROP_FRAME_HEIGHT,
@@ -101,7 +101,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 if not self._hq_condition.wait(5):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByHiresFrame(
-                    frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
+                    frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY)
                 return buffer
 
     def gen_stream(self):
@@ -140,7 +140,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 if not self._lores_condition.wait(5):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByLoresFrame(
-                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
+                    frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 return buffer
 
     def _onCaptureMode(self):
@@ -189,6 +189,12 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 # ret=True successful read, otherwise False?
                 if not ret:
                     raise IOError("error reading camera frame")
+
+                # apply flip image to stream only:
+                if settings.common.CAMERA_TRANSFORM_HFLIP:
+                    array = cv2.flip(array, 1)
+                if settings.common.CAMERA_TRANSFORM_VFLIP:
+                    array = cv2.flip(array, 0)
 
                 with self._lores_condition:
                     self._lores_array = array

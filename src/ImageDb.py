@@ -6,6 +6,7 @@ import shutil
 import hashlib
 from turbojpeg import TurboJPEG
 from src.ConfigSettings import settings
+from src.Exif import Exif
 from pathlib import Path
 import time
 import glob
@@ -84,10 +85,10 @@ def writeJpegToFile(buffer, filepath):
 class ImageDb():
     """Handle all image related stuff"""
 
-    def __init__(self, ee, frameServer, exif):
+    def __init__(self, ee, imageServer):
         self._ee = ee
-        self._frameServer = frameServer
-        self._exif = exif
+        self._imageServer = imageServer
+        self._exif = Exif(self._imageServer)
 
         self._db = []  # sorted array. always newest image first in list.
 
@@ -177,10 +178,10 @@ class ImageDb():
 
             # at this point it's assumed, a HQ image was requested by statemachine.
             # seems to not make sense now, maybe revert hat...
-            self._frameServer.trigger_hq_capture()
+            self._imageServer.trigger_hq_capture()
 
             # waitforpic and store to disk
-            jpeg_buffer = self._frameServer.wait_for_hq_image()
+            jpeg_buffer = self._imageServer.wait_for_hq_image()
 
             # create JPGs and add to db
             (item, id) = self.createImageSetFromImage(
@@ -222,7 +223,7 @@ class ImageDb():
         # preview version
         prev_filepath = f"{DATA_PATH}{PATH_PREVIEW}{filename}"
         buffer_preview = getScaledJpegByJpeg(
-            buffer_full, settings.common.PREVIEW_QUALITY, settings.common.PREVIEW_MIN_WIDTH)
+            buffer_full, settings.common.PREVIEW_STILL_QUALITY, settings.common.PREVIEW_STILL_WIDTH)
         writeJpegToFile(
             buffer_preview, prev_filepath)
         logger.debug(
@@ -232,7 +233,7 @@ class ImageDb():
         # thumbnail version
         thumb_filepath = f"{DATA_PATH}{PATH_THUMBNAIL}{filename}"
         buffer_thumbnail = getScaledJpegByJpeg(
-            buffer_full, settings.common.THUMBNAIL_QUALITY, settings.common.THUMBNAIL_MIN_WIDTH)
+            buffer_full, settings.common.THUMBNAIL_STILL_QUALITY, settings.common.THUMBNAIL_STILL_WIDTH)
         writeJpegToFile(
             buffer_thumbnail, thumb_filepath)
         logger.debug(

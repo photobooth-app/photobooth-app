@@ -1,7 +1,8 @@
 import logging
 import keyboard
 from src.ConfigSettings import settings
-
+import json
+from pymitter import EventEmitter
 logger = logging.getLogger(__name__)
 
 """
@@ -17,10 +18,10 @@ sshkeyboard: ?
 
 class KeyboardService():
 
-    def __init__(self, ee):
-        self._ee = ee
+    def __init__(self, ee: EventEmitter):
+        self._ee: EventEmitter = ee
 
-        if settings.hardwareinput.ENABLED:
+        if settings.hardwareinput.keyboard_input_enabled:
             keyboard.on_press(self.on_key_callback)
         else:
             logger.info(
@@ -28,8 +29,10 @@ class KeyboardService():
 
     def on_key_callback(self, key):
         logger.debug(f"key '{key.name}' triggered.")
+        self._ee.emit("publishSSE", sse_event="information",
+                      sse_data=json.dumps({"lastkeycode": key.name}))
 
-        if key.name == settings.hardwareinput.HW_KEYCODE_TAKEPIC:
+        if key.name == settings.hardwareinput.keyboard_input_keycode_takepic:
             logger.info(
-                f"triggered by keyboard input HW_KEYCODE_TAKEPIC={settings.hardwareinput.HW_KEYCODE_TAKEPIC}")
+                f"triggered by keyboard input keyboard_input_keycode_takepic={settings.hardwareinput.keyboard_input_keycode_takepic}")
             self._ee.emit("keyboardservice/chose_1pic")

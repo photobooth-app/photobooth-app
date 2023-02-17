@@ -1,31 +1,34 @@
 #!/usr/bin/python3
+from src.InformationService import InformationService
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exception_handlers import (
+    http_exception_handler,
+    request_validation_exception_handler,
+)
+from fastapi.exceptions import RequestValidationError
+import os
+import platform
+import psutil
+import threading
+import uvicorn
+import asyncio
+import uuid
+import logging
 from src.ImageServers import ImageServers
-from src.LoggingService import EventstreamLogHandler
-from importlib import import_module
 from src.ConfigSettings import ConfigSettings, settings
 from src.KeyboardService import KeyboardService
 from src.CamStateMachine import TakePictureMachineModel, states, transitions
-from transitions import Machine
-from src.Exif import Exif
-import os
+from src.WledService import WledService
 from src.ImageDb import ImageDb
-import psutil
-from gpiozero import CPUTemperature, LoadAverage
+from src.LoggingService import LoggingService
+from transitions import Machine
+# from gpiozero import CPUTemperature, LoadAverage
 from pymitter import EventEmitter
-import threading
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
-import uvicorn
-from src.WledService import WledService
-import asyncio
-import uuid
 from queue import Queue
-import logging
-from src.LoggingService import LoggingService
-import platform
-import os
 
 # create early instances
 # event system
@@ -146,13 +149,14 @@ async def subscribe(request: Request):
 
     return EventSourceResponse(event_iterator(), ping=1)
 
-
+"""
 @app.get("/debug/health")
 async def api_debug_health():
     la = LoadAverage(
         minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
     cpu_temperature = round(CPUTemperature().temperature, 1)
     return ({"cpu_current_load": la.value, "cpu_above_threshold": la.is_active, "cpu_temperature": cpu_temperature})
+"""
 
 
 @app.get("/debug/threads")
@@ -164,13 +168,20 @@ async def api_debug_threads():
 
 
 @app.get("/config/schema")
-async def api_get_config_schema():
-    return (settings.schema())
+async def api_get_config_schema(type: str = "default"):
+    return (settings.getSchema(type=type))
+
+
+@app.get("/config/currentActive")
+async def api_get_config_current():
+    # returns currently cached and active settings
+    return (settings.dict())
 
 
 @app.get("/config/current")
 async def api_get_config_current():
-    return (settings.dict())
+    # read settings from drive and return
+    return (ConfigSettings().dict())
 
 
 @app.post("/config/current")
@@ -192,6 +203,7 @@ async def api_post_config_current(updatedSettings: ConfigSettings):
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
 # photobooth compatibility
 def api_cmd_framserver_capturemode_get():
+    ee.emit("httprequest/armed")
     ee.emit("onCaptureMode")
 
 
@@ -214,6 +226,8 @@ async def api_cmd(action, param):
 
     if (action == "config" and param == "reset"):
         settings.deleteconfig()
+    elif (action == "config" and param == "restore"):
+        os.system("reboot")
     elif (action == "server" and param == "reboot"):
         os.system("reboot")
     elif (action == "server" and param == "shutdown"):
@@ -307,39 +321,53 @@ async def read_index():
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
 
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request, exc):
+    logger.error(f"http StarletteHTTPException: {repr(exc)}")
+    return await http_exception_handler(request, exc)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    logger.error(f"http RequestValidationError: {exc}")
+    return await request_validation_exception_handler(request, exc)
+
 if __name__ == '__main__':
     wledservice = WledService(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
 
-    exif = Exif(imageServers.primaryBackend)
-    imageDb = ImageDb(ee, imageServers.primaryBackend, exif)
+    imageDb = ImageDb(ee, imageServers.primaryBackend)
 
-    if (True):
-        ks = KeyboardService(ee)
+    ks = KeyboardService(ee)
 
     # model, machine and fire.
     model = TakePictureMachineModel(ee)
     machine = Machine(model, states=states,
                       transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
     model.start()
-
     imageServers.start()
 
     # log all registered listener
     logger.debug(ee.listeners_all())
 
+    ins = InformationService(ee)
+
     # serve files forever
     try:
         # log_level="trace", default info
         config = uvicorn.Config(app=app, host="0.0.0.0",
-                                port=8000, log_level="info")
+                                port=settings.common.webserver_port, log_level="info")
         server = uvicorn.Server(config)
-        server.force_exit = True
+
         # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
         # Otherwise the stream.mjpg if open will block shutdown of the server
+        server.force_exit = True
+
         server.run()
     finally:
 
         imageServers.stop()
+        ins.stop()

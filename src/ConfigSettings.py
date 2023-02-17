@@ -1,3 +1,6 @@
+from pydantic import BaseModel, Field
+import jsonref
+from enum import Enum
 from typing import Any
 from pathlib import Path
 from datetime import datetime
@@ -11,29 +14,37 @@ CONFIG_FILENAME = "./config/config.json"
 
 
 class GroupCommon(BaseModel):
-    '''Docstring for SubModelCommon'''
-    CAPTURE_CAM_RESOLUTION_WIDTH:           int = 4656
-    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = 3496
-    CAPTURE_VIDEO_RESOLUTION_WIDTH:           int = 1280
-    CAPTURE_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    PREVIEW_CAM_RESOLUTION_WIDTH:           int = 2328
-    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = 1748
-    PREVIEW_VIDEO_RESOLUTION_WIDTH:           int = 1280
-    PREVIEW_VIDEO_RESOLUTION_HEIGHT:          int = 720
-    LORES_QUALITY:              int = Field(default=80, ge=10, le=100)
-    THUMBNAIL_QUALITY:          int = Field(default=60, ge=10, le=100)
-    PREVIEW_QUALITY:            int = Field(default=75, ge=10, le=100)
-    HIRES_QUALITY:              int = Field(default=90, ge=10, le=100)
-    PREVIEW_MIN_WIDTH:          int = Field(default=900, ge=200, le=2000)
-    THUMBNAIL_MIN_WIDTH:        int = Field(default=400, ge=100, le=1000)
+    '''Common settings for photobooth.'''
+    CAPTURE_CAM_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="camera resolution width for still photos on supported backends (eg. picam2, webcam)")
+    CAPTURE_CAM_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="camera resolution height for still photos on supported backends (eg. picam2, webcam)")
+    PREVIEW_CAM_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="camera resolution width for liveview on supported backends (eg. picam2, webcam)")
+    PREVIEW_CAM_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="camera resolution height for liveview on supported backends (eg. picam2, webcam)")
+    LIVEVIEW_RESOLUTION_WIDTH:           int = Field(
+        default=1280, description="Resolution width liveview is streamed (eg. picam2, webcam)")
+    LIVEVIEW_RESOLUTION_HEIGHT:          int = Field(
+        default=720, description="Resolution height liveview is streamed (eg. picam2, webcam)")
+    LIVEPREVIEW_QUALITY:              int = Field(
+        default=80, ge=10, le=100, description="Livepreview stream JPEG image quality on supported backends")
+    THUMBNAIL_STILL_QUALITY:          int = Field(
+        default=60, ge=10, le=100, description="Still JPEG thumbnail quality (thumbs used in gallery list)")
+    PREVIEW_STILL_QUALITY:            int = Field(
+        default=75, ge=10, le=100, description="Still JPEG preview quality (image shown in gallery detail)")
+    HIRES_STILL_QUALITY:              int = Field(
+        default=90, ge=10, le=100, description="Still JPEG full resolution quality (downloaded photo)")
+    PREVIEW_STILL_WIDTH:          int = Field(
+        default=900, ge=200, le=2000, description="Width of resized preview image, height is automatically calculated to keep aspect ratio")
+    THUMBNAIL_STILL_WIDTH:        int = Field(
+        default=400, ge=100, le=1000, description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio")
+
+    DEBUG_LEVEL: str = "DEBUG"
 
     PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
-
-    PICAM2_AE_EXPOSURE_MODE: int = Field(
-        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
-
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = False
     CAMERA_TRANSFORM_VFLIP: bool = False
@@ -45,87 +56,89 @@ class GroupCommon(BaseModel):
     PROCESS_AUTOCLOSE_TIMER: int = 10
     PROCESS_ADD_EXIF_DATA: bool = True
 
+    webserver_port: int = 8000
+
+
+class EnumFocuserBackends(str, Enum):
+    arducam_imx477 = 'arducam_imx477'
+    arducam_imx519 = 'arducam_imx519'
+    arducam_64mp = 'arducam_64mp'
+
 
 class GroupFocuser(BaseModel):
+    """
+    Focuser is to autofocus motorized focus cameras. Use for cameras that do not have their own focus algorithm integrated.
+    Currently supported cameras are arducam imx477, imx519 and 64mp hawkeye.
+    """
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
     ENABLED: bool = False
-    MIN_VALUE: int = 300
-    MAX_VALUE: int = 3000
-    DEF_VALUE: int = 800
-    STEP: int = 50
+    focuser_backend: EnumFocuserBackends = EnumFocuserBackends.arducam_imx477
+    MIN_VALUE: int = 50
+    MAX_VALUE: int = 950
+    DEF_VALUE: int = 300
+    STEP: int = 10
     # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
     MOVE_TIME: float = 0.028
-    JPEG_QUALITY: int = 80
-    ROI: tuple[float, float, float, float] = (
-        0.2, 0.2, 0.6, 0.6)  # x, y, width, height in %
-    DEVICE: str = "/dev/v4l-subdev1"
+    ROI: int = Field(
+        default=20, ge=0, le=30, description="remove x% from every side of image to consider for autofocus")
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
-class GroupBackendDigicamcontrol(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendGphoto2(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendPicam2(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendSimulated(BaseModel):
-    pass  # not yet implemented!
-
-
-class GroupBackendWebcamCv2(BaseModel):
-    # None=first found device, otherwise index 0...
-    device_index:                       int = 2
-
-
-class GroupBackendWebcamV4l(BaseModel):
-    # None=first found device, otherwise index 0...
-    device_index:                       int = 2
+class EnumImageServers(str, Enum):
+    ImageServerSimulated = 'ImageServerSimulated'
+    ImageServerPicam2 = 'ImageServerPicam2'
+    ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
+    ImageServerWebcamV4l = 'ImageServerWebcamV4l'
+    ImageServerGphoto2 = 'ImageServerGphoto2'
+    ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
 
 
 class GroupBackends(BaseModel):
-    '''Settings for specific backends'''
-    MAIN_BACKEND:                       str = "ImageServerSimulated"
-    LIVE_BACKEND:                       str = None
-    LIVEPREVIEW_ENABLED:               bool = True
+    '''
+    Choose backends for still images/high quality images captured on main backend.
+    If the livepreview is enabled, the video is captured from live backend (if configured) or main backend.
+    '''
+    MAIN_BACKEND: EnumImageServers = Field(title="Main Backend",
+                                           default=EnumImageServers.ImageServerSimulated, description="Choose a backend to use for high quality still captures")
+    LIVE_BACKEND: EnumImageServers = Field(title="Live Backend",
+                                           default=None, description="Choose secondary backend used for live streaming only")
+    LIVEPREVIEW_ENABLED:               bool = Field(
+        default=True, description="Enable livestream (if possible)")
 
-    digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
-    gphoto2: GroupBackendGphoto2 = GroupBackendGphoto2()
-    picam2: GroupBackendPicam2 = GroupBackendPicam2()
-    simulated: GroupBackendSimulated = GroupBackendSimulated()
-    webcamCv2: GroupBackendWebcamCv2 = GroupBackendWebcamCv2()
-    webcamV4l: GroupBackendWebcamV4l = GroupBackendWebcamV4l()
+    cv2_device_index:                       int = 2
+    v4l_device_index:                       int = 2
+    picam2_stats_overlay:                   bool = False
+    picam2_AE_EXPOSURE_MODE: int = Field(
+        default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
 
 class GroupHardwareInput(BaseModel):
-    '''Docstring for Hardwareinput'''
-    ENABLED:                        bool = True
+    '''Hardware related settings'''
+    keyboard_input_enabled:                        bool = True
+    keyboard_input_keycode_takepic:              str = "down"
 
-    HW_KEYCODE_TAKEPIC:              str = "down"
+
+class GroupLocationService(BaseModel):
+    '''Embed GPS coordinates in picam2 images using googles geolocation api. Register and obtain a key here https://developers.google.com/maps/documentation/geolocation/get-api-key'''
+    LOCATION_SERVICE_ENABLED: bool = False
+    LOCATION_SERVICE_API_KEY: str = ""
+    LOCATION_SERVICE_CONSIDER_IP: bool = True
+    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
+    LOCATION_SERVICE_FORCED_UPDATE: int = 60
+    # every x minutes
+    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
+    # retries after program start to get more accurate data
+    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
+    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
 class GroupPersonalize(BaseModel):
-    '''Docstring for Personalization'''
-    UI_FRONTPAGE_TEXT: str = "Hey! Lets take some pictures! :)"
+    '''Personalize your photobooth.'''
+    UI_FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
 
     GALLERY_ENABLE: bool = True
     GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
-
-    exif_enable_geolocation: bool = False
-    geolocation_latitude: str = ""
-    geolocation_longitude: str = ""
-
-
-class GroupDebugging(BaseModel):
-    # dont change following defaults. If necessary change via argument
-    DEBUG_LEVEL: str = "DEBUG"
-    DEBUG_OVERLAY: bool = True
 
 
 class GroupWled(BaseModel):
@@ -165,7 +178,6 @@ class ConfigSettings(BaseSettings):
     4 Variables loaded from the secrets directory.
     5 The default field values for the Settings model.
     '''
-    test: str = "default"
 
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
@@ -176,13 +188,13 @@ class ConfigSettings(BaseSettings):
     backends: GroupBackends = GroupBackends()
     focuser: GroupFocuser = GroupFocuser()
     wled: GroupWled = GroupWled()
-    debugging: GroupDebugging = GroupDebugging()
+    locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
     class Config:
         env_file_encoding = 'utf-8'
-        # `.env.prod` takes priority over `.env`
-        env_file = '.env', '.env.prod'
+        # first in following list is least important; last .env file overwrites the other.
+        env_file = '.env.installer', '.env.dev', '.env', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
         extra = Extra.ignore
@@ -200,6 +212,14 @@ class ConfigSettings(BaseSettings):
                 env_settings,
                 file_secret_settings,
             )
+
+    def getSchema(self, type: str = "default"):
+        '''Get schema to build UI. Schema is polished to the needs of UI'''
+        if (type == "dereferenced"):
+            # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
+            return jsonref.loads(settings.schema_json())
+        else:
+            return settings.schema()
 
     def persist(self):
         '''Persist settings to file'''

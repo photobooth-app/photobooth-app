@@ -1,3 +1,4 @@
+from subprocess import call, STDOUT
 import socket
 import getpass
 import os.path
@@ -11,7 +12,7 @@ from pathlib import Path
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
 
-if os.path.isfile("imageserver.py"):
+if os.path.isfile("start.py"):
     # if imageserver.py is detected, assume the sourcecode was already copied to target computer
     # useful if just want to enable service, install desktop shortcut, ...
     INSTALL_DIR = './'
@@ -20,6 +21,7 @@ else:
     # default install in subdirectory of current workingdir:
     INSTALL_DIR = './imageserver/'
     SUPPRESS_INSTALLATION = False
+    sys.path.append(INSTALL_DIR)
 
 PIP_PACKAGES_COMMON = [
     "fastapi==0.89.1",
@@ -40,7 +42,8 @@ PIP_PACKAGES_COMMON = [
     "transitions==0.9.0",
     "uvicorn==0.20.0",
     "pydantic[dotenv]",
-    "pyserial==3.5"
+    "pyserial==3.5",
+    "jsonref==1.1.0"
 ]
 
 PIP_PACKAGES_LINUX = [
@@ -64,6 +67,66 @@ SYSTEM_PACKAGES_LINUX = [
 ]
 SYSTEM_PACKAGES_RPI = [
     "python3-picamera2",
+]
+
+STARTER_CONFIGURATIONS = [
+    ("rpi_picam2_cameramodule3_native_libcamera",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2304"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
+"""
+     ),
+    ("rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3040"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2028"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1520"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_imx477"
+focuser__MIN_VALUE="50"
+focuser__MAX_VALUE="950"
+focuser__DEF_VALUE="300"
+focuser__STEP="10"
+focuser__MOVE_TIME="0.028"
+"""
+     ),
+    ("rpi_picam2_arducam_imx519_arducams_libcamera",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3496"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2328"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1748"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_imx519"
+focuser__MIN_VALUE="100"
+focuser__MAX_VALUE="3900"
+focuser__DEF_VALUE="800"
+focuser__STEP="25"
+focuser__MOVE_TIME="0.028"
+"""
+     ),
+    ("rpi_picam2_arducam_64mp_arducams_libcamera",
+     """
+backends__MAIN_BACKEND="ImageServerPicam2"
+common__CAPTURE_CAM_RESOLUTION_WIDTH="4624"
+common__CAPTURE_CAM_RESOLUTION_HEIGHT="3472"
+common__PREVIEW_CAM_RESOLUTION_WIDTH="2312"
+common__PREVIEW_CAM_RESOLUTION_HEIGHT="1736"
+focuser__ENABLED="True"
+focuser__MODEL="arducam_64mp"
+focuser__MIN_VALUE="50"
+focuser__MAX_VALUE="950"
+focuser__DEF_VALUE="300"
+focuser__STEP="10"
+focuser__MOVE_TIME="0.028"
+"""
+     ),
 ]
 
 
@@ -100,7 +163,7 @@ def install_pip_packages():
 
     for package in pip_install_packages:
         retval = _syscall(
-            f"python3 -m pip install --upgrade {package}")
+            f"python -m pip install --upgrade {package}")
         if retval == 0:
             pip_OK.append(package)
         else:
@@ -297,7 +360,7 @@ if query_yes_no("Install system packages required for booth?", "no"):
 if _is_linux():
     print_spacer(
         f"add '{USERNAME}' to tty and input groups for keyboard access")
-    _syscall(f'usermod -a -G tty,input {USERNAME}', True)
+    _syscall(f'usermod --append --groups tty,input {USERNAME}', True)
 
 
 # install pip packages
@@ -319,14 +382,21 @@ if _is_linux():
 
 # install booth software
 if not SUPPRESS_INSTALLATION:
-    if query_yes_no("Install booth software?", "no"):
-        print("Installing qBooth to ./imageserver/")
-        if query_yes_no("install dev preview? if no install stable", "no"):
-            _syscall(
-                f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+    if query_yes_no("Install booth software to ./imageserver/ or update if exists?", "no"):
+        if call(["git", "branch"], cwd="./imageserver/", stderr=STDOUT, stdout=open(os.devnull, 'w')) != 0:
+            # subdir has no git repo yet - considered as new installation
+            print("Installing qBooth to ./imageserver/")
+            if query_yes_no("install dev preview? if no install stable", "no"):
+                _syscall(
+                    f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+            else:
+                _syscall(
+                    f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
         else:
+            print("Updating qBooth in subdir ./imageserver/")
             _syscall(
-                f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+                f"cd {INSTALL_DIR}; git pull")
+
 
 if platform.system() == "Linux":
     _syscall(
@@ -337,7 +407,7 @@ if platform.system() == "Linux":
 if query_yes_no("Install booth service?", "no"):
     if _is_linux():
 
-        with open("imageserver.service", "rt") as fin:
+        with open(f"{INSTALL_DIR}/misc/installer/imageserver.service", "rt") as fin:
             compiled_service_file = Path(
                 f"{str(Path.home())}/.local/share/systemd/user/imageserver.service")
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
@@ -354,6 +424,14 @@ if query_yes_no("Install booth service?", "no"):
     if _is_windows():
         print_red(
             "not yet supported. pls start imageserver manually and browse to photobooth website.")
+
+
+# compatibility for photobooth? photobooth runs as www-data; the imageserver needs to write the image to given location - only possible with www-data rights:
+if _is_linux():
+    if query_yes_no(f"Fix permissions to be compatible to https://photoboothproject.github.io/", "no"):
+        _syscall(f'usermod --append --groups www-data {USERNAME}', True)
+        _syscall(f'chmod -R 775 /var/www/html', True)
+
 
 """
 Post install checks
@@ -407,6 +485,30 @@ if _is_linux():
         print(ind)
     else:
         print_red("no webcamera found")
+
+print_spacer("Apply starter configuration for popular hardware choices?")
+print("Choose from following list:")
+choices = (list(zip(*STARTER_CONFIGURATIONS))[0])
+for idx, x in enumerate(choices):
+    print(idx, x)
+
+chosen_starter_configuration_str = input(
+    "Choose number of starter configuration [leave empty to skip]: ")
+if (chosen_starter_configuration_str):
+    chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
+
+    print_blue(
+        f"chosen starter configuration number {chosen_starter_configuration_idx}: {STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][0]}")
+    print(
+        f"{STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1]}")
+    with open(str(f"{INSTALL_DIR}.env.installer"), "wt") as fout:
+        fout.writelines(
+            STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1])
+    print_blue("start configuration written to .env.installer")
+
+else:
+    print_blue("skipping starter configuration")
+
 
 """
 FINISH

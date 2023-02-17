@@ -9,8 +9,8 @@ from picamera2 import Picamera2, MappedArray
 import psutil
 import threading
 from threading import Condition
-from src.ImageServerPicam2AddonAutofocus import ImageServerPicam2AddonAutofocus
-from src.ImageServerPicam2AddonLibcamAufocous import ImageServerPicam2AddonLibcamAutofocus
+from src.ImageServerPicam2AddonCustomAutofocus import ImageServerPicam2AddonCustomAutofocus
+from src.ImageServerPicam2AddonLibcamAutofocus import ImageServerPicam2AddonLibcamAutofocus
 import cv2
 import time
 import logging
@@ -36,7 +36,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self._ee = ee
         if (settings.focuser.ENABLED):
             # custom autofocus (has ROI, ... might be removed in future if libcam support for autofocus is well)
-            self._addonAutofocus = ImageServerPicam2AddonAutofocus(self, ee)
+            self._addonAutofocus = ImageServerPicam2AddonCustomAutofocus(
+                self, ee)
         else:
             self._addonAutofocus = ImageServerPicam2AddonLibcamAutofocus(
                 self, ee)
@@ -58,11 +59,11 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._captureConfig = self._picam2.create_still_configuration(
-            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.CAPTURE_VIDEO_RESOLUTION_WIDTH, settings.common.CAPTURE_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # config preview mode (used for permanent live view)
         self._previewConfig = self._picam2.create_video_configuration(
-            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.PREVIEW_VIDEO_RESOLUTION_WIDTH, settings.common.PREVIEW_VIDEO_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
 
         # activate preview mode on init
         self._onPreviewMode()
@@ -75,7 +76,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
         self._picam2.pre_callback = self._pre_callback_overlay
 
-        self.setAeExposureMode(settings.common.PICAM2_AE_EXPOSURE_MODE)
+        self.setAeExposureMode(
+            settings.backends.picam2_AE_EXPOSURE_MODE)
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
@@ -111,7 +113,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 if not self._hq_condition.wait(1):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByHiresFrame(
-                    frame=self._hq_array, quality=settings.common.HIRES_QUALITY)
+                    frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY)
                 return buffer
 
     def gen_stream(self):
@@ -146,7 +148,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._getJpegByLoresFrame(
-                    frame=self._lores_array, quality=settings.common.LORES_QUALITY)
+                    frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 return buffer
 
     def _wait_for_autofocus_frame(self):
@@ -195,15 +197,15 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):
-        if settings.debugging.DEBUG_OVERLAY:
+        if settings.debugging.picam2_stats_overlay:
             try:
-                overlay1 = ""  # f"{focuser.get(focuser.OPT_FOCUS)} focus"
+                overlay1 = f""
                 overlay2 = f"{self.fps} fps"
                 overlay3 = f"Exposure: {round(self.metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self.metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self.metadata['ExposureTime']*1000*1000,1)}"
                 overlay4 = f"Lux: {round(self.metadata['Lux'],1)}"
                 overlay5 = f"Ae locked: {self.metadata['AeLocked']}, analogue gain {round(self.metadata['AnalogueGain'],1)}"
                 overlay6 = f"Colour Temp: {self.metadata['ColourTemperature']}"
-                overlay7 = f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%, active threads #{threading.active_count()}"
+                overlay7 = f""
                 colour = (210, 210, 210)
                 origin1 = (30, 200)
                 origin2 = (30, 230)
@@ -235,13 +237,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
                 pass
 
-    def _publishSSEInitial(self):
-        self._publishSSE_metadata()
-
-    def _publishSSE_metadata(self):
-        self._ee.emit("publishSSE", sse_event="frameserver/metadata",
-                      sse_data=json.dumps(self.metadata))
-
     """
     INTERNAL IMAGE GENERATOR
     """
@@ -261,9 +256,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # reset
                 self._count = 0
                 start_time = time.time()
-
-                # send metadata
-                self._publishSSE_metadata()
 
             # thread wait otherwise 100% load ;)
             time.sleep(0.1)
@@ -302,7 +294,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # capture hq picture
                 (array,), self.metadata = self._picam2.capture_arrays(
                     ["main"])
-                logger.debug(self.metadata)
+                logger.info(self.metadata)
 
                 self._ee.emit("frameserver/onCaptureFinished")
 

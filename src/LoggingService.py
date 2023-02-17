@@ -1,8 +1,12 @@
 import os
 import logging
+import json
 from logging.handlers import RotatingFileHandler
+from logging import LogRecord
 from pymitter import EventEmitter
 from ConfigSettings import settings
+
+import datetime
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -14,9 +18,18 @@ class EventstreamLogHandler(logging.Handler):
         self._ee = ee
         logging.Handler.__init__(self)
 
-    def emit(self, record):
-        self._ee.emit("publishSSE", sse_event="message",
-                      sse_data=self.format(record))
+    def emit(self, record: LogRecord):
+
+        logrecord = {
+            "time": datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
+            'level': record.levelname,
+            'message': record.getMessage(),
+            'name': record.name,
+            'funcName': record.funcName,
+            'lineno': record.lineno,
+        }
+        self._ee.emit("publishSSE", sse_event="logrecord",
+                      sse_data=json.dumps(logrecord))
 
 
 class LoggingService():
@@ -30,11 +43,11 @@ class LoggingService():
         # Remove all handlers associated with the root logger object.
         # for handler in logging.root.handlers[:]:
         #    logging.root.removeHandler(handler)
-        rootLogger.setLevel(settings.debugging.DEBUG_LEVEL)
+        rootLogger.setLevel(settings.common.DEBUG_LEVEL)
 
         # our default logger (not root, root would be None)
         mainLogger = logging.getLogger(name="__main__")
-        mainLogger.setLevel(settings.debugging.DEBUG_LEVEL)
+        mainLogger.setLevel(settings.common.DEBUG_LEVEL)
         # stop propagating here, so root does not receive __main__'s messages avoiding duplicates
         # mainLogger.propagate = False
 
@@ -69,7 +82,7 @@ class LoggingService():
         logging.config.dictConfig(ConfigSettingsInternal().logger.LOGGER_CONFIG)
         for handles in logging.getLogger().handlers:
             # after configure, set all handlers level to global requested level:
-            handles.setLevel(settings.debugging.DEBUG_LEVEL)
+            handles.setLevel(settings.common.DEBUG_LEVEL)
             print(handles)
         """
         self.otherLoggers()
