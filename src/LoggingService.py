@@ -34,8 +34,11 @@ class EventstreamLogHandler(logging.Handler):
 
 class LoggingService():
     def __init__(self, ee: EventEmitter):
+        fmt = '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s'
+        logFormatter = logging.Formatter(fmt=fmt)
+
         logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s', force=True)
+                            format=fmt, force=True)
 
         # our default logger (root = None)
         # root loggers seems to be the template for all other loggers, that are not in __name__ namespace. not too verbose here
@@ -53,18 +56,18 @@ class LoggingService():
 
         # create console handler
         consoleHandler = logging.StreamHandler()
-        # consoleHandler.setFormatter(formatter)
+        consoleHandler.setFormatter(logFormatter)
 
         # create rotatingFileHandler
         rotatingFileHandler = RotatingFileHandler(
             filename="./log/qbooth.log",
             maxBytes=1024**2,
             backupCount=10)
-        # rotatingFileHandler.setFormatter(formatter)
+        rotatingFileHandler.setFormatter(logFormatter)
 
         # create rotatingFileHandler
         eventStreamHandler = EventstreamLogHandler(ee=ee)
-        # eventStreamHandler.setFormatter(formatter)
+        eventStreamHandler.setFormatter(logFormatter)
 
         # add ch to logger
         # rootLogger.addHandler(consoleHandler)
