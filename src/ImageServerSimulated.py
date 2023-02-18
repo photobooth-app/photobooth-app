@@ -1,4 +1,4 @@
-from multiprocessing import Process, Queue, Condition
+from multiprocessing import Process, Queue
 import threading
 import psutil
 from PIL import Image, ImageDraw, ImageFont
@@ -22,9 +22,10 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        self._img_buffer_queue: Queue = Queue()
+        self._img_buffer_queue: Queue = Queue(maxsize=5)
 
-        self._p = Process(target=img_generator, args=(self._img_buffer_queue,))
+        self._p = Process(target=img_generator, name="ImageServerSimulatedProducerProcess", args=(
+            self._img_buffer_queue,))
 
     def start(self):
         """To start the FrameServer"""
@@ -141,6 +142,7 @@ def img_generator(queue):
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=90)
 
+        # put jpeg on queue until full. If full this function blocks until queue empty
         queue.put(jpeg_buffer.getvalue())
 
         time.sleep(33/1000.)

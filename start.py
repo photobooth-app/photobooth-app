@@ -40,23 +40,6 @@ SERVICE_NAME = "imageserver"
 
 
 logger = logging.getLogger(__name__)
-logger.info('Welcome to qPhotobooth')
-logger.info(f"platform.system={platform.system()}")
-logger.info(f"platform.release={platform.release()}")
-logger.info(f"platform.machine={platform.machine()}")
-logger.info(f"platform.python_version={platform.python_version()}")
-logger.info(f"hostname={platform.node()}")
-logger.info(f"psutil.cpu_count logical={psutil.cpu_count()}")
-logger.info(f"psutil.cpu_count cores={psutil.cpu_count(logical=False)}")
-logger.info(f"psutil.disk_partitions={psutil.disk_partitions()}")
-if platform.system() == "Linux":
-    logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
-elif platform.system() == "Windows":
-    logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
-logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
-logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
-# run python with -O (optimized) sets debug to false and disables asserts from bytecode
-logger.info(f"__debug__={__debug__}")
 
 
 app = FastAPI()
@@ -334,6 +317,24 @@ async def validation_exception_handler(request, exc):
     return await request_validation_exception_handler(request, exc)
 
 if __name__ == '__main__':
+    logger.info('Welcome to qPhotobooth')
+    logger.info(f"platform.system={platform.system()}")
+    logger.info(f"platform.release={platform.release()}")
+    logger.info(f"platform.machine={platform.machine()}")
+    logger.info(f"platform.python_version={platform.python_version()}")
+    logger.info(f"hostname={platform.node()}")
+    logger.info(f"psutil.cpu_count logical={psutil.cpu_count()}")
+    logger.info(f"psutil.cpu_count cores={psutil.cpu_count(logical=False)}")
+    logger.info(f"psutil.disk_partitions={psutil.disk_partitions()}")
+    if platform.system() == "Linux":
+        logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
+    elif platform.system() == "Windows":
+        logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
+    logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
+    logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
+    # run python with -O (optimized) sets debug to false and disables asserts from bytecode
+    logger.info(f"__debug__={__debug__}")
+
     wledservice = WledService(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
