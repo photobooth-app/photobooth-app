@@ -87,15 +87,15 @@ class WledService():
         return wled_detected
 
     def preset_standby(self):
-        logger.debug("WledService preset_standby triggered")
+        logger.info("WledService preset_standby triggered")
         self._write_request(_request_preset(PRESET_ID_STANDBY))
 
     def preset_countdown(self):
-        logger.debug("WledService preset_countdown triggered")
+        logger.info("WledService preset_countdown triggered")
         self._write_request(_request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):
-        logger.debug("WledService preset_shoot triggered")
+        logger.info("WledService preset_shoot triggered")
         self._write_request(_request_preset(PRESET_ID_SHOOT))
 
     def _write_request(self, request):
@@ -109,5 +109,5 @@ class WledService():
 
 def _request_preset(preset_id: int = -1):
     _request_preset_bytes = json.dumps({'ps': preset_id}).encode()
-    logger.debug(f"_request_preset_bytes={_request_preset_bytes}")
+    logger.debug(f"wled request preset id={preset_id}")
     return _request_preset_bytes
