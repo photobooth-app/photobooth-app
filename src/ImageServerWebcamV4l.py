@@ -89,10 +89,6 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
 
-    @property
-    def fps(self):
-        return round(self._fps, 1)
-
     """
     INTERNAL FUNCTIONS
     """

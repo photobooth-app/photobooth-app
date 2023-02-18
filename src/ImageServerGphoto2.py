@@ -64,10 +64,6 @@ class ImageServerDigicamcontrol(ImageServerAbstract.ImageServerAbstract):
         self._onCaptureMode()
         self._trigger_hq_capture = True
 
-    @property
-    def fps(self):
-        return round((1/self.CYCLE_WAIT)*1000, 1)
-
     """
     INTERNAL FUNCTIONS
     """

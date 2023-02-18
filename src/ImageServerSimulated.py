@@ -1,19 +1,19 @@
+from multiprocessing import Process, Queue, Condition
 import threading
 import psutil
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
-from threading import Condition
 import time
 import logging
 from pymitter import EventEmitter
 import ImageServerAbstract
-import StoppableThread
+import src.StoppableThread as StoppableThread
 from ConfigSettings import settings
 logger = logging.getLogger(__name__)
 
 
 class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee, enableStream):
+    def __init__(self, ee: EventEmitter, enableStream):
         super().__init__(ee, enableStream)
 
         # public props (defined in abstract class also)
@@ -22,47 +22,47 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        self._hq_img_buffer = None
-        self._lores_img_buffer = None
-        self._hq_condition = Condition()
-        self._lores_condition = Condition()
-        self._trigger_hq_capture = False
+        self._img_buffer_queue: Queue = Queue()
 
-        self.CYCLE_WAIT = 33  # generate image every XX ms
-
-        self._generateImagesThread = StoppableThread.StoppableThread(name="_generateImagesThread",
-                                                                     target=self._GenerateImagesFun, daemon=True)
+        self._p = Process(target=img_generator, args=(self._img_buffer_queue,))
 
     def start(self):
         """To start the FrameServer"""
-        self._generateImagesThread.start()
+
+        self._p.start()
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer"""
-        self._generateImagesThread.stop()
+
+        self._p.terminate()
+        self._p.join()
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        with self._hq_condition:
-            while True:
-                if not self._hq_condition.wait(1):
-                    raise IOError("timeout receiving frames")
-                return self._hq_img_buffer.getvalue()
+        self._ee.emit("frameserver/onCapture")
+
+        # get img off the producing queue
+        img = self._img_buffer_queue.get(timeout=1)
+
+        # virtual delay for camera to create picture
+        time.sleep(0.1)
+
+        self._ee.emit("frameserver/onCaptureFinished")
+
+        # return to previewmode
+        self._onPreviewMode()
+
+        return img
 
     def gen_stream(self):
-        while not self._generateImagesThread.stopped():
+        while True:
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + self._wait_for_lores_image() + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
-        self._trigger_hq_capture = True
         self._onCaptureMode()
-
-    @property
-    def fps(self):
-        return round((1/self.CYCLE_WAIT)*1000, 1)
 
     """
     INTERNAL FUNCTIONS
@@ -70,11 +70,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._lores_condition:
-            while True:
-                if not self._lores_condition.wait(1):
-                    raise IOError("timeout receiving frames")
-                return self._lores_img_buffer.getvalue()
+        return self._img_buffer_queue.get(timeout=1)
 
     def _wait_for_autofocus_frame(self):
         """autofocus not supported by this backend"""
@@ -94,74 +90,57 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
     INTERNAL IMAGE GENERATOR
     """
 
-    def _GenerateImagesFun(self):
-        counter = 0
 
-        while not self._generateImagesThread.stopped():  # repeat until stopped
-            counter += 1
+def img_generator(queue):
+    counter = 0
+    fps = 0
+    fps_calc_every = 100
+    lastTime = time.time_ns()
+    while True:
 
-            # create PIL image
-            img = Image.new(
-                mode="RGB",
-                size=(640,
-                      480),
-                color="green")
+        counter += 1
+        if (counter % 100) == 0:
+            nowTime = time.time_ns()
+            fps = round(fps_calc_every/(nowTime-lastTime)*1000**3, 1)
+            lastTime = nowTime
 
-            # add text
-            I1 = ImageDraw.Draw(img)
-            font = ImageFont.truetype(
-                font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
-                size=30)
-            I1.text((100, 100),
-                    f"simulated image backend",
-                    fill=(200, 200, 200),
-                    font=font)
-            I1.text((100, 140),
-                    f"img no counter: {counter}",
-                    fill=(200, 200, 200),
-                    font=font)
-            I1.text((100, 180),
-                    f"framerate: {self.fps}",
-                    fill=(200, 200, 200),
-                    font=font)
-            I1.text((100, 220),
-                    f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
-                    fill=(200, 200, 200),
-                    font=font)
-            I1.text((100, 260),
-                    f"active threads #{threading.active_count()}",
-                    fill=(200, 200, 200),
-                    font=font)
+        # create PIL image
+        img = Image.new(
+            mode="RGB",
+            size=(640,
+                  480),
+            color="green")
 
-            # create jpeg
-            jpeg_buffer = BytesIO()
-            img.save(jpeg_buffer, format="jpeg", quality=90)
+        # add text
+        I1 = ImageDraw.Draw(img)
+        font = ImageFont.truetype(
+            font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
+            size=30)
+        I1.text((100, 100),
+                f"simulated image backend",
+                fill=(200, 200, 200),
+                font=font)
+        I1.text((100, 140),
+                f"img no counter: {counter}",
+                fill=(200, 200, 200),
+                font=font)
+        I1.text((100, 180),
+                f"framerate: {fps}",
+                fill=(200, 200, 200),
+                font=font)
+        I1.text((100, 220),
+                f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
+                fill=(200, 200, 200),
+                font=font)
+        I1.text((100, 260),
+                f"active threads #{threading.active_count()}",
+                fill=(200, 200, 200),
+                font=font)
 
-            if not self._trigger_hq_capture:
-                with self._lores_condition:
-                    self._lores_img_buffer = jpeg_buffer
-                    self._lores_condition.notify_all()
-            else:
-                logger.debug(
-                    "triggered capture")
-                # only capture one pic and return to lores streaming afterwards
-                self._trigger_hq_capture = False
+        # create jpeg
+        jpeg_buffer = BytesIO()
+        img.save(jpeg_buffer, format="jpeg", quality=90)
 
-                self._ee.emit("frameserver/onCapture")
+        queue.put(jpeg_buffer.getvalue())
 
-                # virtual delay for camera to create picture
-                time.sleep(0.1)
-
-                self._ee.emit("frameserver/onCaptureFinished")
-
-                logger.debug(f"metadata={self.metadata}")
-
-                with self._hq_condition:
-                    self._hq_img_buffer = jpeg_buffer
-                    self._hq_condition.notify_all()
-
-                # switch back to preview mode
-                self._onPreviewMode()
-
-            time.sleep(self.CYCLE_WAIT/1000.)
-        return
+        time.sleep(33/1000.)

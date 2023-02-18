@@ -1,7 +1,6 @@
 import cv2
 import ImageServerAbstract
 import logging
-
 import platform
 from StoppableThread import StoppableThread
 from pymitter import EventEmitter
@@ -119,10 +118,6 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
-
-    @property
-    def fps(self):
-        return round(self._fps, 1)
 
     """
     INTERNAL FUNCTIONS

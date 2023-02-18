@@ -63,12 +63,6 @@ class ImageServerAbstract(ABC):
         """To stop the backend to serve"""
         pass
 
-    @property
-    @abstractmethod
-    def fps(self):
-        """frames per second"""
-        pass
-
     """
     INTERNAL FUNCTIONS TO BE IMPLEMENTED
     """

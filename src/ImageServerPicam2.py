@@ -49,7 +49,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self._trigger_hq_capture = False
         self._currentmode = None
         self._count = 0
-        self._fps = 0
 
         # worker threads
         self._generateImagesThread = StoppableThread(name="_generateImagesThread",
@@ -131,10 +130,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
-
-    @property
-    def fps(self):
-        return round(self._fps, 1)
 
     """
     INTERNAL FUNCTIONS
@@ -250,8 +245,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         # to calc frames per second every second
         while not self._statsThread.stopped():
             if (time.time() > (start_time+CALC_EVERY)):
-                self._fps = round(float(self._count) /
-                                  (time.time() - start_time), 1)
+                fps = round(float(self._count) /
+                            (time.time() - start_time), 1)
 
                 # reset
                 self._count = 0
