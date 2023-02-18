@@ -24,8 +24,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         # private props
         self._img_buffer_queue: Queue = Queue(maxsize=5)
 
-        self._p = Process(target=img_generator, name="ImageServerSimulatedProducerProcess", args=(
-            self._img_buffer_queue,))
+        self._p = Process(target=img_aquisition, name="ImageServerSimulatedAquisitionProcess", args=(
+            self._img_buffer_queue,), daemon=True)
 
     def start(self):
         """To start the FrameServer"""
@@ -37,7 +37,9 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         """To stop the FrameServer"""
 
         self._p.terminate()
-        self._p.join()
+        self._p.join(1)
+        self._p.close()
+
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
@@ -92,7 +94,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
     """
 
 
-def img_generator(queue):
+def img_aquisition(queue):
     counter = 0
     fps = 0
     fps_calc_every = 100
