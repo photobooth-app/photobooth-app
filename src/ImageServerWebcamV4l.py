@@ -1,17 +1,15 @@
 import ImageServerAbstract
 import logging
+from multiprocessing import Process, Queue, Value
 import platform
 if platform.system() == "Windows":
     raise OSError("backend v4l2py not supported on windows platform")
 from v4l2py import Device
 import platform
-from StoppableThread import StoppableThread
 from pymitter import EventEmitter
-from threading import Condition
 from ConfigSettings import settings
 import json
-from threading import Condition
-
+import ctypes
 
 logger = logging.getLogger(__name__)
 
@@ -27,20 +25,12 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         # private props
         self._ee = ee
 
-        self._hq_buffer = None
-        self._lores_buffer = None
-        self._hq_condition = Condition()
-        self._lores_condition = Condition()
-        self._trigger_hq_capture = False
-        self._count = 0
-        self._fps = 0
+        self._img_buffer_queue: Queue = Queue(maxsize=5)
+        self._hq_img_buffer_queue: Queue = Queue(maxsize=5)
+        self._trigger_hq_capture: Value = Value(ctypes.c_bool, False)
 
-        if platform.system() == "Windows":
-            raise OSError("backend v4l not supported on windows platform")
-
-        # worker threads
-        self._generateImagesThread = StoppableThread(name="_generateImagesThread",
-                                                     target=self._GenerateImagesFun, daemon=True)
+        self._p = Process(target=img_aquisition, name="ImageServerWebcamV4lAquisitionProcess", args=(
+            self._img_buffer_queue, self._hq_img_buffer_queue, self._trigger_hq_capture), daemon=True)
 
         self._onPreviewMode()
 
@@ -48,7 +38,7 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         # start camera
 
-        self._generateImagesThread.start()
+        self._p.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -57,26 +47,30 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
 
-        self._generateImagesThread.stop()
-
-        self._generateImagesThread.join(1)
+        self._p.terminate()
+        self._p.join(1)
+        self._p.close()
 
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        with self._hq_condition:
-            while True:
-                # TODO: timout to make it continue and do not block threads completely
-                if not self._hq_condition.wait(5):
-                    raise IOError("timeout receiving frames")
+        self._ee.emit("frameserver/onCapture")
 
-                return self._hq_buffer
+        # get img off the producing queue
+        img = self._hq_img_buffer_queue.get(timeout=5)
+
+        self._ee.emit("frameserver/onCaptureFinished")
+
+        # return to previewmode
+        self._onPreviewMode()
+
+        return img
 
     def gen_stream(self):
         skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
 
-        while not self._generateImagesThread.stopped():
+        while True:
             buffer = self._wait_for_lores_image()
 
             if (skip_counter <= 1):
@@ -87,7 +81,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
                 skip_counter -= 1
 
     def trigger_hq_capture(self):
-        self._trigger_hq_capture = True
+        self._trigger_hq_capture.value = True
+        self._onCaptureMode()
 
     """
     INTERNAL FUNCTIONS
@@ -99,13 +94,7 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._lores_condition:
-            while True:
-                # TODO: timout to make it continue and do not block threads completely
-                if not self._lores_condition.wait(5):
-                    raise IOError("timeout receiving frames")
-
-                return self._lores_buffer
+        return self._img_buffer_queue.get(timeout=5)
 
     def _onCaptureMode(self):
         logger.debug(
@@ -126,47 +115,29 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
     INTERNAL IMAGE GENERATOR
     """
 
-    def _GenerateImagesFun(self):
 
-        while not self._generateImagesThread.stopped():  # repeat until stopped
-            if self._trigger_hq_capture == True:
-                # ensure cam is in capture quality mode even if there was no countdown triggered beforehand
-                # usually there is a countdown, but this is to be safe
-                logger.warning(
-                    f"force switchmode to capture config right before taking picture (no countdown?!)")
-                self._onCaptureMode()
+def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture):
 
-            with Device.from_id(settings.backends.v4l_device_index) as cam:
-                logger.info(
-                    f"webcam devices index {settings.backends.v4l_device_index} opened")
-                try:
-                    cam.video_capture.set_format(
-                        settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')
-                except Exception as e:
-                    logger.exception(e)
+    # init
 
-                for frame in cam:
+    while True:
+        with Device.from_id(settings.backends.v4l_device_index) as cam:
+            logger.info(
+                f"webcam devices index {settings.backends.v4l_device_index} opened")
+            try:
+                cam.video_capture.set_format(
+                    settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')
+            except Exception as e:
+                logger.exception(e)
 
-                    if not self._trigger_hq_capture:
+            for jpeg_buffer in cam:
+                if _trigger_hq_capture.value == True:
+                    # only capture one pic and return to lores streaming afterwards
+                    _trigger_hq_capture.value = False
 
-                        with self._lores_condition:
-                            self._lores_buffer = frame
-                            self._lores_condition.notify_all()
-                    else:
-                        # only capture one pic and return to lores streaming afterwards
-                        self._trigger_hq_capture = False
+                    # capture hq picture
+                    _hq_img_buffer_queue.put(jpeg_buffer)
 
-                        self._ee.emit("frameserver/onCapture")
-
-                        # capture hq picture
-
-                        with self._hq_condition:
-                            self._hq_buffer = frame
-                            self._hq_condition.notify_all()
-
-                        self._ee.emit("frameserver/onCaptureFinished")
-
-                        # switch back to preview mode
-                        self._onPreviewMode()
-
-                    self._count += 1
+                else:
+                    # put jpeg on queue until full. If full this function blocks until queue empty
+                    _img_buffer_queue.put(jpeg_buffer)
