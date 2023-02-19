@@ -143,7 +143,7 @@ def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture)
 
     # activate preview mode on init
     _video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    # self._video.set(cv2.CAP_PROP_FPS, 30.0)
+    _video.set(cv2.CAP_PROP_FPS, 30.0)
     _video.set(cv2.CAP_PROP_FRAME_WIDTH,
                settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
     _video.set(cv2.CAP_PROP_FRAME_HEIGHT,
