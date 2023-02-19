@@ -231,7 +231,7 @@ def focusThread(imageServerAddonCustomAutofocus: ImageServerPicam2AddonCustomAut
 def set_focus_position(position):
     value = int(position)
     try:
-        focuser = settings.focuser.focuser_backend
+        focuser = settings.focuser.focuser_backend.value
         if focuser == "arducam_imx477":
             arducam_imx477_focuser(value)
         elif focuser == "arducam_imx519":

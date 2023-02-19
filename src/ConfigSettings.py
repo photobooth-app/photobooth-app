@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 CONFIG_FILENAME = "./config/config.json"
 
 
+class EnumDebugLevel(str, Enum):
+    DEBUG = 'DEBUG'
+    INFO = 'INFO'
+    WARNING = 'WARNING'
+    ERROR = 'ERROR'
+
+
 class GroupCommon(BaseModel):
     '''Common settings for photobooth.'''
     CAPTURE_CAM_RESOLUTION_WIDTH:           int = Field(
@@ -40,7 +47,7 @@ class GroupCommon(BaseModel):
     THUMBNAIL_STILL_WIDTH:        int = Field(
         default=400, ge=100, le=1000, description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio")
 
-    DEBUG_LEVEL: str = "DEBUG"
+    DEBUG_LEVEL: EnumDebugLevel = EnumDebugLevel.DEBUG
 
     LIVEPREVIEW_FRAMERATE: int = Field(
         default=15, ge=5, le=30, description="Reduce the framerate to save cpu/gpu on device displaying the live preview")
