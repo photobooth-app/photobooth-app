@@ -60,9 +60,16 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         return img
 
     def gen_stream(self):
+        lastTime = time.time_ns()
         while True:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + self._wait_for_lores_image() + b'\r\n\r\n')
+            buffer = self._wait_for_lores_image()
+
+            nowTime = time.time_ns()
+            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
+                lastTime = nowTime
+
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
         self._onCaptureMode()

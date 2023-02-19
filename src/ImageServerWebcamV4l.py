@@ -1,3 +1,4 @@
+import time
 import ImageServerAbstract
 import logging
 from multiprocessing import Process, Queue, Value
@@ -68,17 +69,16 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         return img
 
     def gen_stream(self):
-        skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
-
+        lastTime = time.time_ns()
         while True:
             buffer = self._wait_for_lores_image()
 
-            if (skip_counter <= 1):
+            nowTime = time.time_ns()
+            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
+                lastTime = nowTime
+
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
-                skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
-            else:
-                skip_counter -= 1
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture.value = True
