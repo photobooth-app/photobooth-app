@@ -120,7 +120,7 @@ def statsThread(imageServer: ImageServerAbstract, imageServerAddonCustomAutofocu
 
     while not imageServerAddonCustomAutofocus.isFinish():
         try:
-            frame = imageServer._wait_for_autofocus_frame()
+            frame = imageServer._wait_for_lores_frame()
         except NotImplementedError:
             logger.error(
                 f"imageserver backend not to deliver lores frames for autofocus - please disable autofocus")

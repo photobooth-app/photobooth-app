@@ -75,7 +75,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         """for other threads to receive a lores JPEG image"""
         return self._img_buffer_queue.get(timeout=1)
 
-    def _wait_for_autofocus_frame(self):
+    def _wait_for_lores_frame(self):
         """autofocus not supported by this backend"""
         raise NotImplementedError()
 

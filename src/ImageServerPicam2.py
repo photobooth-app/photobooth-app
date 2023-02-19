@@ -72,9 +72,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        # apply pre_callback overlay. whether there is actual content is decided in the callback itself.
-        self._picam2.pre_callback = self._pre_callback_overlay
-
         self.setAeExposureMode(
             settings.backends.picam2_AE_EXPOSURE_MODE)
 
@@ -116,17 +113,18 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 return buffer
 
     def gen_stream(self):
-        skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
+        lastTime = time.time_ns()
 
         while not self._generateImagesThread.stopped():
-            buffer = self._wait_for_lores_image()
+            array = self._wait_for_lores_frame()
 
-            if (skip_counter <= 1):
+            nowTime = time.time_ns()
+            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
+                lastTime = nowTime
+                buffer = self._getJpegByLoresFrame(
+                    frame=array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
-                skip_counter = settings.common.PREVIEW_PREVIEW_FRAMERATE_DIVIDER
-            else:
-                skip_counter -= 1
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
@@ -146,7 +144,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                     frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 return buffer
 
-    def _wait_for_autofocus_frame(self):
+    def _wait_for_lores_frame(self):
         """for other threads to receive a lores frame"""
         with self._lores_condition:
             while True:
@@ -190,47 +188,6 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
 
         logger.info(
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
-
-    def _pre_callback_overlay(self, request):
-        if settings.debugging.picam2_stats_overlay:
-            try:
-                overlay1 = f""
-                overlay2 = f"{self.fps} fps"
-                overlay3 = f"Exposure: {round(self.metadata['ExposureTime']/1000,1)}ms, 1/{int(1/(self.metadata['ExposureTime']/1000/1000))}s, resulting max fps: {round(1/self.metadata['ExposureTime']*1000*1000,1)}"
-                overlay4 = f"Lux: {round(self.metadata['Lux'],1)}"
-                overlay5 = f"Ae locked: {self.metadata['AeLocked']}, analogue gain {round(self.metadata['AnalogueGain'],1)}"
-                overlay6 = f"Colour Temp: {self.metadata['ColourTemperature']}"
-                overlay7 = f""
-                colour = (210, 210, 210)
-                origin1 = (30, 200)
-                origin2 = (30, 230)
-                origin3 = (30, 260)
-                origin4 = (30, 290)
-                origin5 = (30, 320)
-                origin6 = (30, 350)
-                origin7 = (30, 380)
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                scale = 1
-                thickness = 2
-
-                with MappedArray(request, "lores") as m:
-                    cv2.putText(m.array, overlay1, origin1,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay2, origin2,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay3, origin3,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay4, origin4,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay5, origin5,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay6, origin6,
-                                font, scale, colour, thickness)
-                    cv2.putText(m.array, overlay7, origin7,
-                                font, scale, colour, thickness)
-            except:
-                # fail silent if metadata still None (TODO: change None to Metadata contructor on init in Frameserver)
-                pass
 
     """
     INTERNAL IMAGE GENERATOR

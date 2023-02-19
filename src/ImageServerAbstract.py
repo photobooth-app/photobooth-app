@@ -68,7 +68,7 @@ class ImageServerAbstract(ABC):
     """
 
     @abstractmethod
-    def _wait_for_autofocus_frame(self):
+    def _wait_for_lores_frame(self):
         """
         function blocks until frame is available for autofocus usually
         """

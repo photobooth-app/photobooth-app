@@ -42,7 +42,9 @@ class GroupCommon(BaseModel):
 
     DEBUG_LEVEL: str = "DEBUG"
 
-    PREVIEW_PREVIEW_FRAMERATE_DIVIDER: int = Field(default=1, ge=1, le=5)
+    LIVEPREVIEW_FRAMERATE: int = Field(
+        default=15, ge=5, le=30, description="Reduce the framerate to save cpu/gpu on device displaying the live preview")
+
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}", description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename")
     # flip camera source horizontal/vertical
