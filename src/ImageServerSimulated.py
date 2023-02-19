@@ -102,17 +102,20 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
 
 def img_aquisition(queue):
-    counter = 0
-    fps = 0
-    fps_calc_every = 100
+
+    target_fps = 30
     lastTime = time.time_ns()
+
     while True:
 
-        counter += 1
-        if (counter % 100) == 0:
-            nowTime = time.time_ns()
-            fps = round(fps_calc_every/(nowTime-lastTime)*1000**3, 1)
-            lastTime = nowTime
+        nowTime = time.time_ns()
+        if ((nowTime-lastTime)/1000**3 <= (1/target_fps)):
+            # limit max framerate to every ~2ms
+            time.sleep(1/1000.)
+            continue
+
+        fps = round(1/(nowTime-lastTime)*1000**3, 1)
+        lastTime = nowTime
 
         # create PIL image
         img = Image.new(
@@ -131,7 +134,7 @@ def img_aquisition(queue):
                 fill=(200, 200, 200),
                 font=font)
         I1.text((100, 140),
-                f"img no counter: {counter}",
+                f"img time: {nowTime}",
                 fill=(200, 200, 200),
                 font=font)
         I1.text((100, 180),
@@ -153,5 +156,3 @@ def img_aquisition(queue):
 
         # put jpeg on queue until full. If full this function blocks until queue empty
         queue.put(jpeg_buffer.getvalue())
-
-        time.sleep(33/1000.)
