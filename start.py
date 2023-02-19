@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import subprocess
 from src.InformationService import InformationService
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exception_handlers import (
@@ -172,12 +173,14 @@ async def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
 
-    status = os.system(f'systemctl is-active --quiet {SERVICE_NAME}')
     # will return 0 for active else inactive.
+    result = subprocess.run(
+        ['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME])
+    logger.info(result)
 
-    if (status == 0):
+    if (result.returncode == 0):
         logger.info(f"service {SERVICE_NAME} currently active, restarting")
-        os.system(f"systemctl restart {SERVICE_NAME}")
+        os.system(f"systemctl --user restart {SERVICE_NAME}")
     else:
         logger.warning(
             f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
@@ -216,11 +219,11 @@ async def api_cmd(action, param):
     elif (action == "server" and param == "shutdown"):
         os.system("shutdown now")
     elif (action == "service" and param == "restart"):
-        os.system("systemctl restart imageserver")
+        os.system("systemctl --user restart imageserver")
     elif (action == "service" and param == "stop"):
-        os.system("systemctl stop imageserver")
+        os.system("systemctl --user stop imageserver")
     elif (action == "service" and param == "start"):
-        os.system("systemctl start imageserver")
+        os.system("systemctl --user start imageserver")
 
     else:
         raise HTTPException(
