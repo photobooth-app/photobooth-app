@@ -191,6 +191,8 @@ class ConfigSettings(BaseSettings):
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
 
+    _shared_memory_buffer_size: int = PrivateAttr(default=15*1024**2)
+
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     personalize: GroupPersonalize = GroupPersonalize()

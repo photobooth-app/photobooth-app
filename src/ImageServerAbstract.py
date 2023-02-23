@@ -83,3 +83,27 @@ class ImageServerAbstract(ABC):
     def _onPreviewMode(self):
         """called externally via events and used to change to a preview mode if necessary"""
         pass
+
+
+"""
+INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.
+"""
+
+
+def decompileBuffer(shm: memoryview):
+    # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
+    # means for this app in consequence: here is the place to make a copy of the image for further processing
+    # ATTENTION2: this function needs to be called with lock aquired
+    length = int.from_bytes(shm.buf[0:4], 'big')
+    ret: memoryview = (shm.buf[4:length+4])
+    return (ret.tobytes())
+
+
+def compileBuffer(shm, jpeg_buffer):
+    # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
+    # means for this app in consequence: here is the place to make a copy of the image for further processing
+    # ATTENTION2: this function needs to be called with lock aquired
+    length: int = len(jpeg_buffer)
+    length_bytes = length.to_bytes(4, 'big')
+    shm.buf[0:4] = (length_bytes)
+    shm.buf[4:length+4] = (jpeg_buffer)
