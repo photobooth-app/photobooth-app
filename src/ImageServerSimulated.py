@@ -75,10 +75,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
             if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
                 lastTime = nowTime
 
-                start = time.time_ns()
                 buffer = self._wait_for_lores_image()
-                print(
-                    f"delta_ms={round((time.time_ns()-start)/1000**2, 1)} lores img ready")
 
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
@@ -93,11 +90,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
 
-        start = time.time_ns()
         with self._condition_img_buffer_ready:
             self._condition_img_buffer_ready.wait(5)
-            print(
-                f"delta_ms={round((time.time_ns()-start)/1000**2, 1)} condition ready")
 
         with self._img_buffer_lock:
 
