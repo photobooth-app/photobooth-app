@@ -363,7 +363,7 @@ if __name__ == '__main__':
     try:
         # log_level="trace", default info
         config = uvicorn.Config(app=app, host="0.0.0.0",
-                                port=settings.common.webserver_port, log_level="info")
+                                port=settings.common.webserver_port, log_level="info", workers=5)
         server = uvicorn.Server(config)
 
         # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
