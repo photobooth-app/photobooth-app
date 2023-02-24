@@ -71,11 +71,14 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
     def gen_stream(self):
         lastTime = time.time_ns()
         while True:
-            buffer = self._wait_for_lores_image()
-
             nowTime = time.time_ns()
             if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
                 lastTime = nowTime
+
+                start = time.time_ns()
+                buffer = self._wait_for_lores_image()
+                print(
+                    f"delta_ms={round((time.time_ns()-start)/1000**2, 1)} lores img ready")
 
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
@@ -89,12 +92,19 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+
+        start = time.time_ns()
         with self._condition_img_buffer_ready:
             self._condition_img_buffer_ready.wait(5)
+            print(
+                f"delta_ms={round((time.time_ns()-start)/1000**2, 1)} condition ready")
 
-            with self._img_buffer_lock:
-                return ImageServerAbstract.decompileBuffer(
-                    self._img_buffer_shm)
+        with self._img_buffer_lock:
+
+            img = ImageServerAbstract.decompileBuffer(
+                self._img_buffer_shm)
+
+        return img
 
     def _wait_for_lores_frame(self):
         """autofocus not supported by this backend"""
