@@ -191,6 +191,8 @@ class ConfigSettings(BaseSettings):
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
 
+    # size of shared memory to transfer images between backend and app. needs to be as large as largest image to be transferred
+    # 15MB should be sufficient, might change in future
     _shared_memory_buffer_size: int = PrivateAttr(default=15*1024**2)
 
     # groups -> setting items

@@ -1,3 +1,5 @@
+import platform
+import socket
 import psutil
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
@@ -141,25 +143,40 @@ def img_aquisition(shm_buffer_name,
 
         # add text
         I1 = ImageDraw.Draw(img)
-        font = ImageFont.truetype(
+        fontDefault = ImageFont.truetype(
             font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
             size=30)
+        fontSmall = ImageFont.truetype(
+            font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
+            size=15)
         I1.text((100, 100),
                 f"simulated image backend",
                 fill=(200, 200, 200),
-                font=font)
+                font=fontDefault)
         I1.text((100, 140),
                 f"img time: {nowTime}",
                 fill=(200, 200, 200),
-                font=font)
+                font=fontDefault)
         I1.text((100, 180),
                 f"framerate: {fps}",
                 fill=(200, 200, 200),
-                font=font)
+                font=fontDefault)
         I1.text((100, 220),
                 f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
                 fill=(200, 200, 200),
-                font=font)
+                font=fontDefault)
+        I1.text((100, 260),
+                f"you see this, so installation was successful :)",
+                fill=(200, 200, 200),
+                font=fontSmall)
+        I1.text((100, 280),
+                f"visit http://{platform.node()}:{settings.common.webserver_port} and configure backend",
+                fill=(200, 200, 200),
+                font=fontSmall)
+        I1.text((100, 300),
+                f"to use a camera instead this simulated backend",
+                fill=(200, 200, 200),
+                font=fontSmall)
 
         # create jpeg
         jpeg_buffer = BytesIO()
