@@ -68,7 +68,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 @app.get("/eventstream")
-async def subscribe(request: Request):
+def subscribe(request: Request):
     # principle with queues like described here:
     # https://maxhalford.github.io/blog/flask-sse-no-deps/
     # and https://github.com/sysid/sse-starlette
@@ -132,6 +132,7 @@ async def subscribe(request: Request):
     ee.emit("publishSSE/initial")
 
     return EventSourceResponse(event_iterator(), ping=1)
+
 
 """
 @app.get("/debug/health")
