@@ -105,6 +105,7 @@ class EnumImageBackendsMain(str, Enum):
 
 
 class EnumImageBackendsLive(str, Enum):
+    null = None
     ImageServerSimulated = 'ImageServerSimulated'
     ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
     ImageServerWebcamV4l = 'ImageServerWebcamV4l'
@@ -124,7 +125,7 @@ class GroupBackends(BaseModel):
 
     cv2_device_index:                       int = 2
     v4l_device_index:                       int = 2
-    picam2_stats_overlay:                   bool = False
+
     picam2_AE_EXPOSURE_MODE: int = Field(
         default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
