@@ -358,9 +358,6 @@ if __name__ == '__main__':
     model.start()
     imageServers.start()
 
-    # log all registered listener
-    logger.debug(ee.listeners_all())
-
     ins = InformationService(ee)
 
     # serve files forever
