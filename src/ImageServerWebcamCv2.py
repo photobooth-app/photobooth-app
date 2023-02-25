@@ -73,7 +73,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
 
         # get img off the producing queue
         with self._condition_img_buffer_hires_ready:
-            self._condition_img_buffer_hires_ready.wait(5)
+            self._condition_img_buffer_hires_ready.wait(2)
 
             with self._img_buffer_hires_lock:
                 img = ImageServerAbstract.decompileBuffer(
@@ -113,7 +113,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._condition_img_buffer_lores_ready:
-            self._condition_img_buffer_lores_ready.wait(5)
+            self._condition_img_buffer_lores_ready.wait(2)
             with self._img_buffer_lores_lock:
                 img = ImageServerAbstract.decompileBuffer(
                     self._img_buffer_lores_shm)
