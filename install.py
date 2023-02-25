@@ -24,12 +24,12 @@ else:
     sys.path.append(INSTALL_DIR)
 
 PIP_PACKAGES_COMMON = [
-    "fastapi==0.89.1",
+    "fastapi==0.92.0",
     "googlemaps==4.10.0",
     # "keyboard==0.13.5",
     # need to avoid root for keyboard access, https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
     "git+https://github.com/boppreh/keyboard.git#egg=keyboard",
-    "opencv_python==4.7.0.68",
+    "opencv_python==4.7.0.72",
     "piexif==1.1.3",
     "Pillow==9.4.0",
     "psutil==5.9.4",
@@ -41,7 +41,7 @@ PIP_PACKAGES_COMMON = [
     "sse_starlette==1.2.1",
     "transitions==0.9.0",
     "uvicorn==0.20.0",
-    "pydantic[dotenv]",
+    "python-dotenv==1.0.0",
     "pyserial==3.5",
     "jsonref==1.1.0"
 ]
