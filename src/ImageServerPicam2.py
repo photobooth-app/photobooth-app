@@ -193,7 +193,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
             f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
 
     def _pre_callback_overlay(self, request):
-        if settings.debugging.picam2_stats_overlay:
+        if settings.backends.picam2_stats_overlay:
             try:
                 overlay1 = f""
                 overlay2 = f"{self.fps} fps"
