@@ -52,9 +52,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        """To stop the FrameServer, first stop any client threads (that might be
-        blocked in wait_for_frame), then call this stop method. Don't stop the
-        Picamera2 object until the FrameServer has been stopped."""
+        self._img_buffer_shm.close()
+        self._img_buffer_shm.unlink()
 
         self._p.terminate()
         self._p.join(1)

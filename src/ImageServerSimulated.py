@@ -39,7 +39,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
     def stop(self):
         """To stop the FrameServer"""
-
+        self._img_buffer_shm.close()
+        self._img_buffer_shm.unlink()
         self._p.terminate()
         self._p.join(1)
         self._p.close()
