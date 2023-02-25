@@ -123,7 +123,7 @@ def img_aquisition(shm_buffer_name,
                    _condition_img_buffer_ready: Condition,
                    _img_buffer_lock: Lock):
 
-    target_fps = 30
+    target_fps = 15
     lastTime = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
@@ -132,7 +132,7 @@ def img_aquisition(shm_buffer_name,
         nowTime = time.time_ns()
         if ((nowTime-lastTime)/1000**3 <= (1/target_fps)):
             # limit max framerate to every ~2ms
-            time.sleep(1/1000.)
+            time.sleep(2/1000.)
             continue
 
         fps = round(1/(nowTime-lastTime)*1000**3, 1)
