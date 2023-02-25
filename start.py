@@ -175,18 +175,7 @@ def api_get_config_current():
 def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
-
-    # will return 0 for active else inactive.
-    result = subprocess.run(
-        ['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME])
-    logger.info(result)
-
-    if (result.returncode == 0):
-        logger.info(f"service {SERVICE_NAME} currently active, restarting")
-        os.system(f"systemctl --user restart {SERVICE_NAME}")
-    else:
-        logger.warning(
-            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
+    util_systemd_control("restart")
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
@@ -222,17 +211,39 @@ def api_cmd(action, param):
     elif (action == "server" and param == "shutdown"):
         os.system("shutdown now")
     elif (action == "service" and param == "restart"):
-        os.system("systemctl --user restart imageserver")
+        util_systemd_control("restart")
     elif (action == "service" and param == "stop"):
-        os.system("systemctl --user stop imageserver")
+        util_systemd_control("stop")
     elif (action == "service" and param == "start"):
-        os.system("systemctl --user start imageserver")
+        util_systemd_control("start")
 
     else:
         raise HTTPException(
             500, f"invalid request action={action}, param={param}")
 
     return f"action={action}, param={param}"
+
+
+def util_systemd_control(state):
+    # will return 0 for active else inactive.
+    try:
+        subprocess.run(
+            args=['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME],
+            timeout=10,
+            check=True)
+    except FileNotFoundError as e:
+        logger.info(
+            f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
+    except subprocess.CalledProcessError as e:
+        # non zero returncode
+        logger.warning(
+            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"subprocess timeout {e}")
+    else:
+        # no error, service restart ok
+        logger.info(f"service {SERVICE_NAME} currently active, restarting")
+        os.system(f"systemctl --user {state} {SERVICE_NAME}")
 
 
 """
