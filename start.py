@@ -136,7 +136,7 @@ def subscribe(request: Request):
 
 """
 @app.get("/debug/health")
-async def api_debug_health():
+def api_debug_health():
     la = LoadAverage(
         minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
     cpu_temperature = round(CPUTemperature().temperature, 1)
@@ -145,7 +145,7 @@ async def api_debug_health():
 
 
 @app.get("/debug/threads")
-async def api_debug_threads():
+def api_debug_threads():
 
     list = [item.getName() for item in threading.enumerate()]
     logger.debug(f"active threads: {list}")
@@ -153,24 +153,24 @@ async def api_debug_threads():
 
 
 @app.get("/config/schema")
-async def api_get_config_schema(type: str = "default"):
+def api_get_config_schema(type: str = "default"):
     return (settings.getSchema(type=type))
 
 
 @app.get("/config/currentActive")
-async def api_get_config_current():
+def api_get_config_current():
     # returns currently cached and active settings
     return (settings.dict())
 
 
 @app.get("/config/current")
-async def api_get_config_current():
+def api_get_config_current():
     # read settings from drive and return
     return (ConfigSettings().dict())
 
 
 @app.post("/config/current")
-async def api_post_config_current(updatedSettings: ConfigSettings):
+def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
 
@@ -208,7 +208,7 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
 
 
 @app.get("/cmd/{action}/{param}")
-async def api_cmd(action, param):
+def api_cmd(action, param):
     logger.info(f"cmd api requested action={action}, param={param}")
 
     if (action == "config" and param == "reset"):
@@ -302,8 +302,9 @@ app.mount('/data', StaticFiles(directory='data'), name="data")
 
 
 @app.get("/")
-async def read_index():
+def read_index():
     return FileResponse('web/index.html')
+
 
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
