@@ -29,7 +29,7 @@ from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
-from queue import Queue
+from asyncio import Queue, QueueFull
 
 # create early instances
 # event system
@@ -76,35 +76,41 @@ def subscribe(request: Request):
     # ... this code example seems to be cleaner https://github.com/sysid/sse-starlette/blob/master/examples/custom_generator.py
 
     # local message queue
-    queue = Queue()  # TODO: limit max queue size in case client doesnt catch up so fast?
+    # limit max queue size in case client doesnt catch up so fast. if there are more than 100 messages in the queue
+    # it can be assumed that the connection is broken or something.
+    queue = Queue(100)
 
     def add_subscriptions():
-        logger.debug(f"add subscription for publishSSE")
+        logger.debug(f"SSE subscription added, client {request.client}")
         ee.on("publishSSE", addToQueue)
 
     def remove_subscriptions():
-        logger.debug(f"remove subscriptions for publishSSE")
         ee.off("publishSSE", addToQueue)
+        logger.debug(f"SSE subscription removed, client {request.client}")
 
     def addToQueue(sse_event, sse_data):
-        queue.put_nowait(ServerSentEvent(
-            id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+        try:
+            queue.put_nowait(ServerSentEvent(
+                id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+        except QueueFull:
+            # actually never run, because queue size is infinite currently
+            remove_subscriptions()
+            logger.error(
+                f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
+            raise HTTPException(
+                status_code=500, detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
 
     async def event_iterator():
         try:
             while True:
                 if await request.is_disconnected():
-                    logger.info(f"request.is_disconnected() true")
+                    remove_subscriptions()
+                    logger.info(
+                        f"client request disconnect, client {request.client}")
                     break
-                # if request_stop:
-                #    logger.info(f"event_iterator stop requested")
-                #    break
 
-                # throttle the iterator a little down using asyncio to not block the webserver thread but lower cpu usage.
-                await asyncio.sleep(0.01)
                 try:
-                    # try to get a event/message off the queue
-                    event = queue.get_nowait()
+                    event = await queue.get()
                 except:
                     continue
 
@@ -112,10 +118,9 @@ def subscribe(request: Request):
                 yield event
 
         except asyncio.CancelledError as e:
-            logger.info(
-                f"Disconnected from client (via refresh/close) {request.client}")
-            # Do any other cleanup, if any
             remove_subscriptions()
+            logger.info(
+                f"Disconnected from client {request.client}")
 
             raise e
 
