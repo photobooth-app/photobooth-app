@@ -68,16 +68,13 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 @app.get("/eventstream")
-def subscribe(request: Request):
-    # principle with queues like described here:
-    # https://maxhalford.github.io/blog/flask-sse-no-deps/
-    # and https://github.com/sysid/sse-starlette
-    # and https://github.com/encode/starlette/issues/20#issuecomment-587410233
-    # ... this code example seems to be cleaner https://github.com/sysid/sse-starlette/blob/master/examples/custom_generator.py
-
+async def subscribe(request: Request):
     # local message queue
     # limit max queue size in case client doesnt catch up so fast. if there are more than 100 messages in the queue
     # it can be assumed that the connection is broken or something.
+    # Queue changed in python 3.10, for compatiblity subscribe is async since queue reuses the async thread
+    # that would not be avail if outer function of queue is sync. https://docs.python.org/3.11/library/asyncio-queue.html
+    # each client has it's own queue
     queue = Queue(100)
 
     def add_subscriptions():
@@ -134,7 +131,7 @@ def subscribe(request: Request):
                sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
-    ee.emit("publishSSE/initial")
+    await ee.emit_async("publishSSE/initial")
 
     return EventSourceResponse(event_iterator(), ping=1)
 
@@ -370,7 +367,7 @@ if __name__ == '__main__':
     try:
         # log_level="trace", default info
         config = uvicorn.Config(app=app, host="0.0.0.0",
-                                port=settings.common.webserver_port, log_level="info", workers=5)
+                                port=settings.common.webserver_port, log_level="info")
         server = uvicorn.Server(config)
 
         # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
