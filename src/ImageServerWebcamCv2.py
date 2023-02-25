@@ -1,7 +1,7 @@
 import time
 import cv2
 import ImageServerAbstract
-from multiprocessing import Process, Event, shared_memory, Condition
+from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
 from pymitter import EventEmitter
@@ -30,6 +30,8 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         self._event_hq_capture: Event = Event()
         self._condition_img_buffer_hires_ready = Condition()
         self._condition_img_buffer_lores_ready = Condition()
+        self._img_buffer_lores_lock = Lock()
+        self._img_buffer_hires_lock = Lock()
 
         self._p = Process(
             target=img_aquisition,
@@ -37,6 +39,8 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
             args=(
                 self._img_buffer_lores_shm.name,
                 self._img_buffer_hires_shm.name,
+                self._img_buffer_lores_lock,
+                self._img_buffer_hires_lock,
                 self._event_hq_capture,
                 self._condition_img_buffer_hires_ready,
                 self._condition_img_buffer_lores_ready
@@ -71,8 +75,9 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         with self._condition_img_buffer_hires_ready:
             self._condition_img_buffer_hires_ready.wait(5)
 
-            img = ImageServerAbstract.decompileBuffer(
-                self._img_buffer_hires_shm)
+            with self._img_buffer_hires_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_hires_shm)
 
         self._ee.emit("frameserver/onCaptureFinished")
 
@@ -109,8 +114,10 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         """for other threads to receive a lores JPEG image"""
         with self._condition_img_buffer_lores_ready:
             self._condition_img_buffer_lores_ready.wait(5)
-
-            return ImageServerAbstract.decompileBuffer(self._img_buffer_lores_shm)
+            with self._img_buffer_lores_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_lores_shm)
+            return img
 
     def _onCaptureMode(self):
         logger.debug(
@@ -136,6 +143,8 @@ INTERNAL IMAGE GENERATOR
 def img_aquisition(
         shm_buffer_lores_name,
         shm_buffer_hires_name,
+        _img_buffer_lores_lock,
+        _img_buffer_hires_lock,
         _event_hq_capture: Event,
         _condition_img_buffer_hires_ready: Condition,
         _condition_img_buffer_lores_ready: Condition):
@@ -197,7 +206,8 @@ def img_aquisition(
             jpeg_buffer = _turboJPEG.encode(
                 array, quality=settings.common.HIRES_STILL_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
-            ImageServerAbstract.compileBuffer(shm_hires, jpeg_buffer)
+            with _img_buffer_hires_lock:
+                ImageServerAbstract.compileBuffer(shm_hires, jpeg_buffer)
 
             with _condition_img_buffer_hires_ready:
                 # wait to be notified
@@ -207,7 +217,8 @@ def img_aquisition(
             jpeg_buffer = _turboJPEG.encode(
                 array, quality=settings.common.LIVEPREVIEW_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
-            ImageServerAbstract.compileBuffer(shm_lores, jpeg_buffer)
+            with _img_buffer_lores_lock:
+                ImageServerAbstract.compileBuffer(shm_lores, jpeg_buffer)
 
             with _condition_img_buffer_lores_ready:
                 # wait to be notified

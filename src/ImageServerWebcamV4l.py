@@ -1,4 +1,4 @@
-from multiprocessing import Process, Event, shared_memory, Condition
+from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import time
 import ImageServerAbstract
 import logging
@@ -29,9 +29,17 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         self._img_buffer_shm = shared_memory.SharedMemory(
             create=True, size=settings._shared_memory_buffer_size)
         self._condition_img_buffer_ready = Condition()
+        self._img_buffer_lock = Lock()
 
-        self._p = Process(target=img_aquisition, name="ImageServerWebcamV4lAquisitionProcess", args=(
-            self._img_buffer_shm.name, self._condition_img_buffer_ready), daemon=True)
+        self._p = Process(
+            target=img_aquisition,
+            name="ImageServerWebcamV4lAquisitionProcess",
+            args=(
+                self._img_buffer_shm.name,
+                self._condition_img_buffer_ready,
+                self._img_buffer_lock
+            ),
+            daemon=True)
 
         self._onPreviewMode()
 
@@ -62,8 +70,9 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         with self._condition_img_buffer_ready:
             self._condition_img_buffer_ready.wait(5)
 
-            img = ImageServerAbstract.decompileBuffer(
-                self._img_buffer_shm)
+            with self._img_buffer_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_shm)
 
         self._ee.emit("frameserver/onCaptureFinished")
 
@@ -100,8 +109,10 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         with self._condition_img_buffer_ready:
             self._condition_img_buffer_ready.wait(5)
 
-            return ImageServerAbstract.decompileBuffer(
-                self._img_buffer_shm)
+            with self._img_buffer_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_shm)
+            return img
 
     def _onCaptureMode(self):
         logger.debug(
@@ -124,7 +135,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
 
 
 def img_aquisition(shm_buffer_name,
-                   _condition_img_buffer_ready: Condition):
+                   _condition_img_buffer_ready: Condition,
+                   _img_buffer_lock: Lock):
 
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)
@@ -142,7 +154,8 @@ def img_aquisition(shm_buffer_name,
             time.sleep(0.1)
 
             # put jpeg on queue until full. If full this function blocks until queue empty
-            ImageServerAbstract.compileBuffer(shm, jpeg_buffer)
+            with _img_buffer_lock:
+                ImageServerAbstract.compileBuffer(shm, jpeg_buffer)
 
             with _condition_img_buffer_ready:
                 # wait to be notified
