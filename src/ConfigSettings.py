@@ -94,13 +94,20 @@ class GroupFocuser(BaseModel):
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
-class EnumImageServers(str, Enum):
+class EnumImageBackendsMain(str, Enum):
     ImageServerSimulated = 'ImageServerSimulated'
     ImageServerPicam2 = 'ImageServerPicam2'
     ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
     ImageServerWebcamV4l = 'ImageServerWebcamV4l'
-    ImageServerGphoto2 = 'ImageServerGphoto2'
-    ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
+    # Not yet finished backends:
+    # ImageServerGphoto2 = 'ImageServerGphoto2'
+    # ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
+
+
+class EnumImageBackendsLive(str, Enum):
+    ImageServerSimulated = 'ImageServerSimulated'
+    ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
+    ImageServerWebcamV4l = 'ImageServerWebcamV4l'
 
 
 class GroupBackends(BaseModel):
@@ -108,10 +115,10 @@ class GroupBackends(BaseModel):
     Choose backends for still images/high quality images captured on main backend.
     If the livepreview is enabled, the video is captured from live backend (if configured) or main backend.
     '''
-    MAIN_BACKEND: EnumImageServers = Field(title="Main Backend",
-                                           default=EnumImageServers.ImageServerSimulated, description="Choose a backend to use for high quality still captures")
-    LIVE_BACKEND: EnumImageServers = Field(title="Live Backend",
-                                           default=None, description="Choose secondary backend used for live streaming only")
+    MAIN_BACKEND: EnumImageBackendsMain = Field(title="Main Backend",
+                                                default=EnumImageBackendsMain.ImageServerSimulated, description="Choose a backend to use for high quality still captures. Also used for livepreview if backend is capable of.")
+    LIVE_BACKEND: EnumImageBackendsLive = Field(title="Live Backend",
+                                                default=None, description="Choose secondary backend used for live streaming only if main backend does not support livepreview (useful to use a webcam if DSLR camera gives no livestream)")
     LIVEPREVIEW_ENABLED:               bool = Field(
         default=True, description="Enable livestream (if possible)")
 
