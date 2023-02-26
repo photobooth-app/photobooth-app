@@ -69,7 +69,30 @@ SYSTEM_PACKAGES_RPI = [
     "python3-picamera2",
 ]
 
-STARTER_CONFIGURATIONS = [
+
+STARTER_CONFIGURATIONS_COMMON = [
+    ("windows-and-linux_webcam_opencv2",
+     """
+backends__MAIN_BACKEND="ImageServerWebcamCv2"
+backends__cv2_device_index=##cv2_device_index##
+"""
+     ),
+]
+
+STARTER_CONFIGURATIONS_LINUX = [
+    ("linux_webcam_v4l",
+     """
+backends__MAIN_BACKEND="ImageServerWebcamV4l"
+backends__v4l_device_index=##v4l_device_index##
+"""
+     ),
+]
+
+STARTER_CONFIGURATIONS_WIN = [
+    # none yet
+]
+
+STARTER_CONFIGURATIONS_RPI = [
     ("rpi_picam2_cameramodule3_native_libcamera",
      """
 backends__MAIN_BACKEND="ImageServerPicam2"
@@ -383,6 +406,11 @@ if _is_linux():
 # install booth software
 if not SUPPRESS_INSTALLATION:
     if query_yes_no("Install booth software to ./imageserver/ or update if exists?", "no"):
+        try:
+            os.mkdir("./imageserver/")
+        except FileExistsError:
+            pass  # silent ignore if already exists
+
         if call(["git", "branch"], cwd="./imageserver/", stderr=STDOUT, stdout=open(os.devnull, 'w')) != 0:
             # subdir has no git repo yet - considered as new installation
             print("Installing qBooth to ./imageserver/")
@@ -418,8 +446,6 @@ if query_yes_no("Install booth service?", "no"):
                                os.path.normpath(f"{Path.cwd()}/{INSTALL_DIR}")))
 
         _syscall("systemctl --user enable imageserver.service")
-        # _syscall("systemctl --user start imageserver.service")
-        # _syscall("systemctl --user status imageserver.service")
 
     if _is_windows():
         print_red(
@@ -463,15 +489,17 @@ if _is_linux():
 print_spacer("list available serial ports (use for WLED integration)")
 _syscall("python -m serial.tools.list_ports")
 
+ind_cv2 = []
+ind_v4l = []
 if _is_linux() or _is_windows():
     print_spacer("checking for available opencv2 cameras")
     # suppress warnings during index probing
     os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
     from scripts.available_webcams_cv2 import availableCameraIndexes
-    ind = availableCameraIndexes()
-    if (ind):
+    ind_cv2 = availableCameraIndexes()
+    if (ind_cv2):
         print_green("found cameras, use one of the following device numbers:")
-        print(ind)
+        print(ind_cv2)
     else:
         print_red("no webcamera found")
 
@@ -479,31 +507,48 @@ if _is_linux() or _is_windows():
 if _is_linux():
     print_spacer("checking for available v4l cameras")
     from scripts.available_webcams_v4l import availableCameraIndexes
-    ind = availableCameraIndexes()
-    if (ind):
+    ind_v4l = availableCameraIndexes()
+    if (ind_v4l):
         print_green("found cameras, use one of the following device numbers:")
-        print(ind)
+        print(ind_v4l)
     else:
         print_red("no webcamera found")
 
 print_spacer("Apply starter configuration for popular hardware choices?")
 print("Choose from following list:")
-choices = (list(zip(*STARTER_CONFIGURATIONS))[0])
+availableConfigurations = STARTER_CONFIGURATIONS_COMMON
+if _is_rpi():
+    availableConfigurations.extend(STARTER_CONFIGURATIONS_RPI)
+if _is_linux():
+    availableConfigurations.extend(STARTER_CONFIGURATIONS_LINUX)
+if _is_windows():
+    availableConfigurations.extend(STARTER_CONFIGURATIONS_WIN)
+choices = (list(zip(*availableConfigurations))[0])
 for idx, x in enumerate(choices):
     print(idx, x)
-
 chosen_starter_configuration_str = input(
     "Choose number of starter configuration [leave empty to skip]: ")
 if (chosen_starter_configuration_str):
     chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
+    chosen_starter_configuration_name = availableConfigurations[
+        chosen_starter_configuration_idx][0]
+    chosen_starter_configuration_settings = availableConfigurations[
+        chosen_starter_configuration_idx][1]
+
+    cv2_device_index = ind_cv2[0] if ind_cv2 else 0
+    v4l_device_index = ind_v4l[0] if ind_v4l else 0
+    chosen_starter_configuration_settings = chosen_starter_configuration_settings.replace(
+        '##cv2_device_index##', str(cv2_device_index))
+    chosen_starter_configuration_settings = chosen_starter_configuration_settings.replace(
+        '##v4l_device_index##', str(v4l_device_index))
 
     print_blue(
-        f"chosen starter configuration number {chosen_starter_configuration_idx}: {STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][0]}")
+        f"chosen starter configuration number {chosen_starter_configuration_idx}: {chosen_starter_configuration_name}")
     print(
-        f"{STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1]}")
+        f"{chosen_starter_configuration_settings}")
     with open(str(f"{INSTALL_DIR}.env.installer"), "wt") as fout:
         fout.writelines(
-            STARTER_CONFIGURATIONS[chosen_starter_configuration_idx][1])
+            chosen_starter_configuration_settings)
     print_blue("start configuration written to .env.installer")
 
 else:
