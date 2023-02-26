@@ -404,27 +404,30 @@ if _is_linux():
         _syscall("rm -r tmp_gphoto2_install", True)
 
 # install booth software
-if not SUPPRESS_INSTALLATION:
-    if query_yes_no("Install booth software to ./imageserver/ or update if exists?", "no"):
+install_dir_has_git_repo = True if call(["git", "branch"], cwd=INSTALL_DIR,
+                                        stderr=STDOUT, stdout=open(os.devnull, 'w')) == 0 else False
+if not SUPPRESS_INSTALLATION and not install_dir_has_git_repo:
+    if query_yes_no(f"Install booth software to {INSTALL_DIR}?", "no"):
         try:
-            os.mkdir("./imageserver/")
+            os.mkdir(INSTALL_DIR)
         except FileExistsError:
             pass  # silent ignore if already exists
 
-        if call(["git", "branch"], cwd="./imageserver/", stderr=STDOUT, stdout=open(os.devnull, 'w')) != 0:
-            # subdir has no git repo yet - considered as new installation
-            print("Installing qBooth to ./imageserver/")
-            if query_yes_no("install dev preview? if no install stable", "no"):
-                _syscall(
-                    f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
-            else:
-                _syscall(
-                    f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
-        else:
-            print("Updating qBooth in subdir ./imageserver/")
+        # subdir has no git repo yet - considered as new installation
+        print("Installing qBooth to ./imageserver/")
+        if query_yes_no("install dev preview? if no install stable", "no"):
             _syscall(
-                f"cd {INSTALL_DIR}; git pull")
+                f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+        else:
+            _syscall(
+                f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
 
+
+if install_dir_has_git_repo:
+    if query_yes_no(f"Update booth software in {INSTALL_DIR}, by git pull?", "no"):
+        print("Updating qBooth in subdir ./imageserver/")
+        _syscall(
+            f"cd {INSTALL_DIR}; git pull")
 
 if platform.system() == "Linux":
     _syscall(
