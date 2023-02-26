@@ -132,7 +132,7 @@ class GroupBackends(BaseModel):
 
 class GroupHardwareInput(BaseModel):
     '''Hardware related settings'''
-    keyboard_input_enabled:                        bool = True
+    keyboard_input_enabled:                        bool = False
     keyboard_input_keycode_takepic:              str = "down"
 
 
@@ -212,6 +212,13 @@ class ConfigSettings(BaseSettings):
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
+    # make it a singleton: https://stackoverflow.com/a/1810367
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, '_instance'):
+            cls._instance = super(ConfigSettings, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
+
     class Config:
         env_file_encoding = 'utf-8'
         # first in following list is least important; last .env file overwrites the other.
@@ -261,7 +268,6 @@ class ConfigSettings(BaseSettings):
 
 
 # our settings that can be imported throughout the app like # from src.ConfigService import settings
-# TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
 
 if __name__ == '__main__':
