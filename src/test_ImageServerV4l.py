@@ -1,6 +1,7 @@
-from ImageServerWebcamV4l import ImageServerWebcamV4l
+
 import test_HelperFunctions
 from pymitter import EventEmitter
+from ConfigSettings import settings
 import pytest
 import platform
 import logging
@@ -45,6 +46,8 @@ def test_getImages():
     if not platform.system() == "Linux":
         pytest.skip("v4l is linux only platform, skipping test")
 
+    from ImageServerWebcamV4l import ImageServerWebcamV4l
+
     _availableCameraIndexes = availableCameraIndexes()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
@@ -53,6 +56,9 @@ def test_getImages():
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
+
+    # modify config:
+    settings.backends.v4l_device_index = cameraIndex
 
     # ImageServerSimulated backend: test on every platform
     backend = ImageServerWebcamV4l(EventEmitter(), True)

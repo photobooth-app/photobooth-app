@@ -1,3 +1,4 @@
+from multiprocessing import Process, Value
 import time
 import json
 import pytest
@@ -72,6 +73,17 @@ def tmpEnvFile(tmpMoveAllOutOfTheWay, request):
     os.remove(request.param)
 
 
+def test_ConfigSettingsIsSingleton():
+    from ConfigSettings import settings
+    assert settings == ConfigSettings.ConfigSettings()
+    assert settings is ConfigSettings.ConfigSettings()
+    assert ConfigSettings.ConfigSettings() == ConfigSettings.ConfigSettings()
+    assert ConfigSettings.ConfigSettings() is ConfigSettings.ConfigSettings()
+    ConfigSettings.ConfigSettings()
+    settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = 123
+    assert settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == 123
+
+
 def test_CompareSettingsVsConfigSettings():
     from ConfigSettings import settings
     assert settings == ConfigSettings.ConfigSettings()
@@ -91,6 +103,57 @@ def test_InitUpdatedSettings():
     updatedSettings = ConfigSettings.ConfigSettings(
         common={'CAPTURE_CAM_RESOLUTION_HEIGHT': TEST_KEY_TEST_VALUE})
     assert updatedSettings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == TEST_KEY_TEST_VALUE
+
+
+def test_UpdatedSettingsInSingletonAvailable():
+    from ConfigSettings import settings
+
+    settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = TEST_KEY_TEST_VALUE
+    assert settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == TEST_KEY_TEST_VALUE
+
+    assert settings is ConfigSettings.ConfigSettings()
+
+
+def _separateProcessNoSettingsPassedFun(checkValue: Value):
+    from ConfigSettings import settings
+    checkValue.value = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+
+
+def _separateProcessSettingsPassedFun(checkValue: Value, settings: ConfigSettings.ConfigSettings):
+    checkValue.value = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+
+
+def test_SettingsAvailableInSeparateProcess():
+    from ConfigSettings import settings
+    settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = TEST_KEY_TEST_VALUE
+    assert settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == TEST_KEY_TEST_VALUE
+
+    checkValue1 = Value("i", 0)
+    _p1 = Process(target=_separateProcessNoSettingsPassedFun,
+                  args=(checkValue1,), daemon=True)
+    _p1.start()
+    time.sleep(0.5)
+    # can show that separate processes to not receive the changed settings! complete separate memory. need to share settings explicitly if changes need to be shared (for tests)
+    assert not checkValue1.value == TEST_KEY_TEST_VALUE
+    assert checkValue1.value == TEST_KEY_DEFAULT_VALUE
+    logger.info(f"checkValue1.value={checkValue1.value}")
+
+    _p1.terminate()
+    _p1.join(1)
+    _p1.close()
+
+    checkValue2 = Value("i", 0)
+    _p2 = Process(target=_separateProcessSettingsPassedFun,
+                  args=(checkValue2, settings), daemon=True)
+    _p2.start()
+    time.sleep(0.5)
+
+    assert checkValue2.value == TEST_KEY_TEST_VALUE
+    logger.info(f"checkValue2.value={checkValue2.value}")
+
+    _p2.terminate()
+    _p2.join(1)
+    _p2.close()
 
 
 def test_PersistSettings(tmpMoveAllOutOfTheWay):

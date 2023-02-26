@@ -2,11 +2,7 @@ import logging
 import time
 from ImageServerAbstract import ImageServerAbstract
 
-logging.basicConfig()
-# get a root looger one time as this is used later for all other modules as template
 logger = logging.getLogger(name=None)
-# set debug on root, so all debug messages from all imported modules will be received also.
-logger.setLevel("DEBUG")
 
 
 def getImages(backend: ImageServerAbstract):

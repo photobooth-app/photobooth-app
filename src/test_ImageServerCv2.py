@@ -2,6 +2,7 @@ from ImageServerWebcamCv2 import ImageServerWebcamCv2
 import test_HelperFunctions
 import cv2
 from pymitter import EventEmitter
+from ConfigSettings import settings
 import pytest
 import logging
 logger = logging.getLogger(name=None)
@@ -37,6 +38,9 @@ def test_getImages():
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
+
+    # modify config:
+    settings.backends.cv2_device_index = cameraIndex
 
     # ImageServerSimulated backend: test on every platform
     backend = ImageServerWebcamCv2(EventEmitter(), True)
