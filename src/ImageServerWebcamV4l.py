@@ -10,7 +10,7 @@ import platform
 from pymitter import EventEmitter
 from ConfigSettings import settings
 import json
-import ctypes
+
 
 logger = logging.getLogger(__name__)
 

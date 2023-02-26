@@ -30,6 +30,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from asyncio import Queue, QueueFull
+import multiprocessing
 
 # create early instances
 # event system
@@ -352,6 +353,10 @@ if __name__ == '__main__':
     logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
     logger.info(f"__debug__={__debug__}")
+
+    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
+    # spawn will be the default for all systems in future so it's set here now to have same results on all platforms
+    multiprocessing.set_start_method('spawn')
 
     wledservice = WledService(ee)
 

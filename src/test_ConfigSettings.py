@@ -1,3 +1,5 @@
+import platform
+import multiprocessing
 from multiprocessing import Process, Value
 import time
 import json
@@ -123,20 +125,27 @@ def _separateProcessSettingsPassedFun(checkValue: Value, settings: ConfigSetting
     checkValue.value = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
 
 
-def test_SettingsAvailableInSeparateProcess():
+def test_SettingsAvailableInSeparateSpawnedProcess():
     from ConfigSettings import settings
+    ORIGINAL_TEST_KEY_VALUE = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+
+    # now change the value
     settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = TEST_KEY_TEST_VALUE
     assert settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == TEST_KEY_TEST_VALUE
+
+    multiprocessing.set_start_method('spawn', force=True)
 
     checkValue1 = Value("i", 0)
     _p1 = Process(target=_separateProcessNoSettingsPassedFun,
                   args=(checkValue1,), daemon=True)
     _p1.start()
-    time.sleep(0.5)
+
+    # wait long enough, that the process has started actually
+    time.sleep(2)
     # can show that separate processes to not receive the changed settings! complete separate memory. need to share settings explicitly if changes need to be shared (for tests)
-    assert not checkValue1.value == TEST_KEY_TEST_VALUE
-    assert checkValue1.value == TEST_KEY_DEFAULT_VALUE
-    logger.info(f"checkValue1.value={checkValue1.value}")
+    assert checkValue1.value == ORIGINAL_TEST_KEY_VALUE
+    logger.warning(
+        f"in process the value is still the original value, changed setting not reflected.")
 
     _p1.terminate()
     _p1.join(1)
@@ -146,14 +155,44 @@ def test_SettingsAvailableInSeparateProcess():
     _p2 = Process(target=_separateProcessSettingsPassedFun,
                   args=(checkValue2, settings), daemon=True)
     _p2.start()
-    time.sleep(0.5)
+    time.sleep(2)
 
     assert checkValue2.value == TEST_KEY_TEST_VALUE
-    logger.info(f"checkValue2.value={checkValue2.value}")
+    logger.warning(
+        f"in process the value changed, this is good. so passing settings to processes is necessary if start_method is 'spawn'")
 
     _p2.terminate()
     _p2.join(1)
     _p2.close()
+
+
+def test_SettingsAvailableInSeparateForkedProcess():
+    if not platform.system() == "Linux":
+        pytest.skip(
+            "forked processes only avail on linux is linux only platform, skipping test")
+
+    from ConfigSettings import settings
+    ORIGINAL_TEST_KEY_VALUE = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+
+    # now change the value
+    settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = TEST_KEY_TEST_VALUE
+    assert settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT == TEST_KEY_TEST_VALUE
+
+    multiprocessing.set_start_method('fork', force=True)
+
+    checkValue3 = Value("i", 0)
+    _p3 = Process(target=_separateProcessNoSettingsPassedFun,
+                  args=(checkValue3,), daemon=True)
+    _p3.start()
+    time.sleep(2)
+
+    assert checkValue3.value == TEST_KEY_TEST_VALUE
+    logger.warning(
+        f"in process the value changed, this is good. so passing settings to processes is NOT necessary if start_method is 'fork'")
+
+    _p3.terminate()
+    _p3.join(2)
+    _p3.close()
 
 
 def test_PersistSettings(tmpMoveAllOutOfTheWay):
