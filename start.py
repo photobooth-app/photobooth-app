@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import sys
 import subprocess
 from src.InformationService import InformationService
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -176,7 +177,10 @@ def api_get_config_current():
 def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
-    util_systemd_control("restart")
+    try:
+        util_systemd_control("restart")
+    except:
+        pass
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
@@ -205,6 +209,10 @@ def api_cmd(action, param):
 
     if (action == "config" and param == "reset"):
         settings.deleteconfig()
+        try:
+            util_systemd_control("restart")
+        except:
+            pass
     elif (action == "config" and param == "restore"):
         os.system("reboot")
     elif (action == "server" and param == "reboot"):
