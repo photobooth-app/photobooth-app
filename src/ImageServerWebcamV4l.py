@@ -37,7 +37,9 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
             args=(
                 self._img_buffer_shm.name,
                 self._condition_img_buffer_ready,
-                self._img_buffer_lock
+                self._img_buffer_lock,
+                # need to pass settings, because unittests can change settings, if not passed, the settings are not available in the separate process!
+                settings
             ),
             daemon=True)
 
@@ -137,7 +139,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
 
 def img_aquisition(shm_buffer_name,
                    _condition_img_buffer_ready: Condition,
-                   _img_buffer_lock: Lock):
+                   _img_buffer_lock: Lock,
+                   settings):
 
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)

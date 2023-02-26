@@ -43,7 +43,8 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 self._img_buffer_hires_lock,
                 self._event_hq_capture,
                 self._condition_img_buffer_hires_ready,
-                self._condition_img_buffer_lores_ready
+                self._condition_img_buffer_lores_ready,
+                settings
             ),
             daemon=True)
 
@@ -150,7 +151,9 @@ def img_aquisition(
         _img_buffer_hires_lock,
         _event_hq_capture: Event,
         _condition_img_buffer_hires_ready: Condition,
-        _condition_img_buffer_lores_ready: Condition):
+        _condition_img_buffer_lores_ready: Condition,
+        # need to pass settings, because unittests can change settings, if not passed, the settings are not available in the separate process!
+        settings):
 
     # init
     _turboJPEG = TurboJPEG()
