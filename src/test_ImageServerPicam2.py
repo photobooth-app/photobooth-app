@@ -1,4 +1,4 @@
-import src.test_ImageServer as test_ImageServer
+import test_HelperFunctions
 from pymitter import EventEmitter
 import platform
 import pytest
@@ -9,5 +9,5 @@ def test_getImages():
         pytest.skip("not on linux, test of Picam2 backend skipped")
 
     from ImageServerPicam2 import ImageServerPicam2
-    backend = (ImageServerPicam2(EventEmitter()))
-    test_ImageServer.getImages(backend)
+    backend = ImageServerPicam2(EventEmitter())
+    test_HelperFunctions.getImages(backend)

@@ -1,4 +1,5 @@
 import logging
+import time
 from ImageServerAbstract import ImageServerAbstract
 
 logging.basicConfig()
@@ -6,10 +7,6 @@ logging.basicConfig()
 logger = logging.getLogger(name=None)
 # set debug on root, so all debug messages from all imported modules will be received also.
 logger.setLevel("DEBUG")
-
-# execute tests:
-# _test_getImages()
-logger.info("testing finished.")
 
 
 def getImages(backend: ImageServerAbstract):
@@ -21,15 +18,19 @@ def getImages(backend: ImageServerAbstract):
     logger.info(f"testing backend {backend.__module__}")
     backend.start()
 
+    # wait until backends threads started properly before asking for an image
+    time.sleep(5)
+
     try:
         with Image.open(io.BytesIO(backend._wait_for_lores_image())) as im:
             im.verify()
-    except NotImplementedError:
+    except Exception as e:
+        print("exception!")
+        print(e)
         raise AssertionError(
             "backend did not return valid image bytes")
 
     backend.trigger_hq_capture()
-    # time.sleep(1) #TODO: race condition?!
 
     try:
         with Image.open(io.BytesIO(backend.wait_for_hq_image())) as im:

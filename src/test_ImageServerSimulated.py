@@ -1,10 +1,10 @@
-import src.test_ImageServer as test_ImageServer
+import test_HelperFunctions
 from pymitter import EventEmitter
 
 # ImageServerSimulated backend: test on every platform
 from ImageServerSimulated import ImageServerSimulated
-backend = (ImageServerSimulated(EventEmitter()))
+backend = ImageServerSimulated(EventEmitter(), True)
 
 
 def test_getImages():
-    test_ImageServer.getImages(backend)
+    test_HelperFunctions.getImages(backend)
