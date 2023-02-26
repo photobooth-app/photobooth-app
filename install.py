@@ -417,15 +417,15 @@ if not SUPPRESS_INSTALLATION and not install_dir_has_git_repo:
         print("Installing qBooth to ./imageserver/")
         if query_yes_no("install dev preview? if no install stable", "no"):
             _syscall(
-                f"git clone --branch dev https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+                f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
         else:
             _syscall(
-                f"git clone https://github.com/mgrl/photobooth-imageserver.git {INSTALL_DIR}")
+                f"git clone https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
 
 
 if install_dir_has_git_repo:
     if query_yes_no(f"Update booth software in {INSTALL_DIR}, by git pull?", "no"):
-        print("Updating qBooth in subdir ./imageserver/")
+        print(f"Updating qBooth in subdir {INSTALL_DIR}")
         _syscall(
             f"cd {INSTALL_DIR}; git pull")
 
