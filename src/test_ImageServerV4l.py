@@ -1,10 +1,11 @@
-from ImageServerWebcamCv2 import ImageServerWebcamCv2
+from ImageServerWebcamV4l import ImageServerWebcamV4l
 import test_HelperFunctions
-import cv2
 from pymitter import EventEmitter
 import pytest
+import platform
 import logging
 logger = logging.getLogger(name=None)
+
 """
 prepare config for testing
 """
@@ -17,17 +18,32 @@ def availableCameraIndexes():
     arr = []
     i = 10
     while i > 0:
-        cap = cv2.VideoCapture(index)
-        if cap.read()[0]:
+        if isValidIndex(index):
             arr.append(index)
-            cap.release()
         index += 1
         i -= 1
 
     return arr
 
 
+def isValidIndex(index):
+    from v4l2py import Device
+    try:
+        cap = Device.from_id(index)
+        cap.video_capture.set_format(640, 480, 'MJPG')
+        for _ in (cap):
+            # got frame, close cam and return true; otherwise false.
+            break
+        cap.close()
+    except Exception as e:
+        return False
+    else:
+        return True
+
+
 def test_getImages():
+    if not platform.system() == "Linux":
+        pytest.skip("v4l is linux only platform, skipping test")
 
     _availableCameraIndexes = availableCameraIndexes()
     if not _availableCameraIndexes:
@@ -39,6 +55,6 @@ def test_getImages():
     logger.info(f"using first camera index to test: {cameraIndex}")
 
     # ImageServerSimulated backend: test on every platform
-    backend = ImageServerWebcamCv2(EventEmitter(), True)
+    backend = ImageServerWebcamV4l(EventEmitter(), True)
 
     test_HelperFunctions.getImages(backend)

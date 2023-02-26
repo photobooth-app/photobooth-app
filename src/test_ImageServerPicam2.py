@@ -2,6 +2,8 @@ import test_HelperFunctions
 from pymitter import EventEmitter
 import platform
 import pytest
+import logging
+logger = logging.getLogger(name=None)
 
 
 def test_getImages():
