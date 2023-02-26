@@ -1,17 +1,13 @@
 import time
 import cv2
 import ImageServerAbstract
-from multiprocessing import Process, Queue, Value
+from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
-from StoppableThread import StoppableThread
 from pymitter import EventEmitter
-from threading import Condition
 from ConfigSettings import settings
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
+from turbojpeg import TurboJPEG
 import json
-from threading import Condition
-import ctypes
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +23,30 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         # private props
         self._ee = ee
 
-        self._img_buffer_queue: Queue = Queue(maxsize=5)
-        self._hq_img_buffer_queue: Queue = Queue(maxsize=5)
-        self._trigger_hq_capture: Value = Value(ctypes.c_bool, False)
+        self._img_buffer_lores_shm = shared_memory.SharedMemory(
+            create=True, size=settings._shared_memory_buffer_size)
+        self._img_buffer_hires_shm = shared_memory.SharedMemory(
+            create=True, size=settings._shared_memory_buffer_size)
+        self._event_hq_capture: Event = Event()
+        self._condition_img_buffer_hires_ready = Condition()
+        self._condition_img_buffer_lores_ready = Condition()
+        self._img_buffer_lores_lock = Lock()
+        self._img_buffer_hires_lock = Lock()
 
-        self._p = Process(target=img_aquisition, name="ImageServerWebcamCv2AquisitionProcess", args=(
-            self._img_buffer_queue, self._hq_img_buffer_queue, self._trigger_hq_capture), daemon=True)
+        self._p = Process(
+            target=img_aquisition,
+            name="ImageServerWebcamCv2AquisitionProcess",
+            args=(
+                self._img_buffer_lores_shm.name,
+                self._img_buffer_hires_shm.name,
+                self._img_buffer_lores_lock,
+                self._img_buffer_hires_lock,
+                self._event_hq_capture,
+                self._condition_img_buffer_hires_ready,
+                self._condition_img_buffer_lores_ready,
+                settings
+            ),
+            daemon=True)
 
         self._onPreviewMode()
 
@@ -44,10 +58,10 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        """To stop the FrameServer, first stop any client threads (that might be
-        blocked in wait_for_frame), then call this stop method. Don't stop the
-        Picamera2 object until the FrameServer has been stopped."""
-
+        self._img_buffer_lores_shm.close()
+        self._img_buffer_lores_shm.unlink()
+        self._img_buffer_hires_shm.close()
+        self._img_buffer_hires_shm.unlink()
         self._p.terminate()
         self._p.join(1)
         self._p.close()
@@ -59,7 +73,13 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
         self._ee.emit("frameserver/onCapture")
 
         # get img off the producing queue
-        img = self._hq_img_buffer_queue.get(timeout=5)
+        with self._condition_img_buffer_hires_ready:
+            if not self._condition_img_buffer_hires_ready.wait(2):
+                raise IOError("timeout receiving frames")
+
+            with self._img_buffer_hires_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_hires_shm)
 
         self._ee.emit("frameserver/onCaptureFinished")
 
@@ -81,7 +101,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
-        self._trigger_hq_capture.value = True
+        self._event_hq_capture.set()
         self._onCaptureMode()
 
     """
@@ -94,7 +114,14 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        return self._img_buffer_queue.get(timeout=5)
+        with self._condition_img_buffer_lores_ready:
+            if not self._condition_img_buffer_lores_ready.wait(2):
+                raise IOError("timeout receiving frames")
+
+            with self._img_buffer_lores_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_lores_shm)
+            return img
 
     def _onCaptureMode(self):
         logger.debug(
@@ -117,10 +144,21 @@ INTERNAL IMAGE GENERATOR
 """
 
 
-def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture):
+def img_aquisition(
+        shm_buffer_lores_name,
+        shm_buffer_hires_name,
+        _img_buffer_lores_lock,
+        _img_buffer_hires_lock,
+        _event_hq_capture: Event,
+        _condition_img_buffer_hires_ready: Condition,
+        _condition_img_buffer_lores_ready: Condition,
+        # need to pass settings, because unittests can change settings, if not passed, the settings are not available in the separate process!
+        settings):
 
     # init
     _turboJPEG = TurboJPEG()
+    shm_lores = shared_memory.SharedMemory(shm_buffer_lores_name)
+    shm_hires = shared_memory.SharedMemory(shm_buffer_hires_name)
 
     if platform.system() == "Windows":
         logger.info(
@@ -144,10 +182,15 @@ def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture)
     # activate preview mode on init
     _video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
     _video.set(cv2.CAP_PROP_FPS, 30.0)
+    _video.set(cv2.CAP_PROP_BUFFERSIZE, 2)  # low number for lowest lag
     _video.set(cv2.CAP_PROP_FRAME_WIDTH,
                settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
     _video.set(cv2.CAP_PROP_FRAME_HEIGHT,
                settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
+
+    # read first five frames and send to void
+    for _ in range(5):
+        _, _ = _video.read()
 
     while True:
         ret, array = _video.read()
@@ -161,21 +204,34 @@ def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture)
         if settings.common.CAMERA_TRANSFORM_VFLIP:
             array = cv2.flip(array, 0)
 
-        if _trigger_hq_capture.value == True:
+        if _event_hq_capture.is_set():
+
+            _event_hq_capture.clear()
+
             # one time hq still
             array = cv2.fastNlMeansDenoisingColored(
                 array, None, 2, 2, 3, 9)
+
             # convert frame to jpeg buffer
             jpeg_buffer = _turboJPEG.encode(
                 array, quality=settings.common.HIRES_STILL_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
-            _hq_img_buffer_queue.put(jpeg_buffer)
-            _trigger_hq_capture.value = False
+            with _img_buffer_hires_lock:
+                ImageServerAbstract.compileBuffer(shm_hires, jpeg_buffer)
+
+            with _condition_img_buffer_hires_ready:
+                # wait to be notified
+                _condition_img_buffer_hires_ready.notify_all()
         else:
             # preview livestream
             jpeg_buffer = _turboJPEG.encode(
                 array, quality=settings.common.LIVEPREVIEW_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
-            _img_buffer_queue.put(jpeg_buffer)
+            with _img_buffer_lores_lock:
+                ImageServerAbstract.compileBuffer(shm_lores, jpeg_buffer)
+
+            with _condition_img_buffer_lores_ready:
+                # wait to be notified
+                _condition_img_buffer_lores_ready.notify_all()
 
     # TODO: need to close video actually on exit: self._video.release()

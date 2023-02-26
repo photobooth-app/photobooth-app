@@ -94,13 +94,21 @@ class GroupFocuser(BaseModel):
     REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
-class EnumImageServers(str, Enum):
+class EnumImageBackendsMain(str, Enum):
     ImageServerSimulated = 'ImageServerSimulated'
     ImageServerPicam2 = 'ImageServerPicam2'
     ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
     ImageServerWebcamV4l = 'ImageServerWebcamV4l'
-    ImageServerGphoto2 = 'ImageServerGphoto2'
-    ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
+    # Not yet finished backends:
+    # ImageServerGphoto2 = 'ImageServerGphoto2'
+    # ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
+
+
+class EnumImageBackendsLive(str, Enum):
+    null = None
+    ImageServerSimulated = 'ImageServerSimulated'
+    ImageServerWebcamCv2 = 'ImageServerWebcamCv2'
+    ImageServerWebcamV4l = 'ImageServerWebcamV4l'
 
 
 class GroupBackends(BaseModel):
@@ -108,23 +116,23 @@ class GroupBackends(BaseModel):
     Choose backends for still images/high quality images captured on main backend.
     If the livepreview is enabled, the video is captured from live backend (if configured) or main backend.
     '''
-    MAIN_BACKEND: EnumImageServers = Field(title="Main Backend",
-                                           default=EnumImageServers.ImageServerSimulated, description="Choose a backend to use for high quality still captures")
-    LIVE_BACKEND: EnumImageServers = Field(title="Live Backend",
-                                           default=None, description="Choose secondary backend used for live streaming only")
+    MAIN_BACKEND: EnumImageBackendsMain = Field(title="Main Backend",
+                                                default=EnumImageBackendsMain.ImageServerSimulated, description="Choose a backend to use for high quality still captures. Also used for livepreview if backend is capable of.")
+    LIVE_BACKEND: EnumImageBackendsLive = Field(title="Live Backend",
+                                                default=None, description="Choose secondary backend used for live streaming only if main backend does not support livepreview (useful to use a webcam if DSLR camera gives no livestream)")
     LIVEPREVIEW_ENABLED:               bool = Field(
         default=True, description="Enable livestream (if possible)")
 
     cv2_device_index:                       int = 2
     v4l_device_index:                       int = 2
-    picam2_stats_overlay:                   bool = False
+
     picam2_AE_EXPOSURE_MODE: int = Field(
         default=1, ge=0, le=4, description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!")
 
 
 class GroupHardwareInput(BaseModel):
     '''Hardware related settings'''
-    keyboard_input_enabled:                        bool = True
+    keyboard_input_enabled:                        bool = False
     keyboard_input_keycode_takepic:              str = "down"
 
 
@@ -191,6 +199,10 @@ class ConfigSettings(BaseSettings):
     _processed_at: datetime = PrivateAttr(
         default_factory=datetime.now)  # private attributes
 
+    # size of shared memory to transfer images between backend and app. needs to be as large as largest image to be transferred
+    # 15MB should be sufficient, might change in future
+    _shared_memory_buffer_size: int = PrivateAttr(default=15*1024**2)
+
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     personalize: GroupPersonalize = GroupPersonalize()
@@ -200,10 +212,17 @@ class ConfigSettings(BaseSettings):
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
 
+    # make it a singleton: https://stackoverflow.com/a/1810367
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, '_instance'):
+            cls._instance = super(ConfigSettings, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
+
     class Config:
         env_file_encoding = 'utf-8'
         # first in following list is least important; last .env file overwrites the other.
-        env_file = '.env.installer', '.env.dev', '.env', '.env.prod'
+        env_file = '.env.installer', '.env.dev', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
         extra = Extra.ignore
@@ -249,7 +268,6 @@ class ConfigSettings(BaseSettings):
 
 
 # our settings that can be imported throughout the app like # from src.ConfigService import settings
-# TODO: might wanna use LROcache functools.
 settings = ConfigSettings()
 
 if __name__ == '__main__':

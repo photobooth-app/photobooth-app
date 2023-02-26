@@ -1,7 +1,7 @@
+from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import time
 import ImageServerAbstract
 import logging
-from multiprocessing import Process, Queue, Value
 import platform
 if platform.system() == "Windows":
     raise OSError("backend v4l2py not supported on windows platform")
@@ -10,7 +10,7 @@ import platform
 from pymitter import EventEmitter
 from ConfigSettings import settings
 import json
-import ctypes
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,22 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         # private props
         self._ee = ee
 
-        self._img_buffer_queue: Queue = Queue(maxsize=5)
-        self._hq_img_buffer_queue: Queue = Queue(maxsize=5)
-        self._trigger_hq_capture: Value = Value(ctypes.c_bool, False)
+        self._img_buffer_shm = shared_memory.SharedMemory(
+            create=True, size=settings._shared_memory_buffer_size)
+        self._condition_img_buffer_ready = Condition()
+        self._img_buffer_lock = Lock()
 
-        self._p = Process(target=img_aquisition, name="ImageServerWebcamV4lAquisitionProcess", args=(
-            self._img_buffer_queue, self._hq_img_buffer_queue, self._trigger_hq_capture), daemon=True)
+        self._p = Process(
+            target=img_aquisition,
+            name="ImageServerWebcamV4lAquisitionProcess",
+            args=(
+                self._img_buffer_shm.name,
+                self._condition_img_buffer_ready,
+                self._img_buffer_lock,
+                # need to pass settings, because unittests can change settings, if not passed, the settings are not available in the separate process!
+                settings
+            ),
+            daemon=True)
 
         self._onPreviewMode()
 
@@ -44,9 +54,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        """To stop the FrameServer, first stop any client threads (that might be
-        blocked in wait_for_frame), then call this stop method. Don't stop the
-        Picamera2 object until the FrameServer has been stopped."""
+        self._img_buffer_shm.close()
+        self._img_buffer_shm.unlink()
 
         self._p.terminate()
         self._p.join(1)
@@ -59,7 +68,13 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
         self._ee.emit("frameserver/onCapture")
 
         # get img off the producing queue
-        img = self._hq_img_buffer_queue.get(timeout=5)
+        with self._condition_img_buffer_ready:
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
+
+            with self._img_buffer_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_shm)
 
         self._ee.emit("frameserver/onCaptureFinished")
 
@@ -81,7 +96,6 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
-        self._trigger_hq_capture.value = True
         self._onCaptureMode()
 
     """
@@ -94,7 +108,14 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        return self._img_buffer_queue.get(timeout=5)
+        with self._condition_img_buffer_ready:
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
+
+            with self._img_buffer_lock:
+                img = ImageServerAbstract.decompileBuffer(
+                    self._img_buffer_shm)
+            return img
 
     def _onCaptureMode(self):
         logger.debug(
@@ -116,28 +137,30 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
     """
 
 
-def img_aquisition(_img_buffer_queue, _hq_img_buffer_queue, _trigger_hq_capture):
+def img_aquisition(shm_buffer_name,
+                   _condition_img_buffer_ready: Condition,
+                   _img_buffer_lock: Lock,
+                   settings):
 
     # init
+    shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    while True:
-        with Device.from_id(settings.backends.v4l_device_index) as cam:
-            logger.info(
-                f"webcam devices index {settings.backends.v4l_device_index} opened")
-            try:
-                cam.video_capture.set_format(
-                    settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')
-            except Exception as e:
-                logger.exception(e)
+    with Device.from_id(settings.backends.v4l_device_index) as cam:
+        logger.info(
+            f"webcam devices index {settings.backends.v4l_device_index} opened")
+        try:
+            cam.video_capture.set_format(
+                settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT, 'MJPG')
+        except Exception as e:
+            logger.exception(e)
 
-            for jpeg_buffer in cam:
-                if _trigger_hq_capture.value == True:
-                    # only capture one pic and return to lores streaming afterwards
-                    _trigger_hq_capture.value = False
+        for jpeg_buffer in cam:  # forever
+            time.sleep(0.1)
 
-                    # capture hq picture
-                    _hq_img_buffer_queue.put(jpeg_buffer)
+            # put jpeg on queue until full. If full this function blocks until queue empty
+            with _img_buffer_lock:
+                ImageServerAbstract.compileBuffer(shm, jpeg_buffer)
 
-                else:
-                    # put jpeg on queue until full. If full this function blocks until queue empty
-                    _img_buffer_queue.put(jpeg_buffer)
+            with _condition_img_buffer_ready:
+                # wait to be notified
+                _condition_img_buffer_ready.notify_all()

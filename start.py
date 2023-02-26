@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import sys
 import subprocess
 from src.InformationService import InformationService
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -29,7 +30,8 @@ from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, HTTPException, status, Body
-from queue import Queue
+from asyncio import Queue, QueueFull
+import multiprocessing
 
 # create early instances
 # event system
@@ -69,42 +71,45 @@ signal.signal(signal.SIGINT, signal_handler)
 
 @app.get("/eventstream")
 async def subscribe(request: Request):
-    # principle with queues like described here:
-    # https://maxhalford.github.io/blog/flask-sse-no-deps/
-    # and https://github.com/sysid/sse-starlette
-    # and https://github.com/encode/starlette/issues/20#issuecomment-587410233
-    # ... this code example seems to be cleaner https://github.com/sysid/sse-starlette/blob/master/examples/custom_generator.py
-
     # local message queue
-    queue = Queue()  # TODO: limit max queue size in case client doesnt catch up so fast?
+    # limit max queue size in case client doesnt catch up so fast. if there are more than 100 messages in the queue
+    # it can be assumed that the connection is broken or something.
+    # Queue changed in python 3.10, for compatiblity subscribe is async since queue reuses the async thread
+    # that would not be avail if outer function of queue is sync. https://docs.python.org/3.11/library/asyncio-queue.html
+    # each client has it's own queue
+    queue = Queue(100)
 
     def add_subscriptions():
-        logger.debug(f"add subscription for publishSSE")
+        logger.debug(f"SSE subscription added, client {request.client}")
         ee.on("publishSSE", addToQueue)
 
     def remove_subscriptions():
-        logger.debug(f"remove subscriptions for publishSSE")
         ee.off("publishSSE", addToQueue)
+        logger.debug(f"SSE subscription removed, client {request.client}")
 
     def addToQueue(sse_event, sse_data):
-        queue.put_nowait(ServerSentEvent(
-            id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+        try:
+            queue.put_nowait(ServerSentEvent(
+                id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+        except QueueFull:
+            # actually never run, because queue size is infinite currently
+            remove_subscriptions()
+            logger.error(
+                f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
+            raise HTTPException(
+                status_code=500, detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
 
     async def event_iterator():
         try:
             while True:
                 if await request.is_disconnected():
-                    logger.info(f"request.is_disconnected() true")
+                    remove_subscriptions()
+                    logger.info(
+                        f"client request disconnect, client {request.client}")
                     break
-                # if request_stop:
-                #    logger.info(f"event_iterator stop requested")
-                #    break
 
-                # throttle the iterator a little down using asyncio to not block the webserver thread but lower cpu usage.
-                await asyncio.sleep(0.01)
                 try:
-                    # try to get a event/message off the queue
-                    event = queue.get_nowait()
+                    event = await queue.get()
                 except:
                     continue
 
@@ -112,10 +117,9 @@ async def subscribe(request: Request):
                 yield event
 
         except asyncio.CancelledError as e:
-            logger.info(
-                f"Disconnected from client (via refresh/close) {request.client}")
-            # Do any other cleanup, if any
             remove_subscriptions()
+            logger.info(
+                f"Disconnected from client {request.client}")
 
             raise e
 
@@ -129,13 +133,14 @@ async def subscribe(request: Request):
                sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
-    ee.emit("publishSSE/initial")
+    await ee.emit_async("publishSSE/initial")
 
     return EventSourceResponse(event_iterator(), ping=1)
 
+
 """
 @app.get("/debug/health")
-async def api_debug_health():
+def api_debug_health():
     la = LoadAverage(
         minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
     cpu_temperature = round(CPUTemperature().temperature, 1)
@@ -144,7 +149,7 @@ async def api_debug_health():
 
 
 @app.get("/debug/threads")
-async def api_debug_threads():
+def api_debug_threads():
 
     list = [item.getName() for item in threading.enumerate()]
     logger.debug(f"active threads: {list}")
@@ -152,38 +157,30 @@ async def api_debug_threads():
 
 
 @app.get("/config/schema")
-async def api_get_config_schema(type: str = "default"):
+def api_get_config_schema(type: str = "default"):
     return (settings.getSchema(type=type))
 
 
 @app.get("/config/currentActive")
-async def api_get_config_current():
+def api_get_config_current():
     # returns currently cached and active settings
     return (settings.dict())
 
 
 @app.get("/config/current")
-async def api_get_config_current():
+def api_get_config_current():
     # read settings from drive and return
     return (ConfigSettings().dict())
 
 
 @app.post("/config/current")
-async def api_post_config_current(updatedSettings: ConfigSettings):
+def api_post_config_current(updatedSettings: ConfigSettings):
     updatedSettings.persist()  # save settings to disc
     # restart service to load new config
-
-    # will return 0 for active else inactive.
-    result = subprocess.run(
-        ['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME])
-    logger.info(result)
-
-    if (result.returncode == 0):
-        logger.info(f"service {SERVICE_NAME} currently active, restarting")
-        os.system(f"systemctl --user restart {SERVICE_NAME}")
-    else:
-        logger.warning(
-            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
+    try:
+        util_systemd_control("restart")
+    except:
+        pass
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
@@ -207,11 +204,15 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
 
 
 @app.get("/cmd/{action}/{param}")
-async def api_cmd(action, param):
+def api_cmd(action, param):
     logger.info(f"cmd api requested action={action}, param={param}")
 
     if (action == "config" and param == "reset"):
         settings.deleteconfig()
+        try:
+            util_systemd_control("restart")
+        except:
+            pass
     elif (action == "config" and param == "restore"):
         os.system("reboot")
     elif (action == "server" and param == "reboot"):
@@ -219,17 +220,39 @@ async def api_cmd(action, param):
     elif (action == "server" and param == "shutdown"):
         os.system("shutdown now")
     elif (action == "service" and param == "restart"):
-        os.system("systemctl --user restart imageserver")
+        util_systemd_control("restart")
     elif (action == "service" and param == "stop"):
-        os.system("systemctl --user stop imageserver")
+        util_systemd_control("stop")
     elif (action == "service" and param == "start"):
-        os.system("systemctl --user start imageserver")
+        util_systemd_control("start")
 
     else:
         raise HTTPException(
             500, f"invalid request action={action}, param={param}")
 
     return f"action={action}, param={param}"
+
+
+def util_systemd_control(state):
+    # will return 0 for active else inactive.
+    try:
+        subprocess.run(
+            args=['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME],
+            timeout=10,
+            check=True)
+    except FileNotFoundError as e:
+        logger.info(
+            f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
+    except subprocess.CalledProcessError as e:
+        # non zero returncode
+        logger.warning(
+            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"subprocess timeout {e}")
+    else:
+        # no error, service restart ok
+        logger.info(f"service {SERVICE_NAME} currently active, restarting")
+        os.system(f"systemctl --user {state} {SERVICE_NAME}")
 
 
 """
@@ -301,8 +324,9 @@ app.mount('/data', StaticFiles(directory='data'), name="data")
 
 
 @app.get("/")
-async def read_index():
+def read_index():
     return FileResponse('web/index.html')
+
 
 # if not match anything above, default to deliver static files from web directory
 app.mount("/", StaticFiles(directory="web"), name="web")
@@ -338,6 +362,10 @@ if __name__ == '__main__':
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
     logger.info(f"__debug__={__debug__}")
 
+    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
+    # spawn will be the default for all systems in future so it's set here now to have same results on all platforms
+    multiprocessing.set_start_method('spawn')
+
     wledservice = WledService(ee)
 
     # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
@@ -353,9 +381,6 @@ if __name__ == '__main__':
                       transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
     model.start()
     imageServers.start()
-
-    # log all registered listener
-    logger.debug(ee.listeners_all())
 
     ins = InformationService(ee)
 

@@ -1,5 +1,5 @@
 from importlib import import_module
-from ConfigSettings import settings
+from ConfigSettings import settings, EnumImageBackendsLive
 import ImageServerAbstract
 import logging
 logger = logging.getLogger(__name__)
@@ -15,6 +15,8 @@ class ImageServers():
         self.metadata = {}
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
+        logger.info(
+            f"loading primary backend: src.{settings.backends.MAIN_BACKEND.value}")
         imageserverPrimaryBackendModule = import_module(
             f"src.{settings.backends.MAIN_BACKEND.value}")
         clsPrimary = getattr(imageserverPrimaryBackendModule,
@@ -22,7 +24,9 @@ class ImageServers():
         self.primaryBackend = clsPrimary(ee, False)
 
         # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-        if settings.backends.LIVE_BACKEND and settings.backends.LIVE_BACKEND.value:
+        if settings.backends.LIVE_BACKEND and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.null and settings.backends.LIVE_BACKEND.value:
+            logger.info(
+                f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}")
             imageserverSecondaryBackendModule = import_module(
                 f"src.{settings.backends.LIVE_BACKEND.value}")
             clsSecondary = getattr(imageserverSecondaryBackendModule,
