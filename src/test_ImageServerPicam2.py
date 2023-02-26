@@ -9,5 +9,6 @@ def test_getImages():
         pytest.skip("not on linux, test of Picam2 backend skipped")
 
     from ImageServerPicam2 import ImageServerPicam2
-    backend = ImageServerPicam2(EventEmitter())
+    backend = ImageServerPicam2(EventEmitter(), True)
+
     test_HelperFunctions.getImages(backend)

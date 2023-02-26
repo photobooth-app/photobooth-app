@@ -215,7 +215,7 @@ class ConfigSettings(BaseSettings):
     class Config:
         env_file_encoding = 'utf-8'
         # first in following list is least important; last .env file overwrites the other.
-        env_file = '.env.installer', '.env.dev', '.env', '.env.prod'
+        env_file = '.env.installer', '.env.dev', '.env.prod'
         env_nested_delimiter = '__'
         case_sensitive = True
         extra = Extra.ignore

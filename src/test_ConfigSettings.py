@@ -1,3 +1,4 @@
+import time
 import json
 import pytest
 import ConfigSettings
@@ -19,17 +20,19 @@ lowest->highest priority
 env
 '.env.installer',
 '.env.dev',
-'.env',
 '.env.prod'
 json
 init arguments
 
-private variable _testing_variable is used for testing.
+file '.env' is removed from the list, because behaves different between windows/linux or python 3.9/3.11:
+.env is always loaded on linux/python 3.11 on program start and makes available the stored values.
+due to this renaming the files doesn't help because too late.
 """
 
 
 @pytest.fixture
 def tmpMoveAllOutOfTheWay():
+
     filenames = [
         "./config/config.json",
     ]
@@ -38,8 +41,8 @@ def tmpMoveAllOutOfTheWay():
     # rename all files
     for filename in filenames:
         try:
-            os.rename(filename, f"{filename}-tmp")
-        except:
+            os.rename(filename, f"{filename.replace('.','_')}")
+        except FileNotFoundError:
             # fail silently if file not exists...
             pass
 
@@ -49,13 +52,13 @@ def tmpMoveAllOutOfTheWay():
     # return original filenames
     for filename in filenames:
         try:
-            os.rename(f"{filename}-tmp", filename)
-        except:
+            os.rename(f"{filename.replace('.', '_')}", filename)
+        except FileNotFoundError:
             # fail silently if file not exists...
             pass
 
 
-@pytest.fixture(params=['.env.installer', '.env.dev', '.env', '.env.prod'])
+@pytest.fixture(params=['.env.installer', '.env.dev', '.env.prod'])
 def tmpEnvFile(tmpMoveAllOutOfTheWay, request):
 
     with open(request.param, 'w') as env_file:
