@@ -3,46 +3,58 @@
 
 This is in dev currently. Not for production.
 
-# Photobooth Imageserver
+# Photobooth App
 
-This small python imageserver allows to use
+This app allows to use
 
-- picameras (with or without autofocus)
-- arducams (with or without autofocus)
-- DSLR cameras (via gphoto2 or digicamcontrol) and
+- picamera2 (with or without autofocus)
+- arducam cameras (with or without autofocus)
+- DSLR cameras (via gphoto2 or digicamcontrol) (not yet implemented) and
 - webcams (via opencv2 or v4l)
-to be used for high quality still photos and for livestream.
 
-The imageserver controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
+for high quality still photos and for livestream in your own photobooth.
+
+The app controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
 The booth is made from 3d printed parts, [see the documentation over here](https://github.com/mgrl/photobooth-3d).
+The camera support is mostly ready to use, the frontend is not production ready yet.
+Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
 ## :heart_eyes: Features
 
-- camera live preview
+- camera live preview with shortest delay as possible
 - permanent video live view in background
-- contant autofocus based on the live preview
+- autofocus based on the live preview
 - several camera backends supported for still/livestream
 - led ring signaling photo countdown and when the photo is actually taken
 
 ## :gear: Prerequisites
 
-- Python 3.9
+- Python 3.9 or later
 - Camera supported by one of the backends
 - [photobooth installed](https://photoboothproject.github.io/)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
 ## :wrench: Installation
 
-An installer is available, helping to setup a linux or windows system.
+An installer is available, helping to setup on a linux or windows system.
 Download the installer and start it as follows:
 
+Linux:
+
 ```text
-wget https://raw.githubusercontent.com/mgrl/photobooth-imageserver/dev/install.py
+wget https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
 python install.py
 ```
 
-Browse to <http://photobooth:8000> (replace photobooth by actual hostname) and see that it is working
+Windows:
+
+```text
+curl -O https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
+python install.py
+```
+
+Browse to <http://localhost:8000> and see that it is working
 
 ### Integrate Photobooth and ImageServer
 
@@ -112,6 +124,14 @@ network={
 
 ## :mag: Changelog
 
+- 2023-02-26
+  - added pytest and set up automated tests
+  - fixed some performance issues using separate processes to exploit cpu better
+  - fixed performance issue when connecting multiple clients on eventstream
+  - improved installer
+  - pydantic config management fully presented in user interface via blitzar
+  - many smaller improvements
+  - many bugfixes
 - 2023-02-05
   - added several camera backends (working: v4l, opencv, simulated, picamera2; not yet working: gphoto2, digicamcontrol)
   - added installer
@@ -128,11 +148,14 @@ network={
 
 ## Contribute
 
+If you find an issue, please post it <https://github.com/mgrl/photobooth-app/issues>
+
 Develop on Windows or Linux using VScode.
 Additional requirements
 
 - backend development
   - pip install pipreqs
+  - pip install pytest
 - frontend development
   - nodejs 16 (nodejs 18 fails proxying the devServer)
   - yarn
@@ -165,4 +188,4 @@ The software is licensed under the MIT license.
 
 If you like my work and like to keep me motivated you can buy me a coconut water:
 
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](localhost)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=8255Y566TBNEC)
