@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 import logging
+from pymitter import EventEmitter
 logger = logging.getLogger(__name__)
 
 
 class ImageServerAbstract(ABC):
     @abstractmethod
-    def __init__(self, ee, enableStream):
+    def __init__(self, ee: EventEmitter, enableStream: bool):
         # public
         self.exif_make = "ImageServerAbstract-Make"
         self.exif_model = "ImageServerAbstract-Model"
@@ -66,6 +67,13 @@ class ImageServerAbstract(ABC):
     """
     INTERNAL FUNCTIONS TO BE IMPLEMENTED
     """
+
+    @abstractmethod
+    def _wait_for_lores_image(self):
+        """
+        function blocks until frame is available for preview stream
+        """
+        pass
 
     @abstractmethod
     def _wait_for_lores_frame(self):
