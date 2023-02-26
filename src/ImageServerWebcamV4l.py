@@ -67,7 +67,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
 
         # get img off the producing queue
         with self._condition_img_buffer_ready:
-            self._condition_img_buffer_ready.wait(5)
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
 
             with self._img_buffer_lock:
                 img = ImageServerAbstract.decompileBuffer(
@@ -106,7 +107,8 @@ class ImageServerWebcamV4l(ImageServerAbstract.ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._condition_img_buffer_ready:
-            self._condition_img_buffer_ready.wait(5)
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
 
             with self._img_buffer_lock:
                 img = ImageServerAbstract.decompileBuffer(

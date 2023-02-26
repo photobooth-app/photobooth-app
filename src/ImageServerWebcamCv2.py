@@ -73,7 +73,8 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
 
         # get img off the producing queue
         with self._condition_img_buffer_hires_ready:
-            self._condition_img_buffer_hires_ready.wait(2)
+            if not self._condition_img_buffer_hires_ready.wait(2):
+                raise IOError("timeout receiving frames")
 
             with self._img_buffer_hires_lock:
                 img = ImageServerAbstract.decompileBuffer(
@@ -113,7 +114,9 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._condition_img_buffer_lores_ready:
-            self._condition_img_buffer_lores_ready.wait(2)
+            if not self._condition_img_buffer_lores_ready.wait(2):
+                raise IOError("timeout receiving frames")
+
             with self._img_buffer_lores_lock:
                 img = ImageServerAbstract.decompileBuffer(
                     self._img_buffer_lores_shm)
@@ -181,6 +184,10 @@ def img_aquisition(
                settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
     _video.set(cv2.CAP_PROP_FRAME_HEIGHT,
                settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
+
+    # read first five frames and send to void
+    for _ in range(5):
+        _, _ = _video.read()
 
     while True:
         ret, array = _video.read()

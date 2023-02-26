@@ -53,7 +53,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
         # get img off the producing queue
         with self._condition_img_buffer_ready:
-            self._condition_img_buffer_ready.wait(5)
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
 
             with self._img_buffer_lock:
                 img = ImageServerAbstract.decompileBuffer(
@@ -92,7 +93,8 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         """for other threads to receive a lores JPEG image"""
 
         with self._condition_img_buffer_ready:
-            self._condition_img_buffer_ready.wait(5)
+            if not self._condition_img_buffer_ready.wait(2):
+                raise IOError("timeout receiving frames")
 
         with self._img_buffer_lock:
 
