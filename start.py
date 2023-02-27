@@ -1,37 +1,40 @@
 #!/usr/bin/python3
-import sys
+"""
+Photobooth Application start script
+"""
 import subprocess
-from src.InformationService import InformationService
+import os
+import platform
+import threading
+import logging
+import asyncio
+import uuid
+import multiprocessing
+from asyncio import Queue, QueueFull
+import uvicorn
+import psutil
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.staticfiles import StaticFiles
+from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.exception_handlers import (
     http_exception_handler,
     request_validation_exception_handler,
 )
 from fastapi.exceptions import RequestValidationError
-import os
-import platform
-import psutil
-import threading
-import uvicorn
-import asyncio
-import uuid
-import logging
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi import FastAPI, Request, HTTPException, status, Body
+from transitions import Machine
+from pymitter import EventEmitter
 from src.ImageServers import ImageServers
+from src.InformationService import InformationService
 from src.ConfigSettings import ConfigSettings, settings
 from src.KeyboardService import KeyboardService
 from src.CamStateMachine import TakePictureMachineModel, states, transitions
 from src.WledService import WledService
 from src.ImageDb import ImageDb
 from src.LoggingService import LoggingService
-from transitions import Machine
 # from gpiozero import CPUTemperature, LoadAverage
-from pymitter import EventEmitter
-from sse_starlette import EventSourceResponse, ServerSentEvent
-from fastapi.responses import StreamingResponse, FileResponse
-from starlette.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, HTTPException, status, Body
-from asyncio import Queue, QueueFull
-import multiprocessing
+
 
 # create early instances
 # event system
@@ -64,40 +67,48 @@ def signal_handler(sig, frame):
 
 # signal CTRL-C and systemctl stop
 signal.signal(signal.SIGINT, signal_handler)
-# this is not working, because uvicorn is eating up signal handler definitions currently: https://github.com/encode/uvicorn/issues/1579
+# this is not working, because uvicorn is eating up signal handler
+# definitions currently: https://github.com/encode/uvicorn/issues/1579
 # as workaround currently we set force_exit to True to shutdown the server
 """
 
 
 @app.get("/eventstream")
 async def subscribe(request: Request):
-    # local message queue
-    # limit max queue size in case client doesnt catch up so fast. if there are more than 100 messages in the queue
+    """
+    Eventstream to feed clients with server generated events and data
+    """
+
+    # local message queue, each client has it's own queue
+    # limit max queue size in case client doesnt catch up so fast.
+    # if there are more than 100 messages in the queue
     # it can be assumed that the connection is broken or something.
-    # Queue changed in python 3.10, for compatiblity subscribe is async since queue reuses the async thread
-    # that would not be avail if outer function of queue is sync. https://docs.python.org/3.11/library/asyncio-queue.html
-    # each client has it's own queue
+    # Queue changed in python 3.10, for compatiblity subscribe is
+    # async since queue reuses the async thread
+    # that would not be avail if outer function of queue is sync.
+    # https://docs.python.org/3.11/library/asyncio-queue.html
     queue = Queue(100)
 
     def add_subscriptions():
         logger.debug(f"SSE subscription added, client {request.client}")
-        ee.on("publishSSE", addToQueue)
+        ee.on("publishSSE", add_queue)
 
     def remove_subscriptions():
-        ee.off("publishSSE", addToQueue)
+        ee.off("publishSSE", add_queue)
         logger.debug(f"SSE subscription removed, client {request.client}")
 
-    def addToQueue(sse_event, sse_data):
+    def add_queue(sse_event, sse_data):
         try:
             queue.put_nowait(ServerSentEvent(
                 id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
-        except QueueFull:
+        except QueueFull as exc:
             # actually never run, because queue size is infinite currently
             remove_subscriptions()
             logger.error(
                 f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
             raise HTTPException(
-                status_code=500, detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
+                status_code=500,
+                detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?") from exc
 
     async def event_iterator():
         try:
@@ -108,29 +119,24 @@ async def subscribe(request: Request):
                         f"client request disconnect, client {request.client}")
                     break
 
-                try:
-                    event = await queue.get()
-                except:
-                    continue
+                event = await queue.get()
 
                 # send data to client
                 yield event
 
-        except asyncio.CancelledError as e:
+        except asyncio.CancelledError:
             remove_subscriptions()
             logger.info(
                 f"Disconnected from client {request.client}")
-
-            raise e
 
     logger.info(f"Client connected {request.client}")
     add_subscriptions()
 
     # initial messages on client connect
-    addToQueue(sse_event="message",
-               sse_data=f"Client connected {request.client}")
-    addToQueue(sse_event="config/currentconfig",
-               sse_data=settings.json())
+    add_queue(sse_event="message",
+              sse_data=f"Client connected {request.client}")
+    add_queue(sse_event="config/currentconfig",
+              sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
     await ee.emit_async("publishSSE/initial")
@@ -138,49 +144,43 @@ async def subscribe(request: Request):
     return EventSourceResponse(event_iterator(), ping=1)
 
 
-"""
-@app.get("/debug/health")
-def api_debug_health():
-    la = LoadAverage(
-        minutes=1, max_load_average=psutil.cpu_count(), threshold=psutil.cpu_count()*0.8)
-    cpu_temperature = round(CPUTemperature().temperature, 1)
-    return ({"cpu_current_load": la.value, "cpu_above_threshold": la.is_active, "cpu_temperature": cpu_temperature})
-"""
-
-
 @app.get("/debug/threads")
 def api_debug_threads():
-
-    list = [item.getName() for item in threading.enumerate()]
-    logger.debug(f"active threads: {list}")
-    return (list)
+    """
+    get active threads in main process.
+    if any subprocesses started (example in backends), these are not reported
+    """
+    active_threads = [item.getName() for item in threading.enumerate()]
+    logger.debug(f"active threads: {active_threads}")
+    return active_threads
 
 
 @app.get("/config/schema")
-def api_get_config_schema(type: str = "default"):
-    return (settings.getSchema(type=type))
+def api_get_config_schema(schema_type: str = "default"):
+    """
+    Get schema to build the client UI
+    :param str schema_type: default or dereferenced.
+    """
+    return settings.getSchema(type=schema_type)
 
 
 @app.get("/config/currentActive")
-def api_get_config_current():
-    # returns currently cached and active settings
-    return (settings.dict())
+def api_get_config_current_active():
+    """returns currently cached and active settings"""
+    return settings.dict()
 
 
 @app.get("/config/current")
 def api_get_config_current():
-    # read settings from drive and return
-    return (ConfigSettings().dict())
+    """read settings from drive and return"""
+    return ConfigSettings().dict()
 
 
 @app.post("/config/current")
-def api_post_config_current(updatedSettings: ConfigSettings):
-    updatedSettings.persist()  # save settings to disc
+def api_post_config_current(updated_settings: ConfigSettings):
+    updated_settings.persist()  # save settings to disc
     # restart service to load new config
-    try:
-        util_systemd_control("restart")
-    except:
-        pass
+    util_systemd_control("restart")
 
 
 @app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
@@ -209,10 +209,7 @@ def api_cmd(action, param):
 
     if (action == "config" and param == "reset"):
         settings.deleteconfig()
-        try:
-            util_systemd_control("restart")
-        except:
-            pass
+        util_systemd_control("restart")
     elif (action == "config" and param == "restore"):
         os.system("reboot")
     elif (action == "server" and param == "reboot"):
@@ -240,24 +237,19 @@ def util_systemd_control(state):
             args=['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME],
             timeout=10,
             check=True)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         logger.info(
             f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError as exc:
         # non zero returncode
         logger.warning(
-            f"service {SERVICE_NAME} currently inactive, need to restart by yourself!")
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"subprocess timeout {e}")
+            f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
+    except subprocess.TimeoutExpired as exc:
+        logger.error(f"subprocess timeout {exc}")
     else:
         # no error, service restart ok
         logger.info(f"service {SERVICE_NAME} currently active, restarting")
         os.system(f"systemctl --user {state} {SERVICE_NAME}")
-
-
-"""
-CAM STATE MACHINE CONTROLS triggered by client ui
-"""
 
 
 @app.get("/cmd/capture")
@@ -266,18 +258,18 @@ def api_chose_1pic_get():
     try:
         model.invokeProcess("arm")
         return "OK"
-    except Exception as e:
-        logger.exception(e)
+    except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {e}")
+            status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
     try:
         model.invokeProcess("arm")
-    except Exception as e:
-        logger.exception(e)
+    except Exception as exc:
+        logger.exception(exc)
 
 
 @app.get("/stats/focuser")
@@ -290,33 +282,36 @@ def api_stats_focuser():
 def api_gallery_images():
     try:
         return imageDb.dbGetImages()
-    except Exception as e:
-        logger.exception(e)
+    except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {e}")
+            status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @app.get("/gallery/delete", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete(id: str):
-    logger.info(f"gallery_delete requested, id={id}")
+def api_gallery_delete(image_id: str):
+    logger.info(f"gallery_delete requested, id={image_id}")
     try:
-        imageDb.deleteImageById(id)
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(500, f"deleting failed: {e}")
+        imageDb.deleteImageById(image_id)
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
 @app.get('/stream.mjpg')
 def video_stream():
+    """
+    endpoint to stream live video to clients
+    """
     if not settings.backends.LIVEPREVIEW_ENABLED:
-        raise HTTPException(405, f"preview not enabled")
+        raise HTTPException(405, "preview not enabled")
 
     try:
         return StreamingResponse(imageServers.gen_stream(),
                                  media_type='multipart/x-mixed-replace; boundary=frame')
-    except Exception as e:
-        logger.exception(e)
-        raise HTTPException(500, f"preview failed: {e}")
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(500, f"preview failed: {exc}") from exc
 
 
 # serve data directory holding images, thumbnails, ...
@@ -325,6 +320,9 @@ app.mount('/data', StaticFiles(directory='data'), name="data")
 
 @app.get("/")
 def read_index():
+    """
+    return homepage of booth
+    """
     return FileResponse('web/index.html')
 
 
@@ -363,12 +361,14 @@ if __name__ == '__main__':
     logger.info(f"__debug__={__debug__}")
 
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
-    # spawn will be the default for all systems in future so it's set here now to have same results on all platforms
+    # spawn will be the default for all systems in future so it's set here now to have same
+    # results on all platforms
     multiprocessing.set_start_method('spawn')
 
     wledservice = WledService(ee)
 
-    # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
+    # load imageserver dynamically because service can be configured
+    # https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
 
     imageDb = ImageDb(ee, imageServers.primaryBackend)
@@ -377,8 +377,11 @@ if __name__ == '__main__':
 
     # model, machine and fire.
     model = TakePictureMachineModel(ee)
-    machine = Machine(model, states=states,
-                      transitions=transitions, after_state_change='sse_emit_statechange', initial='idle')
+    machine = Machine(model,
+                      states=states,
+                      transitions=transitions,
+                      after_state_change='sse_emit_statechange',
+                      initial='idle')
     model.start()
     imageServers.start()
 
@@ -391,7 +394,8 @@ if __name__ == '__main__':
                                 port=settings.common.webserver_port, log_level="info")
         server = uvicorn.Server(config)
 
-        # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and shutdown can be handled properly.
+        # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
+        # shutdown can be handled properly.
         # Otherwise the stream.mjpg if open will block shutdown of the server
         server.force_exit = True
 
