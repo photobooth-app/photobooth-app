@@ -1,0 +1,5 @@
+[LOGGING]
+logging-format-style=new
+
+[pylint.FORMAT]
+disable=logging-fstring-interpolation
