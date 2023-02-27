@@ -1,11 +1,16 @@
-# https://stackoverflow.com/questions/45321425/how-to-run-a-fsm-model-forever
+"""
+CamStateMachine
+Controlling the process to take a picture/video, ...
+https://stackoverflow.com/questions/45321425/how-to-run-a-fsm-model-forever
+"""
+
 
 import json
-from threading import Thread, Lock
-import time
-from queue import Queue
-from src.ConfigSettings import settings
 import logging
+import time
+from threading import Thread, Lock
+from queue import Queue
+from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +31,7 @@ class TakePictureMachineModel(Thread):
     def invokeProcess(self, transition):
 
         if self.lock.locked():
-            raise Exception("cannot trigger, only one process at a time!")
+            raise RuntimeError("cannot trigger, only one process at a time!")
 
         # queue used to decouple requesting thread from this runner thread
         self.event_queue.put_nowait(transition)

@@ -25,21 +25,21 @@ from fastapi.responses import StreamingResponse, FileResponse
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from transitions import Machine
 from pymitter import EventEmitter
-from src.ImageServers import ImageServers
-from src.InformationService import InformationService
-from src.ConfigSettings import ConfigSettings, settings
-from src.KeyboardService import KeyboardService
-from src.CamStateMachine import TakePictureMachineModel, states, transitions
-from src.WledService import WledService
-from src.ImageDb import ImageDb
-from src.LoggingService import LoggingService
+from src.imageservers import ImageServers
+from src.informationservice import InformationService
+from src.configsettings import ConfigSettings, settings
+from src.keyboardservice import KeyboardService
+from src.camstatemachine import TakePictureMachineModel, states, transitions
+from src.wledservice import WledService
+from src.imagedb import ImageDb
+from src.loggingservice import LoggingService
 # from gpiozero import CPUTemperature, LoadAverage
 
 
 # create early instances
 # event system
 ee: EventEmitter = EventEmitter()
-ls: LoggingService = LoggingService(ee=ee)
+ls: LoggingService = LoggingService(evtbus=ee)
 
 # constants
 SERVICE_NAME = "imageserver"
@@ -161,7 +161,8 @@ def api_get_config_schema(schema_type: str = "default"):
     Get schema to build the client UI
     :param str schema_type: default or dereferenced.
     """
-    return settings.getSchema(type=schema_type)
+    print(schema_type)
+    return settings.get_schema(schema_type=schema_type)
 
 
 @app.get("/config/currentActive")
@@ -199,7 +200,7 @@ def api_cmd_frameserver_previewmode_get():
 @app.post("/cmd/capture", status_code=status.HTTP_200_OK)
 # photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
-    imageDb.captureHqImage(filepath, True)
+    imageDb.capture_hq_image(filepath, True)
     return "Done"
 
 
@@ -268,7 +269,7 @@ def api_chose_1pic_get():
 def evt_chose_1pic_get():
     try:
         model.invokeProcess("arm")
-    except Exception as exc:
+    except RuntimeError as exc:
         logger.exception(exc)
 
 
@@ -281,7 +282,7 @@ def api_stats_focuser():
 @app.get("/gallery/images")
 def api_gallery_images():
     try:
-        return imageDb.dbGetImages()
+        return imageDb.db_get_images()
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
@@ -292,7 +293,7 @@ def api_gallery_images():
 def api_gallery_delete(image_id: str):
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
-        imageDb.deleteImageById(image_id)
+        imageDb.delete_image_by_id(image_id)
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"deleting failed: {exc}") from exc
@@ -371,7 +372,7 @@ if __name__ == '__main__':
     # https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
 
-    imageDb = ImageDb(ee, imageServers.primaryBackend)
+    imageDb = ImageDb(ee, imageServers.primary_backend)
 
     ks = KeyboardService(ee)
 

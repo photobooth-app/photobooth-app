@@ -2,7 +2,7 @@
 import json
 import time
 import serial
-from .ConfigSettings import settings
+from .configsettings import settings
 import logging
 from pymitter import EventEmitter
 logger = logging.getLogger(__name__)

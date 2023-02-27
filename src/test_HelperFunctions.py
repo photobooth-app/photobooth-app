@@ -1,16 +1,13 @@
 import logging
 import time
-from ImageServerAbstract import ImageServerAbstract
+import io
+from PIL import Image
+from src.imageserverabstract import ImageServerAbstract
 
 logger = logging.getLogger(name=None)
 
 
-def getImages(backend: ImageServerAbstract):
-    from pymitter import EventEmitter
-    from PIL import Image
-    import io
-    import platform
-
+def get_images(backend: ImageServerAbstract):
     logger.info(f"testing backend {backend.__module__}")
     backend.start()
 
@@ -18,21 +15,21 @@ def getImages(backend: ImageServerAbstract):
     time.sleep(5)
 
     try:
-        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as im:
-            im.verify()
-    except Exception as e:
+        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+            img.verify()
+    except Exception as exc:
         print("exception!")
-        print(e)
+        print(exc)
         raise AssertionError(
-            "backend did not return valid image bytes")
+            "backend did not return valid image bytes") from exc
 
     backend.trigger_hq_capture()
 
     try:
-        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as im:
-            im.verify()
-    except Exception as e:
+        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
+            img.verify()
+    except Exception as exc:
         raise AssertionError(
-            f"backend did not return valid image bytes {e}")
+            f"backend did not return valid image bytes {exc}") from exc
 
     backend.stop()

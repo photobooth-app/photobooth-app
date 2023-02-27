@@ -1,46 +1,64 @@
-from importlib import import_module
-from ConfigSettings import settings, EnumImageBackendsLive
-import ImageServerAbstract
+"""
+manage up to two imageserver backends in this module
+"""
 import logging
+from importlib import import_module
+from pymitter import EventEmitter
+from src.configsettings import settings, EnumImageBackendsLive
+from src.imageserverabstract import ImageServerAbstract
+
 logger = logging.getLogger(__name__)
 
 
 class ImageServers():
+    """
+    Class managing imageserver backends
+    MAIN: used for high quality still pictures
+    LIVE: used for streams and live previews
+          (can be used additionally if MAIN is not capable to deliver video)
+    """
 
-    def __init__(self, ee):
+    def __init__(self, evtbus: EventEmitter):
         # public
-        self.primaryBackend: ImageServerAbstract = None
-        self.secondaryBackend: ImageServerAbstract = None
+        self.primary_backend: ImageServerAbstract = None
+        self.secondary_backend: ImageServerAbstract = None
 
         self.metadata = {}
 
-        # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
+        # load imageserver dynamically because service can
+        # be configured https://stackoverflow.com/a/14053838
         logger.info(
             f"loading primary backend: src.{settings.backends.MAIN_BACKEND.value}")
-        imageserverPrimaryBackendModule = import_module(
-            f"src.{settings.backends.MAIN_BACKEND.value}")
-        clsPrimary = getattr(imageserverPrimaryBackendModule,
-                             settings.backends.MAIN_BACKEND.value)
-        self.primaryBackend = clsPrimary(ee, False)
+        imageserver_primary_backendmodule = import_module(
+            f"src.{settings.backends.MAIN_BACKEND.lower()}")
+        cls_primary = getattr(imageserver_primary_backendmodule,
+                              settings.backends.MAIN_BACKEND.value)
+        self.primary_backend = cls_primary(evtbus, False)
 
-        # load imageserver dynamically because service can be configured https://stackoverflow.com/a/14053838
-        if settings.backends.LIVE_BACKEND and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.null and settings.backends.LIVE_BACKEND.value:
+        # load imageserver dynamically because service can
+        # be configured https://stackoverflow.com/a/14053838
+        if (settings.backends.LIVE_BACKEND and
+                not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL and
+                settings.backends.LIVE_BACKEND.value):
             logger.info(
                 f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}")
-            imageserverSecondaryBackendModule = import_module(
-                f"src.{settings.backends.LIVE_BACKEND.value}")
-            clsSecondary = getattr(imageserverSecondaryBackendModule,
-                                   settings.backends.LIVE_BACKEND.value)
-            self.secondaryBackend = clsSecondary(ee, True)
+            imageserver_secondary_backendmodule = import_module(
+                f"src.{settings.backends.LIVE_BACKEND.lower()}")
+            cls_secondary = getattr(imageserver_secondary_backendmodule,
+                                    settings.backends.LIVE_BACKEND.value)
+            self.secondary_backend = cls_secondary(evtbus, True)
 
     def gen_stream(self):
+        """
+        assigns a backend to generate a stream
+        """
         if settings.backends.LIVEPREVIEW_ENABLED:
-            if self.secondaryBackend:
-                return self.secondaryBackend.gen_stream()
-            else:
-                return self.primaryBackend.gen_stream()
+            if self.secondary_backend:
+                return self.secondary_backend.gen_stream()
+
+            return self.primary_backend.gen_stream()
         else:
-            raise Exception("livepreview not enabled")
+            raise IOError("livepreview not enabled")
     # @property
     # @abstractmethod
     # def stream_url(self):
@@ -53,22 +71,22 @@ class ImageServers():
         """
         trigger one time capture of high quality image
         """
-        pass
 
     def wait_for_hq_image(self):
         """
         function blocks until high quality image is available
         """
-        pass
 
     def start(self):
-        self.primaryBackend.start()
+        """ start backends """
+        self.primary_backend.start()
 
-        if self.secondaryBackend:
-            self.secondaryBackend.start()
+        if self.secondary_backend:
+            self.secondary_backend.start()
 
     def stop(self):
-        self.primaryBackend.stop()
+        """stop backends"""
+        self.primary_backend.stop()
 
-        if self.secondaryBackend:
-            self.secondaryBackend.stop()
+        if self.secondary_backend:
+            self.secondary_backend.stop()

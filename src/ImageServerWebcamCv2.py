@@ -1,27 +1,34 @@
+"""
+backend opencv2 for webcameras
+"""
 import time
-import cv2
-import ImageServerAbstract
 from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
-from pymitter import EventEmitter
-from ConfigSettings import settings
-from turbojpeg import TurboJPEG
 import json
+import cv2
+from turbojpeg import TurboJPEG
+from pymitter import EventEmitter
+from src.imageserverabstract import ImageServerAbstract, compile_buffer, decompile_buffer
+from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
 
-class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee: EventEmitter, enableStream):
-        super().__init__(ee, enableStream)
+class ImageServerWebcamCv2(ImageServerAbstract):
+    """
+    opencv2 backend implementation for webcameras
+    """
+
+    def __init__(self, evtbus: EventEmitter, enable_stream):
+        super().__init__(evtbus, enable_stream)
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth WebcamCv2"
         self.exif_model = "Custom"
         self.metadata = {}
 
         # private props
-        self._ee = ee
+        self._evtbus = evtbus
 
         self._img_buffer_lores_shm = shared_memory.SharedMemory(
             create=True, size=settings._shared_memory_buffer_size)
@@ -48,7 +55,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
             ),
             daemon=True)
 
-        self._onPreviewMode()
+        self._on_preview_mode()
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
@@ -70,7 +77,7 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        self._ee.emit("frameserver/onCapture")
+        self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
         with self._condition_img_buffer_hires_ready:
@@ -78,35 +85,35 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_hires_lock:
-                img = ImageServerAbstract.decompileBuffer(
+                img = decompile_buffer(
                     self._img_buffer_hires_shm)
 
-        self._ee.emit("frameserver/onCaptureFinished")
+        self._evtbus.emit("frameserver/onCaptureFinished")
 
         # return to previewmode
-        self._onPreviewMode()
+        self._on_preview_mode()
 
         return img
 
     def gen_stream(self):
-        lastTime = time.time_ns()
+        last_time = time.time_ns()
         while True:
             buffer = self._wait_for_lores_image()
 
-            nowTime = time.time_ns()
-            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
-                lastTime = nowTime
+            now_time = time.time_ns()
+            if (now_time-last_time)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE):
+                last_time = now_time
 
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
         self._event_hq_capture.set()
-        self._onCaptureMode()
+        self._on_capture_mode()
 
-    """
-    INTERNAL FUNCTIONS
-    """
+    #
+    # INTERNAL FUNCTIONS
+    #
 
     def _wait_for_lores_frame(self):
         """autofocus not supported by this backend"""
@@ -119,29 +126,29 @@ class ImageServerWebcamCv2(ImageServerAbstract.ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_lores_lock:
-                img = ImageServerAbstract.decompileBuffer(
+                img = decompile_buffer(
                     self._img_buffer_lores_shm)
             return img
 
-    def _onCaptureMode(self):
+    def _on_capture_mode(self):
         logger.debug(
-            "change to capture mode requested - currently no way for webcam to switch within reasonable time")
+            "change to capture mode requested - ignored for cv2 backend")
 
-    def _onPreviewMode(self):
+    def _on_preview_mode(self):
         logger.debug(
-            "change to preview mode requested - currently no way for webcam to switch within reasonable time")
+            "change to preview mode requested - ignored for cv2 backend")
 
-    def _publishSSEInitial(self):
-        self._publishSSE_metadata()
+    def _publish_sse_initial(self):
+        self._publish_sse_metadata()
 
-    def _publishSSE_metadata(self):
-        self._ee.emit("publishSSE", sse_event="frameserver/metadata",
-                      sse_data=json.dumps(self.metadata))
+    def _publish_sse_metadata(self):
+        self._evtbus.emit("publishSSE", sse_event="frameserver/metadata",
+                          sse_data=json.dumps(self.metadata))
 
 
-"""
-INTERNAL IMAGE GENERATOR
-"""
+#
+# INTERNAL IMAGE GENERATOR
+#
 
 
 def img_aquisition(
@@ -152,30 +159,33 @@ def img_aquisition(
         _event_hq_capture: Event,
         _condition_img_buffer_hires_ready: Condition,
         _condition_img_buffer_lores_ready: Condition,
-        # need to pass settings, because unittests can change settings, if not passed, the settings are not available in the separate process!
-        settings):
-
+        # need to pass settings, because unittests can change settings,
+        # if not passed, the settings are not available in the separate process!
+        _settings):
+    """
+    process function to gather webcam images
+    """
     # init
-    _turboJPEG = TurboJPEG()
+    _turbojpeg = TurboJPEG()
     shm_lores = shared_memory.SharedMemory(shm_buffer_lores_name)
     shm_hires = shared_memory.SharedMemory(shm_buffer_hires_name)
 
     if platform.system() == "Windows":
         logger.info(
-            "force VideoCapture to DSHOW backend on windows (MSMF is buggy with OpenCv and crashes app)")
+            "force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
         _video = cv2.VideoCapture(
-            settings.backends.cv2_device_index, cv2.CAP_DSHOW)
+            _settings.backends.cv2_device_index, cv2.CAP_DSHOW)
     else:
         _video = cv2.VideoCapture(
-            settings.backends.cv2_device_index)
+            _settings.backends.cv2_device_index)
 
     if not _video.isOpened():
         raise IOError(
-            f"cannot open camera index {settings.backends.cv2_device_index}")
+            f"cannot open camera index {_settings.backends.cv2_device_index}")
 
     if not _video.read()[0]:
         raise IOError(
-            f"cannot read camera index {settings.backends.cv2_device_index}")
+            f"cannot read camera index {_settings.backends.cv2_device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
 
@@ -184,9 +194,9 @@ def img_aquisition(
     _video.set(cv2.CAP_PROP_FPS, 30.0)
     _video.set(cv2.CAP_PROP_BUFFERSIZE, 2)  # low number for lowest lag
     _video.set(cv2.CAP_PROP_FRAME_WIDTH,
-               settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
+               _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
     _video.set(cv2.CAP_PROP_FRAME_HEIGHT,
-               settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
+               _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
 
     # read first five frames and send to void
     for _ in range(5):
@@ -199,9 +209,9 @@ def img_aquisition(
             raise IOError("error reading camera frame")
 
         # apply flip image to stream only:
-        if settings.common.CAMERA_TRANSFORM_HFLIP:
+        if _settings.common.CAMERA_TRANSFORM_HFLIP:
             array = cv2.flip(array, 1)
-        if settings.common.CAMERA_TRANSFORM_VFLIP:
+        if _settings.common.CAMERA_TRANSFORM_VFLIP:
             array = cv2.flip(array, 0)
 
         if _event_hq_capture.is_set():
@@ -213,22 +223,22 @@ def img_aquisition(
                 array, None, 2, 2, 3, 9)
 
             # convert frame to jpeg buffer
-            jpeg_buffer = _turboJPEG.encode(
-                array, quality=settings.common.HIRES_STILL_QUALITY)
+            jpeg_buffer = _turbojpeg.encode(
+                array, quality=_settings.common.HIRES_STILL_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_hires_lock:
-                ImageServerAbstract.compileBuffer(shm_hires, jpeg_buffer)
+                compile_buffer(shm_hires, jpeg_buffer)
 
             with _condition_img_buffer_hires_ready:
                 # wait to be notified
                 _condition_img_buffer_hires_ready.notify_all()
         else:
             # preview livestream
-            jpeg_buffer = _turboJPEG.encode(
-                array, quality=settings.common.LIVEPREVIEW_QUALITY)
+            jpeg_buffer = _turbojpeg.encode(
+                array, quality=_settings.common.LIVEPREVIEW_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lores_lock:
-                ImageServerAbstract.compileBuffer(shm_lores, jpeg_buffer)
+                compile_buffer(shm_lores, jpeg_buffer)
 
             with _condition_img_buffer_lores_ready:
                 # wait to be notified

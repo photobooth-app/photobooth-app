@@ -1,27 +1,34 @@
-from abc import ABC, abstractmethod
+"""
+abstract for the imageserver backends
+"""
 import logging
+from abc import ABC, abstractmethod
 from pymitter import EventEmitter
+
 logger = logging.getLogger(__name__)
 
 
 class ImageServerAbstract(ABC):
+    """
+    Imageserver abstract to create backends.
+    """
     @abstractmethod
-    def __init__(self, ee: EventEmitter, enableStream: bool):
+    def __init__(self, evtbus: EventEmitter, enable_stream: bool):
         # public
         self.exif_make = "ImageServerAbstract-Make"
         self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
 
         # private
-        self._enableStream = enableStream
+        self._enable_stream = enable_stream
         self._fps = 0
 
-        self._ee = ee
-        self._ee.on("statemachine/armed",
-                    self._onCaptureMode)
+        self._evtbus = evtbus
+        self._evtbus.on("statemachine/armed",
+                        self._on_capture_mode)
 
-        self._ee.on("onCaptureMode", self._onCaptureMode)
-        self._ee.on("onPreviewMode", self._onPreviewMode)
+        self._evtbus.on("onCaptureMode", self._on_capture_mode)
+        self._evtbus.on("onPreviewMode", self._on_preview_mode)
 
         super().__init__()
 
@@ -30,7 +37,6 @@ class ImageServerAbstract(ABC):
         """
         yield jpeg images to stream to client (if not created otherwise)
         """
-        pass
 
     # @property
     # @abstractmethod
@@ -45,71 +51,65 @@ class ImageServerAbstract(ABC):
         """
         trigger one time capture of high quality image
         """
-        pass
 
     @abstractmethod
     def wait_for_hq_image(self):
         """
         function blocks until high quality image is available
         """
-        pass
 
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
-        pass
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-        pass
 
-    """
-    INTERNAL FUNCTIONS TO BE IMPLEMENTED
-    """
+    #
+    # INTERNAL FUNCTIONS TO BE IMPLEMENTED
+    #
 
     @abstractmethod
     def _wait_for_lores_image(self):
         """
         function blocks until frame is available for preview stream
         """
-        pass
 
     @abstractmethod
     def _wait_for_lores_frame(self):
         """
         function blocks until frame is available for autofocus usually
         """
-        pass
 
     @abstractmethod
-    def _onCaptureMode(self):
+    def _on_capture_mode(self):
         """called externally via events and used to change to a capture mode if necessary"""
-        pass
 
     @abstractmethod
-    def _onPreviewMode(self):
+    def _on_preview_mode(self):
         """called externally via events and used to change to a preview mode if necessary"""
-        pass
 
 
-"""
-INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.
-"""
+#
+# INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.
+#
 
 
-def decompileBuffer(shm: memoryview):
+def decompile_buffer(shm: memoryview):
     # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
-    # means for this app in consequence: here is the place to make a copy of the image for further processing
+    # means for this app in consequence: here is the place to make a copy
+    # of the image for further processing
     # ATTENTION2: this function needs to be called with lock aquired
     length = int.from_bytes(shm.buf[0:4], 'big')
     ret: memoryview = (shm.buf[4:length+4])
     return (ret.tobytes())
 
 
-def compileBuffer(shm, jpeg_buffer):
+def compile_buffer(shm, jpeg_buffer):
     # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
-    # means for this app in consequence: here is the place to make a copy of the image for further processing
+    # means for this app in consequence: here is the place to make a copy
+    # of the image for further processing
     # ATTENTION2: this function needs to be called with lock aquired
     length: int = len(jpeg_buffer)
     length_bytes = length.to_bytes(4, 'big')

@@ -1,8 +1,8 @@
-from ImageServerWebcamCv2 import ImageServerWebcamCv2
-import test_HelperFunctions
+from src.imageserverwebcamcv2 import ImageServerWebcamCv2
+import src.test_helperfunctions as test_helperfunctions
 import cv2
 from pymitter import EventEmitter
-from ConfigSettings import settings
+from src.configsettings import settings
 import pytest
 import logging
 logger = logging.getLogger(name=None)
@@ -45,4 +45,4 @@ def test_getImages():
     # ImageServerSimulated backend: test on every platform
     backend = ImageServerWebcamCv2(EventEmitter(), True)
 
-    test_HelperFunctions.getImages(backend)
+    test_helperfunctions.get_images(backend)

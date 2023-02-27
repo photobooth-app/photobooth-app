@@ -1,4 +1,4 @@
-import test_HelperFunctions
+import src.test_helperfunctions as test_helperfunctions
 from pymitter import EventEmitter
 import platform
 import pytest
@@ -22,7 +22,7 @@ def test_getImages():
     if not _is_rpi():
         pytest.skip("platform not raspberry pi, test of Picam2 backend skipped")
 
-    from ImageServerPicam2 import ImageServerPicam2
+    from src.imageserverpicam2 import ImageServerPicam2
     backend = ImageServerPicam2(EventEmitter(), True)
 
-    test_HelperFunctions.getImages(backend)
+    test_helperfunctions.get_images(backend)

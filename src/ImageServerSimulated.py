@@ -1,19 +1,23 @@
+"""
+Simulated backend for testing.
+"""
 import platform
-import socket
-import psutil
-from PIL import Image, ImageDraw, ImageFont
-from io import BytesIO
 import time
 import logging
+from io import BytesIO
+from multiprocessing import Process, shared_memory, Condition, Lock
+from PIL import Image, ImageDraw, ImageFont
+import psutil
 from pymitter import EventEmitter
-import ImageServerAbstract
-from ConfigSettings import settings
-from multiprocessing import Process, Event, shared_memory, Condition, Lock
+from src.imageserverabstract import ImageServerAbstract, compile_buffer, decompile_buffer
+from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
 
-class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
+class ImageServerSimulated(ImageServerAbstract):
+    """simulated backend to test photobooth"""
+
     def __init__(self, ee: EventEmitter, enableStream):
         super().__init__(ee, enableStream)
 
@@ -24,12 +28,22 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
         # private props
         self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size)
+            create=True,
+            size=settings._shared_memory_buffer_size
+        )
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
 
-        self._p = Process(target=img_aquisition, name="ImageServerSimulatedAquisitionProcess", args=(
-            self._img_buffer_shm.name, self._condition_img_buffer_ready, self._img_buffer_lock), daemon=True)
+        self._p = Process(
+            target=img_aquisition,
+            name="ImageServerSimulatedAquisitionProcess",
+            args=(
+                self._img_buffer_shm.name,
+                self._condition_img_buffer_ready,
+                self._img_buffer_lock
+            ),
+            daemon=True
+        )
 
     def start(self):
         """To start the FrameServer"""
@@ -49,7 +63,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        self._ee.emit("frameserver/onCapture")
+        self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
         with self._condition_img_buffer_ready:
@@ -57,25 +71,25 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_lock:
-                img = ImageServerAbstract.decompileBuffer(
+                img = decompile_buffer(
                     self._img_buffer_shm)
 
         # virtual delay for camera to create picture
         time.sleep(0.1)
 
-        self._ee.emit("frameserver/onCaptureFinished")
+        self._evtbus.emit("frameserver/onCaptureFinished")
 
         # return to previewmode
-        self._onPreviewMode()
+        self._on_preview_mode()
 
         return img
 
     def gen_stream(self):
-        lastTime = time.time_ns()
+        last_time = time.time_ns()
         while True:
-            nowTime = time.time_ns()
-            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
-                lastTime = nowTime
+            now_time = time.time_ns()
+            if (now_time-last_time)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE):
+                last_time = now_time
 
                 buffer = self._wait_for_lores_image()
 
@@ -83,11 +97,11 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
 
     def trigger_hq_capture(self):
-        self._onCaptureMode()
+        self._on_capture_mode()
 
-    """
-    INTERNAL FUNCTIONS
-    """
+    #
+    # INTERNAL FUNCTIONS
+    #
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
@@ -98,7 +112,7 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
 
         with self._img_buffer_lock:
 
-            img = ImageServerAbstract.decompileBuffer(
+            img = decompile_buffer(
                 self._img_buffer_shm)
 
         return img
@@ -107,39 +121,37 @@ class ImageServerSimulated(ImageServerAbstract.ImageServerAbstract):
         """autofocus not supported by this backend"""
         raise NotImplementedError()
 
-    def _onCaptureMode(self):
+    def _on_capture_mode(self):
         logger.debug(
             "change to capture mode - means doing nothing in simulate")
-        pass
 
-    def _onPreviewMode(self):
+    def _on_preview_mode(self):
         logger.debug(
             "change to preview mode - means doing nothing in simulate")
-        pass
 
-    """
-    INTERNAL IMAGE GENERATOR
-    """
+    #
+    # INTERNAL IMAGE GENERATOR
+    #
 
 
 def img_aquisition(shm_buffer_name,
                    _condition_img_buffer_ready: Condition,
                    _img_buffer_lock: Lock):
-
+    """ function started in separate process to deliver images """
     target_fps = 15
-    lastTime = time.time_ns()
+    last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
     while True:
 
-        nowTime = time.time_ns()
-        if ((nowTime-lastTime)/1000**3 <= (1/target_fps)):
+        now_time = time.time_ns()
+        if (now_time-last_time)/1000**3 <= (1/target_fps):
             # limit max framerate to every ~2ms
             time.sleep(2/1000.)
             continue
 
-        fps = round(1/(nowTime-lastTime)*1000**3, 1)
-        lastTime = nowTime
+        fps = round(1/(now_time-last_time)*1000**3, 1)
+        last_time = now_time
 
         # create PIL image
         img = Image.new(
@@ -149,41 +161,43 @@ def img_aquisition(shm_buffer_name,
             color="green")
 
         # add text
-        I1 = ImageDraw.Draw(img)
-        fontDefault = ImageFont.truetype(
+        img_draw = ImageDraw.Draw(img)
+        font_large = ImageFont.truetype(
             font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
             size=30)
-        fontSmall = ImageFont.truetype(
+        font_small = ImageFont.truetype(
             font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
             size=15)
-        I1.text((100, 100),
-                f"simulated image backend",
-                fill=(200, 200, 200),
-                font=fontDefault)
-        I1.text((100, 140),
-                f"img time: {nowTime}",
-                fill=(200, 200, 200),
-                font=fontDefault)
-        I1.text((100, 180),
-                f"framerate: {fps}",
-                fill=(200, 200, 200),
-                font=fontDefault)
-        I1.text((100, 220),
-                f"cpu: 1/5/15min {[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%",
-                fill=(200, 200, 200),
-                font=fontDefault)
-        I1.text((100, 260),
-                f"you see this, so installation was successful :)",
-                fill=(200, 200, 200),
-                font=fontSmall)
-        I1.text((100, 280),
-                f"visit http://{platform.node()}:{settings.common.webserver_port} and configure backend",
-                fill=(200, 200, 200),
-                font=fontSmall)
-        I1.text((100, 300),
-                f"to use a camera instead this simulated backend",
-                fill=(200, 200, 200),
-                font=fontSmall)
+        img_draw.text((100, 100),
+                      "simulated image backend",
+                      fill=(200, 200, 200),
+                      font=font_large)
+        img_draw.text((100, 140),
+                      f"img time: {now_time}",
+                      fill=(200, 200, 200),
+                      font=font_large)
+        img_draw.text((100, 180),
+                      f"framerate: {fps}",
+                      fill=(200, 200, 200),
+                      font=font_large)
+        img_draw.text((100, 220), (
+            f"cpu: 1/5/15min "
+            f"{[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%"
+        ),
+            fill=(200, 200, 200),
+            font=font_large)
+        img_draw.text((100, 260),
+                      "you see this, so installation was successful :)",
+                      fill=(200, 200, 200),
+                      font=font_small)
+        img_draw.text((100, 280),
+                      f"goto http://{platform.node()}:{settings.common.webserver_port} to setup",
+                      fill=(200, 200, 200),
+                      font=font_small)
+        img_draw.text((100, 300),
+                      "to use a camera instead this simulated backend",
+                      fill=(200, 200, 200),
+                      font=font_small)
 
         # create jpeg
         jpeg_buffer = BytesIO()
@@ -191,7 +205,7 @@ def img_aquisition(shm_buffer_name,
 
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:
-            ImageServerAbstract.compileBuffer(shm, jpeg_buffer.getvalue())
+            compile_buffer(shm, jpeg_buffer.getvalue())
 
         with _condition_img_buffer_ready:
             # wait to be notified

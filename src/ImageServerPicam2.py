@@ -1,26 +1,30 @@
-from StoppableThread import StoppableThread
-from pymitter import EventEmitter
+"""
+Picam2 backend implementation
+
+"""
 from threading import Condition
-from ConfigSettings import settings
-from libcamera import Transform
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
-import json
-from picamera2 import Picamera2, MappedArray
-import psutil
-import threading
-from threading import Condition
-from src.ImageServerPicam2AddonCustomAutofocus import ImageServerPicam2AddonCustomAutofocus
-from src.ImageServerPicam2AddonLibcamAutofocus import ImageServerPicam2AddonLibcamAutofocus
-import cv2
 import time
 import logging
-import ImageServerAbstract
+from pymitter import EventEmitter
+from libcamera import Transform
+from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
+from picamera2 import Picamera2
+from cv2 import cvtColor, COLOR_YUV420p2RGB
+from src.configsettings import settings
+from src.StoppableThread import StoppableThread
+from src.imageserverpicam2_addoncustomautofocus import ImageServerPicam2AddonCustomAutofocus
+from src.imageserverpicam2_addonlibcamautofocus import ImageServerPicam2AddonLibcamAutofocus
+from src.imageserverabstract import ImageServerAbstract
 logger = logging.getLogger(__name__)
 
 
-class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
-    def __init__(self, ee, enableStream):
-        super().__init__(ee, enableStream)
+class ImageServerPicam2(ImageServerAbstract):
+    """
+    The backend implementation using picam2
+    """
+
+    def __init__(self, evtbus: EventEmitter, enableStream):
+        super().__init__(evtbus, enableStream)
         # public props (defined in abstract class also)
         self.exif_make = "Photobooth Picamera2 Integration"
         self.exif_model = "Custom"
@@ -32,15 +36,16 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = Picamera2()
-        self._turboJPEG = TurboJPEG()
-        self._ee = ee
-        if (settings.focuser.ENABLED):
-            # custom autofocus (has ROI, ... might be removed in future if libcam support for autofocus is well)
-            self._addonAutofocus = ImageServerPicam2AddonCustomAutofocus(
-                self, ee)
+        self._turbojpeg = TurboJPEG()
+        self._evtbus = evtbus
+        if settings.focuser.ENABLED:
+            # custom autofocus (has ROI, ... might be removed in future if
+            # libcam support for autofocus is well)
+            self._addon_autofocus = ImageServerPicam2AddonCustomAutofocus(
+                self, evtbus)
         else:
-            self._addonAutofocus = ImageServerPicam2AddonLibcamAutofocus(
-                self, ee)
+            self._addon_autofocus = ImageServerPicam2AddonLibcamAutofocus(
+                self, evtbus)
 
         self._hq_array = None
         self._lores_array = None
@@ -48,31 +53,54 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         self._lores_condition = Condition()
         self._trigger_hq_capture = False
         self._currentmode = None
+        self._lastmode = None
         self._count = 0
 
         # worker threads
-        self._generateImagesThread = StoppableThread(name="_generateImagesThread",
-                                                     target=self._GenerateImagesFun, daemon=True)
-        self._statsThread = StoppableThread(name="_statsThread",
-                                            target=self._StatsFun, daemon=True)
+        self._generate_images_thread = StoppableThread(name="_generateImagesThread",
+                                                       target=self._generate_images_fun,
+                                                       daemon=True)
+        self._stats_thread = StoppableThread(name="_statsThread",
+                                             target=self._stats_fun,
+                                             daemon=True)
 
         # config HQ mode (used for picture capture and live preview on countdown)
-        self._captureConfig = self._picam2.create_still_configuration(
-            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH, settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+        self._capture_config = self._picam2.create_still_configuration(
+            {"size": (settings.common.CAPTURE_CAM_RESOLUTION_WIDTH,
+                      settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)},
+            {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH,
+                      settings.common.LIVEVIEW_RESOLUTION_HEIGHT)},
+            encode="lores",
+            buffer_count=2,
+            display="lores",
+            transform=Transform(
+                hflip=settings.common.CAMERA_TRANSFORM_HFLIP,
+                vflip=settings.common.CAMERA_TRANSFORM_VFLIP)
+        )
 
         # config preview mode (used for permanent live view)
-        self._previewConfig = self._picam2.create_video_configuration(
-            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH, settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)}, {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH, settings.common.LIVEVIEW_RESOLUTION_HEIGHT)}, encode="lores", buffer_count=2, display="lores", transform=Transform(hflip=settings.common.CAMERA_TRANSFORM_HFLIP, vflip=settings.common.CAMERA_TRANSFORM_VFLIP))
+        self._preview_config = self._picam2.create_video_configuration(
+            {"size": (settings.common.PREVIEW_CAM_RESOLUTION_WIDTH,
+                      settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT)},
+            {"size": (settings.common.LIVEVIEW_RESOLUTION_WIDTH,
+                      settings.common.LIVEVIEW_RESOLUTION_HEIGHT)},
+            encode="lores",
+            buffer_count=2,
+            display="lores",
+            transform=Transform(
+                hflip=settings.common.CAMERA_TRANSFORM_HFLIP,
+                vflip=settings.common.CAMERA_TRANSFORM_VFLIP)
+        )
 
         # activate preview mode on init
-        self._onPreviewMode()
+        self._on_preview_mode()
         self._picam2.configure(self._currentmode)
 
         logger.info(f"camera_config: {self._picam2.camera_config}")
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        self.setAeExposureMode(
+        self.set_ae_exposure(
             settings.backends.picam2_AE_EXPOSURE_MODE)
 
     def start(self):
@@ -80,8 +108,8 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         # start camera
         self._picam2.start()
 
-        self._generateImagesThread.start()
-        self._statsThread.start()
+        self._generate_images_thread.start()
+        self._stats_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -89,13 +117,13 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
-        self._addonAutofocus.abortOngoingFocusThread()
+        self._addon_autofocus.abort_ongoing_focus_thread()
 
-        self._generateImagesThread.stop()
-        self._statsThread.stop()
+        self._generate_images_thread.stop()
+        self._stats_thread.stop()
 
-        self._generateImagesThread.join(1)
-        self._statsThread.join(1)
+        self._generate_images_thread.join(1)
+        self._stats_thread.join(1)
 
         self._picam2.stop()
 
@@ -108,20 +136,20 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # TODO: timout to make it continue and do not block threads completely
                 if not self._hq_condition.wait(1):
                     raise IOError("timeout receiving frames")
-                buffer = self._getJpegByHiresFrame(
+                buffer = self._get_jpeg_by_hires_frame(
                     frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY)
                 return buffer
 
     def gen_stream(self):
-        lastTime = time.time_ns()
+        last_time = time.time_ns()
 
-        while not self._generateImagesThread.stopped():
+        while not self._generate_images_thread.stopped():
             array = self._wait_for_lores_frame()
 
-            nowTime = time.time_ns()
-            if ((nowTime-lastTime)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE)):
-                lastTime = nowTime
-                buffer = self._getJpegByLoresFrame(
+            now_time = time.time_ns()
+            if (now_time-last_time)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE):
+                last_time = now_time
+                buffer = self._get_jpeg_by_lores_frame(
                     frame=array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
@@ -129,9 +157,9 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
 
-    """
-    INTERNAL FUNCTIONS
-    """
+    #
+    # INTERNAL FUNCTIONS
+    #
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
@@ -140,7 +168,7 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # TODO: timout to make it continue and do not block threads completely
                 if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
-                buffer = self._getJpegByLoresFrame(
+                buffer = self._get_jpeg_by_lores_frame(
                     frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY)
                 return buffer
 
@@ -153,55 +181,55 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                     raise IOError("timeout receiving frames")
                 return self._lores_array
 
-    def _onCaptureMode(self):
+    def _on_capture_mode(self):
         logger.debug(
             "change to capture mode")
         self._lastmode = self._currentmode
-        self._currentmode = self._captureConfig
+        self._currentmode = self._capture_config
 
-    def _onPreviewMode(self):
+    def _on_preview_mode(self):
         logger.debug(
             "change to preview mode")
         self._lastmode = self._currentmode
-        self._currentmode = self._previewConfig
+        self._currentmode = self._preview_config
 
-    def _getJpegByHiresFrame(self, frame, quality):
-        jpeg_buffer = self._turboJPEG.encode(
-            frame, quality=quality, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422)
-
-        return jpeg_buffer
-
-    def _getJpegByLoresFrame(self, frame, quality):
-        jpeg_buffer = self._turboJPEG.encode(
-            frame, quality=quality)
+    def _get_jpeg_by_hires_frame(self, frame, quality):
+        jpeg_buffer = self._turbojpeg.encode(frame,
+                                             quality=quality,
+                                             pixel_format=TJPF_RGB,
+                                             jpeg_subsample=TJSAMP_422)
 
         return jpeg_buffer
 
-    def setAeExposureMode(self, newmode):
-        logger.info(f"setAeExposureMode, try to set to {newmode}")
+    def _get_jpeg_by_lores_frame(self, frame, quality):
+        jpeg_buffer = self._turbojpeg.encode(frame, quality=quality)
+        return jpeg_buffer
+
+    def set_ae_exposure(self, newmode):
+        logger.info(f"set_ae_exposure, try to set to {newmode}")
         try:
             self._picam2.set_controls(
                 {"AeExposureMode": newmode})
         except:
             logger.error(
-                f"setAeExposureMode failed! Mode {newmode} not available")
+                f"set_ae_exposure failed! Mode {newmode} not available")
 
-        logger.info(
-            f"current picam2.controls.get_libcamera_controls(): {self._picam2.controls.get_libcamera_controls()}")
+        logger.info(f"current picam2.controls.get_libcamera_controls():"
+                    f"{self._picam2.controls.get_libcamera_controls()}")
 
-    """
-    INTERNAL IMAGE GENERATOR
-    """
+    #
+    # INTERNAL IMAGE GENERATOR
+    #
 
-    def _StatsFun(self):
-        CALC_EVERY = 2  # update every x seconds only
+    def _stats_fun(self):
+        calc_every = 2  # update every x seconds only
 
         # FPS = 1 / time to process loop
         start_time = time.time()  # start time of the loop
 
         # to calc frames per second every second
-        while not self._statsThread.stopped():
-            if (time.time() > (start_time+CALC_EVERY)):
+        while not self._stats_thread.stopped():
+            if time.time() > (start_time+calc_every):
                 fps = round(float(self._count) /
                             (time.time() - start_time), 1)
 
@@ -212,18 +240,18 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
             # thread wait otherwise 100% load ;)
             time.sleep(0.1)
 
-    def _GenerateImagesFun(self):
+    def _generate_images_fun(self):
 
-        while not self._generateImagesThread.stopped():  # repeat until stopped
-            if self._trigger_hq_capture == True and self._currentmode != self._captureConfig:
-                # ensure cam is in capture quality mode even if there was no countdown triggered beforehand
-                # usually there is a countdown, but this is to be safe
+        while not self._generate_images_thread.stopped():  # repeat until stopped
+            if self._trigger_hq_capture is True and self._currentmode != self._capture_config:
+                # ensure cam is in capture quality mode even if there was no countdown
+                # triggered beforehand usually there is a countdown, but this is to be safe
                 logger.warning(
-                    f"force switchmode to capture config right before taking picture (no countdown?!)")
-                self._onCaptureMode()
+                    "force switchmode to capture config right before taking picture")
+                self._on_capture_mode()
 
-            if (not self._currentmode == self._lastmode) and self._lastmode != None:
-                logger.info(f"switch_mode invoked")
+            if (not self._currentmode == self._lastmode) and self._lastmode is not None:
+                logger.info("switch_mode invoked")
                 self._picam2.switch_mode(self._currentmode)
                 self._lastmode = self._currentmode
 
@@ -231,8 +259,9 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 (orig_array,), self.metadata = self._picam2.capture_arrays(
                     ["lores"])
 
-                # convert colors to rgb because lores-stream is always YUV420 that is not used in application usually.
-                array = cv2.cvtColor(orig_array, cv2.COLOR_YUV420p2RGB)
+                # convert colors to rgb because lores-stream is always YUV420 that
+                # is not used in application usually.
+                array = cvtColor(orig_array, COLOR_YUV420p2RGB)
 
                 with self._lores_condition:
                     self._lores_array = array
@@ -241,20 +270,20 @@ class ImageServerPicam2(ImageServerAbstract.ImageServerAbstract):
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
 
-                self._ee.emit("frameserver/onCapture")
+                self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
                 (array,), self.metadata = self._picam2.capture_arrays(
                     ["main"])
                 logger.info(self.metadata)
 
-                self._ee.emit("frameserver/onCaptureFinished")
+                self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hq_condition:
                     self._hq_array = array
                     self._hq_condition.notify_all()
 
                 # switch back to preview mode
-                self._onPreviewMode()
+                self._on_preview_mode()
 
             self._count += 1
