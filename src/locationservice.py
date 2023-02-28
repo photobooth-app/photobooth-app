@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 class LocationService:
     def __init__(self):
-
-        self._thread = Thread(name="LocationServiceThread",
-                              target=self._thread_func, daemon=True)
+        self._thread = Thread(
+            name="LocationServiceThread", target=self._thread_func, daemon=True
+        )
         self._running = True
 
         # request data
@@ -26,19 +26,20 @@ class LocationService:
         # https://developers.google.com/maps/documentation/geolocation/overview#responses
         self._geolocation_response = {}
 
-        self._init_successful = False   # thread cannot be enabled.
+        self._init_successful = False  # thread cannot be enabled.
         if settings.locationservice.LOCATION_SERVICE_ENABLED:
             logger.debug("geolocation api enabled, trying to setup")
             try:
                 self._wifi = pywifi.PyWiFi()
-                self._iface = self._wifi.interfaces(
-                )[settings.locationservice.LOCATION_SERVICE_WIFI_INTERFACE_NO]
+                self._iface = self._wifi.interfaces()[
+                    settings.locationservice.LOCATION_SERVICE_WIFI_INTERFACE_NO
+                ]
                 self._client = googlemaps.Client(
-                    settings.locationservice.LOCATION_SERVICE_API_KEY)
+                    settings.locationservice.LOCATION_SERVICE_API_KEY
+                )
                 self._init_successful = True
             except Exception as exc:
-                logger.error(
-                    f"geolocation setup failed, stopping thread, error: {exc}")
+                logger.error(f"geolocation setup failed, stopping thread, error: {exc}")
         else:
             logger.debug("geolocation api disabled, skipping setup")
 
@@ -49,26 +50,28 @@ class LocationService:
                 self._thread.start()
             else:
                 logger.error(
-                    "LocationService enabled but cannot be started since not initialized properly!")
+                    "LocationService enabled but cannot be started since not initialized properly!"
+                )
         else:
-            logger.info(
-                "LocationService started but not actually enabled in config")
+            logger.info("LocationService started but not actually enabled in config")
 
     def stop(self):
         self._running = False
         self._thread.join(1)
 
     def _thread_func(self):
-        calc_every = settings.locationservice.LOCATION_SERVICE_FORCED_UPDATE * \
-            60  # update every x seconds only
+        calc_every = (
+            settings.locationservice.LOCATION_SERVICE_FORCED_UPDATE * 60
+        )  # update every x seconds only
         last_forced_update_time = time.time()  # last time force updated
-        max_retries_high_frequency = settings.locationservice.LOCATION_SERVICE_HIGH_FREQ_UPDATE
+        max_retries_high_frequency = (
+            settings.locationservice.LOCATION_SERVICE_HIGH_FREQ_UPDATE
+        )
 
         while self._running:
             # forced update by time
-            if time.time() > (last_forced_update_time+calc_every):
-                logger.info(
-                    "geolocation forced update by time triggered")
+            if time.time() > (last_forced_update_time + calc_every):
+                logger.info("geolocation forced update by time triggered")
 
                 self.update_geolocation()
 
@@ -78,14 +81,13 @@ class LocationService:
             # higher frequency retry initial after bootup.
             # if fails still forced update every hour or so above.
             elif (
-                (
-                    self.accuracy is None or
-                    self.accuracy > settings.locationservice.LOCATION_SERVICE_THRESHOLD_ACCURATE
-                ) and
-                    max_retries_high_frequency > 0
-            ):
+                self.accuracy is None
+                or self.accuracy
+                > settings.locationservice.LOCATION_SERVICE_THRESHOLD_ACCURATE
+            ) and max_retries_high_frequency > 0:
                 logger.info(
-                    f"no or inaccurate result, retry {max_retries_high_frequency} times again")
+                    f"no or inaccurate result, retry {max_retries_high_frequency} times again"
+                )
 
                 self.update_geolocation()
 
@@ -100,49 +102,49 @@ class LocationService:
     @property
     def latitude(self):
         try:
-            return self._geolocation_response['location']['lat']
+            return self._geolocation_response["location"]["lat"]
         except KeyError:
             return None
 
     @property
     def longitude(self):
         try:
-            return self._geolocation_response['location']['lng']
+            return self._geolocation_response["location"]["lng"]
         except KeyError:
             return None
 
     @property
     def accuracy(self):
         try:
-            return self._geolocation_response['accuracy']
+            return self._geolocation_response["accuracy"]
         except KeyError:
             return None
 
     @property
     def latitude_dms(self):
         try:
-            return self._decdeg2dms(self._geolocation_response['location']['lat'])
+            return self._decdeg2dms(self._geolocation_response["location"]["lat"])
         except KeyError:
             return None
 
     @property
     def longitude_dms(self):
         try:
-            return self._decdeg2dms(self._geolocation_response['location']['lng'])
+            return self._decdeg2dms(self._geolocation_response["location"]["lng"])
         except KeyError:
             return None
 
     @property
     def latitude_ref(self):
         if self.latitude is not None:
-            return 'S' if self.latitude < 0 else 'N'
+            return "S" if self.latitude < 0 else "N"
         else:
             return None
 
     @property
     def longitude_ref(self):
         if self.longitude is not None:
-            return 'W' if self.longitude < 0 else 'E'
+            return "W" if self.longitude < 0 else "E"
         else:
             return None
 
@@ -151,14 +153,14 @@ class LocationService:
         # 52°24'02.0"N 9°40'46.1"E
         is_positive = decdeg >= 0
         decdeg = abs(decdeg)
-        minutes, seconds = divmod(decdeg*3600, 60)
+        minutes, seconds = divmod(decdeg * 3600, 60)
         degrees, minutes = divmod(minutes, 60)
         degrees = degrees if is_positive else -degrees
 
         return (
             Fraction(degrees).as_integer_ratio(),
             Fraction(minutes).as_integer_ratio(),
-            Fraction(seconds).limit_denominator(100000).as_integer_ratio()
+            Fraction(seconds).limit_denominator(100000).as_integer_ratio(),
         )
 
     def request_geolocation(self):
@@ -166,7 +168,7 @@ class LocationService:
         try:
             results = self._client.geolocate(
                 consider_ip=settings.locationservice.LOCATION_SERVICE_CONSIDER_IP,
-                wifi_access_points=self._wifi_access_points
+                wifi_access_points=self._wifi_access_points,
             )
 
             logger.info(f"geolocation results: {results}")
@@ -184,7 +186,8 @@ class LocationService:
         wifi_access_points = []
         for scan_result in scan_results:
             wifi_access_points.append(
-                {"macAddress": scan_result.bssid, "signalStrength": scan_result.signal})
+                {"macAddress": scan_result.bssid, "signalStrength": scan_result.signal}
+            )
 
         logger.debug(wifi_access_points)
         logger.info(f"Found {len(scan_results)} WiFi for geolocation")

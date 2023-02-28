@@ -1,10 +1,10 @@
-
 import src.test_helperfunctions as test_helperfunctions
 from pymitter import EventEmitter
 from src.configsettings import settings
 import pytest
 import platform
 import logging
+
 logger = logging.getLogger(name=None)
 
 """
@@ -29,10 +29,11 @@ def availableCameraIndexes():
 
 def isValidIndex(index):
     from v4l2py import Device
+
     try:
         cap = Device.from_id(index)
-        cap.video_capture.set_format(640, 480, 'MJPG')
-        for _ in (cap):
+        cap.video_capture.set_format(640, 480, "MJPG")
+        for _ in cap:
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()

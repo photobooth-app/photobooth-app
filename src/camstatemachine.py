@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class TakePictureMachineModel(Thread):
+    """_summary_
+
+    Args:
+        Thread (_type_): _description_
+    """
 
     def __init__(self, ee):
         self._ee = ee  # eventemitter
@@ -29,7 +34,14 @@ class TakePictureMachineModel(Thread):
         self._ee.on("publishSSE/initial", self._publishSSEInitial)
 
     def invokeProcess(self, transition):
+        """_summary_
 
+        Args:
+            transition (_type_): _description_
+
+        Raises:
+            RuntimeError: _description_
+        """
         if self.lock.locked():
             raise RuntimeError("cannot trigger, only one process at a time!")
 
@@ -37,10 +49,12 @@ class TakePictureMachineModel(Thread):
         self.event_queue.put_nowait(transition)
 
     def abortProcess(self):
+        """_summary_"""
         # queue used to decouple requesting thread from this runner thread
-        self.event_queue.put_nowait('abort')
+        self.event_queue.put_nowait("abort")
 
     def run(self):
+        """_summary_"""
         # threaded runner, check consistently for new processes to start...
         while True:
             try:
@@ -48,37 +62,44 @@ class TakePictureMachineModel(Thread):
                 logger.info(f"trigger event {event}")
                 self.trigger(event)
             except:
-                pass    # queue empty, ignore
+                pass  # queue empty, ignore
 
     """
     STATE CALLBACKS
     """
 
     def on_enter_failsafe(self):
+        """_summary_"""
         logger.info(
-            "trying to fix it... send event to client to reload, something like this?")
+            "trying to fix it... send event to client to reload, something like this?"
+        )
         # and go to idle
-        self.trigger('recover')
+        self.trigger("recover")
 
     def on_enter_idle(self):
+        """_summary_"""
         self.lock.release()
         logger.debug("now UNlocked")
-        logger.debug('waiting to start take pics!')
+        logger.debug("waiting to start take pics!")
 
     def on_exit_idle(self):
+        """_summary_"""
         self.lock.acquire()
         logger.debug("now locked")
 
     def on_enter_armed(self):
+        """_summary_"""
         self._ee.emit("statemachine/armed")
         self.countdown()
-        self.trigger('shoot')
+        self.trigger("shoot")
 
     def on_enter_capture(self):
+        """_summary_"""
         self._ee.emit("statemachine/capture")
-        self.trigger('finalize')
+        self.trigger("finalize")
 
     def on_exit_capture(self):
+        """_summary_"""
         self._ee.emit("statemachine/finished")
 
     """
@@ -86,10 +107,18 @@ class TakePictureMachineModel(Thread):
     """
 
     def _publishSSEInitial(self):
-        self._publishSSE(
-            "statemachine/processinfo", self.SSE_processinfo())
+        """_summary_"""
+        self._publishSSE("statemachine/processinfo", self.SSE_processinfo())
 
     def SSE_processinfo(self, additionalData={}):
+        """_summary_
+
+        Args:
+            additionalData (dict, optional): _description_. Defaults to {}.
+
+        Returns:
+            _type_: _description_
+        """
         processinfo = {
             "state": self.state,
         }
@@ -98,14 +127,19 @@ class TakePictureMachineModel(Thread):
         return processinfo
 
     def countdown(self):
-        countdown = settings.common.PROCESS_COUNTDOWN_TIMER + \
-            settings.common.PROCESS_COUNTDOWN_OFFSET
+        """_summary_"""
+        countdown = (
+            settings.common.PROCESS_COUNTDOWN_TIMER
+            + settings.common.PROCESS_COUNTDOWN_OFFSET
+        )
         while True:
             self._publishSSE(
-                "statemachine/processinfo", self.SSE_processinfo({"countdown": round(countdown, 1)}))
+                "statemachine/processinfo",
+                self.SSE_processinfo({"countdown": round(countdown, 1)}),
+            )
             time.sleep(0.1)
             countdown -= 0.1
-            if (countdown <= settings.common.PROCESS_COUNTDOWN_OFFSET):
+            if countdown <= settings.common.PROCESS_COUNTDOWN_OFFSET:
                 break
 
     """
@@ -113,21 +147,19 @@ class TakePictureMachineModel(Thread):
     """
 
     def sse_emit_statechange(self):
+        """_summary_"""
         # set in machine to be called on every change
-        self._publishSSE(
-            "statemachine/processinfo", self.SSE_processinfo())
+        self._publishSSE("statemachine/processinfo", self.SSE_processinfo())
 
     def _publishSSE(self, sse_event, sse_data):
-        self._ee.emit("publishSSE", sse_event=sse_event,
-                      sse_data=json.dumps(sse_data))
+        self._ee.emit("publishSSE", sse_event=sse_event, sse_data=json.dumps(sse_data))
 
 
 states = [
-    'idle',
-    'armed',
-    'capture',
-
-    'failsafe',
+    "idle",
+    "armed",
+    "capture",
+    "failsafe",
 ]
 
 """
@@ -135,11 +167,10 @@ TRANSITIONS
 """
 transitions = [
     # before: set_job(numberofpics)
-    ['arm', ['idle', 'capture'], 'armed'],
-    ['shoot', 'armed', 'capture'],
-    ['finalize', 'capture', 'idle'],
-
-    ['fails', '*', 'failsafe'],
-    ['abort', '*', 'failsafe'],
-    ['recover', 'failsafe', 'idle'],
+    ["arm", ["idle", "capture"], "armed"],
+    ["shoot", "armed", "capture"],
+    ["finalize", "capture", "idle"],
+    ["fails", "*", "failsafe"],
+    ["abort", "*", "failsafe"],
+    ["recover", "failsafe", "idle"],
 ]

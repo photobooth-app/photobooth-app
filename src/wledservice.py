@@ -5,6 +5,7 @@ import serial
 from .configsettings import settings
 import logging
 from pymitter import EventEmitter
+
 logger = logging.getLogger(__name__)
 
 # these presets are set on WLED module to control lights:
@@ -13,7 +14,7 @@ PRESET_ID_COUNTDOWN = 2
 PRESET_ID_SHOOT = 3
 
 
-class WledService():
+class WledService:
     def __init__(self, ee: EventEmitter):
         self._ee = ee
         self._serial = None
@@ -22,10 +23,12 @@ class WledService():
         if settings.wled.ENABLED == True:
             if settings.wled.SERIAL_PORT:
                 logger.info(
-                    f"WledService setup, connecting port {settings.wled.SERIAL_PORT}")
+                    f"WledService setup, connecting port {settings.wled.SERIAL_PORT}"
+                )
             else:
                 logger.error(
-                    f"WledService setup abort, invalid serial port {settings.wled.SERIAL_PORT}")
+                    f"WledService setup abort, invalid serial port {settings.wled.SERIAL_PORT}"
+                )
                 return
         else:
             logger.info(f"WledService disabled")
@@ -51,12 +54,20 @@ class WledService():
 
         try:
             self._serial = serial.Serial(
-                port=settings.wled.SERIAL_PORT, baudrate=115200, bytesize=8, timeout=1, write_timeout=1, stopbits=serial.STOPBITS_ONE, rtscts=False, dsrdtr=False
+                port=settings.wled.SERIAL_PORT,
+                baudrate=115200,
+                bytesize=8,
+                timeout=1,
+                write_timeout=1,
+                stopbits=serial.STOPBITS_ONE,
+                rtscts=False,
+                dsrdtr=False,
             )
         except serial.SerialException as e:
             logger.error(e)
             logger.error(
-                "failed to open WLED module, ESP flashed correctly and correct serial port set in config?")
+                "failed to open WLED module, ESP flashed correctly and correct serial port set in config?"
+            )
 
             return wled_detected
 
@@ -65,8 +76,7 @@ class WledService():
             self._serial.write(b"v")
         except serial.SerialTimeoutException as e:
             logger.error(e)
-            logger.error(
-                "error sending request to identify WLED module - wrong port?")
+            logger.error("error sending request to identify WLED module - wrong port?")
             return wled_detected
 
         # wait for answer being available
@@ -103,11 +113,12 @@ class WledService():
             self._serial.write(request)
         except serial.SerialException as e:
             logger.fatal(
-                "error accessing WLED device, connection loss? device unpowered?")
+                "error accessing WLED device, connection loss? device unpowered?"
+            )
             # TODO: future improvement would be autorecover.
 
 
 def _request_preset(preset_id: int = -1):
-    _request_preset_bytes = json.dumps({'ps': preset_id}).encode()
+    _request_preset_bytes = json.dumps({"ps": preset_id}).encode()
     logger.debug(f"wled request preset id={preset_id}")
     return _request_preset_bytes

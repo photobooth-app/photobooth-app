@@ -9,7 +9,11 @@ import json
 import cv2
 from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
-from src.imageserverabstract import ImageServerAbstract, compile_buffer, decompile_buffer
+from src.imageserverabstract import (
+    ImageServerAbstract,
+    compile_buffer,
+    decompile_buffer,
+)
 from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
@@ -31,9 +35,11 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._evtbus = evtbus
 
         self._img_buffer_lores_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size)
+            create=True, size=settings._shared_memory_buffer_size
+        )
         self._img_buffer_hires_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size)
+            create=True, size=settings._shared_memory_buffer_size
+        )
         self._event_hq_capture: Event = Event()
         self._condition_img_buffer_hires_ready = Condition()
         self._condition_img_buffer_lores_ready = Condition()
@@ -51,9 +57,10 @@ class ImageServerWebcamCv2(ImageServerAbstract):
                 self._event_hq_capture,
                 self._condition_img_buffer_hires_ready,
                 self._condition_img_buffer_lores_ready,
-                settings
+                settings,
             ),
-            daemon=True)
+            daemon=True,
+        )
 
         self._on_preview_mode()
 
@@ -85,8 +92,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_hires_lock:
-                img = decompile_buffer(
-                    self._img_buffer_hires_shm)
+                img = decompile_buffer(self._img_buffer_hires_shm)
 
         self._evtbus.emit("frameserver/onCaptureFinished")
 
@@ -101,11 +107,15 @@ class ImageServerWebcamCv2(ImageServerAbstract):
             buffer = self._wait_for_lores_image()
 
             now_time = time.time_ns()
-            if (now_time-last_time)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (
+                1 / settings.common.LIVEPREVIEW_FRAMERATE
+            ):
                 last_time = now_time
 
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
+                )
 
     def trigger_hq_capture(self):
         self._event_hq_capture.set()
@@ -126,24 +136,24 @@ class ImageServerWebcamCv2(ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_lores_lock:
-                img = decompile_buffer(
-                    self._img_buffer_lores_shm)
+                img = decompile_buffer(self._img_buffer_lores_shm)
             return img
 
     def _on_capture_mode(self):
-        logger.debug(
-            "change to capture mode requested - ignored for cv2 backend")
+        logger.debug("change to capture mode requested - ignored for cv2 backend")
 
     def _on_preview_mode(self):
-        logger.debug(
-            "change to preview mode requested - ignored for cv2 backend")
+        logger.debug("change to preview mode requested - ignored for cv2 backend")
 
     def _publish_sse_initial(self):
         self._publish_sse_metadata()
 
     def _publish_sse_metadata(self):
-        self._evtbus.emit("publishSSE", sse_event="frameserver/metadata",
-                          sse_data=json.dumps(self.metadata))
+        self._evtbus.emit(
+            "publishSSE",
+            sse_event="frameserver/metadata",
+            sse_data=json.dumps(self.metadata),
+        )
 
 
 #
@@ -152,16 +162,17 @@ class ImageServerWebcamCv2(ImageServerAbstract):
 
 
 def img_aquisition(
-        shm_buffer_lores_name,
-        shm_buffer_hires_name,
-        _img_buffer_lores_lock,
-        _img_buffer_hires_lock,
-        _event_hq_capture: Event,
-        _condition_img_buffer_hires_ready: Condition,
-        _condition_img_buffer_lores_ready: Condition,
-        # need to pass settings, because unittests can change settings,
-        # if not passed, the settings are not available in the separate process!
-        _settings):
+    shm_buffer_lores_name,
+    shm_buffer_hires_name,
+    _img_buffer_lores_lock,
+    _img_buffer_hires_lock,
+    _event_hq_capture: Event,
+    _condition_img_buffer_hires_ready: Condition,
+    _condition_img_buffer_lores_ready: Condition,
+    # need to pass settings, because unittests can change settings,
+    # if not passed, the settings are not available in the separate process!
+    _settings,
+):
     """
     process function to gather webcam images
     """
@@ -172,31 +183,28 @@ def img_aquisition(
 
     if platform.system() == "Windows":
         logger.info(
-            "force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
-        _video = cv2.VideoCapture(
-            _settings.backends.cv2_device_index, cv2.CAP_DSHOW)
+            "force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)"
+        )
+        _video = cv2.VideoCapture(_settings.backends.cv2_device_index, cv2.CAP_DSHOW)
     else:
-        _video = cv2.VideoCapture(
-            _settings.backends.cv2_device_index)
+        _video = cv2.VideoCapture(_settings.backends.cv2_device_index)
 
     if not _video.isOpened():
-        raise IOError(
-            f"cannot open camera index {_settings.backends.cv2_device_index}")
+        raise IOError(f"cannot open camera index {_settings.backends.cv2_device_index}")
 
     if not _video.read()[0]:
-        raise IOError(
-            f"cannot read camera index {_settings.backends.cv2_device_index}")
+        raise IOError(f"cannot read camera index {_settings.backends.cv2_device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
 
     # activate preview mode on init
-    _video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    _video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     _video.set(cv2.CAP_PROP_FPS, 30.0)
     _video.set(cv2.CAP_PROP_BUFFERSIZE, 2)  # low number for lowest lag
-    _video.set(cv2.CAP_PROP_FRAME_WIDTH,
-               _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
-    _video.set(cv2.CAP_PROP_FRAME_HEIGHT,
-               _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT)
+    _video.set(cv2.CAP_PROP_FRAME_WIDTH, _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
+    _video.set(
+        cv2.CAP_PROP_FRAME_HEIGHT, _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+    )
 
     # read first five frames and send to void
     for _ in range(5):
@@ -215,16 +223,15 @@ def img_aquisition(
             array = cv2.flip(array, 0)
 
         if _event_hq_capture.is_set():
-
             _event_hq_capture.clear()
 
             # one time hq still
-            array = cv2.fastNlMeansDenoisingColored(
-                array, None, 2, 2, 3, 9)
+            array = cv2.fastNlMeansDenoisingColored(array, None, 2, 2, 3, 9)
 
             # convert frame to jpeg buffer
             jpeg_buffer = _turbojpeg.encode(
-                array, quality=_settings.common.HIRES_STILL_QUALITY)
+                array, quality=_settings.common.HIRES_STILL_QUALITY
+            )
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_hires_lock:
                 compile_buffer(shm_hires, jpeg_buffer)
@@ -235,7 +242,8 @@ def img_aquisition(
         else:
             # preview livestream
             jpeg_buffer = _turbojpeg.encode(
-                array, quality=_settings.common.LIVEPREVIEW_QUALITY)
+                array, quality=_settings.common.LIVEPREVIEW_QUALITY
+            )
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lores_lock:
                 compile_buffer(shm_lores, jpeg_buffer)

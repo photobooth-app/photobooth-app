@@ -33,6 +33,7 @@ from src.camstatemachine import TakePictureMachineModel, states, transitions
 from src.wledservice import WledService
 from src.imagedb import ImageDb
 from src.loggingservice import LoggingService
+
 # from gpiozero import CPUTemperature, LoadAverage
 
 
@@ -99,24 +100,28 @@ async def subscribe(request: Request):
 
     def add_queue(sse_event, sse_data):
         try:
-            queue.put_nowait(ServerSentEvent(
-                id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
+            queue.put_nowait(
+                ServerSentEvent(
+                    id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000
+                )
+            )
         except QueueFull as exc:
             # actually never run, because queue size is infinite currently
             remove_subscriptions()
             logger.error(
-                f"SSE queue full! event '{sse_event}' not sent. Connection broken?")
+                f"SSE queue full! event '{sse_event}' not sent. Connection broken?"
+            )
             raise HTTPException(
                 status_code=500,
-                detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?") from exc
+                detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?",
+            ) from exc
 
     async def event_iterator():
         try:
             while True:
                 if await request.is_disconnected():
                     remove_subscriptions()
-                    logger.info(
-                        f"client request disconnect, client {request.client}")
+                    logger.info(f"client request disconnect, client {request.client}")
                     break
 
                 event = await queue.get()
@@ -126,17 +131,14 @@ async def subscribe(request: Request):
 
         except asyncio.CancelledError:
             remove_subscriptions()
-            logger.info(
-                f"Disconnected from client {request.client}")
+            logger.info(f"Disconnected from client {request.client}")
 
     logger.info(f"Client connected {request.client}")
     add_subscriptions()
 
     # initial messages on client connect
-    add_queue(sse_event="message",
-              sse_data=f"Client connected {request.client}")
-    add_queue(sse_event="config/currentconfig",
-              sse_data=settings.json())
+    add_queue(sse_event="message", sse_data=f"Client connected {request.client}")
+    add_queue(sse_event="config/currentconfig", sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
     await ee.emit_async("publishSSE/initial")
@@ -208,25 +210,24 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
 def api_cmd(action, param):
     logger.info(f"cmd api requested action={action}, param={param}")
 
-    if (action == "config" and param == "reset"):
+    if action == "config" and param == "reset":
         settings.deleteconfig()
         util_systemd_control("restart")
-    elif (action == "config" and param == "restore"):
+    elif action == "config" and param == "restore":
         os.system("reboot")
-    elif (action == "server" and param == "reboot"):
+    elif action == "server" and param == "reboot":
         os.system("reboot")
-    elif (action == "server" and param == "shutdown"):
+    elif action == "server" and param == "shutdown":
         os.system("shutdown now")
-    elif (action == "service" and param == "restart"):
+    elif action == "service" and param == "restart":
         util_systemd_control("restart")
-    elif (action == "service" and param == "stop"):
+    elif action == "service" and param == "stop":
         util_systemd_control("stop")
-    elif (action == "service" and param == "start"):
+    elif action == "service" and param == "start":
         util_systemd_control("start")
 
     else:
-        raise HTTPException(
-            500, f"invalid request action={action}, param={param}")
+        raise HTTPException(500, f"invalid request action={action}, param={param}")
 
     return f"action={action}, param={param}"
 
@@ -235,16 +236,19 @@ def util_systemd_control(state):
     # will return 0 for active else inactive.
     try:
         subprocess.run(
-            args=['systemctl', '--user', 'is-active', '--quiet', SERVICE_NAME],
+            args=["systemctl", "--user", "is-active", "--quiet", SERVICE_NAME],
             timeout=10,
-            check=True)
+            check=True,
+        )
     except FileNotFoundError:
         logger.info(
-            f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
+            f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself."
+        )
     except subprocess.CalledProcessError as exc:
         # non zero returncode
         logger.warning(
-            f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
+            f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}"
+        )
     except subprocess.TimeoutExpired as exc:
         logger.error(f"subprocess timeout {exc}")
     else:
@@ -262,7 +266,8 @@ def api_chose_1pic_get():
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
+            status_code=500, detail=f"something went wrong, Exception: {exc}"
+        ) from exc
 
 
 @ee.on("keyboardservice/chose_1pic")
@@ -286,7 +291,8 @@ def api_gallery_images():
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
+            status_code=500, detail=f"something went wrong, Exception: {exc}"
+        ) from exc
 
 
 @app.get("/gallery/delete", status_code=status.HTTP_204_NO_CONTENT)
@@ -299,7 +305,7 @@ def api_gallery_delete(image_id: str):
         raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
-@app.get('/stream.mjpg')
+@app.get("/stream.mjpg")
 def video_stream():
     """
     endpoint to stream live video to clients
@@ -308,15 +314,17 @@ def video_stream():
         raise HTTPException(405, "preview not enabled")
 
     try:
-        return StreamingResponse(imageServers.gen_stream(),
-                                 media_type='multipart/x-mixed-replace; boundary=frame')
+        return StreamingResponse(
+            imageServers.gen_stream(),
+            media_type="multipart/x-mixed-replace; boundary=frame",
+        )
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"preview failed: {exc}") from exc
 
 
 # serve data directory holding images, thumbnails, ...
-app.mount('/data', StaticFiles(directory='data'), name="data")
+app.mount("/data", StaticFiles(directory="data"), name="data")
 
 
 @app.get("/")
@@ -324,7 +332,7 @@ def read_index():
     """
     return homepage of booth
     """
-    return FileResponse('web/index.html')
+    return FileResponse("web/index.html")
 
 
 # if not match anything above, default to deliver static files from web directory
@@ -342,8 +350,9 @@ async def validation_exception_handler(request, exc):
     logger.error(f"http RequestValidationError: {exc}")
     return await request_validation_exception_handler(request, exc)
 
-if __name__ == '__main__':
-    logger.info('Welcome to qPhotobooth')
+
+if __name__ == "__main__":
+    logger.info("Welcome to qPhotobooth")
     logger.info(f"platform.system={platform.system()}")
     logger.info(f"platform.release={platform.release()}")
     logger.info(f"platform.machine={platform.machine()}")
@@ -364,7 +373,7 @@ if __name__ == '__main__':
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
-    multiprocessing.set_start_method('spawn')
+    multiprocessing.set_start_method("spawn")
 
     wledservice = WledService(ee)
 
@@ -378,11 +387,13 @@ if __name__ == '__main__':
 
     # model, machine and fire.
     model = TakePictureMachineModel(ee)
-    machine = Machine(model,
-                      states=states,
-                      transitions=transitions,
-                      after_state_change='sse_emit_statechange',
-                      initial='idle')
+    machine = Machine(
+        model,
+        states=states,
+        transitions=transitions,
+        after_state_change="sse_emit_statechange",
+        initial="idle",
+    )
     model.start()
     imageServers.start()
 
@@ -391,8 +402,12 @@ if __name__ == '__main__':
     # serve files forever
     try:
         # log_level="trace", default info
-        config = uvicorn.Config(app=app, host="0.0.0.0",
-                                port=settings.common.webserver_port, log_level="info")
+        config = uvicorn.Config(
+            app=app,
+            host="0.0.0.0",
+            port=settings.common.webserver_port,
+            log_level="info",
+        )
         server = uvicorn.Server(config)
 
         # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
@@ -402,6 +417,5 @@ if __name__ == '__main__':
 
         server.run()
     finally:
-
         imageServers.stop()
         ins.stop()

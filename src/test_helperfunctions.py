@@ -20,8 +20,7 @@ def get_images(backend: ImageServerAbstract):
     except Exception as exc:
         print("exception!")
         print(exc)
-        raise AssertionError(
-            "backend did not return valid image bytes") from exc
+        raise AssertionError("backend did not return valid image bytes") from exc
 
     backend.trigger_hq_capture()
 
@@ -29,7 +28,6 @@ def get_images(backend: ImageServerAbstract):
         with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
             img.verify()
     except Exception as exc:
-        raise AssertionError(
-            f"backend did not return valid image bytes {exc}") from exc
+        raise AssertionError(f"backend did not return valid image bytes {exc}") from exc
 
     backend.stop()

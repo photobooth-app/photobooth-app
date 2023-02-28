@@ -1,4 +1,5 @@
 import platform
+
 if platform.system() == "Windows":
     raise OSError("backend v4l2py not supported on windows platform")
 from v4l2py import Device
@@ -22,8 +23,8 @@ def availableCameraIndexes():
 def isValidIndex(index):
     try:
         cap = Device.from_id(index)
-        cap.video_capture.set_format(640, 480, 'MJPG')
-        for _ in (cap):
+        cap.video_capture.set_format(640, 480, "MJPG")
+        for _ in cap:
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()
@@ -33,7 +34,7 @@ def isValidIndex(index):
         return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print(f"probing available webcams")
     print(f"available webcam devices indexes:")
     print(availableCameraIndexes())

@@ -19,26 +19,27 @@ class EventstreamLogHandler(logging.Handler):
         logging.Handler.__init__(self)
 
     def emit(self, record: LogRecord):
-
         logrecord = {
-            "time": datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
-            'level': record.levelname,
-            'message': record.getMessage(),
-            'name': record.name,
-            'funcName': record.funcName,
-            'lineno': record.lineno,
+            "time": datetime.datetime.fromtimestamp(record.created).strftime(
+                "%d.%b.%y %H:%M:%S"
+            ),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "name": record.name,
+            "funcName": record.funcName,
+            "lineno": record.lineno,
         }
-        self._evtbus.emit("publishSSE", sse_event="logrecord",
-                          sse_data=json.dumps(logrecord))
+        self._evtbus.emit(
+            "publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord)
+        )
 
 
-class LoggingService():
+class LoggingService:
     def __init__(self, evtbus: EventEmitter):
-        fmt = '%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s'
+        fmt = "%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s"
         log_formatter = logging.Formatter(fmt=fmt)
 
-        logging.basicConfig(level=logging.DEBUG,
-                            format=fmt, force=True)
+        logging.basicConfig(level=logging.DEBUG, format=fmt, force=True)
 
         # our default logger (root = None)
         # root loggers seems to be the template for all other loggers,
@@ -61,9 +62,8 @@ class LoggingService():
 
         # create rotatingFileHandler
         rotatingfile_handler = RotatingFileHandler(
-            filename="./log/qbooth.log",
-            maxBytes=1024**2,
-            backupCount=10)
+            filename="./log/qbooth.log", maxBytes=1024**2, backupCount=10
+        )
         rotatingfile_handler.setFormatter(log_formatter)
 
         # create rotatingFileHandler
@@ -91,7 +91,7 @@ class LoggingService():
             "sse_starlette.sse",
             "src.Autofocus",
             "transitions.core",
-            "PIL.PngImagePlugin"
+            "PIL.PngImagePlugin",
         ]:
             # mute some other logger
             lgr = logging.getLogger(name=name)

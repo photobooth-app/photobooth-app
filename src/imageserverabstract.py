@@ -12,6 +12,7 @@ class ImageServerAbstract(ABC):
     """
     Imageserver abstract to create backends.
     """
+
     @abstractmethod
     def __init__(self, evtbus: EventEmitter, enable_stream: bool):
         # public
@@ -24,8 +25,7 @@ class ImageServerAbstract(ABC):
         self._fps = 0
 
         self._evtbus = evtbus
-        self._evtbus.on("statemachine/armed",
-                        self._on_capture_mode)
+        self._evtbus.on("statemachine/armed", self._on_capture_mode)
 
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
         self._evtbus.on("onPreviewMode", self._on_preview_mode)
@@ -101,9 +101,9 @@ def decompile_buffer(shm: memoryview):
     # means for this app in consequence: here is the place to make a copy
     # of the image for further processing
     # ATTENTION2: this function needs to be called with lock aquired
-    length = int.from_bytes(shm.buf[0:4], 'big')
-    ret: memoryview = (shm.buf[4:length+4])
-    return (ret.tobytes())
+    length = int.from_bytes(shm.buf[0:4], "big")
+    ret: memoryview = shm.buf[4 : length + 4]
+    return ret.tobytes()
 
 
 def compile_buffer(shm, jpeg_buffer):
@@ -112,6 +112,6 @@ def compile_buffer(shm, jpeg_buffer):
     # of the image for further processing
     # ATTENTION2: this function needs to be called with lock aquired
     length: int = len(jpeg_buffer)
-    length_bytes = length.to_bytes(4, 'big')
-    shm.buf[0:4] = (length_bytes)
-    shm.buf[4:length+4] = (jpeg_buffer)
+    length_bytes = length.to_bytes(4, "big")
+    shm.buf[0:4] = length_bytes
+    shm.buf[4 : length + 4] = jpeg_buffer

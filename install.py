@@ -15,11 +15,11 @@ USERNAME = getpass.getuser()
 if os.path.isfile("start.py"):
     # if imageserver.py is detected, assume the sourcecode was already copied to target computer
     # useful if just want to enable service, install desktop shortcut, ...
-    INSTALL_DIR = './'
+    INSTALL_DIR = "./"
     SUPPRESS_INSTALLATION = True
 else:
     # default install in subdirectory of current workingdir:
-    INSTALL_DIR = './imageserver/'
+    INSTALL_DIR = "./imageserver/"
     SUPPRESS_INSTALLATION = False
     sys.path.append(INSTALL_DIR)
 
@@ -43,7 +43,7 @@ PIP_PACKAGES_COMMON = [
     "uvicorn==0.20.0",
     "python-dotenv==1.0.0",
     "pyserial==3.5",
-    "jsonref==1.1.0"
+    "jsonref==1.1.0",
 ]
 
 PIP_PACKAGES_LINUX = [
@@ -63,7 +63,7 @@ SYSTEM_PACKAGES_LINUX = [
     "fonts-noto-color-emoji",
     "libturbojpeg0",
     "rclone",
-    "inotify-tools"
+    "inotify-tools",
 ]
 SYSTEM_PACKAGES_RPI = [
     "python3-picamera2",
@@ -71,21 +71,23 @@ SYSTEM_PACKAGES_RPI = [
 
 
 STARTER_CONFIGURATIONS_COMMON = [
-    ("windows-and-linux_webcam_opencv2",
-     """
+    (
+        "windows-and-linux_webcam_opencv2",
+        """
 backends__MAIN_BACKEND="ImageServerWebcamCv2"
 backends__cv2_device_index=##cv2_device_index##
-"""
-     ),
+""",
+    ),
 ]
 
 STARTER_CONFIGURATIONS_LINUX = [
-    ("linux_webcam_v4l",
-     """
+    (
+        "linux_webcam_v4l",
+        """
 backends__MAIN_BACKEND="ImageServerWebcamV4l"
 backends__v4l_device_index=##v4l_device_index##
-"""
-     ),
+""",
+    ),
 ]
 
 STARTER_CONFIGURATIONS_WIN = [
@@ -93,17 +95,19 @@ STARTER_CONFIGURATIONS_WIN = [
 ]
 
 STARTER_CONFIGURATIONS_RPI = [
-    ("rpi_picam2_cameramodule3_native_libcamera",
-     """
+    (
+        "rpi_picam2_cameramodule3_native_libcamera",
+        """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2304"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
-"""
-     ),
-    ("rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
-     """
+""",
+    ),
+    (
+        "rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
+        """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3040"
@@ -116,10 +120,11 @@ focuser__MAX_VALUE="950"
 focuser__DEF_VALUE="300"
 focuser__STEP="10"
 focuser__MOVE_TIME="0.028"
-"""
-     ),
-    ("rpi_picam2_arducam_imx519_arducams_libcamera",
-     """
+""",
+    ),
+    (
+        "rpi_picam2_arducam_imx519_arducams_libcamera",
+        """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3496"
@@ -132,10 +137,11 @@ focuser__MAX_VALUE="3900"
 focuser__DEF_VALUE="800"
 focuser__STEP="25"
 focuser__MOVE_TIME="0.028"
-"""
-     ),
-    ("rpi_picam2_arducam_64mp_arducams_libcamera",
-     """
+""",
+    ),
+    (
+        "rpi_picam2_arducam_64mp_arducams_libcamera",
+        """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4624"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3472"
@@ -148,8 +154,8 @@ focuser__MAX_VALUE="950"
 focuser__DEF_VALUE="300"
 focuser__STEP="10"
 focuser__MOVE_TIME="0.028"
-"""
-     ),
+""",
+    ),
 ]
 
 
@@ -161,11 +167,9 @@ def install_system_packages_win():
 
 
 def install_system_packages_linux():
-    _syscall(
-        f'apt install -y {" ".join(SYSTEM_PACKAGES_LINUX)}', True)
+    _syscall(f'apt install -y {" ".join(SYSTEM_PACKAGES_LINUX)}', True)
     if _is_rpi():
-        _syscall(
-            f'apt install -y {" ".join(SYSTEM_PACKAGES_RPI)}', True)
+        _syscall(f'apt install -y {" ".join(SYSTEM_PACKAGES_RPI)}', True)
 
 
 def install_pip_packages():
@@ -185,8 +189,7 @@ def install_pip_packages():
     print(pip_install_packages)
 
     for package in pip_install_packages:
-        retval = _syscall(
-            f"python -m pip install --upgrade {package}")
+        retval = _syscall(f"python -m pip install --upgrade {package}")
         if retval == 0:
             pip_OK.append(package)
         else:
@@ -194,11 +197,12 @@ def install_pip_packages():
     print_spacer("pip install summary:")
     print_green("packages successfully installed:")
     print_green(pip_OK)
-    if (pip_FAIL):
+    if pip_FAIL:
         print_red("packages failed to install:")
         print_red(pip_FAIL)
         print_red(
-            "please check why packages failed to install. some packages might not be necessary on all platforms")
+            "please check why packages failed to install. some packages might not be necessary on all platforms"
+        )
     else:
         print_green("All packages successfully installed")
 
@@ -213,20 +217,14 @@ def _syscall(cmd: str, sudo: bool = False):
     if _is_linux():
         if sudo == True:
             cmd = f"sudo {cmd}"
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            text=True)
+        result = subprocess.run(cmd, shell=True, text=True)
     elif _is_windows():
-        result = subprocess.run(
-            ["powershell", "-Command", cmd],
-            shell=True,
-            text=True)
+        result = subprocess.run(["powershell", "-Command", cmd], shell=True, text=True)
     else:
         print("unsupported platform, exit")
         quit(-1)
 
-    print('command exited with returncode=', result.returncode)
+    print("command exited with returncode=", result.returncode)
     return result.returncode
 
 
@@ -252,7 +250,7 @@ def _is_rpi():
     is_rpi = False
     if platform.system() == "Linux":
         if os.path.isfile("/proc/device-tree/model"):
-            with open('/proc/device-tree/model', 'r') as f:
+            with open("/proc/device-tree/model", "r") as f:
                 model = f.read()
                 is_rpi = "Raspberry" in model
 
@@ -296,8 +294,7 @@ def query_yes_no(question, default="yes"):
         elif choice in valid:
             return valid[choice]
         else:
-            sys.stdout.write(
-                "Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
+            sys.stdout.write("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
 
 
 def print_green(msg):
@@ -312,11 +309,11 @@ def print_blue(msg):
     print(f"{_style.BLUE}{msg}{_style.RESET}")
 
 
-class _style():
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    BLUE = '\033[34m'
-    RESET = '\033[0m'
+class _style:
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    BLUE = "\033[34m"
+    RESET = "\033[0m"
 
 
 """
@@ -325,7 +322,9 @@ class _style():
 print_spacer("current user")
 print_blue(f"{USERNAME}")
 if _is_linux() and _is_admin():
-    print_red("Error, please start installer as normal user, for specific tasks the script will ask for permission")
+    print_red(
+        "Error, please start installer as normal user, for specific tasks the script will ask for permission"
+    )
     quit(-1)
 else:
     print_green("OK")
@@ -336,7 +335,8 @@ if _is_windows():
         print_green("OK, executable found")
     else:
         print_blue(
-            "Info, digicamcontrol not found - please install if digicamintegration shall be used.")
+            "Info, digicamcontrol not found - please install if digicamintegration shall be used."
+        )
 
 
 print_spacer(f"python version > {MIN_PYTHON_VERSION}?")
@@ -363,14 +363,14 @@ print()
 # update system
 if platform.system() == "Linux":
     if query_yes_no("Update and upgrade system packages?", "no"):
-        _syscall('apt update', True)
-        _syscall('apt upgrade -y', True)
+        _syscall("apt update", True)
+        _syscall("apt upgrade -y", True)
 
 # install system dependencies
 if query_yes_no("Install system packages required for booth?", "no"):
     if platform.system() == "Linux":
         print(f"Installing Linux system packages")
-        _syscall('apt update', True)
+        _syscall("apt update", True)
         install_system_packages_linux()
     elif platform.system() == "Windows":
         print(f"Installing Windows system packages")
@@ -381,9 +381,8 @@ if query_yes_no("Install system packages required for booth?", "no"):
 
 # fix keyboard input permissions
 if _is_linux():
-    print_spacer(
-        f"add '{USERNAME}' to tty and input groups for keyboard access")
-    _syscall(f'usermod --append --groups tty,input {USERNAME}', True)
+    print_spacer(f"add '{USERNAME}' to tty and input groups for keyboard access")
+    _syscall(f"usermod --append --groups tty,input {USERNAME}", True)
 
 
 # install pip packages
@@ -396,16 +395,24 @@ if _is_linux():
         # adds missing packages on debian buster that are not covered by the updater script
         _syscall("apt install -y libpopt0 libpopt-dev libexif-dev", True)
         _syscall(
-            "mkdir tmp_gphoto2_install; cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh")
+            "mkdir tmp_gphoto2_install; cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh"
+        )
         _syscall(
-            "cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env")
+            "cd tmp_gphoto2_install; wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env"
+        )
         _syscall("cd tmp_gphoto2_install; chmod +x gphoto2-updater.sh")
         _syscall("cd tmp_gphoto2_install; ./gphoto2-updater.sh --stable", True)
         _syscall("rm -r tmp_gphoto2_install", True)
 
 # install booth software
-install_dir_has_git_repo = True if call(["git", "branch"], cwd=INSTALL_DIR,
-                                        stderr=STDOUT, stdout=open(os.devnull, 'w')) == 0 else False
+install_dir_has_git_repo = (
+    True
+    if call(
+        ["git", "branch"], cwd=INSTALL_DIR, stderr=STDOUT, stdout=open(os.devnull, "w")
+    )
+    == 0
+    else False
+)
 if not SUPPRESS_INSTALLATION and not install_dir_has_git_repo:
     if query_yes_no(f"Install booth software to {INSTALL_DIR}?", "no"):
         try:
@@ -417,49 +424,57 @@ if not SUPPRESS_INSTALLATION and not install_dir_has_git_repo:
         print("Installing qBooth to ./imageserver/")
         if query_yes_no("install dev preview? if no install stable", "no"):
             _syscall(
-                f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
+                f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}"
+            )
         else:
             _syscall(
-                f"git clone https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
+                f"git clone https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}"
+            )
 
 
 if install_dir_has_git_repo:
     if query_yes_no(f"Update booth software in {INSTALL_DIR}, by git pull?", "no"):
         print(f"Updating qBooth in subdir {INSTALL_DIR}")
-        _syscall(
-            f"cd {INSTALL_DIR}; git pull")
+        _syscall(f"cd {INSTALL_DIR}; git pull")
 
 if platform.system() == "Linux":
-    _syscall(
-        f"chmod +x {INSTALL_DIR}start.sh")
+    _syscall(f"chmod +x {INSTALL_DIR}start.sh")
 
 
 # install booth service
 if query_yes_no("Install booth service?", "no"):
     if _is_linux():
-
         with open(f"{INSTALL_DIR}/misc/installer/imageserver.service", "rt") as fin:
             compiled_service_file = Path(
-                f"{str(Path.home())}/.local/share/systemd/user/imageserver.service")
+                f"{str(Path.home())}/.local/share/systemd/user/imageserver.service"
+            )
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
             print_blue(f"creating service file '{compiled_service_file}'")
             with open(str(compiled_service_file), "wt") as fout:
                 for line in fin:
-                    fout.write(line.replace('##install_dir##',
-                               os.path.normpath(f"{Path.cwd()}/{INSTALL_DIR}")))
+                    fout.write(
+                        line.replace(
+                            "##install_dir##",
+                            os.path.normpath(f"{Path.cwd()}/{INSTALL_DIR}"),
+                        )
+                    )
 
         _syscall("systemctl --user enable imageserver.service")
 
     if _is_windows():
         print_red(
-            "not yet supported. pls start imageserver manually and browse to photobooth website.")
+            "not yet supported. pls start imageserver manually and browse to photobooth website."
+        )
 
 
 # compatibility for photobooth? photobooth runs as www-data; the imageserver needs to write the image to given location - only possible with www-data rights:
 if _is_linux():
-    if query_yes_no(f"Fix permissions to be compatible to https://photoboothproject.github.io/", "no"):
-        _syscall(f'usermod --append --groups www-data {USERNAME}', True)
-        _syscall(f'chmod -R 775 /var/www/html', True)
+    if query_yes_no(
+        f"Fix permissions to be compatible to https://photoboothproject.github.io/",
+        "no",
+    ):
+        _syscall(f"usermod --append --groups www-data {USERNAME}", True)
+        _syscall(f"chmod -R 775 /var/www/html", True)
 
 
 """
@@ -469,12 +484,14 @@ Post install checks
 print_spacer("check turbojpeg installed properly")
 try:
     from turbojpeg import TurboJPEG
+
     TurboJPEG()  # instancing throws error if lib not present (usually a problem on windows only)
 except Exception as e:
     print_red(e)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
     print_red(
-        "On Windows use VC version and ensure its located in this path: C:/libjpeg-turbo64/bin/turbojpeg.dll")
+        "On Windows use VC version and ensure its located in this path: C:/libjpeg-turbo64/bin/turbojpeg.dll"
+    )
     quit(-1)
 else:
     print_green("OK, turboJpeg detected.")
@@ -485,7 +502,8 @@ if _is_linux():
     print_spacer("check gphoto2 properly installed")
     if not _syscall("gphoto2 --version") == 0:
         print_red(
-            "Error, gphoto2 command not found, error during installation or installation not selected")
+            "Error, gphoto2 command not found, error during installation or installation not selected"
+        )
     else:
         print_green("OK, Gphoto2 installed properly")
 
@@ -499,8 +517,9 @@ if _is_linux() or _is_windows():
     # suppress warnings during index probing
     os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
     from scripts.available_webcams_cv2 import availableCameraIndexes
+
     ind_cv2 = availableCameraIndexes()
-    if (ind_cv2):
+    if ind_cv2:
         print_green("found cameras, use one of the following device numbers:")
         print(ind_cv2)
     else:
@@ -510,8 +529,9 @@ if _is_linux() or _is_windows():
 if _is_linux():
     print_spacer("checking for available v4l cameras")
     from scripts.available_webcams_v4l import availableCameraIndexes
+
     ind_v4l = availableCameraIndexes()
-    if (ind_v4l):
+    if ind_v4l:
         print_green("found cameras, use one of the following device numbers:")
         print(ind_v4l)
     else:
@@ -526,32 +546,40 @@ if _is_linux():
     availableConfigurations.extend(STARTER_CONFIGURATIONS_LINUX)
 if _is_windows():
     availableConfigurations.extend(STARTER_CONFIGURATIONS_WIN)
-choices = (list(zip(*availableConfigurations))[0])
+choices = list(zip(*availableConfigurations))[0]
 for idx, x in enumerate(choices):
     print(idx, x)
 chosen_starter_configuration_str = input(
-    "Choose number of starter configuration [leave empty to skip]: ")
-if (chosen_starter_configuration_str):
+    "Choose number of starter configuration [leave empty to skip]: "
+)
+if chosen_starter_configuration_str:
     chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
     chosen_starter_configuration_name = availableConfigurations[
-        chosen_starter_configuration_idx][0]
+        chosen_starter_configuration_idx
+    ][0]
     chosen_starter_configuration_settings = availableConfigurations[
-        chosen_starter_configuration_idx][1]
+        chosen_starter_configuration_idx
+    ][1]
 
     cv2_device_index = ind_cv2[0] if ind_cv2 else 0
     v4l_device_index = ind_v4l[0] if ind_v4l else 0
-    chosen_starter_configuration_settings = chosen_starter_configuration_settings.replace(
-        '##cv2_device_index##', str(cv2_device_index))
-    chosen_starter_configuration_settings = chosen_starter_configuration_settings.replace(
-        '##v4l_device_index##', str(v4l_device_index))
+    chosen_starter_configuration_settings = (
+        chosen_starter_configuration_settings.replace(
+            "##cv2_device_index##", str(cv2_device_index)
+        )
+    )
+    chosen_starter_configuration_settings = (
+        chosen_starter_configuration_settings.replace(
+            "##v4l_device_index##", str(v4l_device_index)
+        )
+    )
 
     print_blue(
-        f"chosen starter configuration number {chosen_starter_configuration_idx}: {chosen_starter_configuration_name}")
-    print(
-        f"{chosen_starter_configuration_settings}")
+        f"chosen starter configuration number {chosen_starter_configuration_idx}: {chosen_starter_configuration_name}"
+    )
+    print(f"{chosen_starter_configuration_settings}")
     with open(str(f"{INSTALL_DIR}.env.installer"), "wt") as fout:
-        fout.writelines(
-            chosen_starter_configuration_settings)
+        fout.writelines(chosen_starter_configuration_settings)
     print_blue("start configuration written to .env.installer")
 
 else:

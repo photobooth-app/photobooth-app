@@ -5,6 +5,7 @@ import logging
 from pymitter import EventEmitter
 from src.imageserversimulated import ImageServerSimulated
 from src.test_helperfunctions import get_images
+
 logger = logging.getLogger(name=None)
 
 # ImageServerSimulated backend: test on every platform

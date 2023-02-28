@@ -9,7 +9,11 @@ from multiprocessing import Process, shared_memory, Condition, Lock
 from PIL import Image, ImageDraw, ImageFont
 import psutil
 from pymitter import EventEmitter
-from src.imageserverabstract import ImageServerAbstract, compile_buffer, decompile_buffer
+from src.imageserverabstract import (
+    ImageServerAbstract,
+    compile_buffer,
+    decompile_buffer,
+)
 from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
@@ -28,8 +32,7 @@ class ImageServerSimulated(ImageServerAbstract):
 
         # private props
         self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True,
-            size=settings._shared_memory_buffer_size
+            create=True, size=settings._shared_memory_buffer_size
         )
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
@@ -40,9 +43,9 @@ class ImageServerSimulated(ImageServerAbstract):
             args=(
                 self._img_buffer_shm.name,
                 self._condition_img_buffer_ready,
-                self._img_buffer_lock
+                self._img_buffer_lock,
             ),
-            daemon=True
+            daemon=True,
         )
 
     def start(self):
@@ -71,8 +74,7 @@ class ImageServerSimulated(ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_lock:
-                img = decompile_buffer(
-                    self._img_buffer_shm)
+                img = decompile_buffer(self._img_buffer_shm)
 
         # virtual delay for camera to create picture
         time.sleep(0.1)
@@ -88,13 +90,17 @@ class ImageServerSimulated(ImageServerAbstract):
         last_time = time.time_ns()
         while True:
             now_time = time.time_ns()
-            if (now_time-last_time)/1000**3 >= (1/settings.common.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (
+                1 / settings.common.LIVEPREVIEW_FRAMERATE
+            ):
                 last_time = now_time
 
                 buffer = self._wait_for_lores_image()
 
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + buffer + b'\r\n\r\n')
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
+                )
 
     def trigger_hq_capture(self):
         self._on_capture_mode()
@@ -111,9 +117,7 @@ class ImageServerSimulated(ImageServerAbstract):
                 raise IOError("timeout receiving frames")
 
         with self._img_buffer_lock:
-
-            img = decompile_buffer(
-                self._img_buffer_shm)
+            img = decompile_buffer(self._img_buffer_shm)
 
         return img
 
@@ -122,82 +126,81 @@ class ImageServerSimulated(ImageServerAbstract):
         raise NotImplementedError()
 
     def _on_capture_mode(self):
-        logger.debug(
-            "change to capture mode - means doing nothing in simulate")
+        logger.debug("change to capture mode - means doing nothing in simulate")
 
     def _on_preview_mode(self):
-        logger.debug(
-            "change to preview mode - means doing nothing in simulate")
+        logger.debug("change to preview mode - means doing nothing in simulate")
 
     #
     # INTERNAL IMAGE GENERATOR
     #
 
 
-def img_aquisition(shm_buffer_name,
-                   _condition_img_buffer_ready: Condition,
-                   _img_buffer_lock: Lock):
-    """ function started in separate process to deliver images """
+def img_aquisition(
+    shm_buffer_name, _condition_img_buffer_ready: Condition, _img_buffer_lock: Lock
+):
+    """function started in separate process to deliver images"""
     target_fps = 15
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
     while True:
-
         now_time = time.time_ns()
-        if (now_time-last_time)/1000**3 <= (1/target_fps):
+        if (now_time - last_time) / 1000**3 <= (1 / target_fps):
             # limit max framerate to every ~2ms
-            time.sleep(2/1000.)
+            time.sleep(2 / 1000.0)
             continue
 
-        fps = round(1/(now_time-last_time)*1000**3, 1)
+        fps = round(1 / (now_time - last_time) * 1000**3, 1)
         last_time = now_time
 
         # create PIL image
-        img = Image.new(
-            mode="RGB",
-            size=(640,
-                  480),
-            color="green")
+        img = Image.new(mode="RGB", size=(640, 480), color="green")
 
         # add text
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(
-            font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
-            size=30)
+            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=30
+        )
         font_small = ImageFont.truetype(
-            font="./vendor/fonts/Roboto/Roboto-Bold.ttf",
-            size=15)
-        img_draw.text((100, 100),
-                      "simulated image backend",
-                      fill=(200, 200, 200),
-                      font=font_large)
-        img_draw.text((100, 140),
-                      f"img time: {now_time}",
-                      fill=(200, 200, 200),
-                      font=font_large)
-        img_draw.text((100, 180),
-                      f"framerate: {fps}",
-                      fill=(200, 200, 200),
-                      font=font_large)
-        img_draw.text((100, 220), (
-            f"cpu: 1/5/15min "
-            f"{[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%"
-        ),
+            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=15
+        )
+        img_draw.text(
+            (100, 100), "simulated image backend", fill=(200, 200, 200), font=font_large
+        )
+        img_draw.text(
+            (100, 140), f"img time: {now_time}", fill=(200, 200, 200), font=font_large
+        )
+        img_draw.text(
+            (100, 180), f"framerate: {fps}", fill=(200, 200, 200), font=font_large
+        )
+        img_draw.text(
+            (100, 220),
+            (
+                f"cpu: 1/5/15min "
+                f"{[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%"
+            ),
             fill=(200, 200, 200),
-            font=font_large)
-        img_draw.text((100, 260),
-                      "you see this, so installation was successful :)",
-                      fill=(200, 200, 200),
-                      font=font_small)
-        img_draw.text((100, 280),
-                      f"goto http://{platform.node()}:{settings.common.webserver_port} to setup",
-                      fill=(200, 200, 200),
-                      font=font_small)
-        img_draw.text((100, 300),
-                      "to use a camera instead this simulated backend",
-                      fill=(200, 200, 200),
-                      font=font_small)
+            font=font_large,
+        )
+        img_draw.text(
+            (100, 260),
+            "you see this, so installation was successful :)",
+            fill=(200, 200, 200),
+            font=font_small,
+        )
+        img_draw.text(
+            (100, 280),
+            f"goto http://{platform.node()}:{settings.common.webserver_port} to setup",
+            fill=(200, 200, 200),
+            font=font_small,
+        )
+        img_draw.text(
+            (100, 300),
+            "to use a camera instead this simulated backend",
+            fill=(200, 200, 200),
+            font=font_small,
+        )
 
         # create jpeg
         jpeg_buffer = BytesIO()

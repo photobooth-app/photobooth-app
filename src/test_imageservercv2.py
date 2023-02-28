@@ -5,6 +5,7 @@ from pymitter import EventEmitter
 from src.configsettings import settings
 import pytest
 import logging
+
 logger = logging.getLogger(name=None)
 """
 prepare config for testing
@@ -29,7 +30,6 @@ def availableCameraIndexes():
 
 
 def test_getImages():
-
     _availableCameraIndexes = availableCameraIndexes()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")

@@ -10,7 +10,7 @@ from src.imageserverabstract import ImageServerAbstract
 logger = logging.getLogger(__name__)
 
 
-class ImageServers():
+class ImageServers:
     """
     Class managing imageserver backends
     MAIN: used for high quality still pictures
@@ -28,24 +28,33 @@ class ImageServers():
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
         logger.info(
-            f"loading primary backend: src.{settings.backends.MAIN_BACKEND.value}")
+            f"loading primary backend: src.{settings.backends.MAIN_BACKEND.value}"
+        )
         imageserver_primary_backendmodule = import_module(
-            f"src.{settings.backends.MAIN_BACKEND.lower()}")
-        cls_primary = getattr(imageserver_primary_backendmodule,
-                              settings.backends.MAIN_BACKEND.value)
+            f"src.{settings.backends.MAIN_BACKEND.lower()}"
+        )
+        cls_primary = getattr(
+            imageserver_primary_backendmodule, settings.backends.MAIN_BACKEND.value
+        )
         self.primary_backend = cls_primary(evtbus, False)
 
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
-        if (settings.backends.LIVE_BACKEND and
-                not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL and
-                settings.backends.LIVE_BACKEND.value):
+        if (
+            settings.backends.LIVE_BACKEND
+            and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL
+            and settings.backends.LIVE_BACKEND.value
+        ):
             logger.info(
-                f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}")
+                f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}"
+            )
             imageserver_secondary_backendmodule = import_module(
-                f"src.{settings.backends.LIVE_BACKEND.lower()}")
-            cls_secondary = getattr(imageserver_secondary_backendmodule,
-                                    settings.backends.LIVE_BACKEND.value)
+                f"src.{settings.backends.LIVE_BACKEND.lower()}"
+            )
+            cls_secondary = getattr(
+                imageserver_secondary_backendmodule,
+                settings.backends.LIVE_BACKEND.value,
+            )
             self.secondary_backend = cls_secondary(evtbus, True)
 
     def gen_stream(self):
@@ -59,6 +68,7 @@ class ImageServers():
             return self.primary_backend.gen_stream()
         else:
             raise IOError("livepreview not enabled")
+
     # @property
     # @abstractmethod
     # def stream_url(self):
@@ -78,7 +88,7 @@ class ImageServers():
         """
 
     def start(self):
-        """ start backends """
+        """start backends"""
         self.primary_backend.start()
 
         if self.secondary_backend:

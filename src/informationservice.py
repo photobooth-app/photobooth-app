@@ -9,8 +9,7 @@ from src.repeatedtimer import RepeatedTimer
 logger = logging.getLogger(__name__)
 
 
-class InformationService():
-
+class InformationService:
     def __init__(self, evtbus: EventEmitter):
         self._evtbus: EventEmitter = evtbus
 
@@ -24,19 +23,25 @@ class InformationService():
         self._rt.stop()
 
     def _on_timer(self):
-        cpu1_5_15 = [round(x / psutil.cpu_count() * 100, 2)
-                     for x in psutil.getloadavg()]
+        cpu1_5_15 = [
+            round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()
+        ]
         memory = psutil.virtual_memory()._asdict()
 
         if platform.system() == "Linux":
-            disk = psutil.disk_usage('/')._asdict()
+            disk = psutil.disk_usage("/")._asdict()
         elif platform.system() == "Windows":
-            disk = psutil.disk_usage('C:')._asdict()
+            disk = psutil.disk_usage("C:")._asdict()
 
-        self._evtbus.emit("publishSSE", sse_event="information",
-                          sse_data=json.dumps({
-                              "cpu1_5_15": cpu1_5_15,
-                              "active_threads": threading.active_count(),
-                              "memory": memory,
-                              "disk": disk,
-                          }))
+        self._evtbus.emit(
+            "publishSSE",
+            sse_event="information",
+            sse_data=json.dumps(
+                {
+                    "cpu1_5_15": cpu1_5_15,
+                    "active_threads": threading.active_count(),
+                    "memory": memory,
+                    "disk": disk,
+                }
+            ),
+        )

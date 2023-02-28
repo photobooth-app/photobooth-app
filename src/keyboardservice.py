@@ -17,21 +17,22 @@ sshkeyboard: ?
 """
 
 
-class KeyboardService():
-
+class KeyboardService:
     def __init__(self, evtbus: EventEmitter):
         self._evtbus: EventEmitter = evtbus
 
         if settings.hardwareinput.keyboard_input_enabled:
             keyboard.on_press(self.on_key_callback)
         else:
-            logger.info(
-                "keyboardservice not enabled - enable for keyboard triggers")
+            logger.info("keyboardservice not enabled - enable for keyboard triggers")
 
     def on_key_callback(self, key):
         logger.debug(f"key '{key.name}' triggered.")
-        self._evtbus.emit("publishSSE", sse_event="information",
-                          sse_data=json.dumps({"lastkeycode": key.name}))
+        self._evtbus.emit(
+            "publishSSE",
+            sse_event="information",
+            sse_data=json.dumps({"lastkeycode": key.name}),
+        )
 
         if key.name == settings.hardwareinput.keyboard_input_keycode_takepic:
             logger.info(

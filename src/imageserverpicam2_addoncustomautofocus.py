@@ -13,10 +13,11 @@ from pymitter import EventEmitter
 from src.configsettings import settings
 from src.imageserverabstract import ImageServerAbstract
 from src.repeatedtimer import RepeatedTimer
+
 logger = logging.getLogger(__name__)
 
 
-class ImageServerPicam2AddonCustomAutofocus():
+class ImageServerPicam2AddonCustomAutofocus:
     """
     Class implementing custom autofocuser for arducam cameras
     """
@@ -24,16 +25,11 @@ class ImageServerPicam2AddonCustomAutofocus():
     def __init__(self, imageserver: ImageServerAbstract, evtbus: EventEmitter):
         self._imageserver: ImageServerAbstract = imageserver
         self._evtbus = evtbus
-        self._evtbus.on("onRefocus",
-                        self.do_focus)
-        self._evtbus.on("statemachine/armed",
-                        self.set_ignore_focus_requests)
-        self._evtbus.on("statemachine/finished",
-                        self.set_allow_focus_requests)
-        self._evtbus.on("onCaptureMode",
-                        self.set_ignore_focus_requests)
-        self._evtbus.on("onPreviewMode",
-                        self.set_allow_focus_requests)
+        self._evtbus.on("onRefocus", self.do_focus)
+        self._evtbus.on("statemachine/armed", self.set_ignore_focus_requests)
+        self._evtbus.on("statemachine/finished", self.set_allow_focus_requests)
+        self._evtbus.on("onCaptureMode", self.set_ignore_focus_requests)
+        self._evtbus.on("onPreviewMode", self.set_allow_focus_requests)
 
         self._last_run_result = []
         self._last_final_position = settings.focuser.DEF_VALUE
@@ -45,8 +41,9 @@ class ImageServerPicam2AddonCustomAutofocus():
         self.set_allow_focus_requests()
         self.reset()
 
-        self._rt = RepeatedTimer(settings.focuser.REPEAT_TRIGGER,
-                                 self.triggerRegularTimedFocus)
+        self._rt = RepeatedTimer(
+            settings.focuser.REPEAT_TRIGGER, self.triggerRegularTimedFocus
+        )
 
         self.start_regular_autofocus_timer()
 
@@ -77,22 +74,19 @@ class ImageServerPicam2AddonCustomAutofocus():
             self.set_finish(False)
 
             thread_autofocus_stats = threading.Thread(
-                name='AutofocusStats',
+                name="AutofocusStats",
                 target=stats_thread,
-                args=(
-                     self._imageserver,
-                     self
-                ),
-                daemon=True)
+                args=(self._imageserver, self),
+                daemon=True,
+            )
             thread_autofocus_stats.start()
 
             thread_autofocus_focussupervisor = threading.Thread(
-                name='AutofocusSupervisor',
+                name="AutofocusSupervisor",
                 target=focus_thread,
-                args=(
-                     self,
-                ),
-                daemon=True)
+                args=(self,),
+                daemon=True,
+            )
             thread_autofocus_focussupervisor.start()
 
         else:
@@ -128,7 +122,7 @@ def get_roi_frame(roi, frame):
 
 def stats_thread(
     imageserver: ImageServerAbstract,
-    imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus
+    imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
 ):
     max_position = settings.focuser.MAX_VALUE
     min_position = settings.focuser.MIN_VALUE
@@ -144,36 +138,41 @@ def stats_thread(
             frame = imageserver._wait_for_lores_frame()
         except NotImplementedError:
             logger.error(
-                "imageserver backend not to deliver frames for autofocus - disable autofocus")
+                "imageserver backend not to deliver frames for autofocus - disable autofocus"
+            )
             imageserver_addon_customautofocus.stop_regular_autofocus_timer()
             imageserver_addon_customautofocus.reset()
             break
         except IOError:
-            logger.warning(
-                "imageserver did not deliver frames, aborting cycle")
+            logger.warning("imageserver did not deliver frames, aborting cycle")
             imageserver_addon_customautofocus.stop_regular_autofocus_timer()
             imageserver_addon_customautofocus.reset()
             break
 
-        if (time.time() - last_time >=
-                settings.focuser.MOVE_TIME and not imageserver_addon_customautofocus.is_finish()):
+        if (
+            time.time() - last_time >= settings.focuser.MOVE_TIME
+            and not imageserver_addon_customautofocus.is_finish()
+        ):
             last_time = time.time()
 
-            next_position = last_position + \
-                (imageserver_addon_customautofocus.direction *
-                 settings.focuser.STEP)
+            next_position = last_position + (
+                imageserver_addon_customautofocus.direction * settings.focuser.STEP
+            )
 
             if next_position < max_position and next_position > min_position:
                 set_focus_position(next_position)
 
             # calc window x, y, width, height
-            roi = (settings.focuser.ROI/100,
-                   (settings.focuser.ROI/100),
-                   (1-(2*settings.focuser.ROI/100),
-                    1-(2*settings.focuser.ROI/100)))
+            roi = (
+                settings.focuser.ROI / 100,
+                (settings.focuser.ROI / 100),
+                (
+                    1 - (2 * settings.focuser.ROI / 100),
+                    1 - (2 * settings.focuser.ROI / 100),
+                ),
+            )
             roi_frame = get_roi_frame(roi, frame)
-            buffer = jpeg.encode(
-                roi_frame, quality=80)
+            buffer = jpeg.encode(roi_frame, quality=80)
 
             # frame is a jpeg; len is the size of the jpeg.
             # the more contrast, the sharper the picture is and thus the bigger the size.
@@ -182,8 +181,9 @@ def stats_thread(
             sharpness_list.append(item)
             imageserver_addon_customautofocus.sharpness_list.put(item)
 
-            last_position += (imageserver_addon_customautofocus.direction *
-                              settings.focuser.STEP)
+            last_position += (
+                imageserver_addon_customautofocus.direction * settings.focuser.STEP
+            )
 
             if last_position > max_position:
                 break
@@ -201,24 +201,29 @@ def stats_thread(
     # reverse search direction next time.
     imageserver_addon_customautofocus.direction *= -1
 
-    imageserver_addon_customautofocus._evtbus.emit("publishSSE", sse_event="autofocus/sharpness",
-                                                   sse_data=json.dumps(sharpness_list))
+    imageserver_addon_customautofocus._evtbus.emit(
+        "publishSSE",
+        sse_event="autofocus/sharpness",
+        sse_data=json.dumps(sharpness_list),
+    )
 
     logger.debug(f"autofocus run finished, sharpnessList={sharpness_list}")
     if skipped_frame_counter:
         logger.debug(
             f"skipped {skipped_frame_counter} frames because motor "
-            f"cannot catch up with FPS of camera. not a problem, could be tuned.")
+            f"cannot catch up with FPS of camera. not a problem, could be tuned."
+        )
 
 
-def focus_thread(imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus):
+def focus_thread(
+    imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
+):
     sharpness_list = []
     continuousdecline_req = 6
     continuousdecline = 0
     max_position = 0
     last_sharpness = 0
     while not imageserver_addon_customautofocus.is_finish():
-
         position, sharpness = imageserver_addon_customautofocus.sharpness_list.get()
 
         if last_sharpness / sharpness >= 1:
@@ -272,11 +277,11 @@ def set_focus_position(position):
 
 def arducam_imx477_focuser(position):
     bus = 10
-    i2caddress = 0x0c
+    i2caddress = 0x0C
 
-    value = (position << 4) & 0x3ff0
-    dat1 = (value >> 8) & 0x3f
-    dat2 = value & 0xf0
+    value = (position << 4) & 0x3FF0
+    dat1 = (value >> 8) & 0x3F
+    dat2 = value & 0xF0
 
     i2cbus = SMBus(bus)
     i2cbus.write_byte_data(i2caddress, dat1, dat2)
@@ -286,5 +291,4 @@ def arducam_imx477_focuser(position):
 
 
 def arducam_imx519_64mp_focuser(position):
-    os.system(
-        f"v4l2-ctl -c focus_absolute={position} -d /dev/v4l-subdev1")
+    os.system(f"v4l2-ctl -c focus_absolute={position} -d /dev/v4l-subdev1")
