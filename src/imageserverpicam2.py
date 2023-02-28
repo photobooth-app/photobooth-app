@@ -6,12 +6,16 @@ from threading import Condition
 import time
 import logging
 from pymitter import EventEmitter
-from libcamera import Transform
+
+try:
+    from libcamera import Transform
+    from picamera2 import Picamera2
+except ImportError as import_exc:
+    raise OSError("smbus not supported on windows platform") from import_exc
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
-from picamera2 import Picamera2
 from cv2 import cvtColor, COLOR_YUV420p2RGB
 from src.configsettings import settings
-from src.StoppableThread import StoppableThread
+from src.stoppablethread import StoppableThread
 from src.imageserverpicam2_addoncustomautofocus import (
     ImageServerPicam2AddonCustomAutofocus,
 )
@@ -153,8 +157,7 @@ class ImageServerPicam2(ImageServerAbstract):
         """for other threads to receive a hq JPEG image"""
         with self._hq_condition:
             while True:
-                # TODO: timout to make it continue and do not block threads completely
-                if not self._hq_condition.wait(1):
+                if not self._hq_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._get_jpeg_by_hires_frame(
                     frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY
@@ -191,7 +194,6 @@ class ImageServerPicam2(ImageServerAbstract):
         """for other threads to receive a lores JPEG image"""
         with self._lores_condition:
             while True:
-                # TODO: timout to make it continue and do not block threads completely
                 if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._get_jpeg_by_lores_frame(
@@ -203,7 +205,6 @@ class ImageServerPicam2(ImageServerAbstract):
         """for other threads to receive a lores frame"""
         with self._lores_condition:
             while True:
-                # TODO: timout to make it continue and do not block threads completely
                 if not self._lores_condition.wait(2):
                     raise IOError("timeout receiving frames")
                 return self._lores_array
@@ -230,6 +231,11 @@ class ImageServerPicam2(ImageServerAbstract):
         return jpeg_buffer
 
     def set_ae_exposure(self, newmode):
+        """_summary_
+
+        Args:
+            newmode (_type_): _description_
+        """
         logger.info(f"set_ae_exposure, try to set to {newmode}")
         try:
             self._picam2.set_controls({"AeExposureMode": newmode})

@@ -2,8 +2,6 @@
 v4l webcam implementation backend
 """
 import time
-
-# import platform
 import logging
 import json
 from multiprocessing import Process, shared_memory, Condition, Lock
@@ -15,8 +13,6 @@ from src.imageserverabstract import (
 )
 from src.configsettings import settings
 
-# if platform.system() == "Windows":
-#    raise OSError("backend v4l2py not supported on windows platform")
 try:
     from v4l2py import Device
 except ImportError as exc:
@@ -26,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 class ImageServerWebcamV4l(ImageServerAbstract):
+    """_summary_
+
+    Args:
+        ImageServerAbstract (_type_): _description_
+    """
+
     def __init__(self, evtbus: EventEmitter, enable_stream):
         super().__init__(evtbus, enable_stream)
         # public props (defined in abstract class also)
@@ -185,3 +187,46 @@ def img_aquisition(
             with _condition_img_buffer_ready:
                 # wait to be notified
                 _condition_img_buffer_ready.notify_all()
+
+
+def available_camera_indexes():
+    """
+    detect usb camera indexes
+
+    Returns:
+        _type_: _description_
+    """
+    # checks the first 10 indexes.
+
+    index = 0
+    arr = []
+    i = 10
+    while i > 0:
+        if is_valid_camera_index(index):
+            arr.append(index)
+        index += 1
+        i -= 1
+
+    return arr
+
+
+def is_valid_camera_index(index):
+    """test whether index is valid device
+
+    Args:
+        index (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    try:
+        cap = Device.from_id(index)
+        cap.video_capture.set_format(640, 480, "MJPG")
+        for _ in cap:
+            # got frame, close cam and return true; otherwise false.
+            break
+        cap.close()
+    except Exception:
+        return False
+
+    return True

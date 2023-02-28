@@ -96,7 +96,19 @@ class ImageServerAbstract(ABC):
 #
 
 
-def decompile_buffer(shm: memoryview):
+def decompile_buffer(shm: memoryview) -> bytes:
+    """
+    decompile buffer holding jpeg buffer for transport between processes
+    in shared memory
+    constructed as
+    INT(4bytes)+JPEG of length the int describes
+
+    Args:
+        shm (memoryview): shared memory buffer
+
+    Returns:
+        bytes: concat(length of jpeg+jpegbuffer)
+    """
     # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
     # means for this app in consequence: here is the place to make a copy
     # of the image for further processing
@@ -106,7 +118,17 @@ def decompile_buffer(shm: memoryview):
     return ret.tobytes()
 
 
-def compile_buffer(shm, jpeg_buffer):
+def compile_buffer(shm: memoryview, jpeg_buffer: bytes) -> bytes:
+    """
+    compile buffer holding jpeg buffer for transport between processes
+    in shared memory
+    constructed as
+    INT(4bytes)+JPEG of length the int describes
+
+    Args:
+        shm (bytes): shared memory buffer
+        jpeg_buffer (bytes): jpeg image
+    """
     # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
     # means for this app in consequence: here is the place to make a copy
     # of the image for further processing

@@ -1,3 +1,6 @@
+"""
+_summary_
+"""
 import logging
 import json
 import threading
@@ -10,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class InformationService:
+    """_summary_"""
+
     def __init__(self, evtbus: EventEmitter):
         self._evtbus: EventEmitter = evtbus
 
@@ -20,9 +25,11 @@ class InformationService:
         logger.info("initialized information service")
 
     def stop(self):
+        """_summary_"""
         self._rt.stop()
 
     def _on_timer(self):
+        """_summary_"""
         cpu1_5_15 = [
             round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()
         ]

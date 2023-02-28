@@ -2,7 +2,11 @@
 autofocus control using native libcamera functions
 """
 import logging
-from libcamera import controls
+
+try:
+    from libcamera import controls
+except ImportError as import_exc:
+    raise OSError("libcamera not supported on windows platform") from import_exc
 from pymitter import EventEmitter
 from src.imageserverabstract import ImageServerAbstract
 
@@ -26,12 +30,15 @@ class ImageServerPicam2AddonLibcamAutofocus:
         self.set_allow_focus_requests()
 
     def abort_ongoing_focus_thread(self):
+        """_summary_"""
         self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
 
     def set_ignore_focus_requests(self):
+        """_summary_"""
         self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
 
     def set_allow_focus_requests(self):
+        """_summary_"""
         self._imageserver._picam2.set_controls(
             {"AfMode": controls.AfModeEnum.Continuous}
         )

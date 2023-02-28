@@ -1,3 +1,7 @@
+""" 
+Control logging for the app
+"""
+
 import os
 import logging
 import datetime
@@ -35,6 +39,8 @@ class EventstreamLogHandler(logging.Handler):
 
 
 class LoggingService:
+    """_summary_"""
+
     def __init__(self, evtbus: EventEmitter):
         fmt = "%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s"
         log_formatter = logging.Formatter(fmt=fmt)
@@ -82,9 +88,10 @@ class LoggingService:
         #                   for name in logging.root.manager.loggerDict]
         # print(loggers_defined)
 
-        self.otherLoggers()
+        self.other_loggers()
 
-    def otherLoggers(self):
+    def other_loggers(self):
+        """_summary_"""
         for name in [
             "picamera2",
             "pywifi",

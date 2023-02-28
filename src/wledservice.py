@@ -1,10 +1,11 @@
-# WLED Integration
+""" WLED Integration
+"""
 import json
 import time
-import serial
-from .configsettings import settings
 import logging
+import serial
 from pymitter import EventEmitter
+from .configsettings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,14 @@ PRESET_ID_SHOOT = 3
 
 
 class WledService:
-    def __init__(self, ee: EventEmitter):
-        self._ee = ee
+    """_summary_"""
+
+    def __init__(self, evtbus: EventEmitter):
+        self._evtbus = evtbus
         self._serial = None
         wled_detected = False
 
-        if settings.wled.ENABLED == True:
+        if settings.wled.ENABLED is True:
             if settings.wled.SERIAL_PORT:
                 logger.info(
                     f"WledService setup, connecting port {settings.wled.SERIAL_PORT}"
@@ -31,25 +34,31 @@ class WledService:
                 )
                 return
         else:
-            logger.info(f"WledService disabled")
+            logger.info("WledService disabled")
             return
 
-        wled_detected = self.initWledDevice()
+        wled_detected = self.init_wled_device()
 
         if not wled_detected:
             # abort init due to problems
-            # program continues this way, but no light integration available, use error log to find out how to solve
+            # program continues this way, but no light integration available,
+            # use error log to find out how to solve
             return
 
         logger.info("register events for WLED")
-        self._ee.on("statemachine/armed", self.preset_countdown)
-        self._ee.on("httprequest/armed", self.preset_countdown)
-        self._ee.on("frameserver/onCapture", self.preset_shoot)
-        self._ee.on("frameserver/onCaptureFinished", self.preset_standby)
+        self._evtbus.on("statemachine/armed", self.preset_countdown)
+        self._evtbus.on("httprequest/armed", self.preset_countdown)
+        self._evtbus.on("frameserver/onCapture", self.preset_shoot)
+        self._evtbus.on("frameserver/onCaptureFinished", self.preset_standby)
 
         self.preset_standby()
 
-    def initWledDevice(self):
+    def init_wled_device(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         wled_detected = False
 
         try:
@@ -63,10 +72,10 @@ class WledService:
                 rtscts=False,
                 dsrdtr=False,
             )
-        except serial.SerialException as e:
-            logger.error(e)
+        except serial.SerialException as exc:
+            logger.error(exc)
             logger.error(
-                "failed to open WLED module, ESP flashed correctly and correct serial port set in config?"
+                "failed to open WLED module, ESP flashed and correct serial port set in config?"
             )
 
             return wled_detected
@@ -74,8 +83,8 @@ class WledService:
         # ask WLED module for version (format: WLED YYYYMMDD)
         try:
             self._serial.write(b"v")
-        except serial.SerialTimeoutException as e:
-            logger.error(e)
+        except serial.SerialTimeoutException as exc:
+            logger.error(exc)
             logger.error("error sending request to identify WLED module - wrong port?")
             return wled_detected
 
@@ -88,8 +97,8 @@ class WledService:
                 # indicates WLED module found:
                 wled_detected = "WLED" in wled_response
                 logger.info(f"WLED version response: {wled_response}")
-            except UnicodeDecodeError as e:
-                logger.exception(e)
+            except UnicodeDecodeError as exc:
+                logger.exception(exc)
                 logger.error("message from WLED module not understood")
 
         logger.debug(f"wled_detected={wled_detected}")
@@ -97,23 +106,26 @@ class WledService:
         return wled_detected
 
     def preset_standby(self):
+        """_summary_"""
         logger.info("WledService preset_standby triggered")
         self._write_request(_request_preset(PRESET_ID_STANDBY))
 
     def preset_countdown(self):
+        """_summary_"""
         logger.info("WledService preset_countdown triggered")
         self._write_request(_request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):
+        """_summary_"""
         logger.info("WledService preset_shoot triggered")
         self._write_request(_request_preset(PRESET_ID_SHOOT))
 
     def _write_request(self, request):
         try:
             self._serial.write(request)
-        except serial.SerialException as e:
+        except serial.SerialException as exc:
             logger.fatal(
-                "error accessing WLED device, connection loss? device unpowered?"
+                f"error accessing WLED device, connection loss? device unpowered? {exc}"
             )
             # TODO: future improvement would be autorecover.
 

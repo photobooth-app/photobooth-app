@@ -1,12 +1,6 @@
-import logging
-import json
-import keyboard
-from pymitter import EventEmitter
-from src.configsettings import settings
-
-logger = logging.getLogger(__name__)
-
 """
+submit events on keypress to take photos
+
 tested following libs:
 keyboard: works seamless in win/linux but needs sudo on linux, not maintained actually
 pynput: works seamless in win/linux but needs sudo on linux, not working when started as service
@@ -15,9 +9,18 @@ hid: untested, needs additional libraries on win/linux to be installed
 evdev: linux only
 sshkeyboard: ?
 """
+import logging
+import json
+import keyboard
+from pymitter import EventEmitter
+from src.configsettings import settings
+
+logger = logging.getLogger(__name__)
 
 
 class KeyboardService:
+    """_summary_"""
+
     def __init__(self, evtbus: EventEmitter):
         self._evtbus: EventEmitter = evtbus
 
@@ -27,6 +30,11 @@ class KeyboardService:
             logger.info("keyboardservice not enabled - enable for keyboard triggers")
 
     def on_key_callback(self, key):
+        """_summary_
+
+        Args:
+            key (_type_): _description_
+        """
         logger.debug(f"key '{key.name}' triggered.")
         self._evtbus.emit(
             "publishSSE",

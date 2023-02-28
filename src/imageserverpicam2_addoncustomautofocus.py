@@ -7,7 +7,11 @@ import threading
 import time
 import logging
 from queue import Queue
-from smbus import SMBus
+
+try:
+    from smbus import SMBus
+except ImportError as import_exc:
+    raise OSError("smbus not supported on windows platform") from import_exc
 from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
 from src.configsettings import settings
@@ -36,38 +40,46 @@ class ImageServerPicam2AddonCustomAutofocus:
         self.sharpness_list = Queue()
         self.lock = threading.Lock()
         self.direction = 1
+        self.finish = True
         self._standby = False
 
         self.set_allow_focus_requests()
         self.reset()
 
         self._rt = RepeatedTimer(
-            settings.focuser.REPEAT_TRIGGER, self.triggerRegularTimedFocus
+            settings.focuser.REPEAT_TRIGGER, self.trigger_regular_timed_focus
         )
 
         self.start_regular_autofocus_timer()
 
     def start_regular_autofocus_timer(self):
+        """_summary_"""
         self._rt.start()
 
     def stop_regular_autofocus_timer(self):
+        """_summary_"""
         self._rt.stop()
 
     def abort_ongoing_focus_thread(self):
+        """_summary_"""
         logger.debug("abort ongoing focus thread")
         self.set_finish(True)
 
     def set_ignore_focus_requests(self):
+        """_summary_"""
         self._standby = True
 
     def set_allow_focus_requests(self):
+        """_summary_"""
         self._standby = False
 
-    def triggerRegularTimedFocus(self):
+    def trigger_regular_timed_focus(self):
+        """_summary_"""
         if not self._standby:
             self.do_focus()
 
     def do_focus(self):
+        """_summary_"""
         # guard to perfom autofocus only once at a time
         if self.is_finish() and self._standby is False and settings.focuser.ENABLED:
             self.reset()
@@ -93,22 +105,41 @@ class ImageServerPicam2AddonCustomAutofocus:
             logger.warning("Focus is not done yet or in standby.")
 
     def is_finish(self):
-        self.lock.acquire()
-        finish = self.finish
-        self.lock.release()
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
+        with self.lock:
+            finish = self.finish
+
         return finish
 
     def set_finish(self, finish=True):
-        self.lock.acquire()
-        self.finish = finish
-        self.lock.release()
+        """_summary_
+
+        Args:
+            finish (bool, optional): _description_. Defaults to True.
+        """
+        with self.lock:
+            self.finish = finish
 
     def reset(self):
+        """_summary_"""
         self.sharpness_list = Queue()
         self.set_finish(True)
 
 
 def get_roi_frame(roi, frame):
+    """_summary_
+
+    Args:
+        roi (_type_): _description_
+        frame (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     height, width = frame.shape[:2]
     x_start = int(width * roi[0])
     x_end = x_start + int(width * roi[2])
@@ -117,6 +148,7 @@ def get_roi_frame(roi, frame):
     y_end = y_start + int(height * roi[3])
 
     roi_frame = frame[y_start:y_end, x_start:x_end]
+
     return roi_frame
 
 
@@ -124,6 +156,12 @@ def stats_thread(
     imageserver: ImageServerAbstract,
     imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
 ):
+    """_summary_
+
+    Args:
+        imageserver (ImageServerAbstract): _description_
+        imageserver_addon_customautofocus (ImageServerPicam2AddonCustomAutofocus): _description_
+    """
     max_position = settings.focuser.MAX_VALUE
     min_position = settings.focuser.MIN_VALUE
     last_position = imageserver_addon_customautofocus._last_final_position
@@ -218,6 +256,11 @@ def stats_thread(
 def focus_thread(
     imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
 ):
+    """_summary_
+
+    Args:
+        imageserver_addon_customautofocus (ImageServerPicam2AddonCustomAutofocus): _description_
+    """
     sharpness_list = []
     continuousdecline_req = 6
     continuousdecline = 0
@@ -258,6 +301,14 @@ def focus_thread(
 
 
 def set_focus_position(position):
+    """_summary_
+
+    Args:
+        position (_type_): _description_
+
+    Raises:
+        ValueError: _description_
+    """
     value = int(position)
     try:
         focuser = settings.focuser.focuser_backend.value
@@ -276,6 +327,11 @@ def set_focus_position(position):
 
 
 def arducam_imx477_focuser(position):
+    """_summary_
+
+    Args:
+        position (_type_): _description_
+    """
     bus = 10
     i2caddress = 0x0C
 
@@ -291,4 +347,9 @@ def arducam_imx477_focuser(position):
 
 
 def arducam_imx519_64mp_focuser(position):
+    """_summary_
+
+    Args:
+        position (_type_): _description_
+    """
     os.system(f"v4l2-ctl -c focus_absolute={position} -d /dev/v4l-subdev1")

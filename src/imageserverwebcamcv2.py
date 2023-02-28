@@ -253,3 +253,26 @@ def img_aquisition(
                 _condition_img_buffer_lores_ready.notify_all()
 
     # TODO: need to close video actually on exit: self._video.release()
+
+
+def available_camera_indexes():
+    """
+    detect device indexes with usb camera connected
+
+    Returns:
+        _type_: _description_
+    """
+    # checks the first 10 indexes.
+
+    index = 0
+    arr = []
+    i = 10
+    while i > 0:
+        cap = cv2.VideoCapture(index)
+        if cap.read()[0]:
+            arr.append(index)
+            cap.release()
+        index += 1
+        i -= 1
+
+    return arr

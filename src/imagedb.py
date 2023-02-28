@@ -183,13 +183,38 @@ class ImageDb:
 
     @property
     def number_of_images(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return len(self._db)
 
     def db_get_images(self, sort_by_key="datetime", reverse=True):
+        """_summary_
+
+        Args:
+            sort_by_key (str, optional): _description_. Defaults to "datetime".
+            reverse (bool, optional): _description_. Defaults to True.
+
+        Returns:
+            _type_: _description_
+        """
         return sorted(self._db, key=lambda x: x[sort_by_key], reverse=reverse)
         # return dict(sorted(self._db.items(), key=lambda x: x[1][sortByKey], reverse=reverse))
 
     def db_get_image_by_id(self, item_id):
+        """_summary_
+
+        Args:
+            item_id (_type_): _description_
+
+        Raises:
+            FileNotFoundError: _description_
+
+        Returns:
+            _type_: _description_
+        """
         # https://stackoverflow.com/a/7125547
         item = next((x for x in self._db if x["id"] == item_id), None)
 
@@ -246,8 +271,15 @@ class ImageDb:
             return "Done, frame capture successful"
         except Exception as exc:
             logger.exception(exc)
+            return "Error"
 
     def create_scaled_images(self, buffer_full, filepath):
+        """_summary_
+
+        Args:
+            buffer_full (_type_): _description_
+            filepath (_type_): _description_
+        """
         filename = os.path.basename(filepath)
 
         logger.debug(f"filesize full image: {round(len(buffer_full)/1024,1)}")

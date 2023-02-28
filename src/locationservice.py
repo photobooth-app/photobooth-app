@@ -1,3 +1,8 @@
+""" 
+
+Gather location based on IP and WiFi to embed in Exif data
+
+"""
 import time
 import logging
 from threading import Thread
@@ -12,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class LocationService:
+    """_summary_"""
+
     def __init__(self):
         self._thread = Thread(
             name="LocationServiceThread", target=self._thread_func, daemon=True
@@ -44,6 +51,7 @@ class LocationService:
             logger.debug("geolocation api disabled, skipping setup")
 
     def start(self):
+        """_summary_"""
         if settings.locationservice.LOCATION_SERVICE_ENABLED:
             if self._init_successful:
                 self._running = True
@@ -56,10 +64,12 @@ class LocationService:
             logger.info("LocationService started but not actually enabled in config")
 
     def stop(self):
+        """_summary_"""
         self._running = False
         self._thread.join(1)
 
     def _thread_func(self):
+        """_summary_"""
         calc_every = (
             settings.locationservice.LOCATION_SERVICE_FORCED_UPDATE * 60
         )  # update every x seconds only
@@ -101,6 +111,11 @@ class LocationService:
 
     @property
     def latitude(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             return self._geolocation_response["location"]["lat"]
         except KeyError:
@@ -108,6 +123,11 @@ class LocationService:
 
     @property
     def longitude(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             return self._geolocation_response["location"]["lng"]
         except KeyError:
@@ -115,6 +135,11 @@ class LocationService:
 
     @property
     def accuracy(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             return self._geolocation_response["accuracy"]
         except KeyError:
@@ -122,6 +147,11 @@ class LocationService:
 
     @property
     def latitude_dms(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             return self._decdeg2dms(self._geolocation_response["location"]["lat"])
         except KeyError:
@@ -129,6 +159,11 @@ class LocationService:
 
     @property
     def longitude_dms(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         try:
             return self._decdeg2dms(self._geolocation_response["location"]["lng"])
         except KeyError:
@@ -136,6 +171,11 @@ class LocationService:
 
     @property
     def latitude_ref(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         if self.latitude is not None:
             return "S" if self.latitude < 0 else "N"
         else:
@@ -143,12 +183,25 @@ class LocationService:
 
     @property
     def longitude_ref(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         if self.longitude is not None:
             return "W" if self.longitude < 0 else "E"
         else:
             return None
 
     def _decdeg2dms(self, decdeg):
+        """_summary_
+
+        Args:
+            decdeg (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         # 52.400561, 9.679484 converts to
         # 52°24'02.0"N 9°40'46.1"E
         is_positive = decdeg >= 0
@@ -164,6 +217,7 @@ class LocationService:
         )
 
     def request_geolocation(self):
+        """_summary_"""
         # use api key to request via nearby wifis
         try:
             results = self._client.geolocate(
@@ -179,6 +233,7 @@ class LocationService:
             logger.error(f"geolocation request failed, error {exc}")
 
     def gather_wifi(self):
+        """_summary_"""
         self._iface.scan()
         # time.sleep(0.5)
         scan_results = self._iface.scan_results()
@@ -195,6 +250,7 @@ class LocationService:
         self._wifi_access_points = wifi_access_points
 
     def update_geolocation(self):
+        """_summary_"""
         # gather wifi
         self.gather_wifi()
 
