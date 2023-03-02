@@ -13,13 +13,13 @@ import multiprocessing
 from asyncio import Queue, QueueFull
 import uvicorn
 import psutil
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.staticfiles import StaticFiles
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.exception_handlers import (
     http_exception_handler,
     request_validation_exception_handler,
 )
+from fastapi.exceptions import HTTPException as StarletteHTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi import FastAPI, Request, HTTPException, status, Body
@@ -163,7 +163,6 @@ def api_get_config_schema(schema_type: str = "default"):
     Get schema to build the client UI
     :param str schema_type: default or dereferenced.
     """
-    print(schema_type)
     return settings.get_schema(schema_type=schema_type)
 
 
@@ -325,6 +324,17 @@ def video_stream():
 
 # serve data directory holding images, thumbnails, ...
 app.mount("/data", StaticFiles(directory="data"), name="data")
+
+
+@app.get("/log/latest")
+def get_qbooth_log():
+    """provide latest logfile to download
+    TODO Handle exception if file not exists
+
+    Returns:
+        _type_: _description_
+    """
+    return FileResponse(path="./log/qbooth.log")
 
 
 @app.get("/")
