@@ -25,6 +25,8 @@ else:
     INSTALL_DIR = "./imageserver/"
     SUPPRESS_INSTALLATION = False
     sys.path.append(INSTALL_DIR)
+    #ensure dir exists
+    Path(INSTALL_DIR).mkdir(exist_ok=True) 
 
 PIP_PACKAGES_COMMON = [
     "fastapi==0.92.0",
