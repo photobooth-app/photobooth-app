@@ -32,6 +32,7 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
 - Python 3.9 or later
 - Camera supported by one of the backends
+- Raspberry Pi Bullseye with libcamera stack for picamera modules
 - [photobooth installed](https://photoboothproject.github.io/)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
