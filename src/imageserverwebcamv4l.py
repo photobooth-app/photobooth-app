@@ -10,13 +10,14 @@ from src.imageserverabstract import (
     ImageServerAbstract,
     decompile_buffer,
     compile_buffer,
+    SharedMemoryDataExch,
 )
 from src.configsettings import settings
 
 try:
     from v4l2py import Device
-except ImportError as exc:
-    raise OSError("backend v4l2py not supported on windows platform") from exc
+except ImportError as import_exc:
+    raise OSError("backend v4l2py not supported on windows platform") from import_exc
 
 logger = logging.getLogger(__name__)
 
@@ -38,19 +39,22 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size
+        self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
         )
-        self._condition_img_buffer_ready = Condition()
-        self._img_buffer_lock = Lock()
 
         self._p = Process(
             target=img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
             args=(
-                self._img_buffer_shm.name,
-                self._condition_img_buffer_ready,
-                self._img_buffer_lock,
+                self._img_buffer.sharedmemory.name,
+                self._img_buffer.condition,
+                self._img_buffer.lock,
                 # need to pass settings, because unittests can change settings,
                 # if not passed, the settings are not available in the separate process!
                 settings,
@@ -69,8 +73,8 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        self._img_buffer_shm.close()
-        self._img_buffer_shm.unlink()
+        self._img_buffer.sharedmemory.close()
+        self._img_buffer.sharedmemory.unlink()
 
         self._p.terminate()
         self._p.join(1)
@@ -83,12 +87,12 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
-        with self._condition_img_buffer_ready:
-            if not self._condition_img_buffer_ready.wait(2):
+        with self._img_buffer.condition:
+            if not self._img_buffer.condition.wait(2):
                 raise IOError("timeout receiving frames")
 
-            with self._img_buffer_lock:
-                img = decompile_buffer(self._img_buffer_shm)
+            with self._img_buffer.lock:
+                img = decompile_buffer(self._img_buffer.sharedmemory)
 
         self._evtbus.emit("frameserver/onCaptureFinished")
 
@@ -126,12 +130,12 @@ class ImageServerWebcamV4l(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._condition_img_buffer_ready:
-            if not self._condition_img_buffer_ready.wait(2):
+        with self._img_buffer.condition:
+            if not self._img_buffer.condition.wait(2):
                 raise IOError("timeout receiving frames")
 
-            with self._img_buffer_lock:
-                img = decompile_buffer(self._img_buffer_shm)
+            with self._img_buffer.lock:
+                img = decompile_buffer(self._img_buffer.sharedmemory)
             return img
 
     def _on_capture_mode(self):
@@ -174,8 +178,12 @@ def img_aquisition(
                 _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
                 "MJPG",
             )
-        except Exception as exc:
+        except (AttributeError, FileNotFoundError) as exc:
+            logger.error(
+                f"cannot open camera {_settings.backends.v4l_device_index} properly."
+            )
             logger.exception(exc)
+            raise exc
 
         for jpeg_buffer in cam:  # forever
             time.sleep(0.1)
@@ -226,7 +234,7 @@ def is_valid_camera_index(index):
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()
-    except Exception:
+    except (AttributeError, FileNotFoundError):
         return False
 
     return True

@@ -49,6 +49,5 @@ class ImageServerPicam2AddonLibcamAutofocus:
             self._imageserver._picam2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
-        except Exception as exc:
-            logger.info(exc)
-            logger.info("control not available on all cameras - can ignore")
+        except RuntimeError as exc:
+            logger.info("control not available on all cameras - can ignore {exc}")

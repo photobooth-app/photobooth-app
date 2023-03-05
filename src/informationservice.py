@@ -11,6 +11,8 @@ from src.repeatedtimer import RepeatedTimer
 
 logger = logging.getLogger(__name__)
 
+STATS_INTERVAL_TIMER = 2  # every x seconds
+
 
 class InformationService:
     """_summary_"""
@@ -18,7 +20,7 @@ class InformationService:
     def __init__(self, evtbus: EventEmitter):
         self._evtbus: EventEmitter = evtbus
 
-        self._rt = RepeatedTimer(10, self._on_timer)
+        self._rt = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_timer)
 
         self._evtbus.on("publishSSE/initial", self._on_timer)
 
@@ -35,6 +37,17 @@ class InformationService:
         ]
         memory = psutil.virtual_memory()._asdict()
 
+        try:
+            meminfo = dict(
+                (i.split()[0].rstrip(":"), int(i.split()[1]))
+                for i in open("/proc/meminfo", encoding="utf-8").readlines()
+            )
+
+            cma = {"CmaTotal": meminfo["CmaTotal"], "CmaFree": meminfo["CmaFree"]}
+        except FileNotFoundError:
+            # linux only
+            cma = {"CmaTotal": None, "CmaFree": None}
+
         if platform.system() == "Linux":
             disk = psutil.disk_usage("/")._asdict()
         elif platform.system() == "Windows":
@@ -48,6 +61,7 @@ class InformationService:
                     "cpu1_5_15": cpu1_5_15,
                     "active_threads": threading.active_count(),
                     "memory": memory,
+                    "cma": cma,
                     "disk": disk,
                 }
             ),

@@ -166,7 +166,7 @@ def stats_thread(
     min_position = settings.focuser.MIN_VALUE
     last_position = imageserver_addon_customautofocus._last_final_position
 
-    jpeg = TurboJPEG()
+    turbojpeg = TurboJPEG()
     last_time = time.time()
     skipped_frame_counter = 0
     sharpness_list = []
@@ -210,7 +210,7 @@ def stats_thread(
                 ),
             )
             roi_frame = get_roi_frame(roi, frame)
-            buffer = jpeg.encode(roi_frame, quality=80)
+            buffer = turbojpeg.encode(roi_frame, quality=80)
 
             # frame is a jpeg; len is the size of the jpeg.
             # the more contrast, the sharper the picture is and thus the bigger the size.

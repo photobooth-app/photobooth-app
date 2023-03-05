@@ -1,7 +1,12 @@
+"""
+Repeat Timer in separate thread for tasks to be executed in intervals
+"""
 from threading import Timer
 
 
-class RepeatedTimer(object):
+class RepeatedTimer:
+    """_summary_"""
+
     def __init__(self, interval, function, *args, **kwargs):
         self._timer = None
         self.interval = interval
@@ -12,16 +17,19 @@ class RepeatedTimer(object):
         self.start()
 
     def _run(self):
+        """_summary_"""
         self.is_running = False
         self.start()
         self.function(*self.args, **self.kwargs)
 
     def start(self):
+        """_summary_"""
         if not self.is_running:
             self._timer = Timer(self.interval, self._run)
             self._timer.start()
             self.is_running = True
 
     def stop(self):
+        """_summary_"""
         self._timer.cancel()
         self.is_running = False

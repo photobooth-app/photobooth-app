@@ -1,7 +1,7 @@
 """
 Installer
 """
-from subprocess import call, STDOUT
+from subprocess import call
 import socket
 import getpass
 import os.path
@@ -10,6 +10,7 @@ import ctypes
 import sys
 import subprocess
 import platform
+from dataclasses import dataclass
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
@@ -25,6 +26,8 @@ else:
     INSTALL_DIR = "./imageserver/"
     SUPPRESS_INSTALLATION = False
     sys.path.append(INSTALL_DIR)
+    # ensure dir exists
+    Path(INSTALL_DIR).mkdir(exist_ok=True)
 
 PIP_PACKAGES_COMMON = [
     "fastapi==0.92.0",
@@ -43,7 +46,7 @@ PIP_PACKAGES_COMMON = [
     "pywifi==1.1.12",
     "requests==2.28.2",
     "sse_starlette==1.2.1",
-    "transitions==0.9.0",
+    "python-statemachine==1.0.3",
     "uvicorn==0.20.0",
     "python-dotenv==1.0.0",
     "pyserial==3.5",
@@ -233,7 +236,7 @@ def _syscall(cmd: str, sudo: bool = False):
         )
     else:
         print("unsupported platform, exit")
-        quit(-1)
+        sys.exit(-1)
 
     print("command exited with returncode=", result.returncode)
     return result.returncode
@@ -340,6 +343,7 @@ def print_blue(msg):
     print(f"{_style.BLUE}{msg}{_style.RESET}")
 
 
+@dataclass
 class _style:
     RED = "\033[31m"
     GREEN = "\033[32m"
@@ -357,7 +361,7 @@ if _is_linux() and _is_admin():
         "Error, please start installer as normal user, "
         "for specific tasks the script will ask for permission"
     )
-    quit(-1)
+    sys.exit(-1)
 else:
     print_green("OK")
 
@@ -375,7 +379,7 @@ print_spacer(f"python version > {MIN_PYTHON_VERSION}?")
 print_blue(f"Python version {sys.version}")
 if sys.version_info < MIN_PYTHON_VERSION:
     print_red(f"error, need at least python version {MIN_PYTHON_VERSION}")
-    quit(-1)
+    sys.exit(-1)
 else:
     print_green("OK")
 
@@ -409,7 +413,7 @@ if query_yes_no("Install system packages required for booth?", "no"):
         install_system_packages_win()
     else:
         print("unsupported platform, exit")
-        quit(-1)
+        sys.exit(-1)
 
 # fix keyboard input permissions
 if _is_linux():
@@ -441,15 +445,11 @@ if _is_linux():
 
 # install booth software
 INSTALLDIR_HAS_GIT_REPO = (
-    True
-    if call(
+    call(
         ["git", "branch"],
         cwd=INSTALL_DIR,
-        stderr=STDOUT,
-        stdout=open(os.devnull, "w", encoding="utf-8"),
     )
     == 0
-    else False
 )
 if not SUPPRESS_INSTALLATION and not INSTALLDIR_HAS_GIT_REPO:
     if query_yes_no(f"Install booth software to {INSTALL_DIR}?", "no"):
@@ -527,7 +527,7 @@ try:
     from turbojpeg import TurboJPEG
 
     TurboJPEG()  # instancing throws error if lib not present (usually a problem on windows only)
-except Exception as exc:
+except RuntimeError as exc:
     print_red(exc)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
     print_red(
@@ -634,5 +634,9 @@ else:
 # FINISH
 #
 print_spacer("Installer finished")
-print("start imageserver (start.sh/start.bat) and")
-print(f"Browse to http://{socket.gethostname()}:8000")
+print()
+print()
+print("Start imageserver (start.sh/start.bat) and")
+print(f"browse to http://{socket.gethostname()}:8000")
+print()
+print()

@@ -2,6 +2,8 @@
 abstract for the imageserver backends
 """
 import logging
+import dataclasses
+from multiprocessing import shared_memory, Condition, Lock
 from abc import ABC, abstractmethod
 from pymitter import EventEmitter
 
@@ -94,6 +96,19 @@ class ImageServerAbstract(ABC):
 #
 # INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.
 #
+
+
+@dataclasses.dataclass
+class SharedMemoryDataExch:
+    """
+    bundle data array and it's condition.
+    1) save some instance attributes and
+    2) bundle as it makes sense
+    """
+
+    sharedmemory: shared_memory.SharedMemory = None
+    condition: Condition = None
+    lock: Lock = None
 
 
 def decompile_buffer(shm: memoryview) -> bytes:

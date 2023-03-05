@@ -1,4 +1,5 @@
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, too-few-public-methods
+
 
 """
 ConfigSettings class providing central settings service to app

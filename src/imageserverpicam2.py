@@ -4,7 +4,9 @@ Picam2 backend implementation
 """
 from threading import Condition
 import time
+import dataclasses
 import logging
+import numpy
 from pymitter import EventEmitter
 
 try:
@@ -25,12 +27,24 @@ from src.imageserverpicam2_addonlibcamautofocus import (
 from src.imageserverabstract import ImageServerAbstract
 
 logger = logging.getLogger(__name__)
+turbojpeg = TurboJPEG()
 
 
 class ImageServerPicam2(ImageServerAbstract):
     """
     The backend implementation using picam2
     """
+
+    @dataclasses.dataclass
+    class PicamDataArray:
+        """
+        bundle data array and it's condition.
+        1) save some instance attributes and
+        2) bundle as it makes sense
+        """
+
+        array: numpy.ndarray = None
+        condition: Condition = None
 
     def __init__(self, evtbus: EventEmitter, enableStream):
         super().__init__(evtbus, enableStream)
@@ -45,7 +59,7 @@ class ImageServerPicam2(ImageServerAbstract):
         Pass in the Picamera2 object and the name of the stream for which you want
         to serve up frames."""
         self._picam2 = Picamera2()
-        self._turbojpeg = TurboJPEG()
+
         self._evtbus = evtbus
         if settings.focuser.ENABLED:
             # custom autofocus (has ROI, ... might be removed in future if
@@ -54,10 +68,14 @@ class ImageServerPicam2(ImageServerAbstract):
         else:
             self._addon_autofocus = ImageServerPicam2AddonLibcamAutofocus(self, evtbus)
 
-        self._hq_array = None
-        self._lores_array = None
-        self._hq_condition = Condition()
-        self._lores_condition = Condition()
+        self._hires_data: ImageServerPicam2.PicamDataArray = (
+            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
+        )
+
+        self._lores_data: ImageServerPicam2.PicamDataArray = (
+            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
+        )
+
         self._trigger_hq_capture = False
         self._currentmode = None
         self._lastmode = None
@@ -155,12 +173,15 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        with self._hq_condition:
+        with self._hires_data.condition:
             while True:
-                if not self._hq_condition.wait(2):
+                if not self._hires_data.condition.wait(2):
                     raise IOError("timeout receiving frames")
+                print("getting frame")
+                print(self._hires_data.array)
                 buffer = self._get_jpeg_by_hires_frame(
-                    frame=self._hq_array, quality=settings.common.HIRES_STILL_QUALITY
+                    frame=self._hires_data.array,
+                    quality=settings.common.HIRES_STILL_QUALITY,
                 )
                 return buffer
 
@@ -192,22 +213,23 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._lores_condition:
+        with self._lores_data.condition:
             while True:
-                if not self._lores_condition.wait(2):
+                if not self._lores_data.condition.wait(2):
                     raise IOError("timeout receiving frames")
                 buffer = self._get_jpeg_by_lores_frame(
-                    frame=self._lores_array, quality=settings.common.LIVEPREVIEW_QUALITY
+                    frame=self._lores_data.array,
+                    quality=settings.common.LIVEPREVIEW_QUALITY,
                 )
                 return buffer
 
     def _wait_for_lores_frame(self):
         """for other threads to receive a lores frame"""
-        with self._lores_condition:
+        with self._lores_data.condition:
             while True:
-                if not self._lores_condition.wait(2):
+                if not self._lores_data.condition.wait(2):
                     raise IOError("timeout receiving frames")
-                return self._lores_array
+                return self._lores_data.array
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode")
@@ -220,14 +242,14 @@ class ImageServerPicam2(ImageServerAbstract):
         self._currentmode = self._preview_config
 
     def _get_jpeg_by_hires_frame(self, frame, quality):
-        jpeg_buffer = self._turbojpeg.encode(
+        jpeg_buffer = turbojpeg.encode(
             frame, quality=quality, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422
         )
 
         return jpeg_buffer
 
     def _get_jpeg_by_lores_frame(self, frame, quality):
-        jpeg_buffer = self._turbojpeg.encode(frame, quality=quality)
+        jpeg_buffer = turbojpeg.encode(frame, quality=quality)
         return jpeg_buffer
 
     def set_ae_exposure(self, newmode):
@@ -239,8 +261,9 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.info(f"set_ae_exposure, try to set to {newmode}")
         try:
             self._picam2.set_controls({"AeExposureMode": newmode})
-        except:
-            logger.error(f"set_ae_exposure failed! Mode {newmode} not available")
+        except RuntimeError as exc:
+            # catch runtimeerror and no reraise, can fail and being logged but continue.
+            logger.error(f"set_ae_exposure failed! Mode {newmode} not available {exc}")
 
         logger.info(
             f"current picam2.controls.get_libcamera_controls():"
@@ -260,7 +283,10 @@ class ImageServerPicam2(ImageServerAbstract):
         # to calc frames per second every second
         while not self._stats_thread.stopped():
             if time.time() > (start_time + calc_every):
-                fps = round(float(self._count) / (time.time() - start_time), 1)
+                fps = round(  # pylint: disable=unused-variable
+                    float(self._count) / (time.time() - start_time),
+                    1,
+                )
 
                 # reset
                 self._count = 0
@@ -294,9 +320,9 @@ class ImageServerPicam2(ImageServerAbstract):
                 # is not used in application usually.
                 array = cvtColor(orig_array, COLOR_YUV420p2RGB)
 
-                with self._lores_condition:
-                    self._lores_array = array
-                    self._lores_condition.notify_all()
+                with self._lores_data.condition:
+                    self._lores_data.array = array
+                    self._lores_data.condition.notify_all()
             else:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
@@ -309,9 +335,11 @@ class ImageServerPicam2(ImageServerAbstract):
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
 
-                with self._hq_condition:
-                    self._hq_array = array
-                    self._hq_condition.notify_all()
+                with self._hires_data.condition:
+                    self._hires_data.array = array
+
+                    print(f"dataarray: {self._hires_data.array[0:2]}")
+                    self._hires_data.condition.notify_all()
 
                 # switch back to preview mode
                 self._on_preview_mode()

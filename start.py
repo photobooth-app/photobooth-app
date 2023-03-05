@@ -13,23 +13,23 @@ import multiprocessing
 from asyncio import Queue, QueueFull
 import uvicorn
 import psutil
-from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.staticfiles import StaticFiles
 from sse_starlette import EventSourceResponse, ServerSentEvent
 from fastapi.exception_handlers import (
     http_exception_handler,
     request_validation_exception_handler,
 )
+from fastapi.exceptions import HTTPException as StarletteHTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi import FastAPI, Request, HTTPException, status, Body
-from transitions import Machine
 from pymitter import EventEmitter
+from statemachine.exceptions import TransitionNotAllowed
 from src.imageservers import ImageServers
 from src.informationservice import InformationService
 from src.configsettings import ConfigSettings, settings
 from src.keyboardservice import KeyboardService
-from src.camstatemachine import TakePictureMachineModel, states, transitions
+from src.processingpicture import ProcessingPicture
 from src.wledservice import WledService
 from src.imagedb import ImageDb
 from src.loggingservice import LoggingService
@@ -163,7 +163,6 @@ def api_get_config_schema(schema_type: str = "default"):
     Get schema to build the client UI
     :param str schema_type: default or dereferenced.
     """
-    print(schema_type)
     return settings.get_schema(schema_type=schema_type)
 
 
@@ -261,21 +260,28 @@ def util_systemd_control(state):
 @app.get("/chose/1pic")
 def api_chose_1pic_get():
     try:
-        model.invokeProcess("arm")
+        processingpicture.arm()
         return "OK"
+    except TransitionNotAllowed as exc:
+        logger.exception(exc)
+        raise HTTPException(
+            status_code=400,
+            detail=f"bad request, only one request at a time, Exception: {exc}",
+        ) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {exc}"
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
         ) from exc
 
 
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
     try:
-        model.invokeProcess("arm")
-    except RuntimeError as exc:
-        logger.exception(exc)
+        processingpicture.arm()
+    except TransitionNotAllowed as exc:
+        logger.error(f"bad request, only one request at a time, Exception: {exc}")
 
 
 @app.get("/stats/focuser")
@@ -327,6 +333,17 @@ def video_stream():
 app.mount("/data", StaticFiles(directory="data"), name="data")
 
 
+@app.get("/log/latest")
+def get_qbooth_log():
+    """provide latest logfile to download
+    TODO Handle exception if file not exists
+
+    Returns:
+        _type_: _description_
+    """
+    return FileResponse(path="./log/qbooth.log")
+
+
 @app.get("/")
 def read_index():
     """
@@ -373,7 +390,13 @@ if __name__ == "__main__":
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
-    multiprocessing.set_start_method("spawn")
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(
+        f"multiprocessing_start_method={multiprocessing_start_method}, before forcing"
+    )
+    multiprocessing.set_start_method(method="spawn", force=True)
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}, forced")
 
     wledservice = WledService(ee)
 
@@ -385,19 +408,11 @@ if __name__ == "__main__":
 
     ks = KeyboardService(ee)
 
-    # model, machine and fire.
-    model = TakePictureMachineModel(ee)
-    machine = Machine(
-        model,
-        states=states,
-        transitions=transitions,
-        after_state_change="sse_emit_statechange",
-        initial="idle",
-    )
-    model.start()
     imageServers.start()
 
     ins = InformationService(ee)
+
+    processingpicture = ProcessingPicture(ee)
 
     # serve files forever
     try:

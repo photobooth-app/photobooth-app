@@ -66,8 +66,8 @@ class ImageServers:
                 return self.secondary_backend.gen_stream()
 
             return self.primary_backend.gen_stream()
-        else:
-            raise IOError("livepreview not enabled")
+
+        raise IOError("livepreview not enabled")
 
     # @property
     # @abstractmethod

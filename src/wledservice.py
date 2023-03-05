@@ -127,7 +127,6 @@ class WledService:
             logger.fatal(
                 f"error accessing WLED device, connection loss? device unpowered? {exc}"
             )
-            # TODO: future improvement would be autorecover.
 
 
 def _request_preset(preset_id: int = -1):

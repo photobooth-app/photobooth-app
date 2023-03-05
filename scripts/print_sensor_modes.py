@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 from pprint import *
 from picamera2 import Picamera2
 

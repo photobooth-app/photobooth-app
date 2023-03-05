@@ -1,4 +1,4 @@
-from src.imageserverwebcamcv2 import ImageServerWebcamCv2
+from src.imageserverwebcamcv2 import ImageServerWebcamCv2, available_camera_indexes
 import src.test_helperfunctions as test_helperfunctions
 import cv2
 from pymitter import EventEmitter
@@ -12,25 +12,8 @@ prepare config for testing
 """
 
 
-def availableCameraIndexes():
-    # checks the first 10 indexes.
-
-    index = 0
-    arr = []
-    i = 10
-    while i > 0:
-        cap = cv2.VideoCapture(index)
-        if cap.read()[0]:
-            arr.append(index)
-            cap.release()
-        index += 1
-        i -= 1
-
-    return arr
-
-
 def test_getImages():
-    _availableCameraIndexes = availableCameraIndexes()
+    _availableCameraIndexes = available_camera_indexes()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
 
