@@ -348,13 +348,13 @@ class ImageDb:
     def delete_images(self):
         """delete all images, inclusive thumbnails, ..."""
         try:
-            for file in os.scandir(f"{DATA_PATH}{PATH_IMAGE}*.jpg"):
-                os.remove(file.path)
-            for file in os.scandir(f"{DATA_PATH}{PATH_PREVIEW}*.jpg"):
-                os.remove(file.path)
-            for file in os.scandir(f"{DATA_PATH}{PATH_THUMBNAIL}*.jpg"):
-                os.remove(file.path)
+            for file in Path(f"{DATA_PATH}{PATH_IMAGE}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{DATA_PATH}{PATH_PREVIEW}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{DATA_PATH}{PATH_THUMBNAIL}").glob("*.jpg"):
+                os.remove(file)
             self._db_delete_items()
         except OSError as exc:
             logger.exception(exc)
-            logger.error(f"error deleting file {file.path}")
+            logger.error(f"error deleting file {file}")

@@ -311,6 +311,22 @@ def api_gallery_delete(image_id: str):
         raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
+@app.get("/gallery/delete_all", status_code=status.HTTP_204_NO_CONTENT)
+def api_gallery_delete_all():
+    """Warning: deletes all files permanently without any further confirmation
+
+    Raises:
+        HTTPException: _description_
+    """
+    logger.info("delete_all media items requested")
+    try:
+        imageDb.delete_images()
+        logger.info("all media successfully deleted")
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(500, f"deleting all media items failed: {exc}") from exc
+
+
 @app.get("/stream.mjpg")
 def video_stream():
     """
