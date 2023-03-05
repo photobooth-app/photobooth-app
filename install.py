@@ -1,7 +1,7 @@
 """
 Installer
 """
-from subprocess import call
+from subprocess import call, STDOUT
 import socket
 import getpass
 import os.path
@@ -415,6 +415,16 @@ if query_yes_no("Install system packages required for booth?", "no"):
         print("unsupported platform, exit")
         sys.exit(-1)
 
+
+# check git prerequisite
+print_spacer("check git properly installed")
+if not _syscall("git --version") == 0:
+    print_red("Error, git not found. Install git from https://git-scm.com/")
+    sys.exit(-1)
+else:
+    print_green("OK, git installed properly")
+    print()
+
 # fix keyboard input permissions
 if _is_linux():
     print_spacer(f"add '{USERNAME}' to tty and input groups for keyboard access")
@@ -448,6 +458,8 @@ INSTALLDIR_HAS_GIT_REPO = (
     call(
         ["git", "branch"],
         cwd=INSTALL_DIR,
+        stderr=STDOUT,
+        stdout=open(os.devnull, "w", encoding="utf-8"),
     )
     == 0
 )
