@@ -23,13 +23,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi import FastAPI, Request, HTTPException, status, Body
-from transitions import Machine
 from pymitter import EventEmitter
+from statemachine.exceptions import TransitionNotAllowed
 from src.imageservers import ImageServers
 from src.informationservice import InformationService
 from src.configsettings import ConfigSettings, settings
 from src.keyboardservice import KeyboardService
-from src.camstatemachine import TakePictureMachineModel, states, transitions
+from src.processingpicture import ProcessingPicture
 from src.wledservice import WledService
 from src.imagedb import ImageDb
 from src.loggingservice import LoggingService
@@ -260,20 +260,29 @@ def util_systemd_control(state):
 @app.get("/chose/1pic")
 def api_chose_1pic_get():
     try:
-        model.invokeProcess("arm")
+        processingpicture.arm()
         return "OK"
+    except TransitionNotAllowed as exc:
+        logger.exception(exc)
+        raise HTTPException(
+            status_code=400,
+            detail=f"bad request, only one request at a time, Exception: {exc}",
+        ) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {exc}"
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
         ) from exc
 
 
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
     try:
-        model.invokeProcess("arm")
-    except RuntimeError as exc:
+        processingpicture.arm()
+    except TransitionNotAllowed as exc:
+        logger.error(f"bad request, only one request at a time, Exception: {exc}")
+    except Exception as exc:
         logger.exception(exc)
 
 
@@ -395,19 +404,11 @@ if __name__ == "__main__":
 
     ks = KeyboardService(ee)
 
-    # model, machine and fire.
-    model = TakePictureMachineModel(ee)
-    machine = Machine(
-        model,
-        states=states,
-        transitions=transitions,
-        after_state_change="sse_emit_statechange",
-        initial="idle",
-    )
-    model.start()
     imageServers.start()
 
     ins = InformationService(ee)
+
+    processingpicture = ProcessingPicture(ee)
 
     # serve files forever
     try:
