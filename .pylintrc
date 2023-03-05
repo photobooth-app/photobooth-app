@@ -3,6 +3,8 @@
 # https://github.com/pydantic/pydantic/issues/1961
 extension-pkg-allow-list=pydantic
 
+ignore-patterns=(.)*_test\.py,test_(.)*\.py
+
 [LOGGING]
 logging-format-style=new
 
@@ -14,3 +16,4 @@ ignored-modules=cv2
 
 [MESSAGES CONTROL]
 disable=import-error
+

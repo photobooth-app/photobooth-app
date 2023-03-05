@@ -6,6 +6,7 @@ from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
 import json
+import dataclasses
 import cv2
 from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
@@ -13,10 +14,12 @@ from src.imageserverabstract import (
     ImageServerAbstract,
     compile_buffer,
     decompile_buffer,
+    SharedMemoryDataExch,
 )
 from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
+turbojpeg = TurboJPEG()
 
 
 class ImageServerWebcamCv2(ImageServerAbstract):
@@ -34,29 +37,21 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer_lores_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size
-        )
-        self._img_buffer_hires_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size
-        )
+        self._img_buffer_lores: SharedMemoryDataExch = SharedMemoryDataExch()
+        self._img_buffer_hires: SharedMemoryDataExch = SharedMemoryDataExch()
         self._event_hq_capture: Event = Event()
-        self._condition_img_buffer_hires_ready = Condition()
-        self._condition_img_buffer_lores_ready = Condition()
-        self._img_buffer_lores_lock = Lock()
-        self._img_buffer_hires_lock = Lock()
 
         self._p = Process(
             target=img_aquisition,
             name="ImageServerWebcamCv2AquisitionProcess",
             args=(
-                self._img_buffer_lores_shm.name,
-                self._img_buffer_hires_shm.name,
-                self._img_buffer_lores_lock,
-                self._img_buffer_hires_lock,
+                self._img_buffer_lores.sharedmemory.name,
+                self._img_buffer_hires.sharedmemory.name,
+                self._img_buffer_lores.lock,
+                self._img_buffer_hires.lock,
                 self._event_hq_capture,
-                self._condition_img_buffer_hires_ready,
-                self._condition_img_buffer_lores_ready,
+                self._img_buffer_lores.condition,
+                self._img_buffer_hires.condition,
                 settings,
             ),
             daemon=True,
@@ -72,10 +67,10 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        self._img_buffer_lores_shm.close()
-        self._img_buffer_lores_shm.unlink()
-        self._img_buffer_hires_shm.close()
-        self._img_buffer_hires_shm.unlink()
+        self._img_buffer_lores.sharedmemory.close()
+        self._img_buffer_lores.sharedmemory.unlink()
+        self._img_buffer_hires.sharedmemory.close()
+        self._img_buffer_hires.sharedmemory.unlink()
         self._p.terminate()
         self._p.join(1)
         self._p.close()
@@ -87,12 +82,12 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
-        with self._condition_img_buffer_hires_ready:
-            if not self._condition_img_buffer_hires_ready.wait(2):
+        with self._img_buffer_hires.condition:
+            if not self._img_buffer_hires.condition.wait(2):
                 raise IOError("timeout receiving frames")
 
-            with self._img_buffer_hires_lock:
-                img = decompile_buffer(self._img_buffer_hires_shm)
+            with self._img_buffer_hires.lock:
+                img = decompile_buffer(self._img_buffer_hires.sharedmemory)
 
         self._evtbus.emit("frameserver/onCaptureFinished")
 
@@ -131,12 +126,12 @@ class ImageServerWebcamCv2(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._condition_img_buffer_lores_ready:
-            if not self._condition_img_buffer_lores_ready.wait(2):
+        with self._img_buffer_lores.condition:
+            if not self._img_buffer_lores.condition.wait(2):
                 raise IOError("timeout receiving frames")
 
-            with self._img_buffer_lores_lock:
-                img = decompile_buffer(self._img_buffer_lores_shm)
+            with self._img_buffer_lores.lock:
+                img = decompile_buffer(self._img_buffer_lores.sharedmemory)
             return img
 
     def _on_capture_mode(self):
@@ -167,8 +162,8 @@ def img_aquisition(
     _img_buffer_lores_lock,
     _img_buffer_hires_lock,
     _event_hq_capture: Event,
-    _condition_img_buffer_hires_ready: Condition,
     _condition_img_buffer_lores_ready: Condition,
+    _condition_img_buffer_hires_ready: Condition,
     # need to pass settings, because unittests can change settings,
     # if not passed, the settings are not available in the separate process!
     _settings,
@@ -177,7 +172,7 @@ def img_aquisition(
     process function to gather webcam images
     """
     # init
-    _turbojpeg = TurboJPEG()
+
     shm_lores = shared_memory.SharedMemory(shm_buffer_lores_name)
     shm_hires = shared_memory.SharedMemory(shm_buffer_hires_name)
 
@@ -229,7 +224,7 @@ def img_aquisition(
             array = cv2.fastNlMeansDenoisingColored(array, None, 2, 2, 3, 9)
 
             # convert frame to jpeg buffer
-            jpeg_buffer = _turbojpeg.encode(
+            jpeg_buffer = turbojpeg.encode(
                 array, quality=_settings.common.HIRES_STILL_QUALITY
             )
             # put jpeg on queue until full. If full this function blocks until queue empty
@@ -241,7 +236,7 @@ def img_aquisition(
                 _condition_img_buffer_hires_ready.notify_all()
         else:
             # preview livestream
-            jpeg_buffer = _turbojpeg.encode(
+            jpeg_buffer = turbojpeg.encode(
                 array, quality=_settings.common.LIVEPREVIEW_QUALITY
             )
             # put jpeg on queue until full. If full this function blocks until queue empty
@@ -251,8 +246,6 @@ def img_aquisition(
             with _condition_img_buffer_lores_ready:
                 # wait to be notified
                 _condition_img_buffer_lores_ready.notify_all()
-
-    # TODO: need to close video actually on exit: self._video.release()
 
 
 def available_camera_indexes():
