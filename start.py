@@ -390,7 +390,9 @@ if __name__ == "__main__":
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
-    multiprocessing.set_start_method("spawn")
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}")
+    multiprocessing.set_start_method(method="spawn", force=True)
 
     wledservice = WledService(ee)
 
