@@ -40,7 +40,14 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch()
+        self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
+        )
 
         self._p = Process(
             target=img_aquisition,
