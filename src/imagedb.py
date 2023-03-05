@@ -267,7 +267,7 @@ class ImageDb:
             )
 
             return "Done, frame capture successful"
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.exception(exc)
             return "Error"
 
