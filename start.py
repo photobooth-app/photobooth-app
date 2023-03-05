@@ -391,8 +391,12 @@ if __name__ == "__main__":
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
     multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}")
+    logger.info(
+        f"multiprocessing_start_method={multiprocessing_start_method}, before forcing"
+    )
     multiprocessing.set_start_method(method="spawn", force=True)
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}, forced")
 
     wledservice = WledService(ee)
 
