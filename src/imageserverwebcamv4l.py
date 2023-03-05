@@ -4,7 +4,6 @@ v4l webcam implementation backend
 import time
 import logging
 import json
-import dataclasses
 from multiprocessing import Process, shared_memory, Condition, Lock
 from pymitter import EventEmitter
 from src.imageserverabstract import (
@@ -179,8 +178,12 @@ def img_aquisition(
                 _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
                 "MJPG",
             )
-        except Exception as exc:
+        except (AttributeError, FileNotFoundError) as exc:
+            logger.error(
+                f"cannot open camera {_settings.backends.v4l_device_index} properly."
+            )
             logger.exception(exc)
+            raise exc
 
         for jpeg_buffer in cam:  # forever
             time.sleep(0.1)
@@ -231,7 +234,7 @@ def is_valid_camera_index(index):
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()
-    except Exception:
+    except (AttributeError, FileNotFoundError):
         return False
 
     return True

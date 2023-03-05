@@ -6,7 +6,6 @@ import dataclasses
 from multiprocessing import shared_memory, Condition, Lock
 from abc import ABC, abstractmethod
 from pymitter import EventEmitter
-from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
