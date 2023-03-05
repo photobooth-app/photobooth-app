@@ -24,11 +24,10 @@ class ProcessingPicture(StateMachine):
     idle = State("Initial", initial=True)
     countdown = State("Countdown")
     capture_still = State("Capture Still")
-    final = State("Final")
 
     arm = idle.to(countdown)
     shoot = countdown.to(capture_still) | idle.to(capture_still)
-    finalize = capture_still.to(final)
+    finalize = capture_still.to(idle)
 
     @dataclass
     class Stateinfo:
@@ -40,11 +39,7 @@ class ProcessingPicture(StateMachine):
     def __init__(self, evtbus):
         self._evtbus: EventEmitter = evtbus  # eventemitter
 
-        self.timer = Thread(
-            name="_decrease_countdown",
-            target=self._decrease_countdown,
-            daemon=True,
-        )
+        self.timer: Thread = None
         self.timer_countdown = 0
 
         super().__init__()
@@ -87,9 +82,14 @@ class ProcessingPicture(StateMachine):
         )
         logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
         logger.info("starting timer")
+        self.timer = Thread(
+            name="_decrease_countdown",
+            target=self._decrease_countdown,
+            daemon=True,
+        )
         self.timer.start()
 
-    def on_exit_countdown(self):
+    def on_enter_idle(self):
         """_summary_"""
         # send 0 countdown to UI
         self._sse_processinfo(
@@ -116,7 +116,8 @@ class ProcessingPicture(StateMachine):
 
     def _decrease_countdown(self):
         """_summary_"""
-        while self.timer_countdown >= settings.common.PROCESS_COUNTDOWN_OFFSET:
+
+        while self.timer_countdown > 0:
             self._sse_processinfo(
                 ProcessingPicture.Stateinfo(
                     state=self.current_state.id,
@@ -126,7 +127,13 @@ class ProcessingPicture(StateMachine):
             time.sleep(0.1)
             self.timer_countdown -= 0.1
 
-        self.shoot()
+            if (
+                self.timer_countdown <= settings.common.PROCESS_COUNTDOWN_OFFSET
+                and self.countdown.is_active
+            ):
+                self.shoot()
+
+        self.timer_countdown = 0
 
     def _sse_initial_processinfo(self):
         """_summary_"""

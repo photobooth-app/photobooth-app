@@ -340,7 +340,6 @@ class ConfigSettings(BaseSettings):
 
     def get_schema(self, schema_type: str = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
-        print(schema_type)
         if schema_type == "dereferenced":
             # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
             return jsonref.loads(settings.schema_json())
