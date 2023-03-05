@@ -1,7 +1,7 @@
 """
 Installer
 """
-from subprocess import call, STDOUT
+from subprocess import call
 import socket
 import getpass
 import os.path
@@ -445,15 +445,11 @@ if _is_linux():
 
 # install booth software
 INSTALLDIR_HAS_GIT_REPO = (
-    True
-    if call(
+    call(
         ["git", "branch"],
         cwd=INSTALL_DIR,
-        stderr=STDOUT,
-        stdout=open(os.devnull, "w", encoding="utf-8"),
     )
     == 0
-    else False
 )
 if not SUPPRESS_INSTALLATION and not INSTALLDIR_HAS_GIT_REPO:
     if query_yes_no(f"Install booth software to {INSTALL_DIR}?", "no"):

@@ -137,7 +137,7 @@ def _separate_process_settings_passed_fun(
 def test_settings_available_in_separate_spawned_process():
     from src.configsettings import settings
 
-    ORIGINAL_TEST_KEY_VALUE = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+    original_test_key_value = settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
 
     # now change the value
     settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT = TEST_KEY_TEST_VALUE
@@ -157,7 +157,7 @@ def test_settings_available_in_separate_spawned_process():
     time.sleep(2)
     # can show that separate processes to not receive the changed settings!
     # complete separate memory. need to share settings explicitly if changes need to be shared (for tests)
-    assert check_value1.value == ORIGINAL_TEST_KEY_VALUE
+    assert check_value1.value == original_test_key_value
     logger.warning(
         "in process the value is still the original value, changed setting not reflected."
     )

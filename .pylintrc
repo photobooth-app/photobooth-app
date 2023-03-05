@@ -2,6 +2,7 @@
 # Whitelist pydantic extension
 # https://github.com/pydantic/pydantic/issues/1961
 extension-pkg-allow-list=pydantic
+extension-pkg-whitelist=pydantic
 
 [LOGGING]
 logging-format-style=new

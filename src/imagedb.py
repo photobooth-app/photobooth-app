@@ -128,8 +128,6 @@ class ImageDb:
 
         self._db = []  # sorted array. always newest image first in list.
 
-        # TODO: check all directory exist and are writeable - otherwise raise exception.
-
         self._evtbus.on("statemachine/capture", self.capture_hq_image)
 
         self._init_db()

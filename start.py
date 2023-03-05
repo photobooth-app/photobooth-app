@@ -282,8 +282,6 @@ def evt_chose_1pic_get():
         processingpicture.arm()
     except TransitionNotAllowed as exc:
         logger.error(f"bad request, only one request at a time, Exception: {exc}")
-    except Exception as exc:
-        logger.exception(exc)
 
 
 @app.get("/stats/focuser")
