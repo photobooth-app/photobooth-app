@@ -11,3 +11,6 @@ disable=logging-fstring-interpolation
 
 [TYPECHECK]
 ignored-modules=cv2
+
+[MESSAGES CONTROL]
+disable=import-error
