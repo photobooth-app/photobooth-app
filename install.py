@@ -634,5 +634,9 @@ else:
 # FINISH
 #
 print_spacer("Installer finished")
-print("start imageserver (start.sh/start.bat) and")
-print(f"Browse to http://{socket.gethostname()}:8000")
+print()
+print()
+print("Start imageserver (start.sh/start.bat) and")
+print(f"browse to http://{socket.gethostname()}:8000")
+print()
+print()
