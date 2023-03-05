@@ -6,7 +6,6 @@ from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
 import json
-import dataclasses
 import cv2
 from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
@@ -37,8 +36,22 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer_lores: SharedMemoryDataExch = SharedMemoryDataExch()
-        self._img_buffer_hires: SharedMemoryDataExch = SharedMemoryDataExch()
+        self._img_buffer_lores: SharedMemoryDataExch = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
+        )
+        self._img_buffer_hires: SharedMemoryDataExch = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
+        )
         self._event_hq_capture: Event = Event()
 
         self._p = Process(

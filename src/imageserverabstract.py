@@ -107,12 +107,9 @@ class SharedMemoryDataExch:
     2) bundle as it makes sense
     """
 
-    sharedmemory: shared_memory.SharedMemory = shared_memory.SharedMemory(
-        create=True,
-        size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
-    )
-    condition: Condition = Condition()
-    lock: Lock = Lock()
+    sharedmemory: shared_memory.SharedMemory = None
+    condition: Condition = None
+    lock: Lock = None
 
 
 def decompile_buffer(shm: memoryview) -> bytes:

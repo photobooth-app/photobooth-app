@@ -44,7 +44,7 @@ class ImageServerPicam2(ImageServerAbstract):
         """
 
         array: numpy.ndarray = None
-        condition: Condition = Condition()
+        condition: Condition = None
 
     def __init__(self, evtbus: EventEmitter, enableStream):
         super().__init__(evtbus, enableStream)
@@ -69,10 +69,11 @@ class ImageServerPicam2(ImageServerAbstract):
             self._addon_autofocus = ImageServerPicam2AddonLibcamAutofocus(self, evtbus)
 
         self._hires_data: ImageServerPicam2.PicamDataArray = (
-            ImageServerPicam2.PicamDataArray()
+            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
         )
+
         self._lores_data: ImageServerPicam2.PicamDataArray = (
-            ImageServerPicam2.PicamDataArray()
+            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
         )
 
         self._trigger_hq_capture = False
@@ -176,6 +177,8 @@ class ImageServerPicam2(ImageServerAbstract):
             while True:
                 if not self._hires_data.condition.wait(2):
                     raise IOError("timeout receiving frames")
+                print("getting frame")
+                print(self._hires_data.array)
                 buffer = self._get_jpeg_by_hires_frame(
                     frame=self._hires_data.array,
                     quality=settings.common.HIRES_STILL_QUALITY,
@@ -258,8 +261,9 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.info(f"set_ae_exposure, try to set to {newmode}")
         try:
             self._picam2.set_controls({"AeExposureMode": newmode})
-        except Exception:
-            logger.error(f"set_ae_exposure failed! Mode {newmode} not available")
+        except RuntimeError as exc:
+            # catch runtimeerror and no reraise, can fail and being logged but continue.
+            logger.error(f"set_ae_exposure failed! Mode {newmode} not available {exc}")
 
         logger.info(
             f"current picam2.controls.get_libcamera_controls():"
@@ -333,6 +337,8 @@ class ImageServerPicam2(ImageServerAbstract):
 
                 with self._hires_data.condition:
                     self._hires_data.array = array
+
+                    print(f"dataarray: {self._hires_data.array[0:2]}")
                     self._hires_data.condition.notify_all()
 
                 # switch back to preview mode
