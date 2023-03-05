@@ -3,6 +3,8 @@
 
 This is in dev currently. Not for production.
 
+[![Pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
+
 # Photobooth App
 
 This app allows to use
