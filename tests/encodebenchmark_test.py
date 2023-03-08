@@ -12,10 +12,10 @@ from PIL import Image
 logger = logging.getLogger(name=None)
 
 
-def turbojpeg_encode(bgr_array):
+def turbojpeg_encode(frame_from_camera):
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
-    bytes = turbojpeg.encode(bgr_array, quality=85)
+    bytes = turbojpeg.encode(frame_from_camera, quality=85)
 
     return bytes
 
@@ -34,11 +34,6 @@ def cv2_encode(frame_from_camera):
     result, encimg = cv2.imencode(".jpg", frame_from_camera, encode_param)
 
     return encimg
-
-
-def print_stats(fun, times):
-    print(f"{fun}: {round(median(times)*1000,1)}ms per call")
-    logger.warning(f"{fun}: {round(median(times)*1000,1)}ms per call")
 
 
 @pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode"])
@@ -63,9 +58,7 @@ def image(request):
     # os.remove(request.param)
 
 
-def test_libraries_encode(library, image):
-    print_stats(
-        f"{library}",
-        timeit.repeat(lambda: eval(library)(image), number=1, repeat=10),
-    )
+# needs pip install pytest-benchmark
+def test_libraries_encode(library, image, benchmark):
+    result = benchmark(eval(library), frame_from_camera=image)
     assert True
