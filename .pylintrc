@@ -25,3 +25,5 @@ ignored-modules=cv2
 [MESSAGES CONTROL]
 disable=import-error
 
+[SIMILARITIES]
+min-similarity-lines=10
