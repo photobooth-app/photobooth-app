@@ -3,6 +3,7 @@
 _Latest stable version:_  
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
+
 _Latest development version:_  
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
