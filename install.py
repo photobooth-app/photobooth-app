@@ -29,42 +29,6 @@ else:
     # ensure dir exists
     Path(INSTALL_DIR).mkdir(exist_ok=True)
 
-PIP_PACKAGES_COMMON = [
-    "fastapi==0.92.0",
-    "googlemaps==4.10.0",
-    # "keyboard==0.13.5",
-    # need to avoid root for keyboard access,
-    # https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
-    "git+https://github.com/boppreh/keyboard.git#egg=keyboard",
-    "opencv_python==4.7.0.72",
-    "piexif==1.1.3",
-    "Pillow==9.4.0",
-    "psutil==5.9.4",
-    "pydantic==1.10.4",
-    "pymitter==0.4.0",
-    "PyTurboJPEG==1.7.0",
-    "pywifi==1.1.12",
-    "requests==2.28.2",
-    "sse_starlette==1.2.1",
-    "python-statemachine==1.0.3",
-    "uvicorn==0.20.0",
-    "python-dotenv==1.0.0",
-    "pyserial==3.5",
-    "jsonref==1.1.0",
-]
-
-PIP_PACKAGES_LINUX = [
-    "v4l2py==0.6.2",
-]
-
-PIP_PACKAGES_WIN = [
-    "comtypes",  # for pywifi; pywifi misses to install required package comtypes
-]
-
-PIP_PACKAGES_RPI = [
-    "gpiozero==1.6.2",
-]
-
 SYSTEM_PACKAGES_LINUX = [
     "git",
     "fonts-noto-color-emoji",
@@ -83,6 +47,8 @@ STARTER_CONFIGURATIONS_COMMON = [
         """
 backends__MAIN_BACKEND="ImageServerWebcamCv2"
 backends__cv2_device_index=##cv2_device_index##
+common__CAPTURE_CAM_RESOLUTION_WIDTH=10000
+common__CAPTURE_CAM_RESOLUTION_HEIGHT=10000
 """,
     ),
 ]
@@ -186,37 +152,13 @@ def install_pip_packages():
     # install total requirements line by line to continue if some packages fail
     # (linux/win use different packages)
     print_spacer("Installing pip packages")
-    pip_ok = []
-    pip_fail = []
-    pip_install_packages = PIP_PACKAGES_COMMON
 
-    if platform.system() == "Linux":
-        pip_install_packages += PIP_PACKAGES_LINUX
-        if _is_rpi():
-            pip_install_packages += PIP_PACKAGES_RPI
-    if platform.system() == "Windows":
-        pip_install_packages += PIP_PACKAGES_WIN
+    retval = _syscall("pip install -r requirements.txt")
+    if retval != 0:
+        print_red("pip installation failed! check output for errors")
+        sys.exit()
 
-    print(pip_install_packages)
-
-    for package in pip_install_packages:
-        retval = _syscall(f"python -m pip install --upgrade {package}")
-        if retval == 0:
-            pip_ok.append(package)
-        else:
-            pip_fail.append(package)
-    print_spacer("pip install summary:")
-    print_green("packages successfully installed:")
-    print_green(pip_ok)
-    if pip_fail:
-        print_red("packages failed to install:")
-        print_red(pip_fail)
-        print_red(
-            "please check why packages failed to install. "
-            "Some packages might not be necessary on all platforms"
-        )
-    else:
-        print_green("All packages successfully installed")
+    print_green("All packages successfully installed")
 
 
 #

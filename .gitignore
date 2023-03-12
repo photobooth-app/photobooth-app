@@ -6,7 +6,6 @@ __pycache__
 log/*.log*
 .env
 .env.*
-requirements.txt
 
 src/ImageServerDigicamcontrol.py
 src/ImageServerGphoto2.py

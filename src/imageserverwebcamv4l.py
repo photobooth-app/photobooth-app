@@ -3,7 +3,6 @@ v4l webcam implementation backend
 """
 import time
 import logging
-import json
 from multiprocessing import Process, shared_memory, Condition, Lock
 from pymitter import EventEmitter
 from src.imageserverabstract import (
@@ -48,8 +47,8 @@ class ImageServerWebcamV4l(ImageServerAbstract):
             lock=Lock(),
         )
 
-        self._p = Process(
-            target=img_aquisition,
+        self._v4l_process = Process(
+            target=v4l_img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
             args=(
                 self._img_buffer.sharedmemory.name,
@@ -65,10 +64,10 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._on_preview_mode()
 
     def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
+        """To start the v4l acquisition process"""
         # start camera
 
-        self._p.start()
+        self._v4l_process.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -76,9 +75,9 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._img_buffer.sharedmemory.close()
         self._img_buffer.sharedmemory.unlink()
 
-        self._p.terminate()
-        self._p.join(1)
-        self._p.close()
+        self._v4l_process.terminate()
+        self._v4l_process.join(1)
+        self._v4l_process.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -100,22 +99,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def gen_stream(self):
-        last_time = time.time_ns()
-        while True:
-            buffer = self._wait_for_lores_image()
-
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (
-                1 / settings.common.LIVEPREVIEW_FRAMERATE
-            ):
-                last_time = now_time
-
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                )
 
     def trigger_hq_capture(self):
         self._on_capture_mode()
@@ -144,27 +127,25 @@ class ImageServerWebcamV4l(ImageServerAbstract):
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested - ignored on this backend")
 
-    def _publish_sse_initial(self):
-        self._publish_sse_metadata()
-
-    def _publish_sse_metadata(self):
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="frameserver/metadata",
-            sse_data=json.dumps(self.metadata),
-        )
-
     #
     # INTERNAL IMAGE GENERATOR
     #
 
 
-def img_aquisition(
+def v4l_img_aquisition(
     shm_buffer_name,
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
     _settings,
 ):
+    """_summary_
+
+    Raises:
+        exc: _description_
+
+    Returns:
+        _type_: _description_
+    """
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)
 

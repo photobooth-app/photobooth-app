@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """
 custom autofocus module mainly used for arducams
 """
@@ -321,7 +322,7 @@ def set_focus_position(position):
         else:
             raise ValueError("invalid focuser model selected")
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.exception(exc)
         logger.error(f"Error on focus command: {exc}")
 

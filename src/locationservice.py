@@ -5,10 +5,10 @@ Gather location based on IP and WiFi to embed in Exif data
 """
 import time
 import logging
-from threading import Thread
 from fractions import Fraction
 import googlemaps
 import pywifi
+from src.stoppablethread import StoppableThread
 from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
@@ -20,10 +20,9 @@ class LocationService:
     """_summary_"""
 
     def __init__(self):
-        self._thread = Thread(
+        self._thread = StoppableThread(
             name="LocationServiceThread", target=self._thread_func, daemon=True
         )
-        self._running = True
 
         # request data
         self._wifi_access_points = []
@@ -41,12 +40,12 @@ class LocationService:
                 self._iface = self._wifi.interfaces()[
                     settings.locationservice.LOCATION_SERVICE_WIFI_INTERFACE_NO
                 ]
-                self._client = googlemaps.Client(
+                self._client: googlemaps.Client = googlemaps.Client(
                     settings.locationservice.LOCATION_SERVICE_API_KEY
                 )
                 self._init_successful = True
-            except Exception as exc:
-                logger.error(f"geolocation setup failed, stopping thread, error: {exc}")
+            except ValueError as exc:
+                logger.error(f"geolocation setup failed, stopping init, error: {exc}")
         else:
             logger.debug("geolocation api disabled, skipping setup")
 
@@ -54,7 +53,6 @@ class LocationService:
         """_summary_"""
         if settings.locationservice.LOCATION_SERVICE_ENABLED:
             if self._init_successful:
-                self._running = True
                 self._thread.start()
             else:
                 logger.error(
@@ -65,7 +63,7 @@ class LocationService:
 
     def stop(self):
         """_summary_"""
-        self._running = False
+        self._thread.stop()
         self._thread.join(1)
 
     def _thread_func(self):
@@ -78,7 +76,7 @@ class LocationService:
             settings.locationservice.LOCATION_SERVICE_HIGH_FREQ_UPDATE
         )
 
-        while self._running:
+        while not self._thread.stopped():
             # forced update by time
             if time.time() > (last_forced_update_time + calc_every):
                 logger.info("geolocation forced update by time triggered")
@@ -178,8 +176,8 @@ class LocationService:
         """
         if self.latitude is not None:
             return "S" if self.latitude < 0 else "N"
-        else:
-            return None
+
+        return None
 
     @property
     def longitude_ref(self):
@@ -190,8 +188,8 @@ class LocationService:
         """
         if self.longitude is not None:
             return "W" if self.longitude < 0 else "E"
-        else:
-            return None
+
+        return None
 
     def _decdeg2dms(self, decdeg):
         """_summary_
@@ -228,7 +226,11 @@ class LocationService:
             logger.info(f"geolocation results: {results}")
 
             self._geolocation_response = results
-        except Exception as exc:
+        except (
+            googlemaps.exceptions.ApiError,
+            googlemaps.exceptions.Timeout,
+            googlemaps.exceptions.TransportError,
+        ) as exc:
             logger.exception(exc)
             logger.error(f"geolocation request failed, error {exc}")
 

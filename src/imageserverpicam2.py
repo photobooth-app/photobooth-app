@@ -177,32 +177,12 @@ class ImageServerPicam2(ImageServerAbstract):
             while True:
                 if not self._hires_data.condition.wait(2):
                     raise IOError("timeout receiving frames")
-                print("getting frame")
-                print(self._hires_data.array)
+
                 buffer = self._get_jpeg_by_hires_frame(
                     frame=self._hires_data.array,
                     quality=settings.common.HIRES_STILL_QUALITY,
                 )
                 return buffer
-
-    def gen_stream(self):
-        last_time = time.time_ns()
-
-        while not self._generate_images_thread.stopped():
-            array = self._wait_for_lores_frame()
-
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (
-                1 / settings.common.LIVEPREVIEW_FRAMERATE
-            ):
-                last_time = now_time
-                buffer = self._get_jpeg_by_lores_frame(
-                    frame=array, quality=settings.common.LIVEPREVIEW_QUALITY
-                )
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                )
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
@@ -338,7 +318,6 @@ class ImageServerPicam2(ImageServerAbstract):
                 with self._hires_data.condition:
                     self._hires_data.array = array
 
-                    print(f"dataarray: {self._hires_data.array[0:2]}")
                     self._hires_data.condition.notify_all()
 
                 # switch back to preview mode
