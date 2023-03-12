@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 """
 autofocus control using native libcamera functions
 """
@@ -50,4 +51,4 @@ class ImageServerPicam2AddonLibcamAutofocus:
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
         except RuntimeError as exc:
-            logger.info("control not available on all cameras - can ignore {exc}")
+            logger.info(f"control not available on all cameras - can ignore {exc}")
