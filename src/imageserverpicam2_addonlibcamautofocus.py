@@ -32,20 +32,35 @@ class ImageServerPicam2AddonLibcamAutofocus:
 
     def abort_ongoing_focus_thread(self):
         """_summary_"""
-        self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
+        try:
+            self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
+        except RuntimeError as exc:
+            logger.critical(
+                f"control not available on camera - autofocus not working properly {exc}"
+            )
 
     def set_ignore_focus_requests(self):
         """_summary_"""
-        self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
+        try:
+            self._imageserver._picam2.set_controls({"AfMode": controls.AfModeEnum.Auto})
+        except RuntimeError as exc:
+            logger.critical(
+                f"control not available on camera - autofocus not working properly {exc}"
+            )
 
     def set_allow_focus_requests(self):
         """_summary_"""
-        self._imageserver._picam2.set_controls(
-            {"AfMode": controls.AfModeEnum.Continuous}
-        )
-        self._imageserver._picam2.set_controls(
-            {"AfTrigger": controls.AfTriggerEnum.Start}
-        )
+        try:
+            self._imageserver._picam2.set_controls(
+                {"AfMode": controls.AfModeEnum.Continuous}
+            )
+            self._imageserver._picam2.set_controls(
+                {"AfTrigger": controls.AfTriggerEnum.Start}
+            )
+        except RuntimeError as exc:
+            logger.critical(
+                f"control not available on camera - autofocus not working properly {exc}"
+            )
         try:
             self._imageserver._picam2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
