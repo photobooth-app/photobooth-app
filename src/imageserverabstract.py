@@ -3,9 +3,11 @@ abstract for the imageserver backends
 """
 import logging
 import dataclasses
+import time
 from multiprocessing import shared_memory, Condition, Lock
 from abc import ABC, abstractmethod
 from pymitter import EventEmitter
+from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +36,26 @@ class ImageServerAbstract(ABC):
 
         super().__init__()
 
-    @abstractmethod
     def gen_stream(self):
         """
         yield jpeg images to stream to client (if not created otherwise)
+        this function may be overriden by backends, but this is the default one
+        relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
+        last_time = time.time_ns()
+        while True:
+            buffer = self._wait_for_lores_image()
+
+            now_time = time.time_ns()
+            if (now_time - last_time) / 1000**3 >= (
+                1 / settings.common.LIVEPREVIEW_FRAMERATE
+            ):
+                last_time = now_time
+
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
+                )
 
     # @property
     # @abstractmethod

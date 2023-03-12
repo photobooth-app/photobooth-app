@@ -54,7 +54,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         )
         self._event_hq_capture: Event = Event()
 
-        self._p = Process(
+        self._cv2_process = Process(
             target=img_aquisition,
             name="ImageServerWebcamCv2AquisitionProcess",
             args=(
@@ -73,9 +73,9 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._on_preview_mode()
 
     def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
+        """To start the cv2 acquisition process"""
         # start camera
-        self._p.start()
+        self._cv2_process.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -84,9 +84,9 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._img_buffer_lores.sharedmemory.unlink()
         self._img_buffer_hires.sharedmemory.close()
         self._img_buffer_hires.sharedmemory.unlink()
-        self._p.terminate()
-        self._p.join(1)
-        self._p.close()
+        self._cv2_process.terminate()
+        self._cv2_process.join(1)
+        self._cv2_process.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -108,22 +108,6 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def gen_stream(self):
-        last_time = time.time_ns()
-        while True:
-            buffer = self._wait_for_lores_image()
-
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (
-                1 / settings.common.LIVEPREVIEW_FRAMERATE
-            ):
-                last_time = now_time
-
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                )
 
     def trigger_hq_capture(self):
         self._event_hq_capture.set()

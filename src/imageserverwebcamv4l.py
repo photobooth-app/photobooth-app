@@ -48,7 +48,7 @@ class ImageServerWebcamV4l(ImageServerAbstract):
             lock=Lock(),
         )
 
-        self._p = Process(
+        self._v4l_process = Process(
             target=img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
             args=(
@@ -65,10 +65,10 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._on_preview_mode()
 
     def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
+        """To start the v4l acquisition process"""
         # start camera
 
-        self._p.start()
+        self._v4l_process.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -76,9 +76,9 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._img_buffer.sharedmemory.close()
         self._img_buffer.sharedmemory.unlink()
 
-        self._p.terminate()
-        self._p.join(1)
-        self._p.close()
+        self._v4l_process.terminate()
+        self._v4l_process.join(1)
+        self._v4l_process.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -100,22 +100,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def gen_stream(self):
-        last_time = time.time_ns()
-        while True:
-            buffer = self._wait_for_lores_image()
-
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (
-                1 / settings.common.LIVEPREVIEW_FRAMERATE
-            ):
-                last_time = now_time
-
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                )
 
     def trigger_hq_capture(self):
         self._on_capture_mode()
