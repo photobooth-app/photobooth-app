@@ -1,11 +1,9 @@
 """
 backend opencv2 for webcameras
 """
-import time
 from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
-import json
 import cv2
 from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
@@ -55,7 +53,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._event_hq_capture: Event = Event()
 
         self._cv2_process = Process(
-            target=img_aquisition,
+            target=cv2_img_aquisition,
             name="ImageServerWebcamCv2AquisitionProcess",
             args=(
                 self._img_buffer_lores.sharedmemory.name,
@@ -137,23 +135,13 @@ class ImageServerWebcamCv2(ImageServerAbstract):
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested - ignored for cv2 backend")
 
-    def _publish_sse_initial(self):
-        self._publish_sse_metadata()
-
-    def _publish_sse_metadata(self):
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="frameserver/metadata",
-            sse_data=json.dumps(self.metadata),
-        )
-
 
 #
 # INTERNAL IMAGE GENERATOR
 #
 
 
-def img_aquisition(
+def cv2_img_aquisition(
     shm_buffer_lores_name,
     shm_buffer_hires_name,
     _img_buffer_lores_lock,

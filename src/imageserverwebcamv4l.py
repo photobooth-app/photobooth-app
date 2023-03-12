@@ -3,7 +3,6 @@ v4l webcam implementation backend
 """
 import time
 import logging
-import json
 from multiprocessing import Process, shared_memory, Condition, Lock
 from pymitter import EventEmitter
 from src.imageserverabstract import (
@@ -49,7 +48,7 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         )
 
         self._v4l_process = Process(
-            target=img_aquisition,
+            target=v4l_img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
             args=(
                 self._img_buffer.sharedmemory.name,
@@ -128,27 +127,25 @@ class ImageServerWebcamV4l(ImageServerAbstract):
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested - ignored on this backend")
 
-    def _publish_sse_initial(self):
-        self._publish_sse_metadata()
-
-    def _publish_sse_metadata(self):
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="frameserver/metadata",
-            sse_data=json.dumps(self.metadata),
-        )
-
     #
     # INTERNAL IMAGE GENERATOR
     #
 
 
-def img_aquisition(
+def v4l_img_aquisition(
     shm_buffer_name,
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
     _settings,
 ):
+    """_summary_
+
+    Raises:
+        exc: _description_
+
+    Returns:
+        _type_: _description_
+    """
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
