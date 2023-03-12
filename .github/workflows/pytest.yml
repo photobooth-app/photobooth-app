@@ -30,6 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install pytest-benchmark
+          pip install httpx
           pip install pytest-cov
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
