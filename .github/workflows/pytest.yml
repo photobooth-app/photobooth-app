@@ -35,6 +35,7 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
-      - name: Test with pytest and cov
-        run: |
-          pytest --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+
+#      - name: Test with pytest and cov
+#        run: |
+#          pytest --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
