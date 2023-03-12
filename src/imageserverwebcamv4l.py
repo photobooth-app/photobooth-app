@@ -215,7 +215,7 @@ def is_valid_camera_index(index):
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()
-    except (AttributeError, FileNotFoundError):
+    except (AttributeError, FileNotFoundError, OSError):
         return False
 
     return True
