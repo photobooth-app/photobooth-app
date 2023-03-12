@@ -41,12 +41,12 @@ class LocationService:
                 self._iface = self._wifi.interfaces()[
                     settings.locationservice.LOCATION_SERVICE_WIFI_INTERFACE_NO
                 ]
-                self._client = googlemaps.Client(
+                self._client: googlemaps.Client = googlemaps.Client(
                     settings.locationservice.LOCATION_SERVICE_API_KEY
                 )
                 self._init_successful = True
-            except Exception as exc:
-                logger.error(f"geolocation setup failed, stopping thread, error: {exc}")
+            except ValueError as exc:
+                logger.error(f"geolocation setup failed, stopping init, error: {exc}")
         else:
             logger.debug("geolocation api disabled, skipping setup")
 
@@ -228,7 +228,11 @@ class LocationService:
             logger.info(f"geolocation results: {results}")
 
             self._geolocation_response = results
-        except Exception as exc:
+        except (
+            googlemaps.exceptions.ApiError,
+            googlemaps.exceptions.Timeout,
+            googlemaps.exceptions.TransportError,
+        ) as exc:
             logger.exception(exc)
             logger.error(f"geolocation request failed, error {exc}")
 
