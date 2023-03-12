@@ -205,10 +205,8 @@ def stats_thread(
             roi = (
                 settings.focuser.ROI / 100,
                 (settings.focuser.ROI / 100),
-                (
-                    1 - (2 * settings.focuser.ROI / 100),
-                    1 - (2 * settings.focuser.ROI / 100),
-                ),
+                (1 - (2 * settings.focuser.ROI / 100)),
+                (1 - (2 * settings.focuser.ROI / 100)),
             )
             roi_frame = get_roi_frame(roi, frame)
             buffer = turbojpeg.encode(roi_frame, quality=80)
