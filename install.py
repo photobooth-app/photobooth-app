@@ -83,6 +83,8 @@ STARTER_CONFIGURATIONS_COMMON = [
         """
 backends__MAIN_BACKEND="ImageServerWebcamCv2"
 backends__cv2_device_index=##cv2_device_index##
+common__CAPTURE_CAM_RESOLUTION_WIDTH=10000
+common__CAPTURE_CAM_RESOLUTION_HEIGHT=10000
 """,
     ),
 ]

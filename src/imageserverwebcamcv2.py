@@ -96,7 +96,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
 
         # get img off the producing queue
         with self._img_buffer_hires.condition:
-            if not self._img_buffer_hires.condition.wait(2):
+            if not self._img_buffer_hires.condition.wait(4):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_hires.lock:
@@ -140,7 +140,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._img_buffer_lores.condition:
-            if not self._img_buffer_lores.condition.wait(2):
+            if not self._img_buffer_lores.condition.wait(4):
                 raise IOError("timeout receiving frames")
 
             with self._img_buffer_lores.lock:
@@ -197,6 +197,18 @@ def img_aquisition(
     else:
         _video = cv2.VideoCapture(_settings.backends.cv2_device_index)
 
+    # activate preview mode on init
+    _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
+    _video_set_check(
+        _video, cv2.CAP_PROP_FRAME_WIDTH, _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH
+    )
+    _video_set_check(
+        _video,
+        cv2.CAP_PROP_FRAME_HEIGHT,
+        _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+    )
+
     if not _video.isOpened():
         raise IOError(f"cannot open camera index {_settings.backends.cv2_device_index}")
 
@@ -204,14 +216,9 @@ def img_aquisition(
         raise IOError(f"cannot read camera index {_settings.backends.cv2_device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
-
-    # activate preview mode on init
-    _video.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    _video.set(cv2.CAP_PROP_FPS, 30.0)
-    _video.set(cv2.CAP_PROP_BUFFERSIZE, 2)  # low number for lowest lag
-    _video.set(cv2.CAP_PROP_FRAME_WIDTH, _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH)
-    _video.set(
-        cv2.CAP_PROP_FRAME_HEIGHT, _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT
+    logger.info(
+        f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x"
+        f"{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}"
     )
 
     # read first five frames and send to void
@@ -235,6 +242,8 @@ def img_aquisition(
 
             # one time hq still
             array = cv2.fastNlMeansDenoisingColored(array, None, 2, 2, 3, 9)
+            # above command takes long time and should be separated to another thread to avoid
+            # timeout on wait commands
 
             # convert frame to jpeg buffer
             jpeg_buffer = turbojpeg.encode(
@@ -259,6 +268,14 @@ def img_aquisition(
             with _condition_img_buffer_lores_ready:
                 # wait to be notified
                 _condition_img_buffer_lores_ready.notify_all()
+
+
+def _video_set_check(_video, prop, value):
+    ret = _video.set(prop, value)
+    if ret is True:
+        logger.info(f"set {prop=} {value} successful")
+    else:
+        logger.error(f"error setting {prop=} {value}")
 
 
 def available_camera_indexes():
