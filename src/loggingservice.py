@@ -20,7 +20,23 @@ class EventstreamLogHandler(logging.Handler):
 
     def __init__(self, evtbus: EventEmitter):
         self._evtbus = evtbus
+
+        self._initlogrecords_emitted = False
+        self._initlogrecords = []
+
+        self._evtbus.on("publishSSE/initial", self._emit_initlogs)
+
         logging.Handler.__init__(self)
+
+    def _emit_initlogs(self):
+        for logrecord in self._initlogrecords:
+            self._evtbus.emit(
+                "publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord)
+            )
+        # stop adding new records
+        self._initlogrecords_emitted = True
+
+        # self._initlogrecords = []
 
     def emit(self, record: LogRecord):
         logrecord = {
@@ -33,6 +49,13 @@ class EventstreamLogHandler(logging.Handler):
             "funcName": record.funcName,
             "lineno": record.lineno,
         }
+
+        if not self._initlogrecords_emitted and len(self._initlogrecords) < 50:
+            # after logrecords were first time emitted to client via eventstream,
+            # not add any new records to array.
+            # only log first 50 messgaes to not pollute the sse queue
+            self._initlogrecords.append(logrecord)
+
         self._evtbus.emit(
             "publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord)
         )
