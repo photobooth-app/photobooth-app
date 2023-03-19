@@ -1,7 +1,6 @@
 """
 v4l webcam implementation backend
 """
-import time
 import logging
 from multiprocessing import Process, shared_memory, Condition, Lock
 from pymitter import EventEmitter
