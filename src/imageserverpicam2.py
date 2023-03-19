@@ -24,7 +24,8 @@ from src.imageserverpicam2_addoncustomautofocus import (
 from src.imageserverpicam2_addonlibcamautofocus import (
     ImageServerPicam2AddonLibcamAutofocus,
 )
-from src.imageserverabstract import ImageServerAbstract
+from src.imageserverabstract import ImageServerAbstract, BackendStats
+
 
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
@@ -80,6 +81,7 @@ class ImageServerPicam2(ImageServerAbstract):
         self._currentmode = None
         self._lastmode = None
         self._count = 0
+        self._fps = 0
 
         # worker threads
         self._generate_images_thread = StoppableThread(
@@ -159,7 +161,6 @@ class ImageServerPicam2(ImageServerAbstract):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
-        self._addon_autofocus.abort_ongoing_focus_thread()
 
         self._generate_images_thread.stop()
         self._stats_thread.stop()
@@ -187,9 +188,44 @@ class ImageServerPicam2(ImageServerAbstract):
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
 
+    def stats(self) -> BackendStats:
+        # exposure time needs math on a possibly None value, do it here separate
+        # because None/1000 raises an exception.
+        exposure_time = self.metadata.get("ExposureTime", None)
+        exposure_time_ms_raw = (
+            exposure_time / 1000 if exposure_time is not None else None
+        )
+        return BackendStats(
+            backend_name=__name__,
+            fps=int(round(self._fps, 0)),
+            exposure_time_ms=self._round_none(exposure_time_ms_raw, 1),
+            lens_position=self._round_none(self.metadata.get("LensPosition", None), 2),
+            gain=self._round_none(self.metadata.get("AnalogueGain", None), 1),
+            lux=self._round_none(self.metadata.get("Lux", None), 1),
+            colour_temperature=self.metadata.get("ColourTemperature", None),
+            sharpness=self.metadata.get("FocusFoM", None),
+        )
+
     #
     # INTERNAL FUNCTIONS
     #
+    @staticmethod
+    def _round_none(value, digits):
+        """
+        function that returns None if value is None,
+        otherwise round is applied and returned
+
+        Args:
+            value (_type_): _description_
+            digits (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if value is None:
+            return None
+
+        return round(value, digits)
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
@@ -255,25 +291,22 @@ class ImageServerPicam2(ImageServerAbstract):
     #
 
     def _stats_fun(self):
-        calc_every = 2  # update every x seconds only
-
         # FPS = 1 / time to process loop
-        start_time = time.time()  # start time of the loop
+        last_calc_time = time.time()  # start time of the loop
 
         # to calc frames per second every second
         while not self._stats_thread.stopped():
-            if time.time() > (start_time + calc_every):
-                fps = round(  # pylint: disable=unused-variable
-                    float(self._count) / (time.time() - start_time),
-                    1,
-                )
+            self._fps = round(
+                float(self._count) / (time.time() - last_calc_time),
+                1,
+            )
 
-                # reset
-                self._count = 0
-                start_time = time.time()
+            # reset
+            self._count = 0
+            last_calc_time = time.time()
 
-            # thread wait otherwise 100% load ;)
-            time.sleep(0.1)
+            # thread wait
+            time.sleep(0.2)
 
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped

@@ -10,6 +10,7 @@ from src.imageserverabstract import (
     decompile_buffer,
     compile_buffer,
     SharedMemoryDataExch,
+    BackendStats,
 )
 from src.configsettings import settings
 
@@ -102,6 +103,11 @@ class ImageServerWebcamV4l(ImageServerAbstract):
 
     def trigger_hq_capture(self):
         self._on_capture_mode()
+
+    def stats(self) -> BackendStats:
+        return BackendStats(
+            backend_name=__name__,
+        )
 
     #
     # INTERNAL FUNCTIONS
