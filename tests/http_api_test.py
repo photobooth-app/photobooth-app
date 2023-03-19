@@ -1,6 +1,11 @@
-from fastapi.testclient import TestClient
+import os
+import sys
 
-from ..start import app
+# https://docs.python-guide.org/writing/structure/
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from fastapi.testclient import TestClient
+from start import app
 
 client = TestClient(app)
 
