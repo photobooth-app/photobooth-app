@@ -426,7 +426,7 @@ if __name__ == "__main__":
 
     imageServers.start()
 
-    ins = InformationService(ee)
+    ins = InformationService(ee, imageServers)
 
     processingpicture = ProcessingPicture(ee)
 
