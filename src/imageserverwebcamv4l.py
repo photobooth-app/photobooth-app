@@ -173,8 +173,6 @@ def v4l_img_aquisition(
             raise exc
 
         for jpeg_buffer in cam:  # forever
-            time.sleep(0.1)
-
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lock:
                 compile_buffer(shm, jpeg_buffer)
