@@ -96,20 +96,14 @@ focuser__MOVE_TIME="0.028"
 """,
     ),
     (
-        "rpi_picam2_arducam_imx519_arducams_libcamera",
+        "rpi_picam2_arducam_imx519_native_libcamera",
         """
 backends__MAIN_BACKEND="ImageServerPicam2"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3496"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2328"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1748"
-focuser__ENABLED="True"
-focuser__focuser_backend="arducam_imx519"
-focuser__MIN_VALUE="100"
-focuser__MAX_VALUE="3900"
-focuser__DEF_VALUE="800"
-focuser__STEP="25"
-focuser__MOVE_TIME="0.028"
+focuser__ENABLED="False"
 """,
     ),
     (
