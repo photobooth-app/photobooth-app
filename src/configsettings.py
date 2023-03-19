@@ -129,7 +129,7 @@ class EnumFocuserBackends(str, Enum):
     ARDUCAM_64MP = "arducam_64mp"
 
 
-class GroupFocuser(BaseModel):
+class GroupAdvancedFocuser(BaseModel):
     """
     Focuser is to autofocus motorized focus cameras.
     Use for cameras that do not have their own focus algorithm integrated.
@@ -138,7 +138,6 @@ class GroupFocuser(BaseModel):
 
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    ENABLED: bool = False
     focuser_backend: EnumFocuserBackends = EnumFocuserBackends.ARDUCAM_IMX477
     MIN_VALUE: int = 50
     MAX_VALUE: int = 950
@@ -152,7 +151,6 @@ class GroupFocuser(BaseModel):
         le=30,
         description="remove x% from every side of image to consider for autofocus",
     )
-    REPEAT_TRIGGER: int = 5  # every x seconds trigger autofocus
 
 
 class EnumImageBackendsMain(str, Enum):
@@ -174,6 +172,15 @@ class EnumImageBackendsLive(str, Enum):
     IMAGESERVER_SIMULATED = "ImageServerSimulated"
     IMAGESERVER_WEBCAMCV2 = "ImageServerWebcamCv2"
     IMAGESERVER_WEBCAMV4L = "ImageServerWebcamV4l"
+
+
+class EnumFocuserModule(str, Enum):
+    """List to choose focuser module from"""
+
+    NULL = None
+    LIBCAM_AF_CONTINUOUS = "LibcamAfContinuous"
+    LIBCAM_AF_INTERVAL = "LibcamAfInterval"
+    ADVANCED_AF = "AdvancedAf"
 
 
 class GroupBackends(BaseModel):
@@ -204,8 +211,16 @@ class GroupBackends(BaseModel):
         default=1,
         ge=0,
         le=4,
-        description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera!",
+        description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera)!",
     )
+
+    picam2_focuser_module: EnumFocuserModule = Field(
+        title="Picam2 Focuser Module",
+        default=EnumFocuserModule.NULL,
+        description="Choose continuous or interval mode to trigger autofocus of picamera2 cam. Choose custom af to enable advanced focuser interface to be configured on separate tab.",
+    )
+
+    picam2_focuser_interval: int = 10  # every x seconds trigger autofocus
 
 
 class GroupHardwareInput(BaseModel):
@@ -300,7 +315,7 @@ class ConfigSettings(BaseSettings):
     common: GroupCommon = GroupCommon()
     personalize: GroupPersonalize = GroupPersonalize()
     backends: GroupBackends = GroupBackends()
-    focuser: GroupFocuser = GroupFocuser()
+    advancedfocuser: GroupAdvancedFocuser = GroupAdvancedFocuser()
     wled: GroupWled = GroupWled()
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()

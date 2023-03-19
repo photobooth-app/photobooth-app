@@ -8,6 +8,7 @@ import dataclasses
 import logging
 import numpy
 from pymitter import EventEmitter
+from importlib import import_module
 
 try:
     from libcamera import Transform
@@ -16,14 +17,8 @@ except ImportError as import_exc:
     raise OSError("smbus not supported on windows platform") from import_exc
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 from cv2 import cvtColor, COLOR_YUV420p2RGB
-from src.configsettings import settings
+from src.configsettings import settings, EnumFocuserModule
 from src.stoppablethread import StoppableThread
-from src.imageserverpicam2_addoncustomautofocus import (
-    ImageServerPicam2AddonCustomAutofocus,
-)
-from src.imageserverpicam2_addonlibcamautofocus import (
-    ImageServerPicam2AddonLibcamAutofocus,
-)
 from src.imageserverabstract import ImageServerAbstract, BackendStats
 
 
@@ -55,19 +50,30 @@ class ImageServerPicam2(ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        """A simple class that can serve up frames from one of the Picamera2's configured
-        streams to multiple other threads.
-        Pass in the Picamera2 object and the name of the stream for which you want
-        to serve up frames."""
         self._picam2 = Picamera2()
-
         self._evtbus = evtbus
-        if settings.focuser.ENABLED:
-            # custom autofocus (has ROI, ... might be removed in future if
-            # libcam support for autofocus is well)
-            self._addon_autofocus = ImageServerPicam2AddonCustomAutofocus(self, evtbus)
+
+        self._autofocus_module = None
+
+        # load autofocus module as chosen by config. if none, don't load
+        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
+            logger.info(
+                f"loading autofocus module: "
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_module = import_module(
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_class_ = getattr(
+                autofocus_module,
+                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
+            )
+            self._autofocus_module = autofocus_class_(self, evtbus)
         else:
-            self._addon_autofocus = ImageServerPicam2AddonLibcamAutofocus(self, evtbus)
+            logger.info(
+                "picam2_focuser_module is disabled. "
+                "Select a focuser module in config to enable autofocus."
+            )
 
         self._hires_data: ImageServerPicam2.PicamDataArray = (
             ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
