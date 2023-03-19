@@ -7,9 +7,9 @@ from threading import Timer
 class RepeatedTimer:
     """_summary_"""
 
-    def __init__(self, interval, function, *args, **kwargs):
+    def __init__(self, interval: float, function, *args, **kwargs):
         self._timer = None
-        self.interval = interval
+        self.interval: float = interval
         self.function = function
         self.args = args
         self.kwargs = kwargs
