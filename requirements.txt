@@ -1,5 +1,5 @@
 ## common pip packages
-fastapi==0.94.0
+fastapi==0.95.0
 googlemaps==4.10.0
 # keyboard==0.13.5
 # need to avoid root for keyboard access,
