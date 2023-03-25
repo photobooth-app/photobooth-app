@@ -219,9 +219,9 @@ def cv2_img_aquisition(
             _event_hq_capture.clear()
 
             # one time hq still
-            array = cv2.fastNlMeansDenoisingColored(array, None, 2, 2, 3, 9)
-            # above command takes long time and should be separated to another thread to avoid
-            # timeout on wait commands
+            # array = cv2.fastNlMeansDenoisingColored(array, None, 2, 2, 3, 9)
+            # above command takes too long time -> timeout on wait commands, HD frame needs like 2sec
+            # not suitable for realtime processing
 
             # convert frame to jpeg buffer
             jpeg_buffer = turbojpeg.encode(
