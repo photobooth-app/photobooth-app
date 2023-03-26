@@ -13,7 +13,6 @@ try:
 except ImportError as import_exc:
     raise OSError("gphoto2 not supported on windows platform") from import_exc
 from turbojpeg import TurboJPEG
-from src.configsettings import settings, EnumFocuserModule
 from src.stoppablethread import StoppableThread
 from src.imageserverabstract import ImageServerAbstract, BackendStats
 
@@ -59,8 +58,7 @@ class ImageServerGphoto2(ImageServerAbstract):
         )
 
         self._trigger_hq_capture = False
-        self._currentmode = None
-        self._lastmode = None
+        self._camera_connected = False
         self._count = 0
         self._fps = 0
 
@@ -72,31 +70,27 @@ class ImageServerGphoto2(ImageServerAbstract):
             name="_statsThread", target=self._stats_fun, daemon=True
         )
 
-        # config HQ mode (used for picture capture and live preview on countdown)
-        self._capture_config = {}
-
-        # config preview mode (used for permanent live view)
-        self._preview_config = {}
-
-        # activate preview mode on init
-        ##self._on_preview_mode()
-        ##self._camera.configure(self._currentmode)
-
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
         logger.info(
             f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}"
         )
+        self._gp_list_cameras()
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         # start camera
-        ##self._camera.start()
+        try:
+            self._camera.init()
+        except gp.GPhoto2Error as exc:
+            logger.critical("camera failed to initialize. no power? no connection?")
+            logger.exception(exc)
+        else:
+            self._camera_connected = True
+            logger.debug(f"{self.__module__} started")
 
         self._generate_images_thread.start()
         self._stats_thread.start()
-
-        logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
@@ -109,7 +103,7 @@ class ImageServerGphoto2(ImageServerAbstract):
         self._generate_images_thread.join(1)
         self._stats_thread.join(1)
 
-        ##self._camera.stop()
+        self._camera.exit()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -118,7 +112,7 @@ class ImageServerGphoto2(ImageServerAbstract):
         with self._hires_data.condition:
             while True:
                 if not self._hires_data.condition.wait(5):
-                    raise RuntimeError("timeout receiving frames")
+                    raise IOError("timeout receiving frames")
 
                 return self._hires_data.data
 
@@ -140,7 +134,7 @@ class ImageServerGphoto2(ImageServerAbstract):
         with self._lores_data.condition:
             while True:
                 if not self._lores_data.condition.wait(5):
-                    raise RuntimeError("timeout receiving frames")
+                    raise IOError("timeout receiving frames")
                 return self._lores_data.data
 
     def _wait_for_lores_frame(self):
@@ -163,6 +157,15 @@ class ImageServerGphoto2(ImageServerAbstract):
 
     def _viewfinder(self, val=0):
         self._gp_set_config("viewfinder", val)
+
+    def _gp_list_cameras(self):
+        camera_list = gp.Camera.autodetect()
+        if len(camera_list) == 0:
+            logger.error("autodetect camera failed! check camera!")
+            return
+
+        for index, (name, addr) in enumerate(camera_list):
+            logger.info(f"{index}:  {addr}  {name}")
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -189,17 +192,21 @@ class ImageServerGphoto2(ImageServerAbstract):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if not self._trigger_hq_capture:
-                capture = self._camera.capture_preview()
-                img_bytes = memoryview(capture.get_data_and_size()).tobytes()
+                if self._enable_stream:
+                    capture = self._camera.capture_preview()
+                    img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 
-                with self._lores_data.condition:
-                    self._lores_data.data = img_bytes
-                    self._lores_data.condition.notify_all()
+                    with self._lores_data.condition:
+                        self._lores_data.data = img_bytes
+                        self._lores_data.condition.notify_all()
+                else:
+                    time.sleep(0.1)
             else:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
 
-                # disable viewfinder; allows camera to autofocus fast in native mode not contrast mode
+                # disable viewfinder;
+                # allows camera to autofocus fast in native mode not contrast mode
                 self._viewfinder(0)
 
                 logger.info("taking hq picture")
@@ -210,9 +217,7 @@ class ImageServerGphoto2(ImageServerAbstract):
                 file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
                 # refresh images on camera
                 self._camera.wait_for_event(1000)
-                logger.info(
-                    "Camera file path: {0}/{1}".format(file_path.folder, file_path.name)
-                )
+                logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
                 camera_file = gp.check_result(
                     gp.gp_camera_file_get(
                         self._camera,
