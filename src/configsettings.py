@@ -161,7 +161,7 @@ class EnumImageBackendsMain(str, Enum):
     IMAGESERVER_WEBCAMCV2 = "ImageServerWebcamCv2"
     IMAGESERVER_WEBCAMV4L = "ImageServerWebcamV4l"
     # Not yet finished backends:
-    # ImageServerGphoto2 = 'ImageServerGphoto2'
+    IMAGESERVER_GPHOTO2 = "ImageServerGphoto2"
     # ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
 
 
