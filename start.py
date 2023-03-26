@@ -11,6 +11,7 @@ import asyncio
 import uuid
 import multiprocessing
 from asyncio import Queue, QueueFull
+from pathlib import Path
 import uvicorn
 import psutil
 from sse_starlette import EventSourceResponse, ServerSentEvent
@@ -21,7 +22,7 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from pymitter import EventEmitter
 from statemachine.exceptions import TransitionNotAllowed
@@ -41,6 +42,7 @@ from src.loggingservice import LoggingService
 # event system
 ee: EventEmitter = EventEmitter()
 ls: LoggingService = LoggingService(evtbus=ee)
+
 
 # constants
 SERVICE_NAME = "imageserver"
@@ -198,11 +200,24 @@ def api_cmd_frameserver_previewmode_get():
     ee.emit("onPreviewMode")
 
 
-@app.post("/cmd/capture", status_code=status.HTTP_200_OK)
+@app.post("/cmd/capture")
 # photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
-    imageDb.capture_hq_image(filepath, True)
-    return "Done"
+    try:
+        imageDb.capture_hq_image(filepath, True)
+        logger.info(f"file {filepath} created successfully")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.critical("error receiving file from backend")
+        logger.exception(exc)
+        return Response(
+            content="Error",
+            media_type="plain/text",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    else:
+        return Response(
+            content="Done", media_type="plain/text", status_code=status.HTTP_200_OK
+        )
 
 
 @app.get("/cmd/{action}/{param}")
@@ -357,7 +372,14 @@ def get_qbooth_log():
     Returns:
         _type_: _description_
     """
-    return FileResponse(path="./log/qbooth.log")
+    # might be a bug in fastapi: if file changes after file length determined
+    # for header content-length, the browser rejects loading the file.
+    # return FileResponse(path="./log/qbooth.log")
+
+    return Response(
+        content=Path("./log/qbooth.log").read_text(encoding="utf-8"),
+        media_type="text/plain",
+    )
 
 
 @app.get("/")
@@ -445,6 +467,8 @@ if __name__ == "__main__":
         # shutdown can be handled properly.
         # Otherwise the stream.mjpg if open will block shutdown of the server
         server.force_exit = True
+
+        ls.uvicorn()
 
         server.run()
     finally:

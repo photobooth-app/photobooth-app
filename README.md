@@ -185,6 +185,14 @@ If service crashed, kill the python process:
 sudo pkill -9 python3
 ```
 
+### Check available webcam device numbers
+
+```text
+python -c "from src.imageserverwebcamv4l import *; print(available_camera_indexes())"
+python -c "from src.imageserverwebcamcv2 import *; print(available_camera_indexes())"
+
+```
+
 ### :copyright: License
 
 The software is licensed under the MIT license.  

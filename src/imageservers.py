@@ -26,6 +26,18 @@ class ImageServers:
 
         self.metadata = {}
 
+        # logic to determine backends to load and which whether to enable stream
+        load_secondary_backend = (
+            settings.backends.LIVEPREVIEW_ENABLED
+            and settings.backends.LIVE_BACKEND
+            and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL
+            and settings.backends.LIVE_BACKEND.value
+        )
+        enable_stream_on_primary = (
+            not load_secondary_backend and settings.backends.LIVEPREVIEW_ENABLED
+        )
+        logger.info(f"{load_secondary_backend=}, {enable_stream_on_primary=}")
+
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
         logger.info(
@@ -37,15 +49,11 @@ class ImageServers:
         cls_primary = getattr(
             imageserver_primary_backendmodule, settings.backends.MAIN_BACKEND.value
         )
-        self.primary_backend = cls_primary(evtbus, False)
+        self.primary_backend = cls_primary(evtbus, enable_stream_on_primary)
 
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
-        if (
-            settings.backends.LIVE_BACKEND
-            and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL
-            and settings.backends.LIVE_BACKEND.value
-        ):
+        if load_secondary_backend:
             logger.info(
                 f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}"
             )
@@ -120,6 +128,6 @@ class ImageServers:
 
         imageservers_stats = {"primary": stats_primary, "secondary": stats_secondary}
 
-        logger.debug(f"{imageservers_stats=}")
+        # logger.debug(f"{imageservers_stats=}")
 
         return imageservers_stats

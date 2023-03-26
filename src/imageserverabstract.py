@@ -57,6 +57,8 @@ class ImageServerAbstract(ABC):
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
         self._evtbus.on("onPreviewMode", self._on_preview_mode)
 
+        logger.info(f"{self._enable_stream=}")
+
         super().__init__()
 
     # @property
