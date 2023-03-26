@@ -233,43 +233,37 @@ class ImageDb:
 
         logger.debug(f"capture to filename: {requested_filepath}")
 
-        try:
-            # at this point it's assumed, a HQ image was requested by statemachine.
-            # seems to not make sense now, maybe revert hat...
-            self._imageserver.trigger_hq_capture()
+        # at this point it's assumed, a HQ image was requested by statemachine.
+        # seems to not make sense now, maybe revert hat...
+        self._imageserver.trigger_hq_capture()
 
-            # waitforpic and store to disk
-            jpeg_buffer = self._imageserver.wait_for_hq_image()
+        # waitforpic and store to disk
+        jpeg_buffer = self._imageserver.wait_for_hq_image()
 
-            # create JPGs and add to db
-            (item, _) = self.create_imageset_from_image(jpeg_buffer, requested_filepath)
-            actual_filepath = item["image"]
+        # create JPGs and add to db
+        (item, _) = self.create_imageset_from_image(jpeg_buffer, requested_filepath)
+        actual_filepath = item["image"]
 
-            # add exif information
-            if settings.common.PROCESS_ADD_EXIF_DATA:
-                logger.info("add exif data to image")
-                self._exif.inject_exif_to_jpeg(actual_filepath)
+        # add exif information
+        if settings.common.PROCESS_ADD_EXIF_DATA:
+            logger.info("add exif data to image")
+            self._exif.inject_exif_to_jpeg(actual_filepath)
 
-            # also create a copy for photobooth compatibility
-            if copy_for_compatibility:
-                # photobooth sends a complete path, where to put the file,
-                # so copy it to requested filepath
-                shutil.copy2(actual_filepath, requested_filepath)
+        # also create a copy for photobooth compatibility
+        if copy_for_compatibility:
+            # photobooth sends a complete path, where to put the file,
+            # so copy it to requested filepath
+            shutil.copy2(actual_filepath, requested_filepath)
 
-            processing_time = round((time.time() - start_time), 1)
-            logger.info(
-                f"capture to file {actual_filepath} successfull, process took {processing_time}s"
-            )
+        processing_time = round((time.time() - start_time), 1)
+        logger.info(
+            f"capture to file {actual_filepath} successfull, process took {processing_time}s"
+        )
 
-            # to inform frontend about new image to display
-            self._evtbus.emit(
-                "publishSSE", sse_event="imagedb/newarrival", sse_data=json.dumps(item)
-            )
-
-            return "Done, frame capture successful"
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.exception(exc)
-            return "Error"
+        # to inform frontend about new image to display
+        self._evtbus.emit(
+            "publishSSE", sse_event="imagedb/newarrival", sse_data=json.dumps(item)
+        )
 
     def create_scaled_images(self, buffer_full, filepath):
         """_summary_

@@ -101,7 +101,11 @@ class ProcessingPicture(StateMachine):
 
     def on_enter_capture_still(self):
         """_summary_"""
-        self._evtbus.emit("statemachine/capture")
+        try:
+            self._evtbus.emit("statemachine/capture")
+        except IOError as exc:
+            logger.critical("error getting a still from backend")
+            logger.exception(exc)
 
         self.finalize()
 

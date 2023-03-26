@@ -1,7 +1,6 @@
 """
 v4l webcam implementation backend
 """
-import time
 import logging
 from multiprocessing import Process, shared_memory, Condition, Lock
 from pymitter import EventEmitter
@@ -10,6 +9,7 @@ from src.imageserverabstract import (
     decompile_buffer,
     compile_buffer,
     SharedMemoryDataExch,
+    BackendStats,
 )
 from src.configsettings import settings
 
@@ -103,6 +103,11 @@ class ImageServerWebcamV4l(ImageServerAbstract):
     def trigger_hq_capture(self):
         self._on_capture_mode()
 
+    def stats(self) -> BackendStats:
+        return BackendStats(
+            backend_name=__name__,
+        )
+
     #
     # INTERNAL FUNCTIONS
     #
@@ -167,8 +172,6 @@ def v4l_img_aquisition(
             raise exc
 
         for jpeg_buffer in cam:  # forever
-            time.sleep(0.1)
-
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lock:
                 compile_buffer(shm, jpeg_buffer)
@@ -215,7 +218,7 @@ def is_valid_camera_index(index):
             # got frame, close cam and return true; otherwise false.
             break
         cap.close()
-    except (AttributeError, FileNotFoundError):
+    except (AttributeError, FileNotFoundError, OSError):
         return False
 
     return True

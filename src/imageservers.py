@@ -2,6 +2,7 @@
 manage up to two imageserver backends in this module
 """
 import logging
+import dataclasses
 from importlib import import_module
 from pymitter import EventEmitter
 from src.configsettings import settings, EnumImageBackendsLive
@@ -25,6 +26,18 @@ class ImageServers:
 
         self.metadata = {}
 
+        # logic to determine backends to load and which whether to enable stream
+        load_secondary_backend = (
+            settings.backends.LIVEPREVIEW_ENABLED
+            and settings.backends.LIVE_BACKEND
+            and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL
+            and settings.backends.LIVE_BACKEND.value
+        )
+        enable_stream_on_primary = (
+            not load_secondary_backend and settings.backends.LIVEPREVIEW_ENABLED
+        )
+        logger.info(f"{load_secondary_backend=}, {enable_stream_on_primary=}")
+
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
         logger.info(
@@ -36,15 +49,11 @@ class ImageServers:
         cls_primary = getattr(
             imageserver_primary_backendmodule, settings.backends.MAIN_BACKEND.value
         )
-        self.primary_backend = cls_primary(evtbus, False)
+        self.primary_backend = cls_primary(evtbus, enable_stream_on_primary)
 
         # load imageserver dynamically because service can
         # be configured https://stackoverflow.com/a/14053838
-        if (
-            settings.backends.LIVE_BACKEND
-            and not settings.backends.LIVE_BACKEND == EnumImageBackendsLive.NULL
-            and settings.backends.LIVE_BACKEND.value
-        ):
+        if load_secondary_backend:
             logger.info(
                 f"loading secondary backend: src.{settings.backends.LIVE_BACKEND.value}"
             )
@@ -62,10 +71,11 @@ class ImageServers:
         assigns a backend to generate a stream
         """
         if settings.backends.LIVEPREVIEW_ENABLED:
-            if self.secondary_backend:
-                return self.secondary_backend.gen_stream()
-
-            return self.primary_backend.gen_stream()
+            return (
+                self.secondary_backend.gen_stream()
+                if self.secondary_backend
+                else self.primary_backend.gen_stream()
+            )
 
         raise IOError("livepreview not enabled")
 
@@ -100,3 +110,24 @@ class ImageServers:
 
         if self.secondary_backend:
             self.secondary_backend.stop()
+
+    def stats(self):
+        """
+        Gather stats from active backends.
+        Backend stats are converted to dict to be processable by JSON lib
+
+        Returns:
+            _type_: _description_
+        """
+        stats_primary = dataclasses.asdict(self.primary_backend.stats())
+        stats_secondary = (
+            dataclasses.asdict(self.secondary_backend.stats())
+            if self.secondary_backend
+            else None
+        )
+
+        imageservers_stats = {"primary": stats_primary, "secondary": stats_secondary}
+
+        # logger.debug(f"{imageservers_stats=}")
+
+        return imageservers_stats

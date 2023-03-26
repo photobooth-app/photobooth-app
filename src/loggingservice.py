@@ -3,6 +3,8 @@ Control logging for the app
 """
 
 import os
+import sys
+import threading
 import logging
 import datetime
 import json
@@ -86,26 +88,26 @@ class LoggingService:
         # mainLogger.propagate = False
 
         # create console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(log_formatter)
+        self.console_handler = logging.StreamHandler()
+        self.console_handler.setFormatter(log_formatter)
 
         # create rotatingFileHandler
-        rotatingfile_handler = RotatingFileHandler(
+        self.rotatingfile_handler = RotatingFileHandler(
             filename="./log/qbooth.log", maxBytes=1024**2, backupCount=10
         )
-        rotatingfile_handler.setFormatter(log_formatter)
+        self.rotatingfile_handler.setFormatter(log_formatter)
 
         # create rotatingFileHandler
-        eventstream_handler = EventstreamLogHandler(evtbus=evtbus)
-        eventstream_handler.setFormatter(log_formatter)
+        self.eventstream_handler = EventstreamLogHandler(evtbus=evtbus)
+        self.eventstream_handler.setFormatter(log_formatter)
 
         # add ch to logger
         # rootLogger.addHandler(consoleHandler)
-        root_logger.addHandler(rotatingfile_handler)
-        root_logger.addHandler(eventstream_handler)
+        root_logger.addHandler(self.rotatingfile_handler)
+        root_logger.addHandler(self.eventstream_handler)
         # mainLogger.addHandler(consoleHandler)
-        main_logger.addHandler(rotatingfile_handler)
-        main_logger.addHandler(eventstream_handler)
+        main_logger.addHandler(self.rotatingfile_handler)
+        main_logger.addHandler(self.eventstream_handler)
 
         # loggers_defined = [logging.getLogger(name)
         #                   for name in logging.root.manager.loggerDict]
@@ -113,14 +115,16 @@ class LoggingService:
 
         self.other_loggers()
 
+        sys.excepthook = self._handle_sys_exception
+        threading.excepthook = self._handle_threading_exception
+        # no solution to handle exceptions in sep processes yet...
+
     def other_loggers(self):
         """_summary_"""
         for name in [
             "picamera2",
             "pywifi",
             "sse_starlette.sse",
-            "src.Autofocus",
-            "transitions.core",
             "PIL.PngImagePlugin",
         ]:
             # mute some other logger
@@ -129,3 +133,38 @@ class LoggingService:
             lgr.propagate = False
 
         os.environ["OPENCV_LOG_LEVEL"] = "ERROR"
+
+    def uvicorn(self):
+        """_summary_"""
+        for name in [
+            "uvicorn.error",
+            "uvicorn.access",
+            "uvicorn",
+        ]:
+            lgr = logging.getLogger(name=name)
+            lgr.setLevel(settings.common.DEBUG_LEVEL.value)
+            lgr.propagate = False
+            lgr.handlers = [
+                self.rotatingfile_handler,
+                self.eventstream_handler,
+                self.console_handler,
+            ]
+
+    @staticmethod
+    def _handle_sys_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+
+        logging.getLogger(name="__main__").exception(
+            f"Uncaught exception: {exc_type} {exc_value}",
+            exc_info=(exc_type, exc_value, exc_traceback),
+        )
+
+    @staticmethod
+    def _handle_threading_exception(args: threading.ExceptHookArgs):
+        # report the failure
+        logging.getLogger(name="__main__").exception(
+            f"Uncaught exception in thread {args.thread}: {args.exc_type} {args.exc_value}",
+            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        )

@@ -1,5 +1,3 @@
-import timeit
-from statistics import median
 from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
 import pytest
 import logging

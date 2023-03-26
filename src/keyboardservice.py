@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """
 submit events on keypress to take photos
 
@@ -25,11 +26,11 @@ class KeyboardService:
         self._evtbus: EventEmitter = evtbus
 
         if settings.hardwareinput.keyboard_input_enabled:
-            keyboard.on_press(self.on_key_callback)
+            keyboard.on_press(self._on_key_callback)
         else:
             logger.info("keyboardservice not enabled - enable for keyboard triggers")
 
-    def on_key_callback(self, key):
+    def _on_key_callback(self, key):
         """_summary_
 
         Args:

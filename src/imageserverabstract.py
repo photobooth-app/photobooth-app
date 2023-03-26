@@ -13,6 +13,28 @@ from src.configsettings import settings
 logger = logging.getLogger(__name__)
 
 
+#
+# Dataclass for stats
+#
+
+
+@dataclasses.dataclass
+class BackendStats:
+    """
+    defines some common stats - if backend supports, they return these properties,
+    if not, may be 0 or None
+    """
+
+    backend_name: str = __name__
+    fps: int = None
+    exposure_time_ms: float = None
+    lens_position: float = None
+    gain: float = None
+    lux: float = None
+    colour_temperature: int = None
+    sharpness: int = None
+
+
 class ImageServerAbstract(ABC):
     """
     Imageserver abstract to create backends.
@@ -34,6 +56,8 @@ class ImageServerAbstract(ABC):
 
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
         self._evtbus.on("onPreviewMode", self._on_preview_mode)
+
+        logger.info(f"{self._enable_stream=}")
 
         super().__init__()
 
@@ -64,6 +88,14 @@ class ImageServerAbstract(ABC):
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
+
+    @abstractmethod
+    def stats(self) -> BackendStats:
+        """gather backend specific stats
+
+        Returns:
+            BackendStats: _description_
+        """
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED

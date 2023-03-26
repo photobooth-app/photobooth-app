@@ -13,6 +13,7 @@ from src.imageserverabstract import (
     ImageServerAbstract,
     compile_buffer,
     decompile_buffer,
+    BackendStats,
 )
 from src.configsettings import settings
 
@@ -88,6 +89,11 @@ class ImageServerSimulated(ImageServerAbstract):
 
     def trigger_hq_capture(self):
         self._on_capture_mode()
+
+    def stats(self) -> BackendStats:
+        return BackendStats(
+            backend_name=__name__,
+        )
 
     #
     # INTERNAL FUNCTIONS

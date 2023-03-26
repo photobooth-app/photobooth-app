@@ -22,7 +22,7 @@ from src.repeatedtimer import RepeatedTimer
 logger = logging.getLogger(__name__)
 
 
-class ImageServerPicam2AddonCustomAutofocus:
+class ImageServerPicam2AdvanceAf:
     """
     Class implementing custom autofocuser for arducam cameras
     """
@@ -30,7 +30,6 @@ class ImageServerPicam2AddonCustomAutofocus:
     def __init__(self, imageserver: ImageServerAbstract, evtbus: EventEmitter):
         self._imageserver: ImageServerAbstract = imageserver
         self._evtbus = evtbus
-        self._evtbus.on("onRefocus", self.do_focus)
         self._evtbus.on("statemachine/armed", self.set_ignore_focus_requests)
         self._evtbus.on("statemachine/finished", self.set_allow_focus_requests)
         self._evtbus.on("onCaptureMode", self.set_ignore_focus_requests)
@@ -48,7 +47,7 @@ class ImageServerPicam2AddonCustomAutofocus:
         self.reset()
 
         self._rt = RepeatedTimer(
-            settings.focuser.REPEAT_TRIGGER, self.trigger_regular_timed_focus
+            settings.backends.picam2_focuser_interval, self.trigger_regular_timed_focus
         )
 
         self.start_regular_autofocus_timer()
@@ -82,7 +81,7 @@ class ImageServerPicam2AddonCustomAutofocus:
     def do_focus(self):
         """_summary_"""
         # guard to perfom autofocus only once at a time
-        if self.is_finish() and self._standby is False and settings.focuser.ENABLED:
+        if self.is_finish() and self._standby is False:
             self.reset()
             self.set_finish(False)
 
@@ -155,13 +154,13 @@ def get_roi_frame(roi, frame):
 
 def stats_thread(
     imageserver: ImageServerAbstract,
-    imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
+    imageserver_addon_customautofocus: ImageServerPicam2AdvanceAf,
 ):
     """_summary_
 
     Args:
         imageserver (ImageServerAbstract): _description_
-        imageserver_addon_customautofocus (ImageServerPicam2AddonCustomAutofocus): _description_
+        imageserver_addon_customautofocus (ImageServerPicam2CustomAf): _description_
     """
     max_position = settings.focuser.MAX_VALUE
     min_position = settings.focuser.MIN_VALUE
@@ -205,10 +204,8 @@ def stats_thread(
             roi = (
                 settings.focuser.ROI / 100,
                 (settings.focuser.ROI / 100),
-                (
-                    1 - (2 * settings.focuser.ROI / 100),
-                    1 - (2 * settings.focuser.ROI / 100),
-                ),
+                (1 - (2 * settings.focuser.ROI / 100)),
+                (1 - (2 * settings.focuser.ROI / 100)),
             )
             roi_frame = get_roi_frame(roi, frame)
             buffer = turbojpeg.encode(roi_frame, quality=80)
@@ -255,12 +252,12 @@ def stats_thread(
 
 
 def focus_thread(
-    imageserver_addon_customautofocus: ImageServerPicam2AddonCustomAutofocus,
+    imageserver_addon_customautofocus: ImageServerPicam2AdvanceAf,
 ):
     """_summary_
 
     Args:
-        imageserver_addon_customautofocus (ImageServerPicam2AddonCustomAutofocus): _description_
+        imageserver_addon_customautofocus (ImageServerPicam2CustomAf): _description_
     """
     sharpness_list = []
     continuousdecline_req = 6
