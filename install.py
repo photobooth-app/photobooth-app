@@ -142,7 +142,7 @@ def install_pip_packages():
     # (linux/win use different packages)
     print_spacer("Installing pip packages")
 
-    retval = _syscall("pip install -r requirements.txt")
+    retval = _syscall("pip install -r requirements.txt", cwd=INSTALL_DIR)
     if retval != 0:
         print_red("pip installation failed! check output for errors")
         sys.exit()
