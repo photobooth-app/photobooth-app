@@ -113,9 +113,6 @@ class GroupCommon(BaseModel):
 
     PROCESS_COUNTDOWN_TIMER: float = 3
     PROCESS_COUNTDOWN_OFFSET: float = 0.25
-    PROCESS_TAKEPIC_MSG: str = "CHEEESE!"
-    PROCESS_TAKEPIC_MSG_TIMER: float = 0.5
-    PROCESS_AUTOCLOSE_TIMER: int = 10
     PROCESS_ADD_EXIF_DATA: bool = True
 
     webserver_port: int = 8000
@@ -249,13 +246,17 @@ class GroupLocationService(BaseModel):
     # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
 
 
-class GroupPersonalize(BaseModel):
-    """Personalize your photobooth."""
+class GroupUiSettings(BaseModel):
+    """Personalize the booth's UI."""
 
-    UI_FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
+    FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
 
     GALLERY_ENABLE: bool = True
     GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
+
+    TAKEPIC_MSG: str = "CHEEESE!"
+    TAKEPIC_MSG_TIME: float = 0.5
+    AUTOCLOSE_NEW_ITEM_ARRIVED: int = 10
 
 
 class GroupWled(BaseModel):
@@ -313,7 +314,7 @@ class ConfigSettings(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
-    personalize: GroupPersonalize = GroupPersonalize()
+    uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     advancedfocuser: GroupAdvancedFocuser = GroupAdvancedFocuser()
     wled: GroupWled = GroupWled()

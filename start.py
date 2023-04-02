@@ -140,7 +140,6 @@ async def subscribe(request: Request):
 
     # initial messages on client connect
     add_queue(sse_event="message", sse_data=f"Client connected {request.client}")
-    add_queue(sse_event="config/currentconfig", sse_data=settings.json())
 
     # all modules can register this event to send initial messages on connection
     await ee.emit_async("publishSSE/initial")
@@ -148,15 +147,10 @@ async def subscribe(request: Request):
     return EventSourceResponse(event_iterator(), ping=1)
 
 
-@app.get("/debug/threads")
-def api_debug_threads():
-    """
-    get active threads in main process.
-    if any subprocesses started (example in backends), these are not reported
-    """
-    active_threads = [item.getName() for item in threading.enumerate()]
-    logger.debug(f"active threads: {active_threads}")
-    return active_threads
+@app.get("/config/ui")
+def api_get_config_ui():
+    """get part of the config dedicated for UI only. UI requests this on startup"""
+    return ConfigSettings().uisettings.dict()
 
 
 @app.get("/config/schema")

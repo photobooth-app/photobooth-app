@@ -44,6 +44,7 @@ def _db_imageitem(filepath: str, user_caption: str = ""):
         "image": f"{DATA_PATH}{PATH_IMAGE}{filename}",
         "preview": f"{DATA_PATH}{PATH_PREVIEW}{filename}",
         "thumbnail": f"{DATA_PATH}{PATH_THUMBNAIL}{filename}",
+        "ext_download_url": settings.common.EXT_DOWNLOAD_URL.format(filename=filename),
     }
 
     if not (
