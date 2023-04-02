@@ -334,7 +334,7 @@ if platform.system() == "Linux":
         _syscall("apt upgrade -y", True)
 
 # install system dependencies
-if query_yes_no("Install system packages required for booth?", "no"):
+if query_yes_no("Install system packages required for booth?", "yes"):
     if platform.system() == "Linux":
         print("Installing Linux system packages")
         _syscall("apt update", True)
@@ -363,7 +363,7 @@ if _is_linux():
 
 
 # install pip packages
-if query_yes_no("Install/Upgrade pip packages for booth?", "no"):
+if query_yes_no("Install/Upgrade pip packages for booth?", "yes"):
     install_pip_packages()
 
 # install gphoto2

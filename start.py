@@ -5,7 +5,6 @@ Photobooth Application start script
 import subprocess
 import os
 import platform
-import threading
 import logging
 import asyncio
 import uuid

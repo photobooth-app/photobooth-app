@@ -33,6 +33,9 @@ class EnumDebugLevel(str, Enum):
 class GroupCommon(BaseModel):
     """Common settings for photobooth."""
 
+    class Config:
+        title = "Common Settings"
+
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
         description="camera resolution width for still photos on supported backends (eg. picam2, webcam)",
@@ -93,8 +96,11 @@ class GroupCommon(BaseModel):
         le=1000,
         description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
     )
-
-    DEBUG_LEVEL: EnumDebugLevel = EnumDebugLevel.DEBUG
+    DEBUG_LEVEL: EnumDebugLevel = Field(
+        title="Debug Level",
+        default=EnumDebugLevel.DEBUG,
+        description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",
+    )
 
     LIVEPREVIEW_FRAMERATE: int = Field(
         default=15,
@@ -133,9 +139,16 @@ class GroupAdvancedFocuser(BaseModel):
     Currently supported cameras are arducam imx477, imx519 and 64mp hawkeye.
     """
 
+    class Config:
+        title = "Advanced Focuser Settings"
+
     # autofocus
     # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    focuser_backend: EnumFocuserBackends = EnumFocuserBackends.ARDUCAM_IMX477
+    focuser_backend: EnumFocuserBackends = Field(
+        title="Focuser backend",
+        default=EnumFocuserBackends.ARDUCAM_IMX477,
+        description="Advanced focuser optimized for several cameras.",
+    )
     MIN_VALUE: int = 50
     MAX_VALUE: int = 950
     DEF_VALUE: int = 300
@@ -187,6 +200,9 @@ class GroupBackends(BaseModel):
     or main backend.
     """
 
+    class Config:
+        title = "Camera Backend Settings"
+
     MAIN_BACKEND: EnumImageBackendsMain = Field(
         title="Main Backend",
         default=EnumImageBackendsMain.IMAGESERVER_SIMULATED,
@@ -221,7 +237,10 @@ class GroupBackends(BaseModel):
 
 
 class GroupHardwareInput(BaseModel):
-    """Hardware related settings"""
+    """Configure GPIO, keyboard and more."""
+
+    class Config:
+        title = "Hardware Input/Output Settings"
 
     keyboard_input_enabled: bool = False
     keyboard_input_keycode_takepic: str = "down"
@@ -233,6 +252,9 @@ class GroupLocationService(BaseModel):
     Register and obtain a key
     here https://developers.google.com/maps/documentation/geolocation/get-api-key
     """
+
+    class Config:
+        title = "Location Based Service Settings"
 
     LOCATION_SERVICE_ENABLED: bool = False
     LOCATION_SERVICE_API_KEY: str = ""
@@ -248,6 +270,9 @@ class GroupLocationService(BaseModel):
 
 class GroupUiSettings(BaseModel):
     """Personalize the booth's UI."""
+
+    class Config:
+        title = "Personalize the User Interface"
 
     FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
 
@@ -269,6 +294,9 @@ class GroupWled(BaseModel):
     3: shoot (imitate a flash)
     Please define presets on your own in WLED webfrontend
     """
+
+    class Config:
+        title = "WLED Integration Settings"
 
     # WledService settings
     ENABLED: bool = False
