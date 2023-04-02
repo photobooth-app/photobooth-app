@@ -155,15 +155,15 @@ def install_pip_packages():
 #
 
 
-def _syscall(cmd: str, sudo: bool = False):
-    print_spacer(f"run cmd: '{cmd}', sudo={sudo}")
+def _syscall(cmd: str, sudo: bool = False, cwd="./"):
+    print_spacer(f"run '{cmd=}', {sudo=}, {cwd=}")
     if _is_linux():
         if sudo is True:
             cmd = f"sudo {cmd}"
-        result = subprocess.run(cmd, shell=True, text=True, check=False)
+        result = subprocess.run(cmd, shell=True, text=True, check=False, cwd=cwd)
     elif _is_windows():
         result = subprocess.run(
-            ["powershell", "-Command", cmd], shell=True, text=True, check=False
+            ["powershell", "-Command", cmd], shell=True, text=True, check=False, cwd=cwd
         )
     else:
         print("unsupported platform, exit")
@@ -371,17 +371,24 @@ if _is_linux():
     if query_yes_no("Install gphoto2 using gphoto2-updater?", "no"):
         # adds missing packages on debian buster that are not covered by the updater script
         _syscall("apt install -y libpopt0 libpopt-dev libexif-dev", True)
+        _syscall("mkdir tmp_gphoto2_install; ")
         _syscall(
-            "mkdir tmp_gphoto2_install; "
-            "cd tmp_gphoto2_install; "
-            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh"  # pylint: disable=line-too-long
+            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/gphoto2-updater.sh",  # pylint: disable=line-too-long
+            cwd="tmp_gphoto2_install",
         )
         _syscall(
-            "cd tmp_gphoto2_install; "
-            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env"
+            "wget https://raw.githubusercontent.com/gonzalo/gphoto2-updater/master/.env",
+            cwd="tmp_gphoto2_install",
         )
-        _syscall("cd tmp_gphoto2_install; chmod +x gphoto2-updater.sh")
-        _syscall("cd tmp_gphoto2_install; ./gphoto2-updater.sh --stable", True)
+        _syscall(
+            "chmod +x gphoto2-updater.sh",
+            cwd="tmp_gphoto2_install",
+        )
+        _syscall(
+            "./gphoto2-updater.sh --stable",
+            True,
+            cwd="tmp_gphoto2_install",
+        )
         _syscall("rm -r tmp_gphoto2_install", True)
 
 # install booth software
@@ -416,7 +423,7 @@ if not SUPPRESS_INSTALLATION and not INSTALLDIR_HAS_GIT_REPO:
 if INSTALLDIR_HAS_GIT_REPO:
     if query_yes_no(f"Update booth software in {INSTALL_DIR}, by git pull?", "no"):
         print(f"Updating qBooth in subdir {INSTALL_DIR}")
-        _syscall(f"cd {INSTALL_DIR}; git pull")
+        _syscall("git pull", cwd=INSTALL_DIR)
 
 if platform.system() == "Linux":
     _syscall(f"chmod +x {INSTALL_DIR}start.sh")
