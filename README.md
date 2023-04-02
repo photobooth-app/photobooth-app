@@ -10,9 +10,9 @@ _Latest development version:_
 
 This app allows to use
 
-- picamera2 (with or without autofocus)
-- arducam cameras (with or without autofocus)
-- DSLR cameras (via gphoto2 or digicamcontrol) (not yet implemented) and
+- Raspberry Pi Camera Module 1/2/3 (with or without autofocus)
+- Arducam cameras (with or without autofocus)
+- DSLR cameras via gphoto2 or digicamcontrol (latter not yet implemented) and
 - webcams (via opencv2 or v4l)
 
 for high quality still photos and for livestream in your own photobooth.
@@ -45,17 +45,8 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 An installer is available, helping to setup on a linux or windows system.
 Download the installer and start it as follows:
 
-Linux:
-
-```text
-wget https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
-python install.py
-```
-
-Windows:
-
-```text
-curl -O https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
+```zsh
+curl -o install.py https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
 python install.py
 ```
 
@@ -90,17 +81,17 @@ Please define presets on your own in WLED webfrontend. Once added, in the photob
 
 ### Sync Online (for file downloads via QR Code)
 
-```text
+```zsh
 sudo apt-get install rclone inotify-tools
 ```
 
-```text
+```zsh
 rclone config
 ```
 
 Setup the remote named "boothupload"!
 
-```text
+```zsh
 chmod u+x ~/imageserver/boothupload.sh
 cp ~/imageserver/boothupload.service ~/.config/systemd/user/
 systemctl --user enable boothupload.service
@@ -170,7 +161,7 @@ Additional requirements
 
 Check following commands and files for error messages:
 
-```text
+```zsh
 # logfiles from service (last 200 lines)
 journalctl --user --unit=imageserver -n 200 --no-pager
 # logfiles created by photobooth
@@ -181,13 +172,13 @@ cat /proc/meminfo
 
 If service crashed, kill the python process:
 
-```text
+```zsh
 sudo pkill -9 python3
 ```
 
 ### Check available webcam device numbers
 
-```text
+```zsh
 python -c "from src.imageserverwebcamv4l import *; print(available_camera_indexes())"
 python -c "from src.imageserverwebcamcv2 import *; print(available_camera_indexes())"
 
