@@ -362,10 +362,6 @@ if _is_linux():
     _syscall(f"usermod --append --groups tty,input {USERNAME}", True)
 
 
-# install pip packages
-if query_yes_no("Install/Upgrade pip packages for booth?", "yes"):
-    install_pip_packages()
-
 # install gphoto2
 if _is_linux():
     if query_yes_no("Install gphoto2 using gphoto2-updater?", "no"):
@@ -427,6 +423,11 @@ if INSTALLDIR_HAS_GIT_REPO:
 
 if platform.system() == "Linux":
     _syscall(f"chmod +x {INSTALL_DIR}start.sh")
+
+
+# install pip packages
+if query_yes_no("Install/Upgrade pip packages for booth?", "yes"):
+    install_pip_packages()
 
 
 # install booth service
