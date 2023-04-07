@@ -7,22 +7,20 @@ import time
 import io
 import dataclasses
 import logging
+from importlib import import_module
 import numpy
 from pymitter import EventEmitter
-from importlib import import_module
 
 try:
     from libcamera import Transform
     from picamera2 import Picamera2
     from picamera2.encoders import MJPEGEncoder
-    from picamera2.encoders import JpegEncoder
     from picamera2.outputs import FileOutput
 except ImportError as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
     ) from import_exc
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
-from cv2 import cvtColor, COLOR_YUV420p2RGB
 from src.configsettings import settings, EnumFocuserModule
 from src.stoppablethread import StoppableThread
 from src.imageserverabstract import ImageServerAbstract, BackendStats
@@ -68,28 +66,6 @@ class ImageServerPicam2(ImageServerAbstract):
         # private props
         self._picam2 = Picamera2()
         self._evtbus = evtbus
-
-        self._autofocus_module = None
-
-        # load autofocus module as chosen by config. if none, don't load
-        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
-            logger.info(
-                f"loading autofocus module: "
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
-            )
-            autofocus_module = import_module(
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
-            )
-            autofocus_class_ = getattr(
-                autofocus_module,
-                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
-            )
-            self._autofocus_module = autofocus_class_(self, evtbus)
-        else:
-            logger.info(
-                "picam2_focuser_module is disabled. "
-                "Select a focuser module in config to enable autofocus."
-            )
 
         self._hires_data: ImageServerPicam2.PicamDataArray = (
             ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
@@ -164,10 +140,34 @@ class ImageServerPicam2(ImageServerAbstract):
         # activate preview mode on init
         self._on_preview_mode()
         self._picam2.configure(self._currentmode)
+        # capture_file image quality
+        self._picam2.options["quality"] = settings.common.HIRES_STILL_QUALITY
 
         logger.info(f"camera_config: {self._picam2.camera_config}")
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
+
+        self._autofocus_module = None
+
+        # load autofocus module as chosen by config. if none, don't load
+        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
+            logger.info(
+                f"loading autofocus module: "
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_module = import_module(
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_class_ = getattr(
+                autofocus_module,
+                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
+            )
+            self._autofocus_module = autofocus_class_(self, evtbus)
+        else:
+            logger.info(
+                "picam2_focuser_module is disabled. "
+                "Select a focuser module in config to enable autofocus."
+            )
 
         self.set_ae_exposure(settings.backends.picam2_AE_EXPOSURE_MODE)
 
@@ -201,15 +201,10 @@ class ImageServerPicam2(ImageServerAbstract):
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
         with self._hires_data.condition:
-            while True:
-                if not self._hires_data.condition.wait(2):
-                    raise IOError("timeout receiving frames")
+            if not self._hires_data.condition.wait(2):
+                raise IOError("timeout receiving frames")
 
-                buffer = self._get_jpeg_by_hires_frame(
-                    frame=self._hires_data.array,
-                    quality=settings.common.HIRES_STILL_QUALITY,
-                )
-                return buffer
+            return self._hires_data.array
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
@@ -261,12 +256,8 @@ class ImageServerPicam2(ImageServerAbstract):
             return self._stream_output.frame
 
     def _wait_for_lores_frame(self):
-        """for other threads to receive a lores frame"""
-        with self._lores_data.condition:
-            while True:
-                if not self._lores_data.condition.wait(2):
-                    raise IOError("timeout receiving frames")
-                return self._lores_data.array
+        """advanced autofocus currently not supported by this backend"""
+        raise NotImplementedError()
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode")
@@ -283,10 +274,6 @@ class ImageServerPicam2(ImageServerAbstract):
             frame, quality=quality, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422
         )
 
-        return jpeg_buffer
-
-    def _get_jpeg_by_lores_frame(self, frame, quality):
-        jpeg_buffer = turbojpeg.encode(frame, quality=quality)
         return jpeg_buffer
 
     def set_ae_exposure(self, newmode):
@@ -306,6 +293,13 @@ class ImageServerPicam2(ImageServerAbstract):
             f"current picam2.controls.get_libcamera_controls():"
             f"{self._picam2.controls.get_libcamera_controls()}"
         )
+
+    def _switch_mode(self):
+        logger.info("switch_mode invoked")
+        self._picam2.stop_encoder()
+        self._picam2.switch_mode(self._currentmode)
+        self._lastmode = self._currentmode
+        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._stream_output))
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -343,13 +337,7 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._on_capture_mode()
 
             if (not self._currentmode == self._lastmode) and self._lastmode is not None:
-                logger.info("switch_mode invoked")
-                self._picam2.stop_encoder()
-                self._picam2.switch_mode(self._currentmode)
-                self._lastmode = self._currentmode
-                self._picam2.start_encoder(
-                    MJPEGEncoder(), FileOutput(self._stream_output)
-                )
+                self._switch_mode()
 
             if self._trigger_hq_capture:
                 # only capture one pic and return to lores streaming afterwards
@@ -358,17 +346,22 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
-                (array,), self.metadata = self._picam2.capture_arrays(["main"])
-                logger.info(self.metadata)
+                # (array,), self.metadata = self._picam2.capture_arrays(["main"])
+                data = io.BytesIO()
+                self._picam2.capture_file(data, format="jpeg")
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hires_data.condition:
-                    self._hires_data.array = array
+                    self._hires_data.array = data.getbuffer()
 
                     self._hires_data.condition.notify_all()
 
                 # switch back to preview mode
                 self._on_preview_mode()
 
-            time.sleep(0.1)
+            # capture metadata blocks until new metadata is avail
+            self.metadata = self._picam2.capture_metadata()
+            # logger.info(self.metadata)
+
+            self._count += 1
