@@ -4,6 +4,7 @@ Picam2 backend implementation
 """
 from threading import Condition
 import time
+import io
 import dataclasses
 import logging
 import numpy
@@ -13,8 +14,13 @@ from importlib import import_module
 try:
     from libcamera import Transform
     from picamera2 import Picamera2
+    from picamera2.encoders import MJPEGEncoder
+    from picamera2.encoders import JpegEncoder
+    from picamera2.outputs import FileOutput
 except ImportError as import_exc:
-    raise OSError("smbus not supported on windows platform") from import_exc
+    raise OSError(
+        "picamera2/libcamera not supported on windows platform"
+    ) from import_exc
 from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 from cv2 import cvtColor, COLOR_YUV420p2RGB
 from src.configsettings import settings, EnumFocuserModule
@@ -41,6 +47,17 @@ class ImageServerPicam2(ImageServerAbstract):
 
         array: numpy.ndarray = None
         condition: Condition = None
+
+    class StreamingOutput(io.BufferedIOBase):
+        def __init__(self):
+            self.frame = None
+            self.condition = Condition()
+
+        def write(self, buf):
+            print("write")
+            with self.condition:
+                self.frame = buf
+                self.condition.notify_all()
 
     def __init__(self, evtbus: EventEmitter, enableStream):
         super().__init__(evtbus, enableStream)
@@ -82,6 +99,8 @@ class ImageServerPicam2(ImageServerAbstract):
         self._lores_data: ImageServerPicam2.PicamDataArray = (
             ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
         )
+
+        self._stream_output = ImageServerPicam2.StreamingOutput()
 
         self._trigger_hq_capture = False
         self._currentmode = None
@@ -155,10 +174,21 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
-        # start camera
+
+        encoder = JpegEncoder()
+        encoder.output = FileOutput(self._stream_output)
+        self._picam2.start_encoder(encoder, name="lores")
         self._picam2.start()
 
-        self._generate_images_thread.start()
+        # start camera
+        # self._picam2.start_encoder(MJPEGEncoder(10000), FileOutput(self._stream_output))
+        # self._picam2.start()
+
+        # following works:
+        # self._picam2.start_recording(JpegEncoder(q=70), FileOutput(self._stream_output))
+        # self._picam2.start_recording(MJPEGEncoder(), FileOutput(self._stream_output))
+
+        # self._generate_images_thread.start()
         self._stats_thread.start()
 
         logger.debug(f"{self.__module__} started")
@@ -235,15 +265,11 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._lores_data.condition:
-            while True:
-                if not self._lores_data.condition.wait(2):
-                    raise IOError("timeout receiving frames")
-                buffer = self._get_jpeg_by_lores_frame(
-                    frame=self._lores_data.array,
-                    quality=settings.common.LIVEPREVIEW_QUALITY,
-                )
-                return buffer
+        with self._stream_output.condition:
+            print("in wait cond")
+            self._stream_output.condition.wait()
+
+            return self._stream_output.frame
 
     def _wait_for_lores_frame(self):
         """for other threads to receive a lores frame"""
@@ -315,6 +341,7 @@ class ImageServerPicam2(ImageServerAbstract):
             time.sleep(0.2)
 
     def _generate_images_fun(self):
+        return
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if (
                 self._trigger_hq_capture is True
