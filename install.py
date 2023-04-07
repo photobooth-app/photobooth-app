@@ -475,9 +475,13 @@ if _is_linux():
 
 print_spacer("check turbojpeg installed properly")
 try:
-    from turbojpeg import TurboJPEG
+    import importlib
 
-    TurboJPEG()  # instancing throws error if lib not present (usually a problem on windows only)
+    # import via importlib in case turbojpeg is installed first time via pip
+    # standard import turbojpeg would fail in this case
+    turbojpeg = importlib.import_module("turbojpeg")
+
+    turbojpeg.TurboJPEG()  # instancing throws error if lib not present
 except RuntimeError as exc:
     print_red(exc)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
