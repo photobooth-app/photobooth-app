@@ -54,7 +54,6 @@ class ImageServerPicam2(ImageServerAbstract):
             self.condition = Condition()
 
         def write(self, buf):
-            print("write")
             with self.condition:
                 self.frame = buf
                 self.condition.notify_all()
@@ -175,20 +174,11 @@ class ImageServerPicam2(ImageServerAbstract):
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
 
-        encoder = JpegEncoder()
-        encoder.output = FileOutput(self._stream_output)
-        self._picam2.start_encoder(encoder, name="lores")
+        # start camera
+        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._stream_output))
         self._picam2.start()
 
-        # start camera
-        # self._picam2.start_encoder(MJPEGEncoder(10000), FileOutput(self._stream_output))
-        # self._picam2.start()
-
-        # following works:
-        # self._picam2.start_recording(JpegEncoder(q=70), FileOutput(self._stream_output))
-        # self._picam2.start_recording(MJPEGEncoder(), FileOutput(self._stream_output))
-
-        # self._generate_images_thread.start()
+        self._generate_images_thread.start()
         self._stats_thread.start()
 
         logger.debug(f"{self.__module__} started")
@@ -266,7 +256,6 @@ class ImageServerPicam2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._stream_output.condition:
-            print("in wait cond")
             self._stream_output.condition.wait()
 
             return self._stream_output.frame
@@ -341,7 +330,6 @@ class ImageServerPicam2(ImageServerAbstract):
             time.sleep(0.2)
 
     def _generate_images_fun(self):
-        return
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if (
                 self._trigger_hq_capture is True
@@ -356,20 +344,14 @@ class ImageServerPicam2(ImageServerAbstract):
 
             if (not self._currentmode == self._lastmode) and self._lastmode is not None:
                 logger.info("switch_mode invoked")
+                self._picam2.stop_encoder()
                 self._picam2.switch_mode(self._currentmode)
                 self._lastmode = self._currentmode
+                self._picam2.start_encoder(
+                    MJPEGEncoder(), FileOutput(self._stream_output)
+                )
 
-            if not self._trigger_hq_capture:
-                (orig_array,), self.metadata = self._picam2.capture_arrays(["lores"])
-
-                # convert colors to rgb because lores-stream is always YUV420 that
-                # is not used in application usually.
-                array = cvtColor(orig_array, COLOR_YUV420p2RGB)
-
-                with self._lores_data.condition:
-                    self._lores_data.array = array
-                    self._lores_data.condition.notify_all()
-            else:
+            if self._trigger_hq_capture:
                 # only capture one pic and return to lores streaming afterwards
                 self._trigger_hq_capture = False
 
@@ -389,4 +371,4 @@ class ImageServerPicam2(ImageServerAbstract):
                 # switch back to preview mode
                 self._on_preview_mode()
 
-            self._count += 1
+            time.sleep(0.1)
