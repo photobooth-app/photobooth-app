@@ -11,6 +11,7 @@ import sys
 import subprocess
 import platform
 from dataclasses import dataclass
+from importlib.metadata import version
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
@@ -493,6 +494,20 @@ except RuntimeError as exc:
 else:
     print_green("OK, turboJpeg detected.")
 
+
+try:
+    print_spacer("check installed picamera2 version")
+    print_blue(version("picamera2"))
+
+    print_blue(
+        "Check the version is up to date. Usually updates received automatically."
+    )
+    print_blue(
+        "If version is outdated, ensure picamera2 is NOT installed via pip. To uninstall:"
+    )
+    print_blue("pip uninstall picamera2 (might need sudo)")
+except importlib.metadata.PackageNotFoundError:
+    print("picamera2 not installed")
 
 # check gphoto2 installed properly
 if _is_linux():
