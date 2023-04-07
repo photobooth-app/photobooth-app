@@ -207,10 +207,10 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
             media_type="plain/text",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    else:
-        return Response(
-            content="Done", media_type="plain/text", status_code=status.HTTP_200_OK
-        )
+
+    return Response(
+        content="Done", media_type="plain/text", status_code=status.HTTP_200_OK
+    )
 
 
 @app.get("/cmd/{action}/{param}")

@@ -8,7 +8,6 @@ import io
 import dataclasses
 import logging
 from importlib import import_module
-import numpy
 from pymitter import EventEmitter
 
 try:
@@ -20,14 +19,12 @@ except ImportError as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
     ) from import_exc
-from turbojpeg import TurboJPEG, TJPF_RGB, TJSAMP_422
 from src.configsettings import settings, EnumFocuserModule
 from src.stoppablethread import StoppableThread
 from src.imageserverabstract import ImageServerAbstract, BackendStats
 
 
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 
 class ImageServerPicam2(ImageServerAbstract):
