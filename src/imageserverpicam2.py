@@ -36,17 +36,24 @@ class ImageServerPicam2(ImageServerAbstract):
     """
 
     @dataclasses.dataclass
-    class PicamDataArray:
+    class PicamHiresData:
         """
-        bundle data array and it's condition.
+        bundle data bytes and it's condition.
         1) save some instance attributes and
         2) bundle as it makes sense
         """
 
-        array: numpy.ndarray = None
+        data: bytes = None
         condition: Condition = None
 
-    class StreamingOutput(io.BufferedIOBase):
+    class PicamLoresData(io.BufferedIOBase):
+        """Lores data class used for streaming.
+        Used in hardware accelerated MJPEGEncoder
+
+        Args:
+            io (_type_): _description_
+        """
+
         def __init__(self):
             self.frame = None
             self.condition = Condition()
@@ -67,15 +74,13 @@ class ImageServerPicam2(ImageServerAbstract):
         self._picam2 = Picamera2()
         self._evtbus = evtbus
 
-        self._hires_data: ImageServerPicam2.PicamDataArray = (
-            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
+        # lores and hires data output
+        self._lores_data: ImageServerPicam2.PicamLoresData = (
+            ImageServerPicam2.PicamLoresData()
         )
-
-        self._lores_data: ImageServerPicam2.PicamDataArray = (
-            ImageServerPicam2.PicamDataArray(array=None, condition=Condition())
+        self._hires_data: ImageServerPicam2.PicamHiresData = (
+            ImageServerPicam2.PicamHiresData(data=None, condition=Condition())
         )
-
-        self._stream_output = ImageServerPicam2.StreamingOutput()
 
         self._trigger_hq_capture = False
         self._currentmode = None
@@ -140,6 +145,7 @@ class ImageServerPicam2(ImageServerAbstract):
         # activate preview mode on init
         self._on_preview_mode()
         self._picam2.configure(self._currentmode)
+
         # capture_file image quality
         self._picam2.options["quality"] = settings.common.HIRES_STILL_QUALITY
 
@@ -175,7 +181,7 @@ class ImageServerPicam2(ImageServerAbstract):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
 
         # start camera
-        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._stream_output))
+        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data))
         self._picam2.start()
 
         self._generate_images_thread.start()
@@ -195,6 +201,7 @@ class ImageServerPicam2(ImageServerAbstract):
         self._stats_thread.join(1)
 
         self._picam2.stop()
+        self._picam2.stop_encoder()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -204,7 +211,7 @@ class ImageServerPicam2(ImageServerAbstract):
             if not self._hires_data.condition.wait(2):
                 raise IOError("timeout receiving frames")
 
-            return self._hires_data.array
+            return self._hires_data.data
 
     def trigger_hq_capture(self):
         self._trigger_hq_capture = True
@@ -250,10 +257,10 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        with self._stream_output.condition:
-            self._stream_output.condition.wait()
+        with self._lores_data.condition:
+            self._lores_data.condition.wait()
 
-            return self._stream_output.frame
+            return self._lores_data.frame
 
     def _wait_for_lores_frame(self):
         """advanced autofocus currently not supported by this backend"""
@@ -268,13 +275,6 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.debug("change to preview mode")
         self._lastmode = self._currentmode
         self._currentmode = self._preview_config
-
-    def _get_jpeg_by_hires_frame(self, frame, quality):
-        jpeg_buffer = turbojpeg.encode(
-            frame, quality=quality, pixel_format=TJPF_RGB, jpeg_subsample=TJSAMP_422
-        )
-
-        return jpeg_buffer
 
     def set_ae_exposure(self, newmode):
         """_summary_
@@ -295,11 +295,13 @@ class ImageServerPicam2(ImageServerAbstract):
         )
 
     def _switch_mode(self):
-        logger.info("switch_mode invoked")
+        logger.info(
+            "switch_mode invoked, stopping stream encoder, switch mode and restart encoder"
+        )
         self._picam2.stop_encoder()
         self._picam2.switch_mode(self._currentmode)
         self._lastmode = self._currentmode
-        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._stream_output))
+        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data))
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -346,14 +348,13 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
-                # (array,), self.metadata = self._picam2.capture_arrays(["main"])
                 data = io.BytesIO()
                 self._picam2.capture_file(data, format="jpeg")
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hires_data.condition:
-                    self._hires_data.array = data.getbuffer()
+                    self._hires_data.data = data.getbuffer()
 
                     self._hires_data.condition.notify_all()
 
@@ -362,6 +363,6 @@ class ImageServerPicam2(ImageServerAbstract):
 
             # capture metadata blocks until new metadata is avail
             self.metadata = self._picam2.capture_metadata()
-            # logger.info(self.metadata)
 
+            # counter to calc the fps
             self._count += 1

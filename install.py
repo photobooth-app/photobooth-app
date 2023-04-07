@@ -80,23 +80,6 @@ common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
 """,
     ),
     (
-        "rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
-        """
-backends__MAIN_BACKEND="ImageServerPicam2"
-backends__picam2_focuser_module="LibcamAfAdvanced"
-common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
-common__CAPTURE_CAM_RESOLUTION_HEIGHT="3040"
-common__PREVIEW_CAM_RESOLUTION_WIDTH="2028"
-common__PREVIEW_CAM_RESOLUTION_HEIGHT="1520"
-advancedfocuser__focuser_backend="arducam_imx477"
-advancedfocuser__MIN_VALUE="50"
-advancedfocuser__MAX_VALUE="950"
-advancedfocuser__DEF_VALUE="300"
-advancedfocuser__STEP="10"
-advancedfocuser__MOVE_TIME="0.028"
-""",
-    ),
-    (
         "rpi_picam2_arducam_imx519_native_libcamera",
         """
 backends__MAIN_BACKEND="ImageServerPicam2"
