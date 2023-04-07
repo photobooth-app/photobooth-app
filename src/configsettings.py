@@ -124,45 +124,6 @@ class GroupCommon(BaseModel):
     webserver_port: int = 8000
 
 
-class EnumFocuserBackends(str, Enum):
-    """enum to choose focuser backend from"""
-
-    ARDUCAM_IMX477 = "arducam_imx477"
-    ARDUCAM_IMX519 = "arducam_imx519"
-    ARDUCAM_64MP = "arducam_64mp"
-
-
-class GroupAdvancedFocuser(BaseModel):
-    """
-    Focuser is to autofocus motorized focus cameras.
-    Use for cameras that do not have their own focus algorithm integrated.
-    Currently supported cameras are arducam imx477, imx519 and 64mp hawkeye.
-    """
-
-    class Config:
-        title = "Advanced Focuser Settings"
-
-    # autofocus
-    # 70 for imx519 (range 0...4000) and 30 for arducam64mp (range 0...1000)
-    focuser_backend: EnumFocuserBackends = Field(
-        title="Focuser backend",
-        default=EnumFocuserBackends.ARDUCAM_IMX477,
-        description="Advanced focuser optimized for several cameras.",
-    )
-    MIN_VALUE: int = 50
-    MAX_VALUE: int = 950
-    DEF_VALUE: int = 300
-    STEP: int = 10
-    # results in max. 1/0.066 fps autofocus speed rate (here about 15fps)
-    MOVE_TIME: float = 0.028
-    ROI: int = Field(
-        default=20,
-        ge=0,
-        le=30,
-        description="remove x% from every side of image to consider for autofocus",
-    )
-
-
 class EnumImageBackendsMain(str, Enum):
     """enum to choose image backend MAIN from"""
 
@@ -170,8 +131,8 @@ class EnumImageBackendsMain(str, Enum):
     IMAGESERVER_PICAM2 = "ImageServerPicam2"
     IMAGESERVER_WEBCAMCV2 = "ImageServerWebcamCv2"
     IMAGESERVER_WEBCAMV4L = "ImageServerWebcamV4l"
-    # Not yet finished backends:
     IMAGESERVER_GPHOTO2 = "ImageServerGphoto2"
+    # Not yet finished backends:
     # ImageServerDigicamcontrol = 'ImageServerDigicamcontrol'
 
 
@@ -190,7 +151,6 @@ class EnumFocuserModule(str, Enum):
     NULL = None
     LIBCAM_AF_CONTINUOUS = "LibcamAfContinuous"
     LIBCAM_AF_INTERVAL = "LibcamAfInterval"
-    ADVANCED_AF = "AdvancedAf"
 
 
 class GroupBackends(BaseModel):
@@ -344,7 +304,6 @@ class ConfigSettings(BaseSettings):
     common: GroupCommon = GroupCommon()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
-    advancedfocuser: GroupAdvancedFocuser = GroupAdvancedFocuser()
     wled: GroupWled = GroupWled()
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()

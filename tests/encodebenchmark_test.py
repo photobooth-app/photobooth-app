@@ -1,4 +1,5 @@
 from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
+import simplejpeg
 import pytest
 import logging
 
@@ -34,7 +35,18 @@ def cv2_encode(frame_from_camera):
     return encimg
 
 
-@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode"])
+def simplejpeg_encode(frame_from_camera):
+    # encoding BGR array to output.jpg with default settings.
+    # 85=default quality
+    # simplejpeg uses turbojpeg as lib, but pyturbojpeg also has scaling
+    bytes = simplejpeg.encode_jpeg(frame_from_camera, quality=85, fastdct=True)
+
+    return bytes
+
+
+@pytest.fixture(
+    params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode"]
+)
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
