@@ -343,9 +343,12 @@ def video_stream():
     if not settings.backends.LIVEPREVIEW_ENABLED:
         raise HTTPException(405, "preview not enabled")
 
+    headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
+
     try:
         return StreamingResponse(
             imageServers.gen_stream(),
+            headers=headers,
             media_type="multipart/x-mixed-replace; boundary=frame",
         )
     except Exception as exc:
