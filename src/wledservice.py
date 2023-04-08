@@ -1,7 +1,6 @@
 """ WLED Integration
 """
 import json
-import time
 import logging
 import serial
 from pymitter import EventEmitter
