@@ -67,8 +67,6 @@ class ImageServerPicam2(ImageServerAbstract):
     def __init__(self, evtbus: EventEmitter, enableStream):
         super().__init__(evtbus, enableStream)
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth Picamera2 Integration"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props

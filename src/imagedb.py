@@ -125,7 +125,7 @@ class ImageDb:
     def __init__(self, evtbus, imageserver):
         self._evtbus = evtbus
         self._imageserver = imageserver
-        self._exif = Exif(self._imageserver)
+        self._exif = Exif()
 
         self._db = []  # sorted array. always newest image first in list.
 

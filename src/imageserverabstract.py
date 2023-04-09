@@ -43,8 +43,6 @@ class ImageServerAbstract(ABC):
     @abstractmethod
     def __init__(self, evtbus: EventEmitter, enable_stream: bool):
         # public
-        self.exif_make = "ImageServerAbstract-Make"
-        self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
 
         # private

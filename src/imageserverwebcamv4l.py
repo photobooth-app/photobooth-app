@@ -31,8 +31,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
     def __init__(self, evtbus: EventEmitter, enable_stream):
         super().__init__(evtbus, enable_stream)
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth WebcamV4l"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props

@@ -27,8 +27,6 @@ class ImageServerSimulated(ImageServerAbstract):
         super().__init__(ee, enableStream)
 
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth FrameServer Simulate"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props
