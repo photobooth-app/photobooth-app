@@ -50,7 +50,7 @@ SERVICE_NAME = "imageserver"
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
+app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
 
 """
 request_stop = False
