@@ -227,12 +227,13 @@ class ImageDb:
         """
         trigger still image capture and align post processing
         """
-        start_time = time.time()
 
         if not requested_filepath:
             requested_filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
 
         logger.debug(f"capture to filename: {requested_filepath}")
+
+        start_time_capture = time.time()
 
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
@@ -240,6 +241,7 @@ class ImageDb:
         jpeg_buffer = self._imageserver.wait_for_hq_image()
 
         # create JPGs and add to db
+        start_time_postproc = time.time()
         (item, _) = self.create_imageset_from_image(jpeg_buffer, requested_filepath)
         actual_filepath = item["image"]
 
@@ -254,9 +256,12 @@ class ImageDb:
             # so copy it to requested filepath
             shutil.copy2(actual_filepath, requested_filepath)
 
-        processing_time = round((time.time() - start_time), 1)
+        logger.info(f"capture to file {actual_filepath} successful")
         logger.info(
-            f"capture to file {actual_filepath} successfull, process took {processing_time}s"
+            f"wait_for_hq_image time: {round((start_time_postproc - start_time_capture), 1)}s"
+        )
+        logger.info(
+            f"post process time: {round((time.time() - start_time_postproc), 1)}s"
         )
 
         # to inform frontend about new image to display
