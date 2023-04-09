@@ -65,24 +65,28 @@ class GroupCommon(BaseModel):
         ge=10,
         le=100,
         description="Livepreview stream JPEG image quality on supported backends",
+        ui_component="QSlider",
     )
     THUMBNAIL_STILL_QUALITY: int = Field(
         default=60,
         ge=10,
         le=100,
         description="Still JPEG thumbnail quality (thumbs used in gallery list)",
+        ui_component="QSlider",
     )
     PREVIEW_STILL_QUALITY: int = Field(
         default=75,
         ge=10,
         le=100,
         description="Still JPEG preview quality (image shown in gallery detail)",
+        ui_component="QSlider",
     )
     HIRES_STILL_QUALITY: int = Field(
         default=90,
         ge=10,
         le=100,
         description="Still JPEG full resolution quality (downloaded photo)",
+        ui_component="QSlider",
     )
     PREVIEW_STILL_WIDTH: int = Field(
         default=900,
