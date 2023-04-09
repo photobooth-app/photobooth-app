@@ -265,6 +265,8 @@ class GroupUiSettings(BaseModel):
     TAKEPIC_MSG_TIME: float = 0.5
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = 10
 
+    SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = True
+
 
 class GroupWled(BaseModel):
     """
