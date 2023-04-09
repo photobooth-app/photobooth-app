@@ -11,10 +11,10 @@ from importlib import import_module
 from pymitter import EventEmitter
 
 try:
-    from libcamera import Transform
-    from picamera2 import Picamera2
-    from picamera2.encoders import MJPEGEncoder
-    from picamera2.outputs import FileOutput
+    from libcamera import Transform  # type: ignore
+    from picamera2 import Picamera2  # type: ignore
+    from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
+    from picamera2.outputs import FileOutput  # type: ignore
 except ImportError as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
@@ -100,13 +100,13 @@ class ImageServerPicam2(ImageServerAbstract):
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picam2.create_still_configuration(
-            {
+            main={
                 "size": (
                     settings.common.CAPTURE_CAM_RESOLUTION_WIDTH,
                     settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
                 )
             },
-            {
+            lores={
                 "size": (
                     settings.common.LIVEVIEW_RESOLUTION_WIDTH,
                     settings.common.LIVEVIEW_RESOLUTION_HEIGHT,
@@ -123,13 +123,13 @@ class ImageServerPicam2(ImageServerAbstract):
 
         # config preview mode (used for permanent live view)
         self._preview_config = self._picam2.create_video_configuration(
-            {
+            main={
                 "size": (
                     settings.common.PREVIEW_CAM_RESOLUTION_WIDTH,
                     settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT,
                 )
             },
-            {
+            lores={
                 "size": (
                     settings.common.LIVEVIEW_RESOLUTION_WIDTH,
                     settings.common.LIVEVIEW_RESOLUTION_HEIGHT,
@@ -181,9 +181,15 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
-
+        logger.info(
+            f"stream quality {Quality[settings.backends.picam2_stream_quality.name]=}"
+        )
         # start camera
-        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data))
+        self._picam2.start_encoder(
+            MJPEGEncoder(),
+            FileOutput(self._lores_data),
+            quality=Quality[settings.backends.picam2_stream_quality.name],
+        )
         self._picam2.start()
 
         self._generate_images_thread.start()
@@ -308,7 +314,11 @@ class ImageServerPicam2(ImageServerAbstract):
         self._picam2.stop_encoder()
         self._picam2.switch_mode(self._currentmode)
         self._lastmode = self._currentmode
-        self._picam2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data))
+        self._picam2.start_encoder(
+            MJPEGEncoder(),
+            FileOutput(self._lores_data),
+            quality=Quality[settings.backends.picam2_stream_quality.name],
+        )
 
     #
     # INTERNAL IMAGE GENERATOR

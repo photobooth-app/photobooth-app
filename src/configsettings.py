@@ -153,6 +153,18 @@ class EnumFocuserModule(str, Enum):
     LIBCAM_AF_INTERVAL = "LibcamAfInterval"
 
 
+class EnumPicamStreamQuality(str, Enum):
+    """Enum type to describe the quality wanted from an encoder.
+    This may be passed if a specific value (such as bitrate) has not been set.
+    """
+
+    VERY_LOW = "very low"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    VERY_HIGH = "very high"
+
+
 class GroupBackends(BaseModel):
     """
     Choose backends for still images/high quality images captured on main backend.
@@ -191,6 +203,12 @@ class GroupBackends(BaseModel):
         title="Picam2 Focuser Module",
         default=EnumFocuserModule.NULL,
         description="Choose continuous or interval mode to trigger autofocus of picamera2 cam. Choose custom af to enable advanced focuser interface to be configured on separate tab.",
+    )
+
+    picam2_stream_quality: EnumPicamStreamQuality = Field(
+        title="Picam2 Stream Quality (for livepreview)",
+        default=EnumPicamStreamQuality.MEDIUM,
+        description="Lower quality results in less data to be transferred. 0=lowest quality, 4=highest quality",
     )
 
     picam2_focuser_interval: int = 10  # every x seconds trigger autofocus
