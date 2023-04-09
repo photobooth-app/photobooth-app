@@ -22,8 +22,6 @@ def get_images(backend: ImageServerAbstract):
         print(exc)
         raise AssertionError("backend did not return valid image bytes") from exc
 
-    backend.trigger_hq_capture()
-
     try:
         with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
             img.verify()

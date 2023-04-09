@@ -28,8 +28,6 @@ class ImageServerWebcamCv2(ImageServerAbstract):
     def __init__(self, evtbus: EventEmitter, enable_stream):
         super().__init__(evtbus, enable_stream)
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth WebcamCv2"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props
@@ -95,6 +93,8 @@ class ImageServerWebcamCv2(ImageServerAbstract):
 
         # get img off the producing queue
         with self._img_buffer_hires.condition:
+            self._event_hq_capture.set()
+
             if not self._img_buffer_hires.condition.wait(4):
                 raise IOError("timeout receiving frames")
 
@@ -107,10 +107,6 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def trigger_hq_capture(self):
-        self._event_hq_capture.set()
-        self._on_capture_mode()
 
     def stats(self) -> BackendStats:
         return BackendStats(

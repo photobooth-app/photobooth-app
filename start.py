@@ -50,7 +50,7 @@ SERVICE_NAME = "imageserver"
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
+app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
 
 """
 request_stop = False
@@ -207,10 +207,10 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
             media_type="plain/text",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-    else:
-        return Response(
-            content="Done", media_type="plain/text", status_code=status.HTTP_200_OK
-        )
+
+    return Response(
+        content="Done", media_type="plain/text", status_code=status.HTTP_200_OK
+    )
 
 
 @app.get("/cmd/{action}/{param}")
@@ -343,9 +343,12 @@ def video_stream():
     if not settings.backends.LIVEPREVIEW_ENABLED:
         raise HTTPException(405, "preview not enabled")
 
+    headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
+
     try:
         return StreamingResponse(
             imageServers.gen_stream(),
+            headers=headers,
             media_type="multipart/x-mixed-replace; boundary=frame",
         )
     except Exception as exc:

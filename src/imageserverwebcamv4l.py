@@ -31,8 +31,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
     def __init__(self, evtbus: EventEmitter, enable_stream):
         super().__init__(evtbus, enable_stream)
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth WebcamV4l"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props
@@ -99,9 +97,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def trigger_hq_capture(self):
-        self._on_capture_mode()
 
     def stats(self) -> BackendStats:
         return BackendStats(

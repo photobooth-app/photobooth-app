@@ -87,11 +87,6 @@ class ImageServers:
     #    """
     #    pass
 
-    def trigger_hq_capture(self):
-        """
-        trigger one time capture of high quality image
-        """
-
     def wait_for_hq_image(self):
         """
         function blocks until high quality image is available

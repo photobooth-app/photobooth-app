@@ -1,7 +1,6 @@
 """ WLED Integration
 """
 import json
-import time
 import logging
 import serial
 from pymitter import EventEmitter
@@ -88,18 +87,28 @@ class WledService:
             logger.error("error sending request to identify WLED module - wrong port?")
             return wled_detected
 
-        # wait for answer being available
-        time.sleep(0.2)
+        try:
+            # readline blocks for timeout seconds (set to 1sec on init), afterwards fails
+            wled_response = self._serial.readline()
 
-        if self._serial.in_waiting > 0:
-            try:
-                wled_response = self._serial.readline().decode("ascii").strip()
-                # indicates WLED module found:
-                wled_detected = "WLED" in wled_response
-                logger.info(f"WLED version response: {wled_response}")
-            except UnicodeDecodeError as exc:
-                logger.exception(exc)
-                logger.error("message from WLED module not understood")
+            if wled_response == b"":
+                # timeout is defined by response being empty
+                raise TimeoutError(
+                    "no answer from serial WLED device received within timeout"
+                )
+
+            # indicates WLED module found:
+            wled_detected = "WLED" in wled_response.decode("ascii").strip()
+
+            logger.info(f"WLED version response: {wled_response}")
+        except UnicodeDecodeError as exc:
+            logger.exception(exc)
+            logger.error("message from WLED module not understood")
+        except TimeoutError as exc:
+            logger.exception(exc)
+            logger.error(
+                "WLED device did not respond during setup. Check device and connections!"
+            )
 
         logger.debug(f"wled_detected={wled_detected}")
 

@@ -27,8 +27,6 @@ class ImageServerSimulated(ImageServerAbstract):
         super().__init__(ee, enableStream)
 
         # public props (defined in abstract class also)
-        self.exif_make = "Photobooth FrameServer Simulate"
-        self.exif_model = "Custom"
         self.metadata = {}
 
         # private props
@@ -86,9 +84,6 @@ class ImageServerSimulated(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def trigger_hq_capture(self):
-        self._on_capture_mode()
 
     def stats(self) -> BackendStats:
         return BackendStats(

@@ -43,8 +43,6 @@ class ImageServerAbstract(ABC):
     @abstractmethod
     def __init__(self, evtbus: EventEmitter, enable_stream: bool):
         # public
-        self.exif_make = "ImageServerAbstract-Make"
-        self.exif_model = "ImageServerAbstract-Model"
         self.metadata = {}
 
         # private
@@ -68,12 +66,6 @@ class ImageServerAbstract(ABC):
     #    get the default backend stream
     #    """
     #    pass
-
-    @abstractmethod
-    def trigger_hq_capture(self):
-        """
-        trigger one time capture of high quality image
-        """
 
     @abstractmethod
     def wait_for_hq_image(self):

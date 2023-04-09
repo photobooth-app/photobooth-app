@@ -43,6 +43,7 @@ class ImageServerPicam2LibcamAfContinuous:
 
     def _on_capture_finished(self):
         """nothing to do in continous mode here"""
+        self._init_autofocus()
 
     def _on_capturemode(self):
         """nothing to do in continous mode here"""
@@ -55,6 +56,7 @@ class ImageServerPicam2LibcamAfContinuous:
         on start set autofocus to continuous if requested by config or
         auto and trigger regularly
         """
+        logger.info(f"{__name__} _init_autofocus call")
         try:
             self._imageserver._picam2.set_controls(
                 {"AfMode": controls.AfModeEnum.Continuous}

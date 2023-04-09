@@ -8,14 +8,26 @@ _Latest development version:_
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
 
-This app allows to use
+The photobooth app is written in Python and coming along with a modern Vue frontend.
+
+## :heart_eyes: Features
+
+- camera live preview with shortest delay as possible
+- permanent video live view in background
+- autofocus based on the live preview
+- several camera backends supported for high quality stills and livestream
+- WLED support signaling photo countdown and feedback to the user when the photo is actually taken
+
+## :camera: Supported Cameras
+
+The photobooth app's Python backend allows to use different camera types on Linux and Windows platforms:
 
 - Raspberry Pi Camera Module 1/2/3 (with or without autofocus)
 - Arducam cameras (with or without autofocus)
-- DSLR cameras via gphoto2 or digicamcontrol (latter not yet implemented) and
+- DSLR camera via
+  - gphoto2, Linux
+  - digicamcontrol, Windows (not yet implemented)
 - webcams (via opencv2 or v4l)
-
-for high quality still photos and for livestream in your own photobooth.
 
 The app controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
@@ -23,37 +35,37 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
-## :heart_eyes: Features
-
-- camera live preview with shortest delay as possible
-- permanent video live view in background
-- autofocus based on the live preview
-- several camera backends supported for still/livestream
-- led ring signaling photo countdown and when the photo is actually taken
-
 ## :gear: Prerequisites
 
 - Python 3.9 or later
 - Camera supported by one of the backends
 - Raspberry Pi Bullseye with libcamera stack for picamera modules
 - git installed (automatic install on linux, download manually for windows platform)
-- [photobooth installed](https://photoboothproject.github.io/)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
+
+The photobooth app can be used standalone but is not feature complete yet.
+Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
+see description below how to achieve integration.
 
 ## :wrench: Installation
 
-An installer is available, helping to setup on a linux or windows system.
-Download the installer and start it as follows:
+Execute the installer following the commands below, helping to setup on a Linux or Windows system:
 
-```zsh
+```sh
 curl -o install.py https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
 python install.py
 ```
 
-Browse to <http://localhost:8000> and see that it is working
+Start the app and browse to <http://localhost:8000>, start using the app.
 
-### Integrate Photobooth and ImageServer
+```sh
+cd imageserver
+python start.py
+```
 
+### Integrate Photobooth-Project and this Photobooth-App
+
+Following commands have to be set in photobooth project to use this app as imageserver.
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
@@ -65,7 +77,7 @@ preview_url: url("http://photobooth:8000/stream.mjpg")
 background_defaults: url("http://photobooth:8000/stream.mjpg")
 ```
 
-### Countdown LED by WLED integration
+### WLED integration for LED signaling
 
 Add animated lights to your photobooth powered by WLED. WLED is a fast and feature-rich implementation of an ESP8266/ESP32 webserver to control NeoPixel (WS2812B, WS2811, SK6812) LEDs.
 
@@ -81,17 +93,17 @@ Please define presets on your own in WLED webfrontend. Once added, in the photob
 
 ### Sync Online (for file downloads via QR Code)
 
-```zsh
+```sh
 sudo apt-get install rclone inotify-tools
 ```
 
-```zsh
+```sh
 rclone config
 ```
 
 Setup the remote named "boothupload"!
 
-```zsh
+```sh
 chmod u+x ~/imageserver/boothupload.sh
 cp ~/imageserver/boothupload.service ~/.config/systemd/user/
 systemctl --user enable boothupload.service
@@ -120,6 +132,13 @@ network={
 
 ## :mag: Changelog
 
+- 2023-04-08
+  - picamera2 now with gpu hardware acceleration reduce cpu load
+  - gphoto2 implemented
+  - frontend polished
+  - removed custom autofocus method (not compatible with gpu acceleration)
+  - many smaller improvements
+  - many bugfixes
 - 2023-02-26
   - added pytest and set up automated tests
   - fixed some performance issues using separate processes to exploit cpu better

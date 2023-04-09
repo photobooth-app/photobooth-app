@@ -11,6 +11,7 @@ import sys
 import subprocess
 import platform
 from dataclasses import dataclass
+from importlib.metadata import version
 from pathlib import Path
 
 MIN_PYTHON_VERSION = (3, 9)
@@ -77,23 +78,6 @@ common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2304"
 common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
-""",
-    ),
-    (
-        "rpi_picam2_arducam_imx477_with_focusmotor_native_libcamera",
-        """
-backends__MAIN_BACKEND="ImageServerPicam2"
-backends__picam2_focuser_module="LibcamAfAdvanced"
-common__CAPTURE_CAM_RESOLUTION_WIDTH="4056"
-common__CAPTURE_CAM_RESOLUTION_HEIGHT="3040"
-common__PREVIEW_CAM_RESOLUTION_WIDTH="2028"
-common__PREVIEW_CAM_RESOLUTION_HEIGHT="1520"
-advancedfocuser__focuser_backend="arducam_imx477"
-advancedfocuser__MIN_VALUE="50"
-advancedfocuser__MAX_VALUE="950"
-advancedfocuser__DEF_VALUE="300"
-advancedfocuser__STEP="10"
-advancedfocuser__MOVE_TIME="0.028"
 """,
     ),
     (
@@ -475,9 +459,13 @@ if _is_linux():
 
 print_spacer("check turbojpeg installed properly")
 try:
-    from turbojpeg import TurboJPEG
+    import importlib
 
-    TurboJPEG()  # instancing throws error if lib not present (usually a problem on windows only)
+    # import via importlib in case turbojpeg is installed first time via pip
+    # standard import turbojpeg would fail in this case
+    turbojpeg = importlib.import_module("turbojpeg")
+
+    turbojpeg.TurboJPEG()  # instancing throws error if lib not present
 except RuntimeError as exc:
     print_red(exc)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
@@ -489,6 +477,20 @@ except RuntimeError as exc:
 else:
     print_green("OK, turboJpeg detected.")
 
+
+try:
+    print_spacer("check installed picamera2 version")
+    print_blue(version("picamera2"))
+
+    print_blue(
+        "Check the version is up to date. Usually updates received automatically."
+    )
+    print_blue(
+        "If version is outdated, ensure picamera2 is NOT installed via pip. To uninstall:"
+    )
+    print_blue("pip uninstall picamera2 (might need sudo)")
+except importlib.metadata.PackageNotFoundError:
+    print("picamera2 not installed")
 
 # check gphoto2 installed properly
 if _is_linux():
