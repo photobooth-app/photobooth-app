@@ -2,7 +2,7 @@
 Gphoto2 backend implementation
 
 """
-from threading import Condition
+from threading import Condition, Event
 import time
 import dataclasses
 import logging
@@ -34,7 +34,11 @@ class ImageServerGphoto2(ImageServerAbstract):
         2) bundle as it makes sense
         """
 
+        # jpeg data as bytes
         data: bytes = None
+        # signal to producer that requesting thread is ready to be notified
+        request_ready: Event = None
+        # condition when frame is avail
         condition: Condition = None
 
     def __init__(self, evtbus: EventEmitter, enableStream):
@@ -50,14 +54,15 @@ class ImageServerGphoto2(ImageServerAbstract):
         self._evtbus = evtbus
 
         self._hires_data: ImageServerGphoto2.Gphoto2DataBytes = (
-            ImageServerGphoto2.Gphoto2DataBytes(data=None, condition=Condition())
+            ImageServerGphoto2.Gphoto2DataBytes(
+                data=None, request_ready=Event(), condition=Condition()
+            )
         )
 
         self._lores_data: ImageServerGphoto2.Gphoto2DataBytes = (
             ImageServerGphoto2.Gphoto2DataBytes(data=None, condition=Condition())
         )
 
-        self._trigger_hq_capture = False
         self._camera_connected = False
         self._count = 0
         self._fps = 0
@@ -108,16 +113,20 @@ class ImageServerGphoto2(ImageServerAbstract):
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
-        """for other threads to receive a hq JPEG image"""
+        """
+        for other threads to receive a hq JPEG image
+        mode switches are handled internally automatically, no separate trigger necessary
+        this function blocks until frame is received
+        raise TimeoutError if no frame was received
+        """
         with self._hires_data.condition:
-            while True:
-                if not self._hires_data.condition.wait(5):
-                    raise IOError("timeout receiving frames")
+            self._hires_data.request_ready.set()
 
-                return self._hires_data.data
+            if not self._hires_data.condition.wait(timeout=2):
+                raise TimeoutError("timeout receiving frames")
 
-    def trigger_hq_capture(self):
-        self._trigger_hq_capture = True
+        self._hires_data.request_ready.clear()
+        return self._hires_data.data
 
     def stats(self) -> BackendStats:
         return BackendStats(
@@ -191,7 +200,7 @@ class ImageServerGphoto2(ImageServerAbstract):
 
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
-            if not self._trigger_hq_capture:
+            if not self._hires_data.request_ready.is_set():
                 if self._enable_stream:
                     capture = self._camera.capture_preview()
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
@@ -203,7 +212,7 @@ class ImageServerGphoto2(ImageServerAbstract):
                     time.sleep(0.1)
             else:
                 # only capture one pic and return to lores streaming afterwards
-                self._trigger_hq_capture = False
+                self._hires_data.request_ready.clear()
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode

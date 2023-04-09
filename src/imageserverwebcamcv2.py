@@ -95,6 +95,8 @@ class ImageServerWebcamCv2(ImageServerAbstract):
 
         # get img off the producing queue
         with self._img_buffer_hires.condition:
+            self._event_hq_capture.set()
+
             if not self._img_buffer_hires.condition.wait(4):
                 raise IOError("timeout receiving frames")
 
@@ -107,10 +109,6 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._on_preview_mode()
 
         return img
-
-    def trigger_hq_capture(self):
-        self._event_hq_capture.set()
-        self._on_capture_mode()
 
     def stats(self) -> BackendStats:
         return BackendStats(

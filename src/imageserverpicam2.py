@@ -2,7 +2,7 @@
 Picam2 backend implementation
 
 """
-from threading import Condition
+from threading import Condition, Event
 import time
 import io
 import dataclasses
@@ -40,7 +40,11 @@ class ImageServerPicam2(ImageServerAbstract):
         2) bundle as it makes sense
         """
 
+        # jpeg data as bytes
         data: bytes = None
+        # signal to producer that requesting thread is ready to be notified
+        request_ready: Event = None
+        # condition when frame is avail
         condition: Condition = None
 
     class PicamLoresData(io.BufferedIOBase):
@@ -76,10 +80,11 @@ class ImageServerPicam2(ImageServerAbstract):
             ImageServerPicam2.PicamLoresData()
         )
         self._hires_data: ImageServerPicam2.PicamHiresData = (
-            ImageServerPicam2.PicamHiresData(data=None, condition=Condition())
+            ImageServerPicam2.PicamHiresData(
+                data=None, request_ready=Event(), condition=Condition()
+            )
         )
 
-        self._trigger_hq_capture = False
         self._currentmode = None
         self._lastmode = None
         self._count = 0
@@ -203,15 +208,20 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.debug(f"{self.__module__} stopped")
 
     def wait_for_hq_image(self):
-        """for other threads to receive a hq JPEG image"""
+        """
+        for other threads to receive a hq JPEG image
+        mode switches are handled internally automatically, no separate trigger necessary
+        this function blocks until frame is received
+        raise TimeoutError if no frame was received
+        """
         with self._hires_data.condition:
-            if not self._hires_data.condition.wait(2):
-                raise IOError("timeout receiving frames")
+            self._hires_data.request_ready.set()
 
-            return self._hires_data.data
+            if not self._hires_data.condition.wait(timeout=2):
+                raise TimeoutError("timeout receiving frames")
 
-    def trigger_hq_capture(self):
-        self._trigger_hq_capture = True
+        self._hires_data.request_ready.clear()
+        return self._hires_data.data
 
     def stats(self) -> BackendStats:
         # exposure time needs math on a possibly None value, do it here separate
@@ -325,7 +335,7 @@ class ImageServerPicam2(ImageServerAbstract):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if (
-                self._trigger_hq_capture is True
+                self._hires_data.request_ready.is_set() is True
                 and self._currentmode != self._capture_config
             ):
                 # ensure cam is in capture quality mode even if there was no countdown
@@ -338,21 +348,20 @@ class ImageServerPicam2(ImageServerAbstract):
             if (not self._currentmode == self._lastmode) and self._lastmode is not None:
                 self._switch_mode()
 
-            if self._trigger_hq_capture:
+            if self._hires_data.request_ready.is_set():
                 # only capture one pic and return to lores streaming afterwards
-                self._trigger_hq_capture = False
+                self._hires_data.request_ready.clear()
 
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
                 data = io.BytesIO()
                 self._picam2.capture_file(data, format="jpeg")
+                self._hires_data.data = data.getbuffer()
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hires_data.condition:
-                    self._hires_data.data = data.getbuffer()
-
                     self._hires_data.condition.notify_all()
 
                 # switch back to preview mode

@@ -87,9 +87,6 @@ class ImageServerSimulated(ImageServerAbstract):
 
         return img
 
-    def trigger_hq_capture(self):
-        self._on_capture_mode()
-
     def stats(self) -> BackendStats:
         return BackendStats(
             backend_name=__name__,
