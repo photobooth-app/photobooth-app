@@ -120,17 +120,26 @@ class LoggingService:
         # no solution to handle exceptions in sep processes yet...
 
     def other_loggers(self):
-        """_summary_"""
+        """mute some logger by rasing their log level"""
+
         for name in [
             "picamera2",
-            "pywifi",
             "sse_starlette.sse",
             "PIL.PngImagePlugin",
+            "PIL.TiffImagePlugin",
         ]:
-            # mute some other logger
+            # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
             lgr.setLevel(logging.INFO)
-            lgr.propagate = False
+            lgr.propagate = True
+
+        for name in [
+            "pywifi",
+        ]:
+            # mute some other logger, by raising their debug level to INFO
+            lgr = logging.getLogger(name=name)
+            lgr.setLevel(logging.WARNING)
+            lgr.propagate = True
 
         os.environ["OPENCV_LOG_LEVEL"] = "ERROR"
 
