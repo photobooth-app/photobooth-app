@@ -221,7 +221,8 @@ class ImageServerPicam2(ImageServerAbstract):
         with self._hires_data.condition:
             self._hires_data.request_ready.set()
 
-            if not self._hires_data.condition.wait(timeout=2):
+            if not self._hires_data.condition.wait(timeout=4):
+                # wait returns true if timeout expired
                 raise TimeoutError("timeout receiving frames")
 
         self._hires_data.request_ready.clear()
@@ -269,7 +270,9 @@ class ImageServerPicam2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
-            self._lores_data.condition.wait()
+            if not self._lores_data.condition.wait(timeout=4):
+                # wait returns true if timeout expired
+                raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame
 

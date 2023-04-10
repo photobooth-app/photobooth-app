@@ -95,8 +95,8 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         with self._img_buffer_hires.condition:
             self._event_hq_capture.set()
 
-            if not self._img_buffer_hires.condition.wait(4):
-                raise IOError("timeout receiving frames")
+            if not self._img_buffer_hires.condition.wait(timeout=4):
+                raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer_hires.lock:
                 img = decompile_buffer(self._img_buffer_hires.sharedmemory)
@@ -124,8 +124,8 @@ class ImageServerWebcamCv2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._img_buffer_lores.condition:
-            if not self._img_buffer_lores.condition.wait(4):
-                raise IOError("timeout receiving frames")
+            if not self._img_buffer_lores.condition.wait(timeout=4):
+                raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer_lores.lock:
                 img = decompile_buffer(self._img_buffer_lores.sharedmemory)

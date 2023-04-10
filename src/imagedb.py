@@ -238,7 +238,22 @@ class ImageDb:
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        jpeg_buffer = self._imageserver.wait_for_hq_image()
+        MAX_ATTEMPTS = 3
+        for attempt in range(MAX_ATTEMPTS - 1):
+            try:
+                jpeg_buffer = self._imageserver.wait_for_hq_image()
+            except TimeoutError:
+                logger.error(
+                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS-1}, retrying"
+                )
+                # can we do additional error handling here?
+            else:
+                break
+        else:
+            # we failed all the attempts - deal with the consequences.
+            raise RuntimeError(
+                f"finally failed after {MAX_ATTEMPTS-1} attemts to capture image!"
+            )
 
         # create JPGs and add to db
         start_time_postproc = time.time()
