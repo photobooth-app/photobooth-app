@@ -139,10 +139,9 @@ class ImageServerGphoto2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
-            while True:  # TODO: is this necessary?
-                if not self._lores_data.condition.wait(timeout=4):
-                    raise TimeoutError("timeout receiving frames")
-                return self._lores_data.data
+            if not self._lores_data.condition.wait(timeout=4):
+                raise TimeoutError("timeout receiving frames")
+            return self._lores_data.data
 
     def _wait_for_lores_frame(self):
         """function not existant"""
