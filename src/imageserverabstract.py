@@ -12,6 +12,8 @@ from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 
+# retry some times to get image for stream
+MAX_ATTEMPTS = 3
 
 #
 # Dataclass for stats
@@ -125,7 +127,26 @@ class ImageServerAbstract(ABC):
         """
         last_time = time.time_ns()
         while True:
-            buffer = self._wait_for_lores_image()
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                try:
+                    buffer = self._wait_for_lores_image()
+                except TimeoutError:
+                    logger.error(
+                        "error capture lores image for stream. "
+                        f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
+                    )
+                    # can we do additional error handling here?
+                else:
+                    break
+            else:
+                # we failed finally all the attempts - deal with the consequences.
+                logger.critical(
+                    "critical error getting stream. "
+                    f"failed to get lores image after {MAX_ATTEMPTS} attempts. giving up!"
+                )
+
+                # return to signal stop yielding frames to calling function
+                return
 
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (

@@ -22,6 +22,9 @@ PATH_IMAGE = "image/"
 PATH_PREVIEW = "preview/"
 PATH_THUMBNAIL = "thumbnail/"
 
+# retry several times to get image
+MAX_ATTEMPTS = 3
+
 
 def _db_imageitem(filepath: str, user_caption: str = ""):
     if not filepath:
@@ -238,21 +241,24 @@ class ImageDb:
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        MAX_ATTEMPTS = 3
-        for attempt in range(MAX_ATTEMPTS - 1):
+        for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 jpeg_buffer = self._imageserver.wait_for_hq_image()
             except TimeoutError:
                 logger.error(
-                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS-1}, retrying"
+                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
                 )
                 # can we do additional error handling here?
             else:
                 break
         else:
-            # we failed all the attempts - deal with the consequences.
+            # we failed finally all the attempts - deal with the consequences.
+            logger.critical(
+                "critical error capture image. "
+                f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
+            )
             raise RuntimeError(
-                f"finally failed after {MAX_ATTEMPTS-1} attemts to capture image!"
+                f"finally failed after {MAX_ATTEMPTS} attempts to capture image!"
             )
 
         # create JPGs and add to db
