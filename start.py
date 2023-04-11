@@ -21,7 +21,11 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import StreamingResponse, FileResponse, Response
+from fastapi.responses import (
+    StreamingResponse,
+    FileResponse,
+    Response,
+)
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from pymitter import EventEmitter
 from statemachine.exceptions import TransitionNotAllowed
@@ -383,7 +387,8 @@ def read_index():
     """
     return homepage of booth
     """
-    return FileResponse("web/index.html")
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+    return FileResponse(path="web/index.html", headers=headers)
 
 
 # if not match anything above, default to deliver static files from web directory
