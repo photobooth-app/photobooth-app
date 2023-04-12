@@ -3,6 +3,7 @@
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
     "-v",
+    "--cov-report=term",
     "--cov-report=xml:coverage.xml",
     "--cov-report=html:coverage_html",
     "--cov",
