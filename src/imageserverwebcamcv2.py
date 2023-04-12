@@ -83,7 +83,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        self._cv2_process.join(5)
+        self._cv2_process.join(timeout=5)
         self._cv2_process.close()
 
         self._img_buffer_lores.sharedmemory.close()

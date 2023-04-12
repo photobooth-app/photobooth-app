@@ -5,7 +5,7 @@ import platform
 import time
 import logging
 from io import BytesIO
-from multiprocessing import Process, shared_memory, Condition, Lock
+from multiprocessing import Process, shared_memory, Condition, Lock, Event
 from PIL import Image, ImageDraw, ImageFont
 import psutil
 from pymitter import EventEmitter
@@ -35,6 +35,7 @@ class ImageServerSimulated(ImageServerAbstract):
         )
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
+        self._event_proc_shutdown: Event = Event()
 
         self._p = Process(
             target=img_aquisition,
@@ -43,23 +44,28 @@ class ImageServerSimulated(ImageServerAbstract):
                 self._img_buffer_shm.name,
                 self._condition_img_buffer_ready,
                 self._img_buffer_lock,
+                self._event_proc_shutdown,
             ),
             daemon=True,
         )
 
     def start(self):
-        """To start the FrameServer"""
+        """To start the image backend"""
 
         self._p.start()
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
-        """To stop the FrameServer"""
+        """To stop the image backend"""
+        # signal process to shutdown properly
+        self._event_proc_shutdown.set()
+
+        # wait until shutdown finished
+        self._p.join(timeout=1)
+        self._p.close()
+
         self._img_buffer_shm.close()
         self._img_buffer_shm.unlink()
-        self._p.terminate()
-        self._p.join(1)
-        self._p.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -122,14 +128,17 @@ class ImageServerSimulated(ImageServerAbstract):
 
 
 def img_aquisition(
-    shm_buffer_name, _condition_img_buffer_ready: Condition, _img_buffer_lock: Lock
+    shm_buffer_name,
+    _condition_img_buffer_ready: Condition,
+    _img_buffer_lock: Lock,
+    _event_proc_shutdown: Event,
 ):
     """function started in separate process to deliver images"""
     target_fps = 15
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    while True:
+    while not _event_proc_shutdown.is_set():
         now_time = time.time_ns()
         if (now_time - last_time) / 1000**3 <= (1 / target_fps):
             # limit max framerate to every ~2ms
@@ -198,3 +207,6 @@ def img_aquisition(
         with _condition_img_buffer_ready:
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
+
+    # release img on process shutdown
+    img.close()
