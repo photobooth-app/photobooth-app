@@ -200,9 +200,22 @@ def api_cmd_frameserver_previewmode_get():
 @app.post("/cmd/capture")
 # photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
+    # strip away the absolute path and process for safety:
+    # https://codeql.github.com/codeql-query-help/python/py-path-injection/
+    safe_path = os.path.normpath(
+        Path(
+            settings.misc.photoboothproject_image_directory,
+            os.path.basename(filepath),
+        )
+    )
+    if not safe_path.startswith(settings.misc.photoboothproject_image_directory):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "illegal path, check configuration"
+        )
+
     try:
-        imageDb.capture_hq_image(filepath, True)
-        logger.info(f"file {filepath} created successfully")
+        imageDb.capture_hq_image(safe_path)
+        logger.info(f"file {safe_path} created successfully")
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.critical("error receiving file from backend")
         logger.exception(exc)

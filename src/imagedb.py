@@ -226,15 +226,13 @@ class ImageDb:
 
         return item
 
-    def capture_hq_image(self, requested_filepath=None, copy_for_compatibility=False):
+    def capture_hq_image(self, photoboothproject_filepath: str = None):
         """
         trigger still image capture and align post processing
         """
 
-        if not requested_filepath:
-            requested_filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
-
-        logger.debug(f"capture to filename: {requested_filepath}")
+        filename_newfile = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+        logger.debug(f"capture to filename: {filename_newfile}")
 
         start_time_capture = time.time()
 
@@ -263,7 +261,7 @@ class ImageDb:
 
         # create JPGs and add to db
         start_time_postproc = time.time()
-        (item, _) = self.create_imageset_from_image(jpeg_buffer, requested_filepath)
+        (item, _) = self.create_imageset_from_image(jpeg_buffer, filename_newfile)
         actual_filepath = item["image"]
 
         # add exif information
@@ -272,24 +270,11 @@ class ImageDb:
             self._exif.inject_exif_to_jpeg(actual_filepath)
 
         # also create a copy for photobooth compatibility
-        if copy_for_compatibility:
+        if photoboothproject_filepath:
             # photobooth sends a complete path, where to put the file,
             # so copy it to requested filepath
 
-            # strip away the absolute path and process for safety:
-            # https://codeql.github.com/codeql-query-help/python/py-path-injection/
-            safe_path = os.path.normpath(
-                Path(
-                    settings.misc.photoboothproject_image_directory,
-                    os.path.basename(requested_filepath),
-                )
-            )
-            if not safe_path.startswith(
-                settings.misc.photoboothproject_image_directory
-            ):
-                raise RuntimeError("illegal path, check configuration")
-
-            shutil.copy2(actual_filepath, safe_path)
+            shutil.copy2(actual_filepath, photoboothproject_filepath)
 
         logger.info(f"capture to file {actual_filepath} successful")
         logger.info(
