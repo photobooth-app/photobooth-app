@@ -2,7 +2,7 @@
 v4l webcam implementation backend
 """
 import logging
-from multiprocessing import Process, shared_memory, Condition, Lock
+from multiprocessing import Process, shared_memory, Condition, Lock, Event
 from pymitter import EventEmitter
 from src.imageserverabstract import (
     ImageServerAbstract,
@@ -45,6 +45,8 @@ class ImageServerWebcamV4l(ImageServerAbstract):
             lock=Lock(),
         )
 
+        self._event_proc_shutdown: Event = Event()
+
         self._v4l_process = Process(
             target=v4l_img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
@@ -55,6 +57,7 @@ class ImageServerWebcamV4l(ImageServerAbstract):
                 # need to pass settings, because unittests can change settings,
                 # if not passed, the settings are not available in the separate process!
                 settings,
+                self._event_proc_shutdown,
             ),
             daemon=True,
         )
@@ -70,12 +73,15 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
+        # signal process to shutdown properly
+        self._event_proc_shutdown.set()
+
+        # wait until shutdown finished
+        self._v4l_process.join(timeout=5)
+        self._v4l_process.close()
+
         self._img_buffer.sharedmemory.close()
         self._img_buffer.sharedmemory.unlink()
-
-        self._v4l_process.terminate()
-        self._v4l_process.join(1)
-        self._v4l_process.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -137,6 +143,7 @@ def v4l_img_aquisition(
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
     _settings,
+    _event_proc_shutdown: Event,
 ):
     """_summary_
 
@@ -174,6 +181,10 @@ def v4l_img_aquisition(
             with _condition_img_buffer_ready:
                 # wait to be notified
                 _condition_img_buffer_ready.notify_all()
+
+            # abort streaming on shutdown so process can join and close
+            if _event_proc_shutdown.is_set():
+                break
 
 
 def available_camera_indexes():
