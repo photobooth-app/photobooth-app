@@ -31,21 +31,25 @@ class ImageServerPicam2LibcamAfInterval:
         self._imageserver: ImageServerAbstract = imageserver
 
         self._evtbus = evtbus
+        self._autofocus_trigger_timer: RepeatedTimer
+
         self._evtbus.on("statemachine/armed", self._on_armed)
         self._evtbus.on("statemachine/finished", self._on_capture_finished)
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
-        # on init test for continuous mode available - if so use it.
-        # if not go for auto and regular triggers
+        logger.info(f"{__name__} initialized")
 
+    def start(self):
         self._autofocus_trigger_timer = RepeatedTimer(
             interval=settings.backends.picam2_focuser_interval,
             function=self._on_autofocus_trigger_timer,
         )
 
         self._init_autofocus()
-        logger.info(f"{__name__} initialized")
+
+    def stop(self):
+        self._autofocus_trigger_timer.stop()
 
     def _on_autofocus_trigger_timer(self):
         """_summary_"""

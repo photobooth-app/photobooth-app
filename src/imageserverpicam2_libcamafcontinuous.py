@@ -38,6 +38,12 @@ class ImageServerPicam2LibcamAfContinuous:
         self._init_autofocus()
         logger.info(f"{__name__} initialized")
 
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
     def _on_armed(self):
         """nothing to do in continous mode here"""
 

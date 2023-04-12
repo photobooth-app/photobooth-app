@@ -169,6 +169,8 @@ class ImageServerPicam2(ImageServerAbstract):
                 f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
             )
             self._autofocus_module = autofocus_class_(self, evtbus)
+
+            self._autofocus_module.start()
         else:
             logger.info(
                 "picam2_focuser_module is disabled. "
@@ -200,16 +202,23 @@ class ImageServerPicam2(ImageServerAbstract):
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
 
+        if self._autofocus_module:
+            # autofocus module needs to stop their threads also for clean shutdown
+            logger.info("stopping autofocus module")
+            self._autofocus_module.stop()
+
         self._generate_images_thread.stop()
         self._stats_thread.stop()
 
-        self._generate_images_thread.join(1)
-        self._stats_thread.join(1)
+        self._generate_images_thread.join(timeout=5)
+        self._stats_thread.join(timeout=5)
 
         self._picam2.stop()
         self._picam2.stop_encoder()
 
-        logger.debug(f"{self.__module__} stopped")
+        logger.debug(
+            f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}"
+        )
 
     def wait_for_hq_image(self):
         """
@@ -281,12 +290,12 @@ class ImageServerPicam2(ImageServerAbstract):
         raise NotImplementedError()
 
     def _on_capture_mode(self):
-        logger.debug("change to capture mode")
+        logger.debug("change to capture mode requested")
         self._lastmode = self._currentmode
         self._currentmode = self._capture_config
 
     def _on_preview_mode(self):
-        logger.debug("change to preview mode")
+        logger.debug("change to preview mode requested")
         self._lastmode = self._currentmode
         self._currentmode = self._preview_config
 
@@ -357,7 +366,12 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._on_capture_mode()
 
             if (not self._currentmode == self._lastmode) and self._lastmode is not None:
-                self._switch_mode()
+                if not self._generate_images_thread.stopped():
+                    self._switch_mode()
+                else:
+                    logger.info(
+                        "switch_mode ignored, because shutdown already requested"
+                    )
 
             if self._hires_data.request_ready.is_set():
                 # only capture one pic and return to lores streaming afterwards
