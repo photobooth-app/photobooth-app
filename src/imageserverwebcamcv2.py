@@ -50,6 +50,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
             lock=Lock(),
         )
         self._event_hq_capture: Event = Event()
+        self._event_proc_shutdown: Event = Event()
 
         self._cv2_process = Process(
             target=cv2_img_aquisition,
@@ -63,6 +64,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
                 self._img_buffer_lores.condition,
                 self._img_buffer_hires.condition,
                 settings,
+                self._event_proc_shutdown,
             ),
             daemon=True,
         )
@@ -77,13 +79,17 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
+        # signal process to shutdown properly
+        self._event_proc_shutdown.set()
+
+        # wait until shutdown finished
+        self._cv2_process.join(5)
+        self._cv2_process.close()
+
         self._img_buffer_lores.sharedmemory.close()
         self._img_buffer_lores.sharedmemory.unlink()
         self._img_buffer_hires.sharedmemory.close()
         self._img_buffer_hires.sharedmemory.unlink()
-        self._cv2_process.terminate()
-        self._cv2_process.join(1)
-        self._cv2_process.close()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -154,6 +160,7 @@ def cv2_img_aquisition(
     # need to pass settings, because unittests can change settings,
     # if not passed, the settings are not available in the separate process!
     _settings,
+    _event_proc_shutdown: Event,
 ):
     """
     process function to gather webcam images
@@ -199,7 +206,7 @@ def cv2_img_aquisition(
     for _ in range(5):
         _, _ = _video.read()
 
-    while True:
+    while not _event_proc_shutdown.is_set():
         ret, array = _video.read()
         # ret=True successful read, otherwise False?
         if not ret:
@@ -243,6 +250,9 @@ def cv2_img_aquisition(
             with _condition_img_buffer_lores_ready:
                 # wait to be notified
                 _condition_img_buffer_lores_ready.notify_all()
+
+    # release camera on process shutdown
+    _video.release()
 
 
 def _video_set_check(_video, prop, value):
