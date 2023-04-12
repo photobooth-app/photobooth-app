@@ -18,7 +18,6 @@ def get_images(backend: ImageServerAbstract):
         with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
             img.verify()
     except Exception as exc:
-        print("exception!")
         print(exc)
         raise AssertionError("backend did not return valid image bytes") from exc
 
@@ -28,4 +27,6 @@ def get_images(backend: ImageServerAbstract):
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes {exc}") from exc
 
+    # stop backend, ensure process is joined properly to collect coverage:
+    # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-process
     backend.stop()
