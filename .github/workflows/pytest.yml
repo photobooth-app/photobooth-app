@@ -28,11 +28,7 @@ jobs:
       - name: Install pip dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest
-          pip install pytest-benchmark
-          pip install httpx
-          pip install pytest-cov
-          pip install simplejpeg
+          if [ -f requirements-testing.txt ]; then pip install -r requirements-testing.txt; fi
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
