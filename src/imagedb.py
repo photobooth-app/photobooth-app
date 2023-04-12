@@ -22,6 +22,9 @@ PATH_IMAGE = "image/"
 PATH_PREVIEW = "preview/"
 PATH_THUMBNAIL = "thumbnail/"
 
+# retry several times to get image
+MAX_ATTEMPTS = 3
+
 
 def _db_imageitem(filepath: str, user_caption: str = ""):
     if not filepath:
@@ -223,26 +226,42 @@ class ImageDb:
 
         return item
 
-    def capture_hq_image(self, requested_filepath=None, copy_for_compatibility=False):
+    def capture_hq_image(self, photoboothproject_filepath: str = None):
         """
         trigger still image capture and align post processing
         """
 
-        if not requested_filepath:
-            requested_filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
-
-        logger.debug(f"capture to filename: {requested_filepath}")
+        filename_newfile = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
+        logger.debug(f"capture to filename: {filename_newfile}")
 
         start_time_capture = time.time()
 
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        jpeg_buffer = self._imageserver.wait_for_hq_image()
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            try:
+                jpeg_buffer = self._imageserver.wait_for_hq_image()
+            except TimeoutError:
+                logger.error(
+                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
+                )
+                # can we do additional error handling here?
+            else:
+                break
+        else:
+            # we failed finally all the attempts - deal with the consequences.
+            logger.critical(
+                "critical error capture image. "
+                f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
+            )
+            raise RuntimeError(
+                f"finally failed after {MAX_ATTEMPTS} attempts to capture image!"
+            )
 
         # create JPGs and add to db
         start_time_postproc = time.time()
-        (item, _) = self.create_imageset_from_image(jpeg_buffer, requested_filepath)
+        (item, _) = self.create_imageset_from_image(jpeg_buffer, filename_newfile)
         actual_filepath = item["image"]
 
         # add exif information
@@ -251,10 +270,11 @@ class ImageDb:
             self._exif.inject_exif_to_jpeg(actual_filepath)
 
         # also create a copy for photobooth compatibility
-        if copy_for_compatibility:
+        if photoboothproject_filepath:
             # photobooth sends a complete path, where to put the file,
             # so copy it to requested filepath
-            shutil.copy2(actual_filepath, requested_filepath)
+
+            shutil.copy2(actual_filepath, photoboothproject_filepath)
 
         logger.info(f"capture to file {actual_filepath} successful")
         logger.info(

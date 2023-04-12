@@ -1,0 +1,7 @@
+#packages required for testing
+#install: pip install -r requirements-testing.txt
+pytest
+pytest-benchmark
+pytest-cov
+httpx
+simplejpeg

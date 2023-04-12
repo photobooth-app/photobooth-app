@@ -9,3 +9,4 @@ log/*.log*
 
 .coverage
 coverage.xml
+junit/*

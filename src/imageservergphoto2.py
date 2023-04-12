@@ -120,7 +120,7 @@ class ImageServerGphoto2(ImageServerAbstract):
         with self._hires_data.condition:
             self._hires_data.request_ready.set()
 
-            if not self._hires_data.condition.wait(timeout=2):
+            if not self._hires_data.condition.wait(timeout=4):
                 raise TimeoutError("timeout receiving frames")
 
         self._hires_data.request_ready.clear()
@@ -139,10 +139,9 @@ class ImageServerGphoto2(ImageServerAbstract):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
-            while True:
-                if not self._lores_data.condition.wait(5):
-                    raise IOError("timeout receiving frames")
-                return self._lores_data.data
+            if not self._lores_data.condition.wait(timeout=4):
+                raise TimeoutError("timeout receiving frames")
+            return self._lores_data.data
 
     def _wait_for_lores_frame(self):
         """function not existant"""

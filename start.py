@@ -21,7 +21,11 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import StreamingResponse, FileResponse, Response
+from fastapi.responses import (
+    StreamingResponse,
+    FileResponse,
+    Response,
+)
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from pymitter import EventEmitter
 from statemachine.exceptions import TransitionNotAllowed
@@ -196,9 +200,22 @@ def api_cmd_frameserver_previewmode_get():
 @app.post("/cmd/capture")
 # photobooth compatibility
 def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
+    # strip away the absolute path and process for safety:
+    # https://codeql.github.com/codeql-query-help/python/py-path-injection/
+    safe_path = os.path.normpath(
+        Path(
+            settings.misc.photoboothproject_image_directory,
+            os.path.basename(filepath),
+        )
+    )
+    if not safe_path.startswith(settings.misc.photoboothproject_image_directory):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "illegal path, check configuration"
+        )
+
     try:
-        imageDb.capture_hq_image(filepath, True)
-        logger.info(f"file {filepath} created successfully")
+        imageDb.capture_hq_image(safe_path)
+        logger.info(f"file {safe_path} created successfully")
     except Exception as exc:  # pylint: disable=broad-exception-caught
         logger.critical("error receiving file from backend")
         logger.exception(exc)
@@ -383,7 +400,8 @@ def read_index():
     """
     return homepage of booth
     """
-    return FileResponse("web/index.html")
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+    return FileResponse(path="web/index.html", headers=headers)
 
 
 # if not match anything above, default to deliver static files from web directory

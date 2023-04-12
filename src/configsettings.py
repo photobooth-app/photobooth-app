@@ -38,27 +38,27 @@ class GroupCommon(BaseModel):
 
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="camera resolution width for still photos on supported backends (eg. picam2, webcam)",
+        description="still photo camera resolution width on supported backends",
     )
     CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="camera resolution height for still photos on supported backends (eg. picam2, webcam)",
+        description="still photo camera resolution height on supported backends",
     )
     PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="camera resolution width for liveview on supported backends (eg. picam2, webcam)",
+        description="liveview camera resolution width on supported backends",
     )
     PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="camera resolution height for liveview on supported backends (eg. picam2, webcam)",
+        description="liveview camera resolution height on supported backends",
     )
     LIVEVIEW_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="Resolution width liveview is streamed (eg. picam2, webcam)",
+        description="Liveview resolution width",
     )
     LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="Resolution height liveview is streamed (eg. picam2, webcam)",
+        description="Liveview resolution height",
     )
     LIVEPREVIEW_QUALITY: int = Field(
         default=80,
@@ -71,21 +71,21 @@ class GroupCommon(BaseModel):
         default=60,
         ge=10,
         le=100,
-        description="Still JPEG thumbnail quality (thumbs used in gallery list)",
+        description="Still JPEG thumbnail quality, thumbs used in gallery list",
         ui_component="QSlider",
     )
     PREVIEW_STILL_QUALITY: int = Field(
         default=75,
         ge=10,
         le=100,
-        description="Still JPEG preview quality (image shown in gallery detail)",
+        description="Still JPEG preview quality, preview still shown in gallery detail",
         ui_component="QSlider",
     )
     HIRES_STILL_QUALITY: int = Field(
         default=90,
         ge=10,
         le=100,
-        description="Still JPEG full resolution quality (downloaded photo)",
+        description="Still JPEG full resolution quality, applied to download images and images with filter",
         ui_component="QSlider",
     )
     PREVIEW_STILL_WIDTH: int = Field(
@@ -105,27 +105,42 @@ class GroupCommon(BaseModel):
         default=EnumDebugLevel.DEBUG,
         description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",
     )
-
     LIVEPREVIEW_FRAMERATE: int = Field(
         default=15,
         ge=5,
         le=30,
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+        ui_component="QSlider",
     )
-
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}",
         description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
     )
     # flip camera source horizontal/vertical
-    CAMERA_TRANSFORM_HFLIP: bool = False
-    CAMERA_TRANSFORM_VFLIP: bool = False
-
-    PROCESS_COUNTDOWN_TIMER: float = 3
-    PROCESS_COUNTDOWN_OFFSET: float = 0.25
-    PROCESS_ADD_EXIF_DATA: bool = True
-
-    webserver_port: int = 8000
+    CAMERA_TRANSFORM_HFLIP: bool = Field(
+        default=False,
+        description="Apply horizontal flip to image source on supported backends",
+    )
+    CAMERA_TRANSFORM_VFLIP: bool = Field(
+        default=False,
+        description="Apply vertical flip to image source on supported backends",
+    )
+    PROCESS_COUNTDOWN_TIMER: float = Field(
+        default=3,
+        description="Countdown in seconds, started when user start a capture process",
+    )
+    PROCESS_COUNTDOWN_OFFSET: float = Field(
+        default=0.25,
+        description="Trigger capture offset in seconds. 0 trigger exactly when countdown is 0. Triggers the capture offset by the given seconds to compensate for delay in camera.",
+    )
+    PROCESS_ADD_EXIF_DATA: bool = Field(
+        default=True,
+        description="Add GPS data to media.",
+    )
+    webserver_port: int = Field(
+        default=8000,
+        description="Port to serve the photobooth website. Ensure the port is available.",
+    )
 
 
 class EnumImageBackendsMain(str, Enum):
@@ -182,40 +197,47 @@ class GroupBackends(BaseModel):
     MAIN_BACKEND: EnumImageBackendsMain = Field(
         title="Main Backend",
         default=EnumImageBackendsMain.IMAGESERVER_SIMULATED,
-        description="Choose a backend to use for high quality still captures. Also used for livepreview if backend is capable of.",
+        description="Main backend to use for high quality still captures. Also used for livepreview if backend is capable of.",
     )
     LIVE_BACKEND: EnumImageBackendsLive = Field(
         title="Live Backend",
         default=None,
-        description="Choose secondary backend used for live streaming only if main backend does not support livepreview (useful to use a webcam if DSLR camera gives no livestream)",
+        description="Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability.",
     )
     LIVEPREVIEW_ENABLED: bool = Field(
         default=True, description="Enable livestream (if possible)"
     )
 
-    cv2_device_index: int = 2
-    v4l_device_index: int = 2
+    cv2_device_index: int = Field(
+        default=0, description="Device index of webcam opened in cv2 backend"
+    )
+    v4l_device_index: int = Field(
+        default=0, description="Device index of webcam opened in v4l backend"
+    )
 
     picam2_AE_EXPOSURE_MODE: int = Field(
         default=1,
         ge=0,
         le=4,
-        description="Usually 0=normal exposure, 1=short, 2=long, 3=custom (not all necessarily supported by camera)!",
+        description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
     )
 
     picam2_focuser_module: EnumFocuserModule = Field(
         title="Picam2 Focuser Module",
         default=EnumFocuserModule.NULL,
-        description="Choose continuous or interval mode to trigger autofocus of picamera2 cam. Choose custom af to enable advanced focuser interface to be configured on separate tab.",
+        description="Choose continuous or interval mode to trigger autofocus of picamera2 cam.",
     )
 
     picam2_stream_quality: EnumPicamStreamQuality = Field(
         title="Picam2 Stream Quality (for livepreview)",
         default=EnumPicamStreamQuality.MEDIUM,
-        description="Lower quality results in less data to be transferred. 0=lowest quality, 4=highest quality",
+        description="Lower quality results in less data to be transferred and may reduce load on display device.",
     )
 
-    picam2_focuser_interval: int = 10  # every x seconds trigger autofocus
+    picam2_focuser_interval: int = Field(
+        default=10,
+        description="Every x seconds trigger autofocus",
+    )
 
 
 class GroupHardwareInput(BaseModel):
@@ -224,8 +246,14 @@ class GroupHardwareInput(BaseModel):
     class Config:
         title = "Hardware Input/Output Settings"
 
-    keyboard_input_enabled: bool = False
-    keyboard_input_keycode_takepic: str = "down"
+    keyboard_input_enabled: bool = Field(
+        default=False,
+        description="Enable keyboard input globally",
+    )
+    keyboard_input_keycode_takepic: str = Field(
+        default="down",
+        description="Keycode triggers capture of one image",
+    )
 
 
 class GroupLocationService(BaseModel):
@@ -238,16 +266,34 @@ class GroupLocationService(BaseModel):
     class Config:
         title = "Location Based Service Settings"
 
-    LOCATION_SERVICE_ENABLED: bool = False
-    LOCATION_SERVICE_API_KEY: str = ""
-    LOCATION_SERVICE_CONSIDER_IP: bool = True
-    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = 0
-    LOCATION_SERVICE_FORCED_UPDATE: int = 60
-    # every x minutes
-    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = 10
-    # retries after program start to get more accurate data
-    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = 1000
-    # threshold below which the data is accurate enough to not trigger high freq updates (in meter)
+    LOCATION_SERVICE_ENABLED: bool = Field(
+        default=False,
+        description="Enable google geolocation service. Needs API key!",
+    )
+    LOCATION_SERVICE_API_KEY: str = Field(
+        default="",
+        description="Geolocation API key. Usually free tier amount sufficient for photobooth.",
+    )
+    LOCATION_SERVICE_CONSIDER_IP: bool = Field(
+        default=True,
+        description="Fallback to IP location if no WiFi found nearby.",
+    )
+    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = Field(
+        default=0,
+        description="WiFi Interface Number, no need to change usually.",
+    )
+    LOCATION_SERVICE_FORCED_UPDATE: int = Field(
+        default=60,
+        description="Once valid location found still update every x minutes.",
+    )
+    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = Field(
+        default=10,
+        description="Number of retries after program start to get more accurate data.",
+    )
+    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = Field(
+        default=1000,
+        description="Threshold in meter below which the location is considered accurate enough to not trigger high freq updates.",
+    )
 
 
 class GroupUiSettings(BaseModel):
@@ -256,16 +302,34 @@ class GroupUiSettings(BaseModel):
     class Config:
         title = "Personalize the User Interface"
 
-    FRONTPAGE_TEXT: str = '<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>'
-
-    GALLERY_ENABLE: bool = True
-    GALLERY_EMPTY_MSG: str = "So boring here...🤷‍♂️<br>Let's take some pictures 📷💕"
-
-    TAKEPIC_MSG: str = "CHEEESE!"
-    TAKEPIC_MSG_TIME: float = 0.5
-    AUTOCLOSE_NEW_ITEM_ARRIVED: int = 10
-
-    SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = True
+    FRONTPAGE_TEXT: str = Field(
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
+        description="Text/HTML displayed on frontpage.",
+    )
+    GALLERY_ENABLE: bool = Field(
+        default=True,
+        description="Enable gallery for user.",
+    )
+    GALLERY_EMPTY_MSG: str = Field(
+        default="So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
+        description="Message displayed if gallery is empty.",
+    )
+    TAKEPIC_MSG: str = Field(
+        default="CHEEESE!",
+        description="Message shown during capture. Use icons also.",
+    )
+    TAKEPIC_MSG_TIME: float = Field(
+        default=0.5,
+        description="Offset in seconds, the message above shall be shown.",
+    )
+    AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
+        default=15,
+        description="Timeout in seconds a new item popup closes automatically.",
+    )
+    SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
+        default=True,
+        description="Show link to admin center, usually only during setup.",
+    )
 
 
 class GroupWled(BaseModel):
@@ -283,8 +347,29 @@ class GroupWled(BaseModel):
         title = "WLED Integration Settings"
 
     # WledService settings
-    ENABLED: bool = False
-    SERIAL_PORT: str = None
+    ENABLED: bool = Field(
+        default=False,
+        description="Enable WLED integration for user feedback during countdown and capture by LEDs.",
+    )
+    SERIAL_PORT: str = Field(
+        default="",
+        description="Serial port the WLED device is connected to.",
+    )
+
+
+class GroupMisc(BaseModel):
+    """
+    Quite advanced, usually not necessary to touch.
+    """
+
+    class Config:
+        title = "Miscellaneous Settings"
+
+    # WledService settings
+    photoboothproject_image_directory: str = Field(
+        default="/var/www/html/data/tmp/",
+        description="Photoboothproject compatibility setting. Provide the directory, where photobooth expects the image to be created. Needed for safety.",
+    )
 
 
 def json_config_settings_source(_settings: BaseSettings) -> dict[str, Any]:
@@ -331,6 +416,7 @@ class ConfigSettings(BaseSettings):
     wled: GroupWled = GroupWled()
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
+    misc: GroupMisc = GroupMisc()
 
     # make it a singleton: https://stackoverflow.com/a/1810367
     def __new__(cls, *args, **kwargs):

@@ -1,14 +1,13 @@
 {
-  "sshUser": "pi",
-  "sshEndpoint": "photobooth",
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
-    "./",
     "-v",
+    "--cov-report=term",
+    "--cov-report=xml:coverage.xml",
+    "--cov-report=html:coverage_html",
     "--cov",
-    "--cov-report=xml",
-    "tests/"
+    "./"
   ],
   "python.linting.flake8Enabled": false,
   "python.linting.pylintEnabled": true,

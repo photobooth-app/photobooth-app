@@ -103,7 +103,7 @@ class ProcessingPicture(StateMachine):
         """_summary_"""
         try:
             self._evtbus.emit("statemachine/capture")
-        except IOError as exc:
+        except TimeoutError as exc:
             logger.critical("error getting a still from backend")
             logger.exception(exc)
 
