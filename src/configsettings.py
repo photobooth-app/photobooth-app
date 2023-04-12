@@ -357,6 +357,21 @@ class GroupWled(BaseModel):
     )
 
 
+class GroupMisc(BaseModel):
+    """
+    Quite advanced, usually not necessary to touch.
+    """
+
+    class Config:
+        title = "Miscellaneous Settings"
+
+    # WledService settings
+    photoboothproject_image_directory: str = Field(
+        default="/var/www/html/data/tmp/",
+        description="Photoboothproject compatibility setting. Provide the directory, where photobooth expects the image to be created. Needed for safety.",
+    )
+
+
 def json_config_settings_source(_settings: BaseSettings) -> dict[str, Any]:
     """
     custom parser to read json config file
@@ -401,6 +416,7 @@ class ConfigSettings(BaseSettings):
     wled: GroupWled = GroupWled()
     locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
+    misc: GroupMisc = GroupMisc()
 
     # make it a singleton: https://stackoverflow.com/a/1810367
     def __new__(cls, *args, **kwargs):

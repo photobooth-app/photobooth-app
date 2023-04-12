@@ -275,7 +275,21 @@ class ImageDb:
         if copy_for_compatibility:
             # photobooth sends a complete path, where to put the file,
             # so copy it to requested filepath
-            shutil.copy2(actual_filepath, requested_filepath)
+
+            # strip away the absolute path and process for safety:
+            # https://codeql.github.com/codeql-query-help/python/py-path-injection/
+            safe_path = os.path.normpath(
+                Path(
+                    settings.misc.photoboothproject_image_directory,
+                    os.path.basename(requested_filepath),
+                )
+            )
+            if not safe_path.startswith(
+                settings.misc.photoboothproject_image_directory
+            ):
+                raise RuntimeError("illegal path, check configuration")
+
+            shutil.copy2(actual_filepath, safe_path)
 
         logger.info(f"capture to file {actual_filepath} successful")
         logger.info(
