@@ -2,6 +2,11 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "pytest with coverage",
+      "type": "shell",
+      "command": "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
+    },
+    {
       "label": "startBoothPi",
       "type": "shell",
       "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"

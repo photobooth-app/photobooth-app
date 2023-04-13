@@ -1,14 +1,7 @@
 {
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": [
-    "-v",
-    "--cov-report=term",
-    "--cov-report=xml:coverage.xml",
-    "--cov-report=html:coverage_html",
-    "--cov",
-    "./"
-  ],
+  "python.testing.pytestArgs": ["-v", "./"],
   "python.linting.flake8Enabled": false,
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true
