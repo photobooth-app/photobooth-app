@@ -24,9 +24,7 @@ class InformationService:
         self._imageservers: ImageServerAbstract = imageservers
 
         # objects
-        self._stats_interval_timer = RepeatedTimer(
-            STATS_INTERVAL_TIMER, self._on_stats_interval_timer
-        )
+        self._stats_interval_timer: RepeatedTimer
 
         # registered events
         self._evtbus.on("publishSSE/initial", self._on_stats_interval_timer)
@@ -35,6 +33,9 @@ class InformationService:
 
     def start(self):
         """_summary_"""
+        self._stats_interval_timer = RepeatedTimer(
+            STATS_INTERVAL_TIMER, self._on_stats_interval_timer
+        )
         self._stats_interval_timer.start()
 
     def stop(self):
