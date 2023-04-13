@@ -69,7 +69,7 @@ Following commands have to be set in photobooth project to use this app as image
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
-take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -H 'accept: application/json' -H 'Content-Type: application/json' -d '"%s"'
+take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -d '"%s"'
 take_picture_msg: Done
 pre_photo_cmd: curl http://photobooth:8000/cmd/frameserver/capturemode
 post_photo_cmd: curl http://photobooth:8000/cmd/frameserver/previewmode
@@ -132,6 +132,8 @@ network={
 
 ## :mag: Changelog
 
+- 2023-04-13
+  - changed api commands for photobooth
 - 2023-04-08
   - picamera2 now with gpu hardware acceleration reduce cpu load
   - gphoto2 implemented

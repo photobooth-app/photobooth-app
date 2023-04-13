@@ -55,6 +55,30 @@ SERVICE_NAME = "imageserver"
 logger = logging.getLogger(__name__)
 
 
+# set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
+# spawn will be the default for all systems in future so it's set here now to have same
+# results on all platforms
+multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+logger.info(f"{multiprocessing_start_method=}, before forcing")
+multiprocessing.set_start_method(method="spawn", force=True)
+multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+logger.info(f"{multiprocessing_start_method=}, forced")
+
+wledservice = WledService(ee)
+
+# load imageserver dynamically because service can be configured
+# https://stackoverflow.com/a/14053838
+imageServers = ImageServers(ee)
+
+imageDb = ImageDb(ee, imageServers.primary_backend)
+
+ks = KeyboardService(ee)
+
+
+ins = InformationService(ee, imageServers)
+
+processingpicture = ProcessingPicture(ee)
+
 app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
 
 """
@@ -200,7 +224,9 @@ def api_cmd_frameserver_previewmode_get():
 
 @app.post("/cmd/capture")
 # photobooth compatibility
-def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
+def api_cmd_capture_post(
+    filepath: str = Body("capture.jpg", media_type="application/x-www-form-urlencoded")
+):
     # strip away the absolute path and process for safety:
     # https://codeql.github.com/codeql-query-help/python/py-path-injection/
     safe_path = os.path.normpath(
@@ -209,9 +235,14 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
             os.path.basename(filepath),
         )
     )
-    if not safe_path.startswith(settings.misc.photoboothproject_image_directory):
+
+    if not safe_path.startswith(
+        os.path.normpath(settings.misc.photoboothproject_image_directory)
+    ):
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "illegal path, check configuration"
+            status.HTTP_400_BAD_REQUEST,
+            "illegal path, check configuration, "
+            f"allowed path {settings.misc.photoboothproject_image_directory=}",
         )
 
     try:
@@ -448,33 +479,11 @@ if __name__ == "__main__":
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
     logger.info(f"{__debug__=}")
 
-    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
-    # spawn will be the default for all systems in future so it's set here now to have same
-    # results on all platforms
-    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"{multiprocessing_start_method=}, before forcing")
-    multiprocessing.set_start_method(method="spawn", force=True)
-    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"{multiprocessing_start_method=}, forced")
-
-    wledservice = WledService(ee)
-
-    # load imageserver dynamically because service can be configured
-    # https://stackoverflow.com/a/14053838
-    imageServers = ImageServers(ee)
-
-    imageDb = ImageDb(ee, imageServers.primary_backend)
-
-    ks = KeyboardService(ee)
-
-    imageServers.start()
-
-    ins = InformationService(ee, imageServers)
-
-    processingpicture = ProcessingPicture(ee)
-
     # serve files forever
     try:
+        imageServers.start()
+        ins.start()
+
         # log_level="trace", default info
         config = uvicorn.Config(
             app=app,
