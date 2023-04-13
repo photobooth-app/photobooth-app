@@ -13,7 +13,12 @@ client = TestClient(app)
 def test_read_main():
     response = client.get("/")
     assert response.status_code == 200
-    # assert response.json() == {"msg": "Hello World"}
+
+    # ensure no cache on main page so frontent updates work fine
+    assert (
+        "cache-control" in response.headers
+        and "no-store, no-cache, must-revalidate" == response.headers["cache-control"]
+    )
 
 
 def test_read_config_scheme():
