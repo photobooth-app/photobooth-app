@@ -34,4 +34,4 @@ jobs:
         run: |
           pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./
       - name: Upload coverage reports to Codecov
-          uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v3
