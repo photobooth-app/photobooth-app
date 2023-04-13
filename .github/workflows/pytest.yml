@@ -37,4 +37,4 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: /home/runner/work/mgrl/photobooth-app/coverage.xml
+          files: /home/runner/work/photobooth-app/photobooth-app/coverage.xml
