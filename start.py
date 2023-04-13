@@ -3,12 +3,13 @@
 Photobooth Application start script
 """
 import subprocess
-import os
+import os, sys
 import platform
 import logging
 import asyncio
 import uuid
 import multiprocessing
+import socket
 from asyncio import Queue, QueueFull
 from pathlib import Path
 import uvicorn
@@ -421,34 +422,40 @@ async def validation_exception_handler(request, exc):
 
 
 if __name__ == "__main__":
+    # guard to start only one instance at a time.
+    try:
+        s = socket.socket()
+        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
+    except OSError:
+        logger.error("startup aborted. another instance is running. exiting.")
+        sys.exit(-1)
+
     logger.info("Welcome to qPhotobooth")
-    logger.info(f"platform.system={platform.system()}")
-    logger.info(f"platform.release={platform.release()}")
-    logger.info(f"platform.machine={platform.machine()}")
-    logger.info(f"platform.python_version={platform.python_version()}")
-    logger.info(f"hostname={platform.node()}")
-    logger.info(f"psutil.cpu_count logical={psutil.cpu_count()}")
-    logger.info(f"psutil.cpu_count cores={psutil.cpu_count(logical=False)}")
-    logger.info(f"psutil.disk_partitions={psutil.disk_partitions()}")
+    logger.info(f"{platform.system()=}")
+    logger.info(f"{platform.release()=}")
+    logger.info(f"{platform.machine()=}")
+    logger.info(f"{platform.python_version()=}")
+    logger.info(f"{platform.node()=}")
+    logger.info(f"{psutil.cpu_count()=}")
+    logger.info(f"{psutil.cpu_count(logical=False)=}")
+    logger.info(f"{psutil.disk_partitions()=}")
     if platform.system() == "Linux":
-        logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
+        logger.info(f"{psutil.disk_usage('/')=}")
     elif platform.system() == "Windows":
-        logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
-    logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
-    logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
+        logger.info(f"{psutil.disk_usage('C:')=}")
+    logger.info(f"{psutil.net_if_addrs()=}")
+    logger.info(f"{psutil.virtual_memory()=}")
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-    logger.info(f"__debug__={__debug__}")
+    logger.info(f"{__debug__=}")
 
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
     multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(
-        f"multiprocessing_start_method={multiprocessing_start_method}, before forcing"
-    )
+    logger.info(f"{multiprocessing_start_method=}, before forcing")
     multiprocessing.set_start_method(method="spawn", force=True)
     multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}, forced")
+    logger.info(f"{multiprocessing_start_method=}, forced")
 
     wledservice = WledService(ee)
 
