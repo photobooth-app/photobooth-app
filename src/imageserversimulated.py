@@ -30,12 +30,22 @@ class ImageServerSimulated(ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size
-        )
+        self._img_buffer_shm: shared_memory.SharedMemory
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
         self._event_proc_shutdown: Event = Event()
+
+        self._p: Process
+
+    def start(self):
+        """To start the image backend"""
+        # ensure shutdown event is cleared (needed for restart during testing)
+        self._event_proc_shutdown.clear()
+
+        self._img_buffer_shm = shared_memory.SharedMemory(
+            create=True,
+            size=settings._shared_memory_buffer_size,  # pylint: disable=W0212
+        )
 
         self._p = Process(
             target=img_aquisition,
@@ -48,11 +58,8 @@ class ImageServerSimulated(ImageServerAbstract):
             ),
             daemon=True,
         )
-
-    def start(self):
-        """To start the image backend"""
-
         self._p.start()
+
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
@@ -207,6 +214,3 @@ def img_aquisition(
         with _condition_img_buffer_ready:
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
-
-    # release img on process shutdown
-    img.close()
