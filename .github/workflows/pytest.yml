@@ -32,6 +32,9 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
-          pytest -v --cov-report=term --cov-report=xml --cov ./
+          pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: /home/runner/work/mgrl/photobooth-app/coverage.xml
