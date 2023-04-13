@@ -278,6 +278,9 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        if self._generate_images_thread.stopped():
+            raise RuntimeError("shutdown already in progress, abort early")
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=4):
                 # wait returns true if timeout expired

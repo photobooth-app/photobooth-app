@@ -109,6 +109,8 @@ class ImageServerSimulated(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        if self._event_proc_shutdown.is_set():
+            raise RuntimeError("shutdown already in progress, abort early")
 
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=4):

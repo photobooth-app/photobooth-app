@@ -119,6 +119,10 @@ class ImageServerWebcamV4l(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+
+        if self._event_proc_shutdown.is_set():
+            raise RuntimeError("shutdown already in progress, abort early")
+
         with self._img_buffer.condition:
             if not self._img_buffer.condition.wait(timeout=4):
                 raise TimeoutError("timeout receiving frames")
