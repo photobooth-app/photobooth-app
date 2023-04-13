@@ -65,43 +65,15 @@ multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
 logger.info(f"{multiprocessing_start_method=}, forced")
 
 wledservice = WledService(ee)
-
 # load imageserver dynamically because service can be configured
 # https://stackoverflow.com/a/14053838
 imageServers = ImageServers(ee)
-
 imageDb = ImageDb(ee, imageServers.primary_backend)
-
 ks = KeyboardService(ee)
-
-
 ins = InformationService(ee, imageServers)
-
 processingpicture = ProcessingPicture(ee)
 
 app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
-
-"""
-request_stop = False
-
-
-def signal_handler(sig, frame):
-    global request_stop
-
-    request_stop = True
-
-    logger.info("request_stop set True to stop ongoing processes")
-    # TODO! this seems not to work properly yet, function is not called!
-
-    # sys.exit(0)
-
-
-# signal CTRL-C and systemctl stop
-signal.signal(signal.SIGINT, signal_handler)
-# this is not working, because uvicorn is eating up signal handler
-# definitions currently: https://github.com/encode/uvicorn/issues/1579
-# as workaround currently we set force_exit to True to shutdown the server
-"""
 
 
 @app.get("/eventstream")
@@ -479,28 +451,38 @@ if __name__ == "__main__":
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
     logger.info(f"{__debug__=}")
 
-    # serve files forever
-    try:
-        imageServers.start()
-        ins.start()
+    # start services
+    imageServers.start()
+    ins.start()
 
-        # log_level="trace", default info
-        config = uvicorn.Config(
-            app=app,
-            host="0.0.0.0",
-            port=settings.common.webserver_port,
-            log_level="info",
-        )
-        server = uvicorn.Server(config)
+    # log_level="trace", default info
+    config = uvicorn.Config(
+        app=app,
+        host="0.0.0.0",
+        port=settings.common.webserver_port,
+        log_level="info",
+    )
+    server = uvicorn.Server(config)
 
-        # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
-        # shutdown can be handled properly.
-        # Otherwise the stream.mjpg if open will block shutdown of the server
-        server.force_exit = True
+    """
+    shutdown app workaround:
+    workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
+    shutdown can be handled properly.
+    Otherwise the stream.mjpg if open will block shutdown of the server
+    signal CTRL-C and systemctl stop would have no effect, app stalls
 
-        ls.uvicorn()
+    signal.signal(signal.SIGINT, signal_handler) and similar
+    don't work, because uvicorn is eating up signal handler
+    currently: https://github.com/encode/uvicorn/issues/1579
+    the workaround: currently we set force_exit to True to shutdown the server
+    """
+    server.force_exit = True
 
-        server.run()
-    finally:
-        imageServers.stop()
-        ins.stop()
+    ls.uvicorn()
+
+    # serve files forever, loops endless
+    server.run()
+
+    # shutdown services
+    imageServers.stop()
+    ins.stop()
