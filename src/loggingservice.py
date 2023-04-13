@@ -67,25 +67,33 @@ class LoggingService:
     """_summary_"""
 
     def __init__(self, evtbus: EventEmitter):
+        """Setup logger
+
+        Args:
+            evtbus (EventEmitter): _description_
+        """
+
+        ## formatter ##
+
         fmt = "%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s"
         log_formatter = logging.Formatter(fmt=fmt)
 
         logging.basicConfig(level=logging.DEBUG, format=fmt, force=True)
 
-        # our default logger (root = None)
-        # root loggers seems to be the template for all other loggers,
-        # that are not in __name__ namespace. not too verbose here
+        ## logger ##
+
+        # default logger (root = None or "")
+        # root logger also to be the template for all other loggers,
+        # that are created in the app at a later time during run
         root_logger = logging.getLogger(name=None)
         # Remove all handlers associated with the root logger object.
-        # for handler in logging.root.handlers[:]:
-        #    logging.root.removeHandler(handler)
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
+        # set level based on users settings
         root_logger.setLevel(settings.common.DEBUG_LEVEL.value)
 
-        # our default logger (not root, root would be None)
-        main_logger = logging.getLogger(name="__main__")
-        main_logger.setLevel(settings.common.DEBUG_LEVEL.value)
-        # stop propagating here, so root does not receive __main__'s messages avoiding duplicates
-        # mainLogger.propagate = False
+        ## handler ##
 
         # create console handler
         self.console_handler = logging.StreamHandler()
@@ -101,13 +109,11 @@ class LoggingService:
         self.eventstream_handler = EventstreamLogHandler(evtbus=evtbus)
         self.eventstream_handler.setFormatter(log_formatter)
 
-        # add ch to logger
-        # rootLogger.addHandler(consoleHandler)
+        ## wire logger and handler ##
+
+        root_logger.addHandler(self.console_handler)
         root_logger.addHandler(self.rotatingfile_handler)
         root_logger.addHandler(self.eventstream_handler)
-        # mainLogger.addHandler(consoleHandler)
-        main_logger.addHandler(self.rotatingfile_handler)
-        main_logger.addHandler(self.eventstream_handler)
 
         # loggers_defined = [logging.getLogger(name)
         #                   for name in logging.root.manager.loggerDict]
