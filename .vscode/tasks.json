@@ -12,6 +12,11 @@
       "command": "pylint -v *.py ./src/*.py"
     },
     {
+      "label": "statemachine diagram (needs pydot and graphviz)",
+      "type": "shell",
+      "command": "python -m statemachine.contrib.diagram src.processingpicture.ProcessingPicture diagram_ProcessingPicture.png"
+    },
+    {
       "label": "startBoothPi",
       "type": "shell",
       "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"
