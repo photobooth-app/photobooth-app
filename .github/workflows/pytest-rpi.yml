@@ -2,11 +2,13 @@
 
 name: pytest-rpi
 
-on:
-  push:
-    branches: ["main", "dev"]
-  pull_request:
-    branches: ["main"]
+# disabled currently, but in codeupload: https://github.com/codecov/uploader/issues/922
+
+#on:
+#  push:
+#    branches: ["main", "dev"]
+#  pull_request:
+#    branches: ["main"]
 
 permissions:
   contents: read
@@ -32,6 +34,5 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         with:
-          verbose: true
-        #  token: ${{ secrets.CODECOV_TOKEN }}
-        #  files: ./coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
