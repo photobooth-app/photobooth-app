@@ -71,7 +71,7 @@ imageServers = ImageServers(ee)
 imageDb = ImageDb(ee, imageServers.primary_backend)
 ks = KeyboardService(ee)
 ins = InformationService(ee, imageServers)
-processingpicture = ProcessingPicture(ee)
+processingpicture = ProcessingPicture(ee, imageServers, imageDb)
 
 app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
 
@@ -181,24 +181,29 @@ def api_post_config_current(updated_settings: ConfigSettings):
     util_systemd_control("restart")
 
 
-@app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get(
+    "/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT
+)  # deprecated
+@app.get("/cmd/imageserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
 # photobooth compatibility
-def api_cmd_framserver_capturemode_get():
-    ee.emit("httprequest/armed")
-    ee.emit("onCaptureMode")
+def api_cmd_imageserver_capturemode_get():
+    # ee.emit("onCaptureMode")
+    processingpicture.thrill()
 
 
-@app.get("/cmd/frameserver/previewmode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get(
+    "/cmd/frameserver/previewmode", status_code=status.HTTP_204_NO_CONTENT
+)  # deprecated
+@app.get("/cmd/imageserver/previewmode", status_code=status.HTTP_204_NO_CONTENT)
 # photobooth compatibility
-def api_cmd_frameserver_previewmode_get():
-    ee.emit("onPreviewMode")
+def api_cmd_imageserver_previewmode_get():
+    # nothing to do acutally
+    pass
 
 
 @app.post("/cmd/capture")
 # photobooth compatibility
-def api_cmd_capture_post(
-    filepath: str = Body("capture.jpg", media_type="application/x-www-form-urlencoded")
-):
+def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
     # strip away the absolute path and process for safety:
     # https://codeql.github.com/codeql-query-help/python/py-path-injection/
     safe_path = os.path.normpath(
@@ -207,7 +212,6 @@ def api_cmd_capture_post(
             os.path.basename(filepath),
         )
     )
-
     if not safe_path.startswith(
         os.path.normpath(settings.misc.photoboothproject_image_directory)
     ):
@@ -218,11 +222,16 @@ def api_cmd_capture_post(
         )
 
     try:
-        imageDb.capture_hq_image(safe_path)
+        processingpicture.shoot()
+        processingpicture.copy(
+            filename=safe_path
+        )  # for compatibility to photoboothproject
+        # processingpicture.postprocess()  # optional also add to this booth, commented out to save time
+        processingpicture.finalize()
+
         logger.info(f"file {safe_path} created successfully")
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.critical("error receiving file from backend")
-        logger.exception(exc)
+        logger.critical(f"error creating file, {exc}")
         return Response(
             content="Error",
             media_type="plain/text",
@@ -289,7 +298,12 @@ def util_systemd_control(state):
 @app.get("/chose/1pic")
 def api_chose_1pic_get():
     try:
-        processingpicture.arm()
+        processingpicture.thrill()
+        processingpicture.countdown()
+        processingpicture.shoot()
+        processingpicture.postprocess()
+        processingpicture.finalize()
+
         return "OK"
     except TransitionNotAllowed as exc:
         logger.exception(exc)
@@ -308,15 +322,13 @@ def api_chose_1pic_get():
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
     try:
-        processingpicture.arm()
+        processingpicture.thrill()
+        processingpicture.countdown()
+        processingpicture.shoot()
+        processingpicture.postprocess()
+        processingpicture.finalize()
     except TransitionNotAllowed as exc:
         logger.error(f"bad request, only one request at a time, Exception: {exc}")
-
-
-@app.get("/stats/focuser")
-def api_stats_focuser():
-    pass
-    # return (focusState._lastRunResult)
 
 
 @app.get("/gallery/images")
