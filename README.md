@@ -1,14 +1,9 @@
 # Photobooth App
 
-_Latest stable version:_  
+The photobooth app is written in Python and coming along with a modern Vue frontend.
+
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
-
-_Latest development version:_  
-[![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
-[![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
-
-The photobooth app is written in Python and coming along with a modern Vue frontend.
 
 ## :heart_eyes: Features
 
@@ -71,8 +66,8 @@ Replace <http://photobooth> by the actual hostname or localhost if on same serve
 ```text
 take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -d '"%s"'
 take_picture_msg: Done
-pre_photo_cmd: curl http://photobooth:8000/cmd/frameserver/capturemode
-post_photo_cmd: curl http://photobooth:8000/cmd/frameserver/previewmode
+pre_photo_cmd: curl http://photobooth:8000/cmd/imageserver/capturemode
+post_photo_cmd: curl http://photobooth:8000/cmd/imageserver/previewmode
 preview_url: url("http://photobooth:8000/stream.mjpg")
 background_defaults: url("http://photobooth:8000/stream.mjpg")
 ```
@@ -133,7 +128,10 @@ network={
 ## :mag: Changelog
 
 - 2023-04-13
+  - revised statemachine
   - changed api commands for photobooth
+  - removed locationservice and extended exif for now
+  - FIX: switch_mode hangs forever, replaced by configure. needs more testing
 - 2023-04-08
   - picamera2 now with gpu hardware acceleration reduce cpu load
   - gphoto2 implemented
