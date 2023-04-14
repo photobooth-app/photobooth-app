@@ -27,3 +27,6 @@ disable=import-error
 
 [SIMILARITIES]
 min-similarity-lines=10
+
+[FORMAT]
+max-line-length=120
