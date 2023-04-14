@@ -16,7 +16,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@master
       - name: Install apt dependencies
         run: |
           sudo apt-get update
@@ -31,6 +31,7 @@ jobs:
           pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
-        #with:
+        with:
+          verbose: true
         #  token: ${{ secrets.CODECOV_TOKEN }}
         #  files: ./coverage.xml
