@@ -133,10 +133,6 @@ class GroupCommon(BaseModel):
         default=0.25,
         description="Trigger capture offset in seconds. 0 trigger exactly when countdown is 0. Triggers the capture offset by the given seconds to compensate for delay in camera.",
     )
-    PROCESS_ADD_EXIF_DATA: bool = Field(
-        default=True,
-        description="Add GPS data to media.",
-    )
     webserver_port: int = Field(
         default=8000,
         description="Port to serve the photobooth website. Ensure the port is available.",
@@ -253,46 +249,6 @@ class GroupHardwareInput(BaseModel):
     keyboard_input_keycode_takepic: str = Field(
         default="down",
         description="Keycode triggers capture of one image",
-    )
-
-
-class GroupLocationService(BaseModel):
-    """
-    Embed GPS coordinates in picam2 images using googles geolocation api.
-    Register and obtain a key
-    here https://developers.google.com/maps/documentation/geolocation/get-api-key
-    """
-
-    class Config:
-        title = "Location Based Service Settings"
-
-    LOCATION_SERVICE_ENABLED: bool = Field(
-        default=False,
-        description="Enable google geolocation service. Needs API key!",
-    )
-    LOCATION_SERVICE_API_KEY: str = Field(
-        default="",
-        description="Geolocation API key. Usually free tier amount sufficient for photobooth.",
-    )
-    LOCATION_SERVICE_CONSIDER_IP: bool = Field(
-        default=True,
-        description="Fallback to IP location if no WiFi found nearby.",
-    )
-    LOCATION_SERVICE_WIFI_INTERFACE_NO: int = Field(
-        default=0,
-        description="WiFi Interface Number, no need to change usually.",
-    )
-    LOCATION_SERVICE_FORCED_UPDATE: int = Field(
-        default=60,
-        description="Once valid location found still update every x minutes.",
-    )
-    LOCATION_SERVICE_HIGH_FREQ_UPDATE: int = Field(
-        default=10,
-        description="Number of retries after program start to get more accurate data.",
-    )
-    LOCATION_SERVICE_THRESHOLD_ACCURATE: int = Field(
-        default=1000,
-        description="Threshold in meter below which the location is considered accurate enough to not trigger high freq updates.",
     )
 
 
@@ -414,7 +370,6 @@ class ConfigSettings(BaseSettings):
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     wled: GroupWled = GroupWled()
-    locationservice: GroupLocationService = GroupLocationService()
     hardwareinput: GroupHardwareInput = GroupHardwareInput()
     misc: GroupMisc = GroupMisc()
 
