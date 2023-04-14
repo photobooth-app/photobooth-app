@@ -1,6 +1,6 @@
 # pytest
 
-name: pytest
+name: pytest-rpi
 
 on:
   push:
@@ -31,6 +31,6 @@ jobs:
           pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+        #with:
+        #  token: ${{ secrets.CODECOV_TOKEN }}
+        #  files: ./coverage.xml
