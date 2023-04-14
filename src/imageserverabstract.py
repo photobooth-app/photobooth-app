@@ -52,7 +52,7 @@ class ImageServerAbstract(ABC):
         self._fps = 0
 
         self._evtbus = evtbus
-        self._evtbus.on("statemachine/armed", self._on_capture_mode)
+        self._evtbus.on("statemachine/on_thrill", self._on_capture_mode)
 
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
         self._evtbus.on("onPreviewMode", self._on_preview_mode)

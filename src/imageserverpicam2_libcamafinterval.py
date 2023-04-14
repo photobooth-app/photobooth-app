@@ -24,7 +24,7 @@ class ImageServerPicam2LibcamAfInterval:
 
     prefer continuous mode if supported by camera module (currently only rpi camera module 3)
     if continuous mode is not available, use auto mode and trigger by timer every X seconds to focus
-    option to trigger focus on arm also possible
+    option to trigger focus on thrill also possible
     """
 
     def __init__(self, imageserver: ImageServerAbstract, evtbus: EventEmitter):
@@ -33,8 +33,8 @@ class ImageServerPicam2LibcamAfInterval:
         self._evtbus = evtbus
         self._autofocus_trigger_timer: RepeatedTimer
 
-        self._evtbus.on("statemachine/armed", self._on_armed)
-        self._evtbus.on("statemachine/finished", self._on_capture_finished)
+        self._evtbus.on("statemachine/on_thrill", self._on_thrill)
+        self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
@@ -55,9 +55,9 @@ class ImageServerPicam2LibcamAfInterval:
         """_summary_"""
         self.__trigger_autofocus()
 
-    def _on_armed(self):
+    def _on_thrill(self):
         """_summary_"""
-        logger.info("called libcamautofocus _on_armed")
+        logger.info("called libcamautofocus _on_thrill")
         self._autofocus_trigger_timer.stop()
 
         self.__trigger_autofocus()  # seems this is ignored, maybe because same time mode switch?
@@ -70,7 +70,7 @@ class ImageServerPicam2LibcamAfInterval:
     def _on_capturemode(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_capturemode")
-        # nothing to do - should be same event as armed
+        # nothing to do - should be same event as thrilled
 
     def _on_previewmode(self):
         """_summary_"""

@@ -23,15 +23,15 @@ class ImageServerPicam2LibcamAfContinuous:
 
     continuous mode needs to be supported by camera module (currently only rpi camera module 3)
     if continuous mode is not available, use auto mode and trigger by timer every X seconds to focus
-    option to trigger focus on arm also possible
+    option to trigger focus on thrill also possible
     """
 
     def __init__(self, imageserver: ImageServerAbstract, evtbus: EventEmitter):
         self._imageserver: ImageServerAbstract = imageserver
 
         self._evtbus = evtbus
-        self._evtbus.on("statemachine/armed", self._on_armed)
-        self._evtbus.on("statemachine/finished", self._on_capture_finished)
+        self._evtbus.on("statemachine/on_thrill", self._on_thrill)
+        self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
@@ -44,7 +44,7 @@ class ImageServerPicam2LibcamAfContinuous:
     def stop(self):
         pass
 
-    def _on_armed(self):
+    def _on_thrill(self):
         """nothing to do in continous mode here"""
 
     def _on_capture_finished(self):
