@@ -170,7 +170,6 @@ class ImageServerPicam2(ImageServerAbstract):
             )
             self._autofocus_module = autofocus_class_(self, evtbus)
 
-            self._autofocus_module.start()
         else:
             logger.info(
                 "picam2_focuser_module is disabled. "
@@ -186,7 +185,7 @@ class ImageServerPicam2(ImageServerAbstract):
         )
         # start camera
         self._picam2.start_encoder(
-            MJPEGEncoder(),
+            MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
             FileOutput(self._lores_data),
             quality=Quality[settings.backends.picam2_stream_quality.name],
         )
@@ -194,6 +193,9 @@ class ImageServerPicam2(ImageServerAbstract):
 
         self._generate_images_thread.start()
         self._stats_thread.start()
+
+        if self._autofocus_module:
+            self._autofocus_module.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -324,9 +326,15 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.info(
             "switch_mode invoked, stopping stream encoder, switch mode and restart encoder"
         )
+        # revisit later, maybe.
+        # sometimes picamera2 got stuck calling switch_mode.
+        # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
+        # some further information here: https://github.com/raspberrypi/picamera2/issues/554
         self._picam2.stop_encoder()
-        self._picam2.switch_mode(self._currentmode)
+        self._picam2.stop()
+        self._picam2.configure(self._currentmode)
         self._lastmode = self._currentmode
+        self._picam2.start()
         self._picam2.start_encoder(
             MJPEGEncoder(),
             FileOutput(self._lores_data),
