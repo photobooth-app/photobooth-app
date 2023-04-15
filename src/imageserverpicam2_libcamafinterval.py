@@ -66,8 +66,6 @@ class ImageServerPicam2LibcamAfInterval:
         logger.info("called libcamautofocus _on_thrill")
         self._mute_cyclic_trigger_requests = True
 
-        self._autofocus_cycle()  # seems this is ignored, maybe because same time mode switch?
-
     def _on_capture_finished(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_capture_finished")
