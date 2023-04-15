@@ -4,11 +4,11 @@ name: pytest-rpi
 
 # disabled currently, but in codeupload: https://github.com/codecov/uploader/issues/922
 
-#on:
-#  push:
-#    branches: ["main", "dev"]
-#  pull_request:
-#    branches: ["main"]
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
