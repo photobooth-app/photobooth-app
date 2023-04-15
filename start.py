@@ -3,7 +3,8 @@
 Photobooth Application start script
 """
 import subprocess
-import os, sys
+import os
+import sys
 import platform
 import logging
 import asyncio
