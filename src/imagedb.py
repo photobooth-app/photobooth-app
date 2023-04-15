@@ -234,7 +234,7 @@ def create_imageset_from_originalimage(filename):
 
     with open(Path(PATH_ORIGINAL, filename), "rb") as file:
         buffer_original = file.read()
-    logger.debug(f"filesize original image: {round(len(buffer_original)/1024,1)}kg")
+    logger.debug(f"filesize original image: {round(len(buffer_original)/1024,1)}kb")
 
     ##
     # this could be a place to add a filter pipeline later
