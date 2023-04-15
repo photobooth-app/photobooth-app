@@ -5,12 +5,13 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from fastapi.testclient import TestClient
-from start import app
-
-client = TestClient(app)
 
 
 def test_read_main():
+    from start import app
+
+    client = TestClient(app)
+
     response = client.get("/")
     assert response.status_code == 200
 
@@ -22,5 +23,9 @@ def test_read_main():
 
 
 def test_read_config_scheme():
+    from start import app
+
+    client = TestClient(app)
+
     response = client.get("/config/schema?schema_type=dereferenced")
     assert response.status_code == 200
