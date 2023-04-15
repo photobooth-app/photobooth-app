@@ -89,12 +89,8 @@ class ImageServerPicam2(ImageServerAbstract):
         self._fps = 0
 
         # worker threads
-        self._generate_images_thread = StoppableThread(
-            name="_generateImagesThread", target=self._generate_images_fun, daemon=True
-        )
-        self._stats_thread = StoppableThread(
-            name="_statsThread", target=self._stats_fun, daemon=True
-        )
+        self._generate_images_thread: StoppableThread
+        self._stats_thread: StoppableThread
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picam2.create_still_configuration(
@@ -191,7 +187,14 @@ class ImageServerPicam2(ImageServerAbstract):
         )
         self._picam2.start()
 
+        self._generate_images_thread = StoppableThread(
+            name="_generateImagesThread", target=self._generate_images_fun, daemon=True
+        )
         self._generate_images_thread.start()
+
+        self._stats_thread = StoppableThread(
+            name="_statsThread", target=self._stats_fun, daemon=True
+        )
         self._stats_thread.start()
 
         if self._autofocus_module:
@@ -331,15 +334,23 @@ class ImageServerPicam2(ImageServerAbstract):
         # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
         # some further information here: https://github.com/raspberrypi/picamera2/issues/554
         self._picam2.stop_encoder()
-        self._picam2.stop()
-        self._picam2.configure(self._currentmode)
         self._lastmode = self._currentmode
-        self._picam2.start()
+
+        logger.critical(
+            f"_switch_mode: {self._picam2.is_open=}, {self._picam2.started=}"
+        )
+
+        logger.critical("_switch_mode: pre")
+        # logger.critical(f"{self._currentmode=}")
+        self._picam2.switch_mode(self._currentmode)
+        logger.critical("_switch_mode: post")
+
         self._picam2.start_encoder(
             MJPEGEncoder(),
             FileOutput(self._lores_data),
             quality=Quality[settings.backends.picam2_stream_quality.name],
         )
+        logger.info("switchmode finished successfully")
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -404,7 +415,8 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._on_preview_mode()
 
             # capture metadata blocks until new metadata is avail
-            self.metadata = self._picam2.capture_metadata()
+            # self.metadata = self._picam2.capture_metadata()
+            time.sleep(0.1)
 
             # counter to calc the fps
             self._count += 1
