@@ -436,33 +436,34 @@ async def validation_exception_handler(request, exc):
     return await request_validation_exception_handler(request, exc)
 
 
+# guard to start only one instance at a time.
+try:
+    s = socket.socket()
+    s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
+except OSError:
+    logger.error("startup aborted. another instance is running. exiting.")
+    sys.exit(-1)
+
+logger.info("Welcome to qPhotobooth")
+logger.info(f"{platform.system()=}")
+logger.info(f"{platform.release()=}")
+logger.info(f"{platform.machine()=}")
+logger.info(f"{platform.python_version()=}")
+logger.info(f"{platform.node()=}")
+logger.info(f"{psutil.cpu_count()=}")
+logger.info(f"{psutil.cpu_count(logical=False)=}")
+logger.info(f"{psutil.disk_partitions()=}")
+if platform.system() == "Linux":
+    logger.info(f"{psutil.disk_usage('/')=}")
+elif platform.system() == "Windows":
+    logger.info(f"{psutil.disk_usage('C:')=}")
+logger.info(f"{psutil.net_if_addrs()=}")
+logger.info(f"{psutil.virtual_memory()=}")
+# run python with -O (optimized) sets debug to false and disables asserts from bytecode
+logger.info(f"{__debug__=}")
+
+
 if __name__ == "__main__":
-    # guard to start only one instance at a time.
-    try:
-        s = socket.socket()
-        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
-    except OSError:
-        logger.error("startup aborted. another instance is running. exiting.")
-        sys.exit(-1)
-
-    logger.info("Welcome to qPhotobooth")
-    logger.info(f"{platform.system()=}")
-    logger.info(f"{platform.release()=}")
-    logger.info(f"{platform.machine()=}")
-    logger.info(f"{platform.python_version()=}")
-    logger.info(f"{platform.node()=}")
-    logger.info(f"{psutil.cpu_count()=}")
-    logger.info(f"{psutil.cpu_count(logical=False)=}")
-    logger.info(f"{psutil.disk_partitions()=}")
-    if platform.system() == "Linux":
-        logger.info(f"{psutil.disk_usage('/')=}")
-    elif platform.system() == "Windows":
-        logger.info(f"{psutil.disk_usage('C:')=}")
-    logger.info(f"{psutil.net_if_addrs()=}")
-    logger.info(f"{psutil.virtual_memory()=}")
-    # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-    logger.info(f"{__debug__=}")
-
     # start services
     imageServers.start()
     ins.start()
