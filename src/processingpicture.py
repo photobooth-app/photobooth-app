@@ -114,7 +114,7 @@ class ProcessingPicture(StateMachine):
             os.path.basename(self._filepath_originalimage_processing)
         )
 
-        item_id = self._imagedb.db_add_item(item)
+        _ = self._imagedb.db_add_item(item)
 
         logger.info(f"capture {item=} successful")
         logger.info(
@@ -205,7 +205,7 @@ class ProcessingPicture(StateMachine):
                 logger.error(
                     f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
                 )
-                # TODO: can we do additional error handling here?
+                # can we do additional error handling here?
             else:
                 break
         else:

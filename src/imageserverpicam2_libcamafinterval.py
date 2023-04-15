@@ -49,11 +49,11 @@ class ImageServerPicam2LibcamAfInterval:
         logger.info(f"{__name__} initialized")
 
     def start(self):
-        # start timer thread
+        """start timer thread"""
         self._autofocus_trigger_timer_thread.start()
 
     def stop(self):
-        # stop timer thread; missing this will lead to halt on program exit.
+        """stop timer thread; missing this will lead to halt on program exit."""
         self._autofocus_trigger_timer_thread.stop()
 
     def _autofocus_trigger_timer_fun(self):

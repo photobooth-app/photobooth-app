@@ -78,10 +78,11 @@ class InformationService:
 
     def _gather_cma(self):
         try:
-            meminfo = dict(
-                (i.split()[0].rstrip(":"), int(i.split()[1]))
-                for i in open("/proc/meminfo", encoding="utf-8").readlines()
-            )
+            with open("/proc/meminfo", encoding="utf-8") as file:
+                meminfo = dict(
+                    (i.split()[0].rstrip(":"), int(i.split()[1]))
+                    for i in file.readlines()
+                )
 
             cma = {"CmaTotal": meminfo["CmaTotal"], "CmaFree": meminfo["CmaFree"]}
         except FileNotFoundError:

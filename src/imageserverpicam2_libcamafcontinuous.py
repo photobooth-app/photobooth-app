@@ -39,10 +39,10 @@ class ImageServerPicam2LibcamAfContinuous:
         logger.info(f"{__name__} initialized")
 
     def start(self):
-        pass
+        """start backend"""
 
     def stop(self):
-        pass
+        """stop backend"""
 
     def _on_thrill(self):
         """nothing to do in continous mode here"""
