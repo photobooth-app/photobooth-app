@@ -415,8 +415,10 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._on_preview_mode()
 
             # capture metadata blocks until new metadata is avail
+            # fixme: following seems to block occasionally the switch_mode function.
             # self.metadata = self._picam2.capture_metadata()
             time.sleep(0.1)
 
             # counter to calc the fps
-            self._count += 1
+            # broken since capture_metadata is commented.
+            # self._count += 1
