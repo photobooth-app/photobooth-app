@@ -2,14 +2,11 @@
 Handle all media collection related functions
 """
 import io
-from dataclasses import dataclass, asdict
-import json
-import time
+from dataclasses import dataclass
 import glob
 import os
+import time
 import logging
-import shutil
-
 import hashlib
 from typing import List
 from pathlib import Path
@@ -43,7 +40,7 @@ class MediaItem:
 
     @property
     def datetime(self) -> float:
-        # TODO cache?
+        # cache useful here?
         return os.path.getmtime(self.path_full)
 
     @property
@@ -276,6 +273,7 @@ class ImageDb:
         image_paths = sorted(glob.glob(f"{PATH_ORIGINAL}*.jpg"))
         counter_processed_images = 0
         counter_failed_images = 0
+        start_time_initialize = time.time()
 
         for image_path in image_paths:
             filename = Path(image_path).name
@@ -302,6 +300,9 @@ class ImageDb:
                     self.db_add_item(MediaItem(filename))
 
         logger.info(f"initialized image DB, added {self.number_of_images} valid images")
+        logger.info(
+            f"initialize process time: {round((time.time() - start_time_initialize), 2)}s"
+        )
         if counter_processed_images:
             logger.warning(
                 f"#{counter_processed_images} items processed due to missing scaled version"
