@@ -31,41 +31,47 @@ class ImageServerPicam2LibcamAfInterval:
         self._imageserver: ImageServerAbstract = imageserver
 
         self._evtbus = evtbus
-        self._autofocus_trigger_timer: RepeatedTimer
+
+        self._autofocus_trigger_timer_thread: RepeatedTimer = RepeatedTimer(
+            interval=settings.backends.picam2_focuser_interval,
+            function=self._autofocus_trigger_timer_fun,
+        )
+        # unmute to actually trigger focus requests:
+        self._mute_cyclic_trigger_requests: bool = False
 
         self._evtbus.on("statemachine/on_thrill", self._on_thrill)
         self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
+        self._init_autofocus()
+
         logger.info(f"{__name__} initialized")
 
     def start(self):
-        self._autofocus_trigger_timer = RepeatedTimer(
-            interval=settings.backends.picam2_focuser_interval,
-            function=self._on_autofocus_trigger_timer,
-        )
-
-        self._init_autofocus()
+        # start timer thread
+        self._autofocus_trigger_timer_thread.start()
 
     def stop(self):
-        self._autofocus_trigger_timer.stop()
+        # stop timer thread; missing this will lead to halt on program exit.
+        self._autofocus_trigger_timer_thread.stop()
 
-    def _on_autofocus_trigger_timer(self):
+    def _autofocus_trigger_timer_fun(self):
         """_summary_"""
-        self.__trigger_autofocus()
+        if not self._mute_cyclic_trigger_requests:
+            self._autofocus_cycle()
 
     def _on_thrill(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_thrill")
-        self._autofocus_trigger_timer.stop()
+        self._mute_cyclic_trigger_requests = True
 
-        self.__trigger_autofocus()  # seems this is ignored, maybe because same time mode switch?
+        self._autofocus_cycle()  # seems this is ignored, maybe because same time mode switch?
 
     def _on_capture_finished(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_capture_finished")
-        self._autofocus_trigger_timer.start()
+        self._mute_cyclic_trigger_requests = False
 
     def _on_capturemode(self):
         """_summary_"""
@@ -90,11 +96,7 @@ class ImageServerPicam2LibcamAfInterval:
         except RuntimeError as exc:
             logger.info(f"control not available on all cameras - can ignore {exc}")
 
-        self.__trigger_autofocus()
-
-        self._autofocus_trigger_timer.start()
-
-    def __trigger_autofocus(self):
+    def _autofocus_cycle(self):
         try:
             # success = self._imageserver._picam2.autofocus_cycle(wait=False)
             # this command breaks the frameserver - reason not yet clear, so currently
