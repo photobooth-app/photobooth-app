@@ -1,5 +1,10 @@
 name: envtest
 
+env:
+  ## Sets environment variable
+  API_KEY: XXXXXXXXXXXX
+  BACKENDS__MAIN_BACKEND: TEST123
+
 on: [push]
 
 jobs:
@@ -9,11 +14,9 @@ jobs:
       matrix:
         python-version: ["3.9"]
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: step 1
+        ## Reference your environment variables
+        run: echo "The API key is:${{env.API_KEY}}"
       - name: "Show environmetn variables"
         run: |
           env
