@@ -7,6 +7,7 @@ log/*.log*
 .env
 .env.*
 
-.coverage
+.coverage*
 coverage.xml
 junit/*
+
