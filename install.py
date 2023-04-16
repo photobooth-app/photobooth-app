@@ -32,6 +32,7 @@ else:
 
 SYSTEM_PACKAGES_LINUX = [
     "git",
+    "libgl1",  # install opencv dependencies from distro, needed on fresh rpi os
     "fonts-noto-color-emoji",
     "libturbojpeg0",
     "rclone",
