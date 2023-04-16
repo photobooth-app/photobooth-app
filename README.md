@@ -33,7 +33,9 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 ## :nail_care: Screenshots
 
 ![frontpage](misc/screenshots/frontpage.png)
-
+![gallery list](misc/screenshots/gallery_list.png)
+![gallery detail](misc/screenshots/gallery_detail.png)
+![admin center config page](misc/screenshots/admin_config.png)
 
 ## :gear: Prerequisites
 
