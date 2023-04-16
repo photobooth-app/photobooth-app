@@ -415,7 +415,7 @@ class ImageServerPicam2(ImageServerAbstract):
                 self._on_preview_mode()
 
             # capture metadata blocks until new metadata is avail
-            # fixme: following seems to block occasionally the switch_mode function.
+            # fixme: following seems to block occasionally the switch_mode function. # pylint: disable=fixme
             # self.metadata = self._picam2.capture_metadata()
             time.sleep(0.1)
 

@@ -30,7 +30,6 @@ from fastapi.responses import (
 )
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from pymitter import EventEmitter
-from statemachine.exceptions import TransitionNotAllowed
 from src.imageservers import ImageServers
 from src.informationservice import InformationService
 from src.configsettings import ConfigSettings, settings
@@ -43,37 +42,16 @@ from src.loggingservice import LoggingService
 # from gpiozero import CPUTemperature, LoadAverage
 
 
+# constants
+SERVICE_NAME = "imageserver"
+
 # create early instances
-# event system
+# event system and logging
 ee: EventEmitter = EventEmitter()
 ls: LoggingService = LoggingService(evtbus=ee)
 
 
-# constants
-SERVICE_NAME = "imageserver"
-
-
 logger = logging.getLogger(__name__)
-
-
-# set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
-# spawn will be the default for all systems in future so it's set here now to have same
-# results on all platforms
-multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-logger.info(f"{multiprocessing_start_method=}, before forcing")
-multiprocessing.set_start_method(method="spawn", force=True)
-multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-logger.info(f"{multiprocessing_start_method=}, forced")
-
-wledservice = WledService(ee)
-# load imageserver dynamically because service can be configured
-# https://stackoverflow.com/a/14053838
-imageServers = ImageServers(ee)
-imageDb = ImageDb(ee, imageServers.primary_backend)
-ks = KeyboardService(ee)
-ins = InformationService(ee, imageServers)
-processingpicture = ProcessingPicture(ee, imageServers, imageDb)
-
 app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
 
 
@@ -443,7 +421,13 @@ async def validation_exception_handler(request, exc):
     return await request_validation_exception_handler(request, exc)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
+    # all dependencies that access hardware are loaded here in if condition
+    # reason: due to using backends with separate processes, this file is executed again per process
+    # so hardware would be accessed two times when using backends with sep processes - no bueno
+    # We are running under pytest or started the program. setup the dependencies.
+    logger.info("setting up dependencies")
+
     # guard to start only one instance at a time.
     try:
         s = socket.socket()
@@ -451,6 +435,27 @@ if __name__ == "__main__":
     except OSError:
         logger.error("startup aborted. another instance is running. exiting.")
         sys.exit(-1)
+
+    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
+    # spawn will be the default for all systems in future so it's set here now to have same
+    # results on all platforms
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"{multiprocessing_start_method=}, before forcing")
+    multiprocessing.set_start_method(method="spawn", force=True)
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"{multiprocessing_start_method=}, forced")
+
+    wledservice = WledService(ee)
+    # load imageserver dynamically because service can be configured
+    # https://stackoverflow.com/a/14053838
+    imageServers = ImageServers(ee)
+    imageDb = ImageDb(ee, imageServers.primary_backend)
+    ks = KeyboardService(ee)
+    ins = InformationService(ee, imageServers)
+    processingpicture = ProcessingPicture(ee, imageServers, imageDb)
+
+if __name__ == "__main__":
+    # here is the server started
 
     logger.info("Welcome to qPhotobooth")
     logger.info(f"{platform.system()=}")
@@ -465,7 +470,12 @@ if __name__ == "__main__":
         logger.info(f"{psutil.disk_usage('/')=}")
     elif platform.system() == "Windows":
         logger.info(f"{psutil.disk_usage('C:')=}")
-    logger.info(f"{psutil.net_if_addrs()=}")
+    logger.info(
+        [
+            (name, [addr.address for addr in addrs if addr.family == socket.AF_INET])
+            for name, addrs in psutil.net_if_addrs().items()
+        ]
+    )
     logger.info(f"{psutil.virtual_memory()=}")
     # run python with -O (optimized) sets debug to false and disables asserts from bytecode
     logger.info(f"{__debug__=}")

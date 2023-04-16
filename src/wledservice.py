@@ -71,9 +71,8 @@ class WledService:
                 dsrdtr=False,
             )
         except serial.SerialException as exc:
-            logger.error(exc)
             logger.error(
-                "failed to open WLED module, ESP flashed and correct serial port set in config?"
+                f"failed to open WLED module, ESP flashed and correct serial port set in config? {exc}"
             )
 
             return wled_detected

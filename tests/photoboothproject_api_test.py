@@ -41,7 +41,7 @@ def test_capturewithcountdown():
 
     try:
         response = client.get("/cmd/imageserver/capturemode")
-        assert response.status_code == 204
+        assert response.status_code == 202
         # bring statemachine to idle again
 
         # virtual countdown
@@ -50,7 +50,7 @@ def test_capturewithcountdown():
         capture(client)
 
         response = client.get("/cmd/imageserver/previewmode")
-        assert response.status_code == 204
+        assert response.status_code == 202
 
     except Exception:
         raise RuntimeError("something is wrong")
@@ -83,7 +83,7 @@ def test_collagewithcountdown():
     try:
         for i in range(1, 4):
             response = client.get("/cmd/imageserver/capturemode")
-            assert response.status_code == 204
+            assert response.status_code == 202
             # bring statemachine to idle again
 
             # virtual countdown
@@ -92,7 +92,7 @@ def test_collagewithcountdown():
             capture(client)
 
             response = client.get("/cmd/imageserver/previewmode")
-            assert response.status_code == 204
+            assert response.status_code == 202
 
     except Exception:
         raise RuntimeError("something is wrong")
