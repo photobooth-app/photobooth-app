@@ -3,5 +3,6 @@
 pytest
 pytest-benchmark
 pytest-cov
+coverage[toml]
 httpx
 simplejpeg
