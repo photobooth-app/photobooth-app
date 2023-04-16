@@ -5,7 +5,7 @@ The photobooth app is written in Python and coming along with a modern Vue front
 ![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)
 ![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
-[![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
+[![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml)
 [![codecov](https://codecov.io/gh/mgrl/photobooth-app/branch/dev/graph/badge.svg?token=SBB5DGX17V)](https://codecov.io/gh/mgrl/photobooth-app)
 
 ## :heart_eyes: Features
