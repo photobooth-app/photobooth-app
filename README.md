@@ -30,6 +30,11 @@ The booth is made from 3d printed parts, [see the documentation over here](https
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
+## :nail_care: Screenshots
+
+![frontpage](misc/screenshots/frontpage.png)
+
+
 ## :gear: Prerequisites
 
 - Python 3.9 or later
@@ -125,7 +130,7 @@ network={
 }
 ```
 
-## :mag: Changelog
+## :mega: Changelog
 
 - 2023-04-13
   - revised statemachine
@@ -161,7 +166,7 @@ network={
   - store exif data to images
   - changed to exposure mode short as per default
 
-## Contribute
+## :rocket: Contribute
 
 If you find an issue, please post it <https://github.com/mgrl/photobooth-app/issues>
 
@@ -176,7 +181,7 @@ Additional requirements
   - yarn
   - quasar cli <https://quasar.dev/start/quasar-cli>
 
-## Troubleshooting
+## :interrobang: Troubleshooting
 
 Check following commands and files for error messages:
 
