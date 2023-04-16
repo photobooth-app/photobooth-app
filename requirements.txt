@@ -1,5 +1,5 @@
 ## common pip packages
-fastapi==0.95.0
+fastapi==0.95.1
 # keyboard==0.13.5
 # need to avoid root for keyboard access,
 # https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
