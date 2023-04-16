@@ -44,12 +44,11 @@ class ImageServerPicam2LibcamAfInterval:
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
-        self._init_autofocus()
-
         logger.info(f"{__name__} initialized")
 
     def start(self):
         """start timer thread"""
+        self._init_autofocus()
         self._autofocus_trigger_timer_thread.start()
 
     def stop(self):
