@@ -1,4 +1,9 @@
-name: upload coverage
+name: pytests and coverage
+
+# coverage is made up by multiple runs on different hosts
+# self-hosted is a RPI and has hardware attached to test and gain high coverage
+# after all jobs finished, coverage is uploaded as described here
+# https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
 
 on:
   push:
