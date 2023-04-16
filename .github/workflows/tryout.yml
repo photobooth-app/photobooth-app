@@ -1,9 +1,9 @@
-name: pylint
+name: envtest
 
 on: [push]
 
 jobs:
-  lint:
+  envtest:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -17,3 +17,11 @@ jobs:
       - name: "Show environmetn variables"
         run: |
           env
+      - name: "Say Hello Mona it's Monday"
+        if: ${{ env.BACKENDS__MAIN_BACKEND == 'Monday' }}
+        run: echo "$Greeting $First_Name. Today is $BACKENDS__MAIN_BACKEND!"
+        env:
+          First_Name: Mona
+      - name: Use variables
+        run: |
+          echo "repository variable : ${{ vars.BACKENDS__MAIN_BACKEND }}"
