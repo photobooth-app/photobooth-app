@@ -36,9 +36,9 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer: SharedMemoryDataExch
+        self._img_buffer: SharedMemoryDataExch = None
         self._event_proc_shutdown: Event = Event()
-        self._v4l_process: Process
+        self._v4l_process: Process = None
 
         self._on_preview_mode()
 

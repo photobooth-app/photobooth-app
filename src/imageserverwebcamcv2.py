@@ -33,12 +33,12 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer_lores: SharedMemoryDataExch
-        self._img_buffer_hires: SharedMemoryDataExch
+        self._img_buffer_lores: SharedMemoryDataExch = None
+        self._img_buffer_hires: SharedMemoryDataExch = None
         self._event_hq_capture: Event = Event()
         self._event_proc_shutdown: Event = Event()
 
-        self._cv2_process: Process
+        self._cv2_process: Process = None
 
         self._on_preview_mode()
 
