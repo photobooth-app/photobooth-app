@@ -35,7 +35,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
-          pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
+          python -m pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
@@ -57,7 +57,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
-          pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
+          python -m pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
