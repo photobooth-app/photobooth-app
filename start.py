@@ -183,19 +183,25 @@ def api_post_config_current(updated_settings: ConfigSettings):
 
 
 @app.get(
-    "/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT
+    "/cmd/frameserver/capturemode", status_code=status.HTTP_202_ACCEPTED
 )  # deprecated
-@app.get("/cmd/imageserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get("/cmd/imageserver/capturemode", status_code=status.HTTP_202_ACCEPTED)
 # photobooth compatibility
 def api_cmd_imageserver_capturemode_get():
     # ee.emit("onCaptureMode")
+    if not processingpicture.idle.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="bad request, only one request at a time!",
+        )
+
     processingpicture.thrill()
 
 
 @app.get(
-    "/cmd/frameserver/previewmode", status_code=status.HTTP_204_NO_CONTENT
+    "/cmd/frameserver/previewmode", status_code=status.HTTP_202_ACCEPTED
 )  # deprecated
-@app.get("/cmd/imageserver/previewmode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get("/cmd/imageserver/previewmode", status_code=status.HTTP_202_ACCEPTED)
 # photobooth compatibility
 def api_cmd_imageserver_previewmode_get():
     # nothing to do acutally
@@ -298,6 +304,12 @@ def util_systemd_control(state):
 @app.get("/cmd/capture")
 @app.get("/chose/1pic")
 def api_chose_1pic_get():
+    if not processingpicture.idle.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="bad request, only one request at a time!",
+        )
+
     try:
         processingpicture.thrill()
         processingpicture.countdown()
@@ -306,12 +318,6 @@ def api_chose_1pic_get():
         processingpicture.finalize()
 
         return "OK"
-    except TransitionNotAllowed as exc:
-        logger.exception(exc)
-        raise HTTPException(
-            status_code=400,
-            detail=f"bad request, only one request at a time, Exception: {exc}",
-        ) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
@@ -322,14 +328,14 @@ def api_chose_1pic_get():
 
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
-    try:
-        processingpicture.thrill()
-        processingpicture.countdown()
-        processingpicture.shoot()
-        processingpicture.postprocess()
-        processingpicture.finalize()
-    except TransitionNotAllowed as exc:
-        logger.error(f"bad request, only one request at a time, Exception: {exc}")
+    if not processingpicture.idle.is_active:
+        raise RuntimeError("bad request, only one request at a time!")
+
+    processingpicture.thrill()
+    processingpicture.countdown()
+    processingpicture.shoot()
+    processingpicture.postprocess()
+    processingpicture.finalize()
 
 
 @app.get("/gallery/images")
