@@ -101,7 +101,7 @@ class LoggingService:
 
         # create rotatingFileHandler
         self.rotatingfile_handler = RotatingFileHandler(
-            filename="./log/qbooth.log", maxBytes=1024**2, backupCount=10
+            filename="./log/qbooth.log", maxBytes=1024**2, backupCount=10, delay=True
         )
         self.rotatingfile_handler.setFormatter(log_formatter)
 
