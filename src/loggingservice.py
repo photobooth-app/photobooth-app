@@ -74,8 +74,7 @@ class LoggingService:
         """
 
         ## formatter ##
-
-        fmt = "%(asctime)s [%(levelname)s] %(name)s %(funcName)s() L%(lineno)-4d %(message)s"
+        fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
         log_formatter = logging.Formatter(fmt=fmt)
 
         logging.basicConfig(level=logging.DEBUG, format=fmt, force=True)
