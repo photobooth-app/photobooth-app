@@ -18,7 +18,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
       - name: Install apt dependencies
         run: |
           sudo apt-get update
@@ -31,7 +31,7 @@ jobs:
       - name: Test with pytest
         run: |
           pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
           path: ./coverage-hardware.xml
