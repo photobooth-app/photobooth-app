@@ -131,7 +131,7 @@ network={
   - revised statemachine
   - changed api commands for photobooth
   - removed locationservice and extended exif for now
-  - FIX: switch_mode hangs forever, replaced by configure. needs more testing
+  - FIX: switch_mode/configure hang forever. removed for now, so no metadata currently avail.
 - 2023-04-08
   - picamera2 now with gpu hardware acceleration reduce cpu load
   - gphoto2 implemented
