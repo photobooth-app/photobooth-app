@@ -36,6 +36,7 @@ SYSTEM_PACKAGES_LINUX = [
     "libturbojpeg0",
     "rclone",
     "inotify-tools",
+    "python3-pip",
 ]
 SYSTEM_PACKAGES_RPI = [
     "python3-picamera2",
