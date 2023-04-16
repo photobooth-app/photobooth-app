@@ -483,6 +483,7 @@ if __name__ == "__main__":
     # start services
     imageServers.start()
     ins.start()
+    wledservice.start()
 
     # log_level="trace", default info
     config = uvicorn.Config(
@@ -513,5 +514,6 @@ if __name__ == "__main__":
     server.run()
 
     # shutdown services
+    wledservice.stop()
     imageServers.stop()
     ins.stop()

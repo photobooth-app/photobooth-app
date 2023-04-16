@@ -33,24 +33,37 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
-        self._img_buffer_lores: SharedMemoryDataExch = SharedMemoryDataExch(
-            sharedmemory=shared_memory.SharedMemory(
-                create=True,
-                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
-            ),
-            condition=Condition(),
-            lock=Lock(),
-        )
-        self._img_buffer_hires: SharedMemoryDataExch = SharedMemoryDataExch(
-            sharedmemory=shared_memory.SharedMemory(
-                create=True,
-                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
-            ),
-            condition=Condition(),
-            lock=Lock(),
-        )
+        self._img_buffer_lores: SharedMemoryDataExch = None
+        self._img_buffer_hires: SharedMemoryDataExch = None
         self._event_hq_capture: Event = Event()
         self._event_proc_shutdown: Event = Event()
+
+        self._cv2_process: Process = None
+
+        self._on_preview_mode()
+
+    def start(self):
+        """To start the cv2 acquisition process"""
+        # start camera
+
+        self._event_proc_shutdown.clear()
+
+        self._img_buffer_lores = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
+        )
+        self._img_buffer_hires = SharedMemoryDataExch(
+            sharedmemory=shared_memory.SharedMemory(
+                create=True,
+                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+            ),
+            condition=Condition(),
+            lock=Lock(),
+        )
 
         self._cv2_process = Process(
             target=cv2_img_aquisition,
@@ -68,12 +81,6 @@ class ImageServerWebcamCv2(ImageServerAbstract):
             ),
             daemon=True,
         )
-
-        self._on_preview_mode()
-
-    def start(self):
-        """To start the cv2 acquisition process"""
-        # start camera
         self._cv2_process.start()
 
         logger.debug(f"{self.__module__} started")

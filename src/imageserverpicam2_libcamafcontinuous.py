@@ -35,11 +35,11 @@ class ImageServerPicam2LibcamAfContinuous:
         self._evtbus.on("onCaptureMode", self._on_capturemode)
         self._evtbus.on("onPreviewMode", self._on_previewmode)
 
-        self._init_autofocus()
         logger.info(f"{__name__} initialized")
 
     def start(self):
         """start backend"""
+        self._init_autofocus()
 
     def stop(self):
         """stop backend"""

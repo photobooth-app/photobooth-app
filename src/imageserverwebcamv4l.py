@@ -36,6 +36,17 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         # private props
         self._evtbus = evtbus
 
+        self._img_buffer: SharedMemoryDataExch = None
+        self._event_proc_shutdown: Event = Event()
+        self._v4l_process: Process = None
+
+        self._on_preview_mode()
+
+    def start(self):
+        """To start the v4l acquisition process"""
+        # start camera
+        self._event_proc_shutdown.clear()
+
         self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
                 create=True,
@@ -44,8 +55,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
             condition=Condition(),
             lock=Lock(),
         )
-
-        self._event_proc_shutdown: Event = Event()
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
@@ -61,12 +70,6 @@ class ImageServerWebcamV4l(ImageServerAbstract):
             ),
             daemon=True,
         )
-
-        self._on_preview_mode()
-
-    def start(self):
-        """To start the v4l acquisition process"""
-        # start camera
 
         self._v4l_process.start()
 

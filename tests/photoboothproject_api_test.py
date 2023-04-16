@@ -1,14 +1,18 @@
-import os
 import sys
+import os
 import time
 import tempfile
+import logging
 from PIL import Image
+
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.configsettings import settings
 from fastapi.testclient import TestClient
+
+logger = logging.getLogger(name=None)
 
 
 def capture(client):
@@ -52,7 +56,8 @@ def test_capturewithcountdown():
         response = client.get("/cmd/imageserver/previewmode")
         assert response.status_code == 202
 
-    except Exception:
+    except Exception as exc:
+        logger.exception(exc)
         raise RuntimeError("something is wrong")
     finally:
         imageServers.stop()
@@ -94,7 +99,8 @@ def test_collagewithcountdown():
             response = client.get("/cmd/imageserver/previewmode")
             assert response.status_code == 202
 
-    except Exception:
+    except Exception as exc:
+        logger.exception(exc)
         raise RuntimeError("something is wrong")
     finally:
         imageServers.stop()

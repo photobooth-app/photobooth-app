@@ -1,4 +1,4 @@
-name: pytests and coverage
+name: pytest
 
 # coverage is made up by multiple runs on different hosts
 # self-hosted is a RPI and has hardware attached to test and gain high coverage
@@ -27,21 +27,28 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libturbojpeg
+          sudo apt-get -y install libturbojpeg python3-pip libgl1 git
       - name: Install pip dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements-testing.txt ]; then pip install -r requirements-testing.txt; fi
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f requirements-testing.txt ]; then pip install --upgrade -r requirements-testing.txt; fi
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
-          pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
+          python -m pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
           path: coverage.xml
 
   tests-hardware:
+    env:
+      ## Sets environment variable
+      backends__MAIN_BACKEND: ImageServerWebcamV4l
+      backends__cv2_device_index: 0
+      wled__ENABLED: True
+      wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+
     runs-on: self-hosted
 
     steps:
@@ -49,15 +56,15 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libturbojpeg0
+          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2
       - name: Install pip dependencies
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements-testing.txt ]; then pip install -r requirements-testing.txt; fi
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f requirements-testing.txt ]; then pip install --upgrade -r requirements-testing.txt; fi
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Test with pytest
         run: |
-          pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
+          python -m pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware

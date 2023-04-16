@@ -1,11 +1,16 @@
 import platform
 import os
+import sys
 import logging
 import json
 import time
 import multiprocessing
 from multiprocessing import Process, Value
 import pytest
+
+# https://docs.python-guide.org/writing/structure/
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src import configsettings
 
 logger = logging.getLogger(name=None)
@@ -153,18 +158,15 @@ def test_settings_available_in_separate_spawned_process():
     )
     _p1.start()
 
-    # wait long enough, that the process has started actually
-    time.sleep(2)
+    # wait for join, that the process has finished
+    _p1.join()
+    _p1.close()
     # can show that separate processes to not receive the changed settings!
     # complete separate memory. need to share settings explicitly if changes need to be shared (for tests)
     assert check_value1.value == original_test_key_value
-    logger.warning(
+    logger.info(
         "in process the value is still the original value, changed setting not reflected."
     )
-
-    _p1.terminate()
-    _p1.join(1)
-    _p1.close()
 
     check_value2 = Value("i", 0)
     _p2 = Process(
@@ -173,17 +175,15 @@ def test_settings_available_in_separate_spawned_process():
         daemon=True,
     )
     _p2.start()
-    time.sleep(2)
+    # wait for join, that the process has finished
+    _p2.join()
+    _p2.close()
 
     assert check_value2.value == TEST_KEY_TEST_VALUE
-    logger.warning(
+    logger.info(
         "in process the value changed, this is good. "
         "so passing settings to processes is necessary if start_method is 'spawn'"
     )
-
-    _p2.terminate()
-    _p2.join(1)
-    _p2.close()
 
 
 def test_settings_available_in_separate_forked_process():
@@ -209,17 +209,15 @@ def test_settings_available_in_separate_forked_process():
         daemon=True,
     )
     _p3.start()
-    time.sleep(2)
+    # wait for join, that the process has finished
+    _p3.join(2)
+    _p3.close()
 
     assert check_value3.value == TEST_KEY_TEST_VALUE
-    logger.warning(
+    logger.info(
         "in process the value changed, this is good. "
         "so passing settings to processes is NOT necessary if start_method is 'fork'"
     )
-
-    _p3.terminate()
-    _p3.join(2)
-    _p3.close()
 
 
 def test_PersistSettings(tmp_movealloutoftheway):

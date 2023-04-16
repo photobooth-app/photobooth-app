@@ -70,27 +70,60 @@ class ImageServerPicam2(ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        self._picam2 = Picamera2()
-        self._evtbus = evtbus
+        self._picam2: Picamera2 = None
+        self._evtbus: EventEmitter = evtbus
+        self._autofocus_module = None
+
+        self._count = 0
+        self._fps = 0
 
         # lores and hires data output
+        self._lores_data: ImageServerPicam2.PicamLoresData = None
+        self._hires_data: ImageServerPicam2.PicamHiresData = None
+
+        # worker threads
+        self._generate_images_thread: StoppableThread = None
+        self._stats_thread: StoppableThread = None
+
+        self._capture_config = None
+        self._preview_config = None
+        self._current_config = None
+        self._last_config = None
+
+        # load autofocus module as chosen by config. if none, don't load
+        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
+            logger.info(
+                f"loading autofocus module: "
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_module = import_module(
+                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+            )
+            autofocus_class_ = getattr(
+                autofocus_module,
+                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
+            )
+            self._autofocus_module = autofocus_class_(self, evtbus)
+
+        else:
+            logger.info(
+                "picam2_focuser_module is disabled. "
+                "Select a focuser module in config to enable autofocus."
+            )
+
+    def start(self):
+        """To start the imageserver, configure picamera2"""
         self._lores_data: ImageServerPicam2.PicamLoresData = (
             ImageServerPicam2.PicamLoresData()
         )
+
         self._hires_data: ImageServerPicam2.PicamHiresData = (
             ImageServerPicam2.PicamHiresData(
                 data=None, request_ready=Event(), condition=Condition()
             )
         )
 
-        self._currentmode = None
-        self._lastmode = None
-        self._count = 0
-        self._fps = 0
-
-        # worker threads
-        self._generate_images_thread: StoppableThread
-        self._stats_thread: StoppableThread
+        self._picam2: Picamera2 = Picamera2()
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picam2.create_still_configuration(
@@ -140,7 +173,7 @@ class ImageServerPicam2(ImageServerAbstract):
 
         # activate preview mode on init
         self._on_preview_mode()
-        self._picam2.configure(self._currentmode)
+        self._picam2.configure(self._current_config)
 
         # capture_file image quality
         self._picam2.options["quality"] = settings.common.HIRES_STILL_QUALITY
@@ -149,33 +182,7 @@ class ImageServerPicam2(ImageServerAbstract):
         logger.info(f"camera_controls: {self._picam2.camera_controls}")
         logger.info(f"controls: {self._picam2.controls}")
 
-        self._autofocus_module = None
-
-        # load autofocus module as chosen by config. if none, don't load
-        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
-            logger.info(
-                f"loading autofocus module: "
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
-            )
-            autofocus_module = import_module(
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
-            )
-            autofocus_class_ = getattr(
-                autofocus_module,
-                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
-            )
-            self._autofocus_module = autofocus_class_(self, evtbus)
-
-        else:
-            logger.info(
-                "picam2_focuser_module is disabled. "
-                "Select a focuser module in config to enable autofocus."
-            )
-
         self.set_ae_exposure(settings.backends.picam2_AE_EXPOSURE_MODE)
-
-    def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
         logger.info(
             f"stream quality {Quality[settings.backends.picam2_stream_quality.name]=}"
         )
@@ -218,8 +225,9 @@ class ImageServerPicam2(ImageServerAbstract):
         self._generate_images_thread.join(timeout=5)
         self._stats_thread.join(timeout=5)
 
-        self._picam2.stop()
         self._picam2.stop_encoder()
+        self._picam2.stop()
+        self._picam2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
         logger.debug(
             f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}"
@@ -299,13 +307,13 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode requested")
-        self._lastmode = self._currentmode
-        self._currentmode = self._capture_config
+        self._last_config = self._current_config
+        self._current_config = self._capture_config
 
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested")
-        self._lastmode = self._currentmode
-        self._currentmode = self._preview_config
+        self._last_config = self._current_config
+        self._current_config = self._preview_config
 
     def set_ae_exposure(self, newmode):
         """_summary_
@@ -334,7 +342,7 @@ class ImageServerPicam2(ImageServerAbstract):
         # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
         # some further information here: https://github.com/raspberrypi/picamera2/issues/554
         self._picam2.stop_encoder()
-        self._lastmode = self._currentmode
+        self._last_config = self._current_config
 
         logger.critical(
             f"_switch_mode: {self._picam2.is_open=}, {self._picam2.started=}"
@@ -342,7 +350,7 @@ class ImageServerPicam2(ImageServerAbstract):
 
         logger.critical("_switch_mode: pre")
         # logger.critical(f"{self._currentmode=}")
-        self._picam2.switch_mode(self._currentmode)
+        self._picam2.switch_mode(self._current_config)
         logger.critical("_switch_mode: post")
 
         self._picam2.start_encoder(
@@ -378,7 +386,7 @@ class ImageServerPicam2(ImageServerAbstract):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if (
                 self._hires_data.request_ready.is_set() is True
-                and self._currentmode != self._capture_config
+                and self._current_config != self._capture_config
             ):
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
@@ -387,7 +395,9 @@ class ImageServerPicam2(ImageServerAbstract):
                 )
                 self._on_capture_mode()
 
-            if (not self._currentmode == self._lastmode) and self._lastmode is not None:
+            if (
+                not self._current_config == self._last_config
+            ) and self._last_config is not None:
                 if not self._generate_images_thread.stopped():
                     self._switch_mode()
                 else:

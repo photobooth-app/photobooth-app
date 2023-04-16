@@ -12,3 +12,5 @@ omit = [
     "test_*.py",
     "./tests/*"
     ]
+parallel = true
+concurrency = ["thread","multiprocessing"]

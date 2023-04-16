@@ -1,7 +1,13 @@
 import logging
 import time
+import sys
+import os
 import io
 from PIL import Image
+
+# https://docs.python-guide.org/writing/structure/
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.imageserverabstract import ImageServerAbstract
 
 logger = logging.getLogger(name=None)
