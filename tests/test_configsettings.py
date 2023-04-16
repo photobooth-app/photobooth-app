@@ -209,17 +209,15 @@ def test_settings_available_in_separate_forked_process():
         daemon=True,
     )
     _p3.start()
-    time.sleep(2)
+    # wait for join, that the process has finished
+    _p3.join(2)
+    _p3.close()
 
     assert check_value3.value == TEST_KEY_TEST_VALUE
     logger.warning(
         "in process the value changed, this is good. "
         "so passing settings to processes is NOT necessary if start_method is 'fork'"
     )
-
-    _p3.terminate()
-    _p3.join(2)
-    _p3.close()
 
 
 def test_PersistSettings(tmp_movealloutoftheway):
