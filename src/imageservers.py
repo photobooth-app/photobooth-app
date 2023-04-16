@@ -91,6 +91,7 @@ class ImageServers:
         """
         function blocks until high quality image is available
         """
+        return self.primary_backend.wait_for_hq_image()
 
     def start(self):
         """start backends"""

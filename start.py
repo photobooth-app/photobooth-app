@@ -4,11 +4,13 @@ Photobooth Application start script
 """
 import subprocess
 import os
+import sys
 import platform
 import logging
 import asyncio
 import uuid
 import multiprocessing
+import socket
 from asyncio import Queue, QueueFull
 from pathlib import Path
 import uvicorn
@@ -28,7 +30,6 @@ from fastapi.responses import (
 )
 from fastapi import FastAPI, Request, HTTPException, status, Body
 from pymitter import EventEmitter
-from statemachine.exceptions import TransitionNotAllowed
 from src.imageservers import ImageServers
 from src.informationservice import InformationService
 from src.configsettings import ConfigSettings, settings
@@ -41,42 +42,17 @@ from src.loggingservice import LoggingService
 # from gpiozero import CPUTemperature, LoadAverage
 
 
+# constants
+SERVICE_NAME = "imageserver"
+
 # create early instances
-# event system
+# event system and logging
 ee: EventEmitter = EventEmitter()
 ls: LoggingService = LoggingService(evtbus=ee)
 
 
-# constants
-SERVICE_NAME = "imageserver"
-
-
 logger = logging.getLogger(__name__)
-
-
 app = FastAPI(docs_url="/api/doc", redoc_url=None, openapi_url="/api/openapi.json")
-
-"""
-request_stop = False
-
-
-def signal_handler(sig, frame):
-    global request_stop
-
-    request_stop = True
-
-    logger.info("request_stop set True to stop ongoing processes")
-    # TODO! this seems not to work properly yet, function is not called!
-
-    # sys.exit(0)
-
-
-# signal CTRL-C and systemctl stop
-signal.signal(signal.SIGINT, signal_handler)
-# this is not working, because uvicorn is eating up signal handler
-# definitions currently: https://github.com/encode/uvicorn/issues/1579
-# as workaround currently we set force_exit to True to shutdown the server
-"""
 
 
 @app.get("/eventstream")
@@ -184,17 +160,30 @@ def api_post_config_current(updated_settings: ConfigSettings):
     util_systemd_control("restart")
 
 
-@app.get("/cmd/frameserver/capturemode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get(
+    "/cmd/frameserver/capturemode", status_code=status.HTTP_202_ACCEPTED
+)  # deprecated
+@app.get("/cmd/imageserver/capturemode", status_code=status.HTTP_202_ACCEPTED)
 # photobooth compatibility
-def api_cmd_framserver_capturemode_get():
-    ee.emit("httprequest/armed")
-    ee.emit("onCaptureMode")
+def api_cmd_imageserver_capturemode_get():
+    # ee.emit("onCaptureMode")
+    if not processingpicture.idle.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="bad request, only one request at a time!",
+        )
+
+    processingpicture.thrill()
 
 
-@app.get("/cmd/frameserver/previewmode", status_code=status.HTTP_204_NO_CONTENT)
+@app.get(
+    "/cmd/frameserver/previewmode", status_code=status.HTTP_202_ACCEPTED
+)  # deprecated
+@app.get("/cmd/imageserver/previewmode", status_code=status.HTTP_202_ACCEPTED)
 # photobooth compatibility
-def api_cmd_frameserver_previewmode_get():
-    ee.emit("onPreviewMode")
+def api_cmd_imageserver_previewmode_get():
+    # nothing to do acutally
+    pass
 
 
 @app.post("/cmd/capture")
@@ -208,17 +197,26 @@ def api_cmd_capture_post(filepath: str = Body("capture.jpg")):
             os.path.basename(filepath),
         )
     )
-    if not safe_path.startswith(settings.misc.photoboothproject_image_directory):
+    if not safe_path.startswith(
+        os.path.normpath(settings.misc.photoboothproject_image_directory)
+    ):
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "illegal path, check configuration"
+            status.HTTP_400_BAD_REQUEST,
+            "illegal path, check configuration, "
+            f"allowed path {settings.misc.photoboothproject_image_directory=}",
         )
 
     try:
-        imageDb.capture_hq_image(safe_path)
+        processingpicture.shoot()
+        processingpicture.copy(
+            filename=safe_path
+        )  # for compatibility to photoboothproject
+        # processingpicture.postprocess()  # optional also add to this booth, commented out to save time
+        processingpicture.finalize()
+
         logger.info(f"file {safe_path} created successfully")
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.critical("error receiving file from backend")
-        logger.exception(exc)
+        logger.critical(f"error creating file, {exc}")
         return Response(
             content="Error",
             media_type="plain/text",
@@ -284,15 +282,20 @@ def util_systemd_control(state):
 @app.get("/cmd/capture")
 @app.get("/chose/1pic")
 def api_chose_1pic_get():
-    try:
-        processingpicture.arm()
-        return "OK"
-    except TransitionNotAllowed as exc:
-        logger.exception(exc)
+    if not processingpicture.idle.is_active:
         raise HTTPException(
             status_code=400,
-            detail=f"bad request, only one request at a time, Exception: {exc}",
-        ) from exc
+            detail="bad request, only one request at a time!",
+        )
+
+    try:
+        processingpicture.thrill()
+        processingpicture.countdown()
+        processingpicture.shoot()
+        processingpicture.postprocess()
+        processingpicture.finalize()
+
+        return "OK"
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
@@ -303,16 +306,14 @@ def api_chose_1pic_get():
 
 @ee.on("keyboardservice/chose_1pic")
 def evt_chose_1pic_get():
-    try:
-        processingpicture.arm()
-    except TransitionNotAllowed as exc:
-        logger.error(f"bad request, only one request at a time, Exception: {exc}")
+    if not processingpicture.idle.is_active:
+        raise RuntimeError("bad request, only one request at a time!")
 
-
-@app.get("/stats/focuser")
-def api_stats_focuser():
-    pass
-    # return (focusState._lastRunResult)
+    processingpicture.thrill()
+    processingpicture.countdown()
+    processingpicture.shoot()
+    processingpicture.postprocess()
+    processingpicture.finalize()
 
 
 @app.get("/gallery/images")
@@ -420,71 +421,97 @@ async def validation_exception_handler(request, exc):
     return await request_validation_exception_handler(request, exc)
 
 
-if __name__ == "__main__":
-    logger.info("Welcome to qPhotobooth")
-    logger.info(f"platform.system={platform.system()}")
-    logger.info(f"platform.release={platform.release()}")
-    logger.info(f"platform.machine={platform.machine()}")
-    logger.info(f"platform.python_version={platform.python_version()}")
-    logger.info(f"hostname={platform.node()}")
-    logger.info(f"psutil.cpu_count logical={psutil.cpu_count()}")
-    logger.info(f"psutil.cpu_count cores={psutil.cpu_count(logical=False)}")
-    logger.info(f"psutil.disk_partitions={psutil.disk_partitions()}")
-    if platform.system() == "Linux":
-        logger.info(f"psutil.disk_usage /={psutil.disk_usage('/')}")
-    elif platform.system() == "Windows":
-        logger.info(f"psutil.disk_usage C:={psutil.disk_usage('C:')}")
-    logger.info(f"psutil.net_if_addrs={psutil.net_if_addrs()}")
-    logger.info(f"psutil.virtual_memory={psutil.virtual_memory()}")
-    # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-    logger.info(f"__debug__={__debug__}")
+if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
+    # all dependencies that access hardware are loaded here in if condition
+    # reason: due to using backends with separate processes, this file is executed again per process
+    # so hardware would be accessed two times when using backends with sep processes - no bueno
+    # We are running under pytest or started the program. setup the dependencies.
+    logger.info("setting up dependencies")
+
+    # guard to start only one instance at a time.
+    try:
+        s = socket.socket()
+        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
+    except OSError:
+        logger.error("startup aborted. another instance is running. exiting.")
+        sys.exit(-1)
 
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
     # results on all platforms
     multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(
-        f"multiprocessing_start_method={multiprocessing_start_method}, before forcing"
-    )
+    logger.info(f"{multiprocessing_start_method=}, before forcing")
     multiprocessing.set_start_method(method="spawn", force=True)
     multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"multiprocessing_start_method={multiprocessing_start_method}, forced")
+    logger.info(f"{multiprocessing_start_method=}, forced")
 
     wledservice = WledService(ee)
-
     # load imageserver dynamically because service can be configured
     # https://stackoverflow.com/a/14053838
     imageServers = ImageServers(ee)
-
     imageDb = ImageDb(ee, imageServers.primary_backend)
-
     ks = KeyboardService(ee)
-
-    imageServers.start()
-
     ins = InformationService(ee, imageServers)
+    processingpicture = ProcessingPicture(ee, imageServers, imageDb)
 
-    processingpicture = ProcessingPicture(ee)
+if __name__ == "__main__":
+    # here is the server started
 
-    # serve files forever
-    try:
-        # log_level="trace", default info
-        config = uvicorn.Config(
-            app=app,
-            host="0.0.0.0",
-            port=settings.common.webserver_port,
-            log_level="info",
-        )
-        server = uvicorn.Server(config)
+    logger.info("Welcome to qPhotobooth")
+    logger.info(f"{platform.system()=}")
+    logger.info(f"{platform.release()=}")
+    logger.info(f"{platform.machine()=}")
+    logger.info(f"{platform.python_version()=}")
+    logger.info(f"{platform.node()=}")
+    logger.info(f"{psutil.cpu_count()=}")
+    logger.info(f"{psutil.cpu_count(logical=False)=}")
+    logger.info(f"{psutil.disk_partitions()=}")
+    if platform.system() == "Linux":
+        logger.info(f"{psutil.disk_usage('/')=}")
+    elif platform.system() == "Windows":
+        logger.info(f"{psutil.disk_usage('C:')=}")
+    logger.info(
+        [
+            (name, [addr.address for addr in addrs if addr.family == socket.AF_INET])
+            for name, addrs in psutil.net_if_addrs().items()
+        ]
+    )
+    logger.info(f"{psutil.virtual_memory()=}")
+    # run python with -O (optimized) sets debug to false and disables asserts from bytecode
+    logger.info(f"{__debug__=}")
 
-        # workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
-        # shutdown can be handled properly.
-        # Otherwise the stream.mjpg if open will block shutdown of the server
-        server.force_exit = True
+    # start services
+    imageServers.start()
+    ins.start()
 
-        ls.uvicorn()
+    # log_level="trace", default info
+    config = uvicorn.Config(
+        app=app,
+        host="0.0.0.0",
+        port=settings.common.webserver_port,
+        log_level="info",
+    )
+    server = uvicorn.Server(config)
 
-        server.run()
-    finally:
-        imageServers.stop()
-        ins.stop()
+    """
+    shutdown app workaround:
+    workaround until https://github.com/encode/uvicorn/issues/1579 is fixed and
+    shutdown can be handled properly.
+    Otherwise the stream.mjpg if open will block shutdown of the server
+    signal CTRL-C and systemctl stop would have no effect, app stalls
+
+    signal.signal(signal.SIGINT, signal_handler) and similar
+    don't work, because uvicorn is eating up signal handler
+    currently: https://github.com/encode/uvicorn/issues/1579
+    the workaround: currently we set force_exit to True to shutdown the server
+    """
+    server.force_exit = True
+
+    ls.uvicorn()
+
+    # serve files forever, loops endless
+    server.run()
+
+    # shutdown services
+    imageServers.stop()
+    ins.stop()

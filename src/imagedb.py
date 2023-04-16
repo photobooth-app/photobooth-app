@@ -2,64 +2,133 @@
 Handle all media collection related functions
 """
 import io
-import json
-import time
+from dataclasses import dataclass
 import glob
 import os
+import time
 import logging
-import shutil
 import hashlib
+from typing import List
 from pathlib import Path
 from PIL import Image
 from turbojpeg import TurboJPEG
 from src.configsettings import settings
-from src.exif import Exif
 
 logger = logging.getLogger(__name__)
+turbojpeg = TurboJPEG()
 
 DATA_PATH = "./data/"
-PATH_IMAGE = "image/"
-PATH_PREVIEW = "preview/"
-PATH_THUMBNAIL = "thumbnail/"
-
-# retry several times to get image
-MAX_ATTEMPTS = 3
+PATH_ORIGINAL = "".join([DATA_PATH, "original/"])
+PATH_FULL = "".join([DATA_PATH, "full/"])
+PATH_PREVIEW = "".join([DATA_PATH, "preview/"])
+PATH_THUMBNAIL = "".join([DATA_PATH, "thumbnail/"])
 
 
-def _db_imageitem(filepath: str, user_caption: str = ""):
-    if not filepath:
-        raise ValueError("need filepath")
+@dataclass
+class MediaItem:
+    """Class for keeping track of an media item in dict database."""
 
-    filename = os.path.basename(filepath)
+    filename: str = None
 
-    caption = filename
-    if user_caption:
-        # overwrite caption if provided
-        caption = user_caption
+    @property
+    def id(self) -> str:
+        return hashlib.md5(self.filename.encode("utf-8")).hexdigest()
 
-    datetime = os.path.getmtime(f"{DATA_PATH}{PATH_IMAGE}{filename}")
+    @property
+    def caption(self) -> str:
+        return Path(self.filename).stem
 
-    item = {
-        "id": hashlib.md5(filename.encode("utf-8")).hexdigest(),
-        "caption": caption,
-        "filename": filename,
-        "datetime": datetime,
-        "image": f"{DATA_PATH}{PATH_IMAGE}{filename}",
-        "preview": f"{DATA_PATH}{PATH_PREVIEW}{filename}",
-        "thumbnail": f"{DATA_PATH}{PATH_THUMBNAIL}{filename}",
-        "ext_download_url": settings.common.EXT_DOWNLOAD_URL.format(filename=filename),
-    }
+    @property
+    def datetime(self) -> float:
+        # cache useful here?
+        return os.path.getmtime(self.path_full)
 
-    if not (
-        Path(item["image"]).is_file()
-        and Path(item["preview"]).is_file()
-        and Path(item["thumbnail"]).is_file()
-    ):
-        raise FileNotFoundError(
-            f"the imageset is incomplete, not adding {filename} to database"
-        )
+    @property
+    def ext_download_url(self) -> str:
+        return settings.common.EXT_DOWNLOAD_URL.format(filename=self.filename)
 
-    return item
+    @property
+    def path_original(self) -> Path:
+        """filepath of item straight from device/webcam/DSLR, totally unprocessed
+        internal use in imagedb"""
+        return Path(PATH_ORIGINAL, self.filename)
+
+    @property
+    def path_full(self) -> Path:
+        """filepath of media item full resolution from device but processed, example background/beautyfilter
+        internal use in imagedb"""
+        return Path(PATH_FULL, self.filename)
+
+    @property
+    def path_preview(self) -> Path:
+        """filepath of media item preview resolution scaled represents full
+        internal use in imagedb"""
+        return Path(PATH_PREVIEW, self.filename)
+
+    @property
+    def path_thumbnail(self) -> Path:
+        """filepath of media item thumbnail resolution scaled represents full
+        internal use in imagedb"""
+        return Path(PATH_THUMBNAIL, self.filename)
+
+    @property
+    def original(self) -> str:
+        """filepath of item straight from device/webcam/DSLR, totally unprocessed
+        external use as urls"""
+        return Path(PATH_ORIGINAL, self.filename).as_posix()
+
+    @property
+    def full(self) -> str:
+        """filepath of media item full resolution from device but processed, example background/beautyfilter
+        external use as urls"""
+        return Path(PATH_FULL, self.filename).as_posix()
+
+    @property
+    def preview(self) -> str:
+        """filepath of media item preview resolution scaled represents full
+        external use as urls"""
+        return Path(PATH_PREVIEW, self.filename).as_posix()
+
+    @property
+    def thumbnail(self) -> str:
+        """filepath of media item thumbnail resolution scaled represents full
+        external use as urls"""
+        return Path(PATH_THUMBNAIL, self.filename).as_posix()
+
+    def __post_init__(self):
+        if not self.filename:
+            raise ValueError("Filename must be given")
+
+        if not (
+            (self.path_original).is_file()
+            and (self.path_full).is_file()
+            and (self.path_preview).is_file()
+            and (self.path_thumbnail).is_file()
+        ):
+            raise FileNotFoundError(
+                f"the imageset is incomplete, not adding {self.filename} to database"
+            )
+
+    def asdict(self) -> dict:
+        """Returns a dict including all properties, excluding __xx__ and other callable functions.
+        reference: https://stackoverflow.com/a/51734064
+
+        #TODO: could be improved by reducing the number of properies (for URL and Path) by apply .as_posix here.
+
+        Returns:
+            dict: MediaItems
+        """
+        return {
+            prop: getattr(self, prop)
+            for prop in dir(self)
+            if (
+                not prop.startswith("__")  # no privates
+                and not callable(getattr(__class__, prop, None))  # no callables
+                and not isinstance(
+                    getattr(self, prop), Path
+                )  # no path instances (not json.serializable)
+            )
+        }
 
 
 def get_scaled_jpeg_by_jpeg(buffer_in, quality, scaled_min_width):
@@ -101,14 +170,12 @@ def get_scaled_jpeg_by_jpeg(buffer_in, quality, scaled_min_width):
     scale_factor_turbojpeg = min(
         enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor)
     )
-    logger.debug(
+    logger.info(
         f"determined scale factor: {scale_factor_turbojpeg[1]},"
-        f"index {scale_factor_turbojpeg[0]}, tuple {allowed_list[scale_factor_turbojpeg[0]]},"
-        f"in width {width}, target width {scaled_min_width}"
+        f"input img width {width}, target img width {scaled_min_width}"
     )
 
-    jpeg = TurboJPEG()
-    buffer_out = jpeg.scale_with_quality(
+    buffer_out = turbojpeg.scale_with_quality(
         buffer_in,
         scaling_factor=allowed_list[scale_factor_turbojpeg[0]],
         quality=quality,
@@ -116,10 +183,68 @@ def get_scaled_jpeg_by_jpeg(buffer_in, quality, scaled_min_width):
     return buffer_out
 
 
-def write_jpeg_to_file(buffer, filepath):
-    """store buffer to given filepath"""
-    with open(filepath, "wb") as file:
-        file.write(buffer)
+def create_scaled_files(buffer_full, filepath):
+    """_summary_
+
+    Args:
+        buffer_full (_type_): _description_
+        filepath (_type_): _description_
+    """
+    filename = os.path.basename(filepath)
+
+    ## full version
+    with open(f"{PATH_FULL}{filename}", "wb") as file:
+        file.write(buffer_full)
+
+    ## preview version
+    buffer_preview = get_scaled_jpeg_by_jpeg(
+        buffer_full,
+        settings.common.PREVIEW_STILL_QUALITY,
+        settings.common.PREVIEW_STILL_WIDTH,
+    )
+    with open(f"{PATH_PREVIEW}{filename}", "wb") as file:
+        file.write(buffer_preview)
+
+    ## thumbnail version
+    buffer_thumbnail = get_scaled_jpeg_by_jpeg(
+        buffer_full,
+        settings.common.THUMBNAIL_STILL_QUALITY,
+        settings.common.THUMBNAIL_STILL_WIDTH,
+    )
+    with open(f"{PATH_THUMBNAIL}{filename}", "wb") as file:
+        file.write(buffer_thumbnail)
+
+    logger.debug(f"filesize full image: {round(len(buffer_full)/1024,1)}kb")
+    logger.debug(f"filesize preview: {round(len(buffer_preview)/1024,1)}kb")
+    logger.debug(f"filesize thumbnail: {round(len(buffer_thumbnail)/1024,1)}kb")
+    logger.info(f"created and saved scaled media items for {filename=}")
+
+
+def create_imageset_from_originalimage(filename):
+    """
+    A newly captured frame was taken by camera,
+    now its up to this class to create the thumbnail,
+    preview finally event is sent when processing is finished
+    """
+
+    # read original file
+
+    with open(Path(PATH_ORIGINAL, filename), "rb") as file:
+        buffer_original = file.read()
+    logger.debug(f"filesize original image: {round(len(buffer_original)/1024,1)}kb")
+
+    ##
+    # this could be a place to add a filter pipeline later
+    # 1) remove background
+    # 2) beauty filter
+    # 3) ...
+
+    # create scaled versions of full image
+    create_scaled_files(buffer_original, filename)
+
+    item = MediaItem(filename)
+
+    return item
 
 
 class ImageDb:
@@ -128,11 +253,16 @@ class ImageDb:
     def __init__(self, evtbus, imageserver):
         self._evtbus = evtbus
         self._imageserver = imageserver
-        self._exif = Exif()
 
-        self._db = []  # sorted array. always newest image first in list.
+        # the database ;)
+        # sorted list containing type MediaItem. always newest image first in list.
+        self._db: List[MediaItem] = []
 
-        self._evtbus.on("statemachine/capture", self.capture_hq_image)
+        # ensure data directories exist
+        os.makedirs(f"{PATH_ORIGINAL}", exist_ok=True)
+        os.makedirs(f"{PATH_FULL}", exist_ok=True)
+        os.makedirs(f"{PATH_PREVIEW}", exist_ok=True)
+        os.makedirs(f"{PATH_THUMBNAIL}", exist_ok=True)
 
         self._init_db()
 
@@ -140,42 +270,57 @@ class ImageDb:
         logger.info(
             "init database and creating missing scaled images. this might take some time."
         )
-        image_paths = sorted(glob.glob(f"{DATA_PATH}{PATH_IMAGE}*.jpg"))
+        image_paths = sorted(glob.glob(f"{PATH_ORIGINAL}*.jpg"))
+        counter_processed_images = 0
         counter_failed_images = 0
+        start_time_initialize = time.time()
 
         for image_path in image_paths:
+            filename = Path(image_path).name
+
             try:
-                self._db_add_item(_db_imageitem(image_path))
+                self.db_add_item(MediaItem(filename))
 
             except FileNotFoundError:
-                # _dbImageItem raises FileNotFoundError if image/preview/thumb is missing.
+                # MediaItem raises FileNotFoundError if original/full/preview/thumb is missing.
                 logger.debug(
-                    f"file {image_path} misses its scaled versions, try to create now"
+                    f"file {filename} misses its scaled versions, try to create now"
                 )
 
                 # try create missing preview/thumbnail and retry. otherwise fail completely
                 try:
-                    with open(image_path, "rb") as file:
-                        self.create_scaled_images(file.read(), image_path)
+                    create_imageset_from_originalimage(filename)
+                    counter_processed_images += 1
                 except (FileNotFoundError, PermissionError, OSError) as exc:
                     logger.error(
-                        f"file {image_path} processing failed. file ignored. {exc}"
+                        f"file {filename} processing failed. file ignored. {exc}"
                     )
                     counter_failed_images += 1
                 else:
-                    self._db_add_item(_db_imageitem(image_path))
+                    self.db_add_item(MediaItem(filename))
 
         logger.info(f"initialized image DB, added {self.number_of_images} valid images")
+        logger.info(
+            f"initialize process time: {round((time.time() - start_time_initialize), 2)}s"
+        )
+        if counter_processed_images:
+            logger.warning(
+                f"#{counter_processed_images} items processed due to missing scaled version"
+            )
         if counter_failed_images:
             logger.error(
                 f"#{counter_failed_images} erroneous files, check the data dir for problems"
             )
 
-    def _db_add_item(self, item):
-        self._db.insert(0, item)  # insert at first position (prepend)
-        return item["id"]
+        # finally sort the db one time only. resorting never necessary
+        # because new items are inserted at the right place and no sort algorithms are supported currently
+        self._db.sort(key=lambda item: item.datetime, reverse=True)
 
-    def _db_delete_item_by_item(self, item):
+    def db_add_item(self, item: MediaItem):
+        self._db.insert(0, item)  # insert at first position (prepend)
+        return item.id
+
+    def _db_delete_item_by_item(self, item: MediaItem):
         # self._db = [item for item in self._db if item['id'] != id]
         self._db.remove(item)
         # del self._db[id]
@@ -184,26 +329,22 @@ class ImageDb:
         self._db.clear()
 
     @property
-    def number_of_images(self):
-        """_summary_
+    def number_of_images(self) -> int:
+        """count number of items in db
 
         Returns:
-            _type_: _description_
+            int: Number of items in db
         """
         return len(self._db)
 
-    def db_get_images(self, sort_by_key="datetime", reverse=True):
-        """_summary_
+    def db_get_images(self) -> dict:
+        """Get dict of mediaitems. Most recent item is at index 0.
 
-        Args:
-            sort_by_key (str, optional): _description_. Defaults to "datetime".
-            reverse (bool, optional): _description_. Defaults to True.
 
         Returns:
-            _type_: _description_
+            dict: _description_
         """
-        return sorted(self._db, key=lambda x: x[sort_by_key], reverse=reverse)
-        # return dict(sorted(self._db.items(), key=lambda x: x[1][sortByKey], reverse=reverse))
+        return [item.asdict() for item in self._db]
 
     def db_get_image_by_id(self, item_id):
         """_summary_
@@ -218,133 +359,13 @@ class ImageDb:
             _type_: _description_
         """
         # https://stackoverflow.com/a/7125547
-        item = next((x for x in self._db if x["id"] == item_id), None)
+        item = next((x for x in self._db if x.id == item_id), None)
 
         if item is None:
             logger.debug(f"image {item_id} not found!")
             raise FileNotFoundError(f"image {item_id} not found!")
 
         return item
-
-    def capture_hq_image(self, photoboothproject_filepath: str = None):
-        """
-        trigger still image capture and align post processing
-        """
-
-        filename_newfile = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
-        logger.debug(f"capture to filename: {filename_newfile}")
-
-        start_time_capture = time.time()
-
-        # at this point it's assumed, a HQ image was requested by statemachine.
-        # seems to not make sense now, maybe revert hat...
-        # waitforpic and store to disk
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            try:
-                jpeg_buffer = self._imageserver.wait_for_hq_image()
-            except TimeoutError:
-                logger.error(
-                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
-                )
-                # can we do additional error handling here?
-            else:
-                break
-        else:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.critical(
-                "critical error capture image. "
-                f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
-            )
-            raise RuntimeError(
-                f"finally failed after {MAX_ATTEMPTS} attempts to capture image!"
-            )
-
-        # create JPGs and add to db
-        start_time_postproc = time.time()
-        (item, _) = self.create_imageset_from_image(jpeg_buffer, filename_newfile)
-        actual_filepath = item["image"]
-
-        # add exif information
-        if settings.common.PROCESS_ADD_EXIF_DATA:
-            logger.info("add exif data to image")
-            self._exif.inject_exif_to_jpeg(actual_filepath)
-
-        # also create a copy for photobooth compatibility
-        if photoboothproject_filepath:
-            # photobooth sends a complete path, where to put the file,
-            # so copy it to requested filepath
-
-            shutil.copy2(actual_filepath, photoboothproject_filepath)
-
-        logger.info(f"capture to file {actual_filepath} successful")
-        logger.info(
-            f"wait_for_hq_image time: {round((start_time_postproc - start_time_capture), 1)}s"
-        )
-        logger.info(
-            f"post process time: {round((time.time() - start_time_postproc), 1)}s"
-        )
-
-        # to inform frontend about new image to display
-        self._evtbus.emit(
-            "publishSSE", sse_event="imagedb/newarrival", sse_data=json.dumps(item)
-        )
-
-    def create_scaled_images(self, buffer_full, filepath):
-        """_summary_
-
-        Args:
-            buffer_full (_type_): _description_
-            filepath (_type_): _description_
-        """
-        filename = os.path.basename(filepath)
-
-        logger.debug(f"filesize full image: {round(len(buffer_full)/1024,1)}")
-
-        # preview version
-        prev_filepath = f"{DATA_PATH}{PATH_PREVIEW}{filename}"
-        buffer_preview = get_scaled_jpeg_by_jpeg(
-            buffer_full,
-            settings.common.PREVIEW_STILL_QUALITY,
-            settings.common.PREVIEW_STILL_WIDTH,
-        )
-        write_jpeg_to_file(buffer_preview, prev_filepath)
-        logger.debug(f"filesize preview: {round(len(buffer_preview)/1024,1)}")
-        logger.info(f"created and saved preview image {prev_filepath}")
-
-        # thumbnail version
-        thumb_filepath = f"{DATA_PATH}{PATH_THUMBNAIL}{filename}"
-        buffer_thumbnail = get_scaled_jpeg_by_jpeg(
-            buffer_full,
-            settings.common.THUMBNAIL_STILL_QUALITY,
-            settings.common.THUMBNAIL_STILL_WIDTH,
-        )
-        write_jpeg_to_file(buffer_thumbnail, thumb_filepath)
-        logger.debug(f"filesize thumbnail: {round(len(buffer_thumbnail)/1024,1)}")
-        logger.info(f"created and saved thumbnail image {thumb_filepath}")
-
-    def create_imageset_from_image(self, hires_image, filepath):
-        """
-        A newly captured frame was taken by camera,
-        now its up to this class to create the thumbnail,
-        preview finally event is sent when processing is finished
-        """
-        if not filepath:
-            filepath = f"{time.strftime('%Y%m%d_%H%M%S')}.jpg"
-        filename = os.path.basename(filepath)
-
-        # create JPGs
-        buffer_full = hires_image
-
-        # save to disk
-        write_jpeg_to_file(buffer_full, f"{DATA_PATH}{PATH_IMAGE}{filename}")
-
-        # create scaled versions of full image
-        self.create_scaled_images(buffer_full, filename)
-
-        item = _db_imageitem(filename)
-        item_id = self._db_add_item(item)
-
-        return item, item_id
 
     def delete_image_by_id(self, item_id):
         """delete single file and it's related thumbnails"""
@@ -354,23 +375,26 @@ class ImageDb:
             item = self.db_get_image_by_id(item_id)
             logger.debug(f"found item={item}")
 
-            os.remove(item["image"])
-            os.remove(item["preview"])
-            os.remove(item["thumbnail"])
+            os.remove(item.original)
+            os.remove(item.full)
+            os.remove(item.preview)
+            os.remove(item.thumbnail)
             self._db_delete_item_by_item(item)
         except Exception as exc:
             logger.exception(exc)
             logger.error(f"error deleting item id={item_id}")
-            raise
+            raise exc
 
     def delete_images(self):
         """delete all images, inclusive thumbnails, ..."""
         try:
-            for file in Path(f"{DATA_PATH}{PATH_IMAGE}").glob("*.jpg"):
+            for file in Path(f"{PATH_ORIGINAL}").glob("*.jpg"):
                 os.remove(file)
-            for file in Path(f"{DATA_PATH}{PATH_PREVIEW}").glob("*.jpg"):
+            for file in Path(f"{PATH_FULL}").glob("*.jpg"):
                 os.remove(file)
-            for file in Path(f"{DATA_PATH}{PATH_THUMBNAIL}").glob("*.jpg"):
+            for file in Path(f"{PATH_PREVIEW}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{PATH_THUMBNAIL}").glob("*.jpg"):
                 os.remove(file)
             self._db_delete_items()
         except OSError as exc:

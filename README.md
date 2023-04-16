@@ -1,14 +1,12 @@
 # Photobooth App
 
-_Latest stable version:_  
+The photobooth app is written in Python and coming along with a modern Vue frontend.
+
+![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)
+![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
-
-_Latest development version:_  
-[![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
-[![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml/badge.svg?branch=dev)](https://github.com/mgrl/photobooth-app/actions/workflows/pytest.yml)
-
-The photobooth app is written in Python and coming along with a modern Vue frontend.
+[![codecov](https://codecov.io/gh/mgrl/photobooth-app/branch/dev/graph/badge.svg?token=SBB5DGX17V)](https://codecov.io/gh/mgrl/photobooth-app)
 
 ## :heart_eyes: Features
 
@@ -34,6 +32,13 @@ The app controls camera's autofocus, handles led signaling when a photo is taken
 The booth is made from 3d printed parts, [see the documentation over here](https://github.com/mgrl/photobooth-3d).
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
+
+## :nail_care: Screenshots
+
+![frontpage](misc/screenshots/frontpage.png)
+![gallery list](misc/screenshots/gallery_list.png)
+![gallery detail](misc/screenshots/gallery_detail.png)
+![admin center config page](misc/screenshots/admin_config.png)
 
 ## :gear: Prerequisites
 
@@ -69,10 +74,10 @@ Following commands have to be set in photobooth project to use this app as image
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
-take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -H 'accept: application/json' -H 'Content-Type: application/json' -d '"%s"'
+take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -d '"%s"'
 take_picture_msg: Done
-pre_photo_cmd: curl http://photobooth:8000/cmd/frameserver/capturemode
-post_photo_cmd: curl http://photobooth:8000/cmd/frameserver/previewmode
+pre_photo_cmd: curl http://photobooth:8000/cmd/imageserver/capturemode
+post_photo_cmd: curl http://photobooth:8000/cmd/imageserver/previewmode
 preview_url: url("http://photobooth:8000/stream.mjpg")
 background_defaults: url("http://photobooth:8000/stream.mjpg")
 ```
@@ -130,8 +135,13 @@ network={
 }
 ```
 
-## :mag: Changelog
+## :mega: Changelog
 
+- 2023-04-13
+  - revised statemachine
+  - changed api commands for photobooth
+  - removed locationservice and extended exif for now
+  - FIX: switch_mode/configure hang forever. removed for now, so no metadata currently avail.
 - 2023-04-08
   - picamera2 now with gpu hardware acceleration reduce cpu load
   - gphoto2 implemented
@@ -161,7 +171,7 @@ network={
   - store exif data to images
   - changed to exposure mode short as per default
 
-## Contribute
+## :rocket: Contribute
 
 If you find an issue, please post it <https://github.com/mgrl/photobooth-app/issues>
 
@@ -176,7 +186,7 @@ Additional requirements
   - yarn
   - quasar cli <https://quasar.dev/start/quasar-cli>
 
-## Troubleshooting
+## :interrobang: Troubleshooting
 
 Check following commands and files for error messages:
 

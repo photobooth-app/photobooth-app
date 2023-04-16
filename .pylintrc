@@ -27,3 +27,7 @@ disable=import-error
 
 [SIMILARITIES]
 min-similarity-lines=10
+
+[FORMAT]
+max-line-length=120
+good-names=i,j,k,id

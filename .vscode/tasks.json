@@ -2,6 +2,21 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "pytest with coverage",
+      "type": "shell",
+      "command": "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
+    },
+    {
+      "label": "pylint",
+      "type": "shell",
+      "command": "pylint -v *.py ./src/*.py"
+    },
+    {
+      "label": "statemachine diagram (needs pydot and graphviz)",
+      "type": "shell",
+      "command": "python -m statemachine.contrib.diagram src.processingpicture.ProcessingPicture diagram_ProcessingPicture.png"
+    },
+    {
       "label": "startBoothPi",
       "type": "shell",
       "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"
@@ -25,17 +40,6 @@
       "label": "cleanupOnPi",
       "type": "shell",
       "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'sudo pkill -9 python3'"
-    },
-
-    {
-      "label": "copyOneFileOnPi(unusedRef)",
-      "type": "shell",
-      "command": "scp ${file} ${config:sshUser}@${config:sshEndpoint}:~/imageserver/${fileBasename}"
-    },
-    {
-      "label": "startOnPi(unusedRef)",
-      "type": "shell",
-      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'nohup python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/${fileBasename} > /dev/null 2>&1 &'"
     },
 
     {

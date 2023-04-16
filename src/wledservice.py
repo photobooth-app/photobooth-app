@@ -45,8 +45,7 @@ class WledService:
             return
 
         logger.info("register events for WLED")
-        self._evtbus.on("statemachine/armed", self.preset_countdown)
-        self._evtbus.on("httprequest/armed", self.preset_countdown)
+        self._evtbus.on("statemachine/on_thrill", self.preset_countdown)
         self._evtbus.on("frameserver/onCapture", self.preset_shoot)
         self._evtbus.on("frameserver/onCaptureFinished", self.preset_standby)
 
@@ -72,9 +71,8 @@ class WledService:
                 dsrdtr=False,
             )
         except serial.SerialException as exc:
-            logger.error(exc)
             logger.error(
-                "failed to open WLED module, ESP flashed and correct serial port set in config?"
+                f"failed to open WLED module, ESP flashed and correct serial port set in config? {exc}"
             )
 
             return wled_detected

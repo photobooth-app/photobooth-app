@@ -24,7 +24,7 @@ class InformationService:
         self._imageservers: ImageServerAbstract = imageservers
 
         # objects
-        self._stats_interval_timer = RepeatedTimer(
+        self._stats_interval_timer: RepeatedTimer = RepeatedTimer(
             STATS_INTERVAL_TIMER, self._on_stats_interval_timer
         )
 
@@ -78,10 +78,11 @@ class InformationService:
 
     def _gather_cma(self):
         try:
-            meminfo = dict(
-                (i.split()[0].rstrip(":"), int(i.split()[1]))
-                for i in open("/proc/meminfo", encoding="utf-8").readlines()
-            )
+            with open("/proc/meminfo", encoding="utf-8") as file:
+                meminfo = dict(
+                    (i.split()[0].rstrip(":"), int(i.split()[1]))
+                    for i in file.readlines()
+                )
 
             cma = {"CmaTotal": meminfo["CmaTotal"], "CmaFree": meminfo["CmaFree"]}
         except FileNotFoundError:

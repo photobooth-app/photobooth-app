@@ -377,7 +377,7 @@ INSTALLDIR_HAS_GIT_REPO = (
         ["git", "branch"],
         cwd=INSTALL_DIR,
         stderr=STDOUT,
-        stdout=open(os.devnull, "w", encoding="utf-8"),
+        stdout=open(os.devnull, "w", encoding="utf-8"),  # pylint: disable=R1732
     )
     == 0
 )

@@ -4,10 +4,10 @@ Simulated backend for testing.
 import platform
 import time
 import logging
+from datetime import datetime
 from io import BytesIO
 from multiprocessing import Process, shared_memory, Condition, Lock, Event
 from PIL import Image, ImageDraw, ImageFont
-import psutil
 from pymitter import EventEmitter
 from src.imageserverabstract import (
     ImageServerAbstract,
@@ -30,12 +30,22 @@ class ImageServerSimulated(ImageServerAbstract):
         self.metadata = {}
 
         # private props
-        self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True, size=settings._shared_memory_buffer_size
-        )
+        self._img_buffer_shm: shared_memory.SharedMemory
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
         self._event_proc_shutdown: Event = Event()
+
+        self._p: Process
+
+    def start(self):
+        """To start the image backend"""
+        # ensure shutdown event is cleared (needed for restart during testing)
+        self._event_proc_shutdown.clear()
+
+        self._img_buffer_shm = shared_memory.SharedMemory(
+            create=True,
+            size=settings._shared_memory_buffer_size,  # pylint: disable=W0212
+        )
 
         self._p = Process(
             target=img_aquisition,
@@ -48,11 +58,8 @@ class ImageServerSimulated(ImageServerAbstract):
             ),
             daemon=True,
         )
-
-    def start(self):
-        """To start the image backend"""
-
         self._p.start()
+
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
@@ -102,6 +109,8 @@ class ImageServerSimulated(ImageServerAbstract):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        if self._event_proc_shutdown.is_set():
+            raise RuntimeError("shutdown already in progress, abort early")
 
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=4):
@@ -138,6 +147,9 @@ def img_aquisition(
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
+    img_original = Image.open("./src/assets/imageserversimulated_background.jpg")
+    text_fill = "#888"
+
     while not _event_proc_shutdown.is_set():
         now_time = time.time_ns()
         if (now_time - last_time) / 1000**3 <= (1 / target_fps):
@@ -149,50 +161,37 @@ def img_aquisition(
         last_time = now_time
 
         # create PIL image
-        img = Image.new(mode="RGB", size=(640, 480), color="green")
+        img = img_original.copy()
 
         # add text
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(
-            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=30
+            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=22
         )
         font_small = ImageFont.truetype(
             font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=15
         )
         img_draw.text(
-            (100, 100), "simulated image backend", fill=(200, 200, 200), font=font_large
+            (25, 100), "simulated image source", fill=text_fill, font=font_large
         )
+
         img_draw.text(
-            (100, 140), f"img time: {now_time}", fill=(200, 200, 200), font=font_large
-        )
-        img_draw.text(
-            (100, 180), f"framerate: {fps}", fill=(200, 200, 200), font=font_large
-        )
-        img_draw.text(
-            (100, 220),
-            (
-                f"cpu: 1/5/15min "
-                f"{[round(x / psutil.cpu_count() * 100,1) for x in psutil.getloadavg()]}%"
-            ),
-            fill=(200, 200, 200),
+            (25, 130),
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+            fill=text_fill,
             font=font_large,
         )
+        img_draw.text((25, 160), f"framerate: {fps}", fill=text_fill, font=font_small)
         img_draw.text(
-            (100, 260),
+            (25, 340),
             "you see this, so installation was successful :)",
-            fill=(200, 200, 200),
+            fill=text_fill,
             font=font_small,
         )
         img_draw.text(
-            (100, 280),
-            f"goto http://{platform.node()}:{settings.common.webserver_port} to setup",
-            fill=(200, 200, 200),
-            font=font_small,
-        )
-        img_draw.text(
-            (100, 300),
-            "to use a camera instead this simulated backend",
-            fill=(200, 200, 200),
+            (25, 360),
+            f"setup camera: http://{platform.node()}:{settings.common.webserver_port}/#/admin",
+            fill=text_fill,
             font=font_small,
         )
 
@@ -207,6 +206,3 @@ def img_aquisition(
         with _condition_img_buffer_ready:
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
-
-    # release img on process shutdown
-    img.close()
