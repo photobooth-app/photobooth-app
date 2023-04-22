@@ -35,6 +35,13 @@ def check_focusavail_skip():
         EnumFocuserModule.LIBCAM_AF_CONTINUOUS,
     ]
 )
+def autofocus_algorithm(request):
+    # yield fixture instead return to allow for cleanup:
+    yield request.param
+
+    # cleanup
+    # os.remove(request.param)
+
 
 ## tests
 
@@ -45,14 +52,6 @@ def test_getImages():
     backend = ImageServerPicam2(EventEmitter(), True)
 
     get_images(backend)
-
-
-def autofocus_algorithm(request):
-    # yield fixture instead return to allow for cleanup:
-    yield request.param
-
-    # cleanup
-    # os.remove(request.param)
 
 
 def test_autofocus(autofocus_algorithm):
