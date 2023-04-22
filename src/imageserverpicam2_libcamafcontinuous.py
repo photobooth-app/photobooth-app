@@ -72,8 +72,7 @@ class ImageServerPicam2LibcamAfContinuous:
             logger.critical(
                 f"control not available on camera - autofocus not working properly {exc}"
             )
-            # rethrow as in moculde continuous it's critical if not available
-            raise exc
+
         try:
             self._imageserver._picam2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
