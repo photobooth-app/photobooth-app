@@ -1,6 +1,5 @@
 import logging
 import time
-import sys
 import os
 import io
 import platform
@@ -11,15 +10,12 @@ from src.imageserverabstract import ImageServerAbstract
 logger = logging.getLogger(name=None)
 
 
-def _is_rpi():
-    is_rpi = False
+def is_rpi():
     if platform.system() == "Linux":
         if os.path.isfile("/proc/device-tree/model"):
-            with open("/proc/device-tree/model", "r") as f:
-                model = f.read()
-                is_rpi = "Raspberry" in model
-
-    return is_rpi
+            with open("/proc/device-tree/model", "r", encoding="utf-8") as file:
+                model = file.read()
+                return "Raspberry" in model
 
 
 def get_images(backend: ImageServerAbstract):
@@ -30,7 +26,11 @@ def get_images(backend: ImageServerAbstract):
     time.sleep(5)
 
     try:
-        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+        with Image.open(
+            io.BytesIO(
+                backend._wait_for_lores_image()  # pylint:disable=protected-access
+            )
+        ) as img:
             img.verify()
     except Exception as exc:
         print(exc)

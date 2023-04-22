@@ -1,4 +1,4 @@
-from .utils import _is_rpi, get_images
+from .utils import is_rpi, get_images
 from pymitter import EventEmitter
 from src.configsettings import settings, ConfigSettings, EnumFocuserModule
 import pytest
@@ -9,7 +9,7 @@ logger = logging.getLogger(name=None)
 
 ## check skip if wrong platform
 
-if not _is_rpi():
+if not is_rpi():
     pytest.skip(
         "platform not raspberry pi, test of Picam2 backend skipped",
         allow_module_level=True,
@@ -17,7 +17,7 @@ if not _is_rpi():
 
 
 def check_focusavail_skip():
-    if _is_rpi():
+    if is_rpi():
         from picamera2 import Picamera2
 
         with Picamera2() as picam2:
