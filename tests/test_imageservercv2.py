@@ -1,11 +1,5 @@
-import sys
-import os
-
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from src.imageserverwebcamcv2 import ImageServerWebcamCv2, available_camera_indexes
-import test_helperfunctions as test_helperfunctions
+from .utils import get_images
 from pymitter import EventEmitter
 from src.configsettings import settings
 import pytest
@@ -33,4 +27,4 @@ def test_getImages():
     # ImageServerSimulated backend: test on every platform
     backend = ImageServerWebcamCv2(EventEmitter(), True)
 
-    test_helperfunctions.get_images(backend)
+    get_images(backend)

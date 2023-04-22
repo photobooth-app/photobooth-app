@@ -1,34 +1,81 @@
-import test_helperfunctions as test_helperfunctions
+from .utils import is_rpi, get_images
 from pymitter import EventEmitter
-import platform
+from src.configsettings import settings, ConfigSettings, EnumFocuserModule
 import pytest
+import time
 import logging
-import os
-import sys
-
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 
 logger = logging.getLogger(name=None)
 
+## check skip if wrong platform
 
-def _is_rpi():
-    is_rpi = False
-    if platform.system() == "Linux":
-        if os.path.isfile("/proc/device-tree/model"):
-            with open("/proc/device-tree/model", "r") as f:
-                model = f.read()
-                is_rpi = "Raspberry" in model
+if not is_rpi():
+    pytest.skip(
+        "platform not raspberry pi, test of Picam2 backend skipped",
+        allow_module_level=True,
+    )
 
-    return is_rpi
+
+def check_focusavail_skip():
+    if is_rpi():
+        from picamera2 import Picamera2
+
+        with Picamera2() as picam2:
+            if "AfMode" not in picam2.camera_controls:
+                pytest.skip("SKIPPED (no AF available)")
+
+
+## fixtures
+
+
+@pytest.fixture(
+    params=[
+        EnumFocuserModule.NULL,
+        EnumFocuserModule.LIBCAM_AF_INTERVAL,
+        EnumFocuserModule.LIBCAM_AF_CONTINUOUS,
+    ]
+)
+def autofocus_algorithm(request):
+    # yield fixture instead return to allow for cleanup:
+    yield request.param
+
+    # cleanup
+    # os.remove(request.param)
+
+
+## tests
 
 
 def test_getImages():
-    if not _is_rpi():
-        pytest.skip("platform not raspberry pi, test of Picam2 backend skipped")
     from src.imageserverpicam2 import ImageServerPicam2
 
     backend = ImageServerPicam2(EventEmitter(), True)
 
-    test_helperfunctions.get_images(backend)
+    get_images(backend)
+
+
+def test_autofocus(autofocus_algorithm):
+    check_focusavail_skip()
+
+    from src.imageserverpicam2 import ImageServerPicam2
+    from src.configsettings import settings
+
+    evtbus = EventEmitter()
+
+    settings.backends.picam2_focuser_module = autofocus_algorithm
+    backend = ImageServerPicam2(evtbus, True)
+    backend.start()
+
+    evtbus.emit("statemachine/on_thrill")
+    time.sleep(1)
+    evtbus.emit("statemachine/on_exit_capture_still")
+    time.sleep(1)
+    evtbus.emit("onCaptureMode")
+    time.sleep(1)
+    evtbus.emit("onPreviewMode")
+    time.sleep(1)
+
+    # wait so some cycles had happen
+    time.sleep(11)
+
+    backend.stop()

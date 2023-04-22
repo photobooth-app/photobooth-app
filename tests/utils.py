@@ -1,16 +1,21 @@
 import logging
 import time
-import sys
 import os
 import io
+import platform
 from PIL import Image
-
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.imageserverabstract import ImageServerAbstract
 
 logger = logging.getLogger(name=None)
+
+
+def is_rpi():
+    if platform.system() == "Linux":
+        if os.path.isfile("/proc/device-tree/model"):
+            with open("/proc/device-tree/model", "r", encoding="utf-8") as file:
+                model = file.read()
+                return "Raspberry" in model
 
 
 def get_images(backend: ImageServerAbstract):
@@ -21,7 +26,11 @@ def get_images(backend: ImageServerAbstract):
     time.sleep(5)
 
     try:
-        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+        with Image.open(
+            io.BytesIO(
+                backend._wait_for_lores_image()  # pylint:disable=protected-access
+            )
+        ) as img:
             img.verify()
     except Exception as exc:
         print(exc)
