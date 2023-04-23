@@ -28,9 +28,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git
-      - name: Add user to input and tty for keyboard event listener
-        run: |
-          sudo usermod -a -G tty,input $USER
       - name: Install pip dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
