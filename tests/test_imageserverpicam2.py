@@ -1,4 +1,5 @@
-from .utils import is_rpi, get_images
+from .utils import get_images
+from src.utils import is_rpi
 from pymitter import EventEmitter
 from src.configsettings import settings, ConfigSettings, EnumFocuserModule
 import pytest

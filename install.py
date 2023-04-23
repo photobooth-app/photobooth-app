@@ -13,6 +13,7 @@ import platform
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
+from src.utils import is_rpi
 
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
@@ -118,7 +119,7 @@ def install_system_packages_win():
 def install_system_packages_linux():
     """_summary_"""
     _syscall(f'apt install -y {" ".join(SYSTEM_PACKAGES_LINUX)}', True)
-    if _is_rpi():
+    if is_rpi():
         _syscall(f'apt install -y {" ".join(SYSTEM_PACKAGES_RPI)}', True)
 
 
@@ -180,17 +181,6 @@ def _is_windows():
 
 def _is_linux():
     return platform.system() == "Linux"
-
-
-def _is_rpi():
-    is_rpi = False
-    if platform.system() == "Linux":
-        if os.path.isfile("/proc/device-tree/model"):
-            with open("/proc/device-tree/model", "r", encoding="utf-8") as file:
-                model = file.read()
-                is_rpi = "Raspberry" in model
-
-    return is_rpi
 
 
 def _is_admin():
@@ -302,7 +292,7 @@ else:
 
 
 print_spacer("Is Raspberry Pi?")
-if _is_rpi():
+if is_rpi():
     print_blue("OK, Pi detected")
 else:
     print_blue("No Pi, will not install Pi specific features")
@@ -538,7 +528,7 @@ if _is_linux():
 print_spacer("Apply starter configuration for popular hardware choices?")
 print("Choose from following list:")
 availableConfigurations = STARTER_CONFIGURATIONS_COMMON
-if _is_rpi():
+if is_rpi():
     availableConfigurations.extend(STARTER_CONFIGURATIONS_RPI)
 if _is_linux():
     availableConfigurations.extend(STARTER_CONFIGURATIONS_LINUX)

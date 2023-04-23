@@ -208,11 +208,15 @@ class ImageServerPicam2(ImageServerAbstract):
             self._autofocus_module.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
+        remaining_retries = 10
         while True:
             with self._lores_data.condition:
-                if self._lores_data.condition.wait(timeout=0.5):
+                if (
+                    self._lores_data.condition.wait(timeout=0.5)
+                    or remaining_retries < 0
+                ):
                     break
-
+                remaining_retries -= 1
                 logger.info("waiting for backend to start up...")
 
         logger.debug(f"{self.__module__} started")
