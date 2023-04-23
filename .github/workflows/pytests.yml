@@ -57,6 +57,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2
+      - name: Install gphoto2 dependencies
+        run: |
+          sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev
       - name: Install pip dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
