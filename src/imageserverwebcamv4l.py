@@ -77,11 +77,12 @@ class ImageServerWebcamV4l(ImageServerAbstract):
         remaining_retries = 10
         while True:
             with self._img_buffer.condition:
-                if (
-                    self._img_buffer.condition.wait(timeout=0.5)
-                    or remaining_retries < 0
-                ):
+                if self._img_buffer.condition.wait(timeout=0.5):
                     break
+
+                if remaining_retries < 0:
+                    raise RuntimeError("failed to start up backend")
+
                 remaining_retries -= 1
                 logger.info("waiting for backend to start up...")
 
