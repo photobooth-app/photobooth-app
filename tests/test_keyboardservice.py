@@ -4,7 +4,7 @@ from pymitter import EventEmitter
 from src.keyboardservice import KeyboardService
 from src.configsettings import settings, ConfigSettings
 import logging
-import time
+import pytest
 
 logger = logging.getLogger(name=None)
 
@@ -31,6 +31,7 @@ def test_key_callback():
         logger.info(
             f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}"
         )
+        pytest.skip("system does not allow access to input devices")
 
     evtbus.on("keyboardservice/chose_1pic", event_chose_1pic_received.callback)
 
