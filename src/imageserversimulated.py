@@ -58,7 +58,16 @@ class ImageServerSimulated(ImageServerAbstract):
             ),
             daemon=True,
         )
+        # start process
         self._p.start()
+
+        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
+        while True:
+            with self._condition_img_buffer_ready:
+                if self._condition_img_buffer_ready.wait(timeout=0.5):
+                    break
+
+                logger.info("waiting for backend to start up...")
 
         logger.debug(f"{self.__module__} started")
 

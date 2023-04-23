@@ -95,6 +95,14 @@ class ImageServerGphoto2(ImageServerAbstract):
         self._generate_images_thread.start()
         self._stats_thread.start()
 
+        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
+        while True:
+            with self._lores_data.condition:
+                if self._lores_data.condition.wait(timeout=0.5):
+                    break
+
+                logger.info("waiting for backend to start up...")
+
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
