@@ -20,7 +20,7 @@ pyserial==3.5
 jsonref==1.1.0
 
 ## linux/rpi only packages
-v4l2py==0.6.2; platform_system == "Linux"
+v4l2py==2.2.1; platform_system == "Linux"
 gpiozero==1.6.2; platform_system == "Linux"
 gphoto2==2.3.4; platform_system == "Linux"
 
