@@ -65,7 +65,7 @@ class ImageServerSimulated(ImageServerAbstract):
         remaining_retries = 10
         while True:
             with self._condition_img_buffer_ready:
-                if self._condition_img_buffer_ready.wait(timeout=0.5):
+                if self._condition_img_buffer_ready.wait(timeout=2):
                     break
 
                 if remaining_retries < 0:
