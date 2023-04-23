@@ -1,5 +1,4 @@
 import logging
-import time
 import os
 import io
 import platform
