@@ -12,8 +12,12 @@ from src.configsettings import ConfigSettings
 def test_reject_request_nonidle_statemachine():
     import time
     from start import app
+    from start import imageServers
+    from start import processingpicture
 
     client = TestClient(app)
+    # reset statemachine
+    processingpicture._reset()
 
     response = client.get("/cmd/imageserver/capturemode")
     assert response.status_code == 202
@@ -31,6 +35,7 @@ def test_chose_1pic():
     from start import processingpicture
 
     client = TestClient(app)
+    processingpicture._reset()
 
     # no imageserver started yet, result 500
     response = client.get("/chose/1pic")

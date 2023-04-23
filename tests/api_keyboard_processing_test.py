@@ -15,6 +15,7 @@ def test_chose_1pic():
     from start import processingpicture
     from start import evt_chose_1pic_get
 
+    processingpicture._reset()
     imageServers.start()
 
     evt_chose_1pic_get()

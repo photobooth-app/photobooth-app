@@ -40,6 +40,8 @@ def test_capturewithcountdown():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
+    processingpicture._reset()
+
     imageServers.start()
     ins.start()
 
@@ -68,6 +70,7 @@ def test_capturenocountdown():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
+    processingpicture._reset()
     imageServers.start()
     ins.start()
 
@@ -82,6 +85,7 @@ def test_collagewithcountdown():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
+    processingpicture._reset()
     imageServers.start()
     ins.start()
 
@@ -111,6 +115,7 @@ def test_collagenocountdown():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
+    processingpicture._reset()
     imageServers.start()
     ins.start()
 
