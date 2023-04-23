@@ -78,10 +78,13 @@ class ImageServerGphoto2(ImageServerAbstract):
         logger.info(
             f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}"
         )
-        self._gp_list_cameras()
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
+        # check for available devices
+        if not available_camera_indexes():
+            raise IOError("no camera detected. abort start")
+
         # start camera
         try:
             self._camera.init()
@@ -107,6 +110,8 @@ class ImageServerGphoto2(ImageServerAbstract):
 
                 remaining_retries -= 1
                 logger.info("waiting for backend to start up...")
+
+        logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
@@ -180,15 +185,6 @@ class ImageServerGphoto2(ImageServerAbstract):
     def _viewfinder(self, val=0):
         self._gp_set_config("viewfinder", val)
 
-    def _gp_list_cameras(self):
-        camera_list = gp.Camera.autodetect()
-        if len(camera_list) == 0:
-            logger.error("autodetect camera failed! check camera!")
-            return
-
-        for index, (name, addr) in enumerate(camera_list):
-            logger.info(f"{index}:  {addr}  {name}")
-
     #
     # INTERNAL IMAGE GENERATOR
     #
@@ -261,3 +257,20 @@ class ImageServerGphoto2(ImageServerAbstract):
                     self._hires_data.condition.notify_all()
 
             self._count += 1
+
+
+def available_camera_indexes():
+    """
+    find available cameras, return valid indexes.
+    """
+    camera_list = gp.Camera.autodetect()
+    if len(camera_list) == 0:
+        logger.info("no camera detected")
+        return []
+
+    available_indexes = []
+    for index, (name, addr) in enumerate(camera_list):
+        available_indexes.append(index)
+        logger.info(f"found camera - {index}:  {addr}  {name}")
+
+    return available_indexes
