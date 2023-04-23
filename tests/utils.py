@@ -22,9 +22,6 @@ def get_images(backend: ImageServerAbstract):
     logger.info(f"testing backend {backend.__module__}")
     backend.start()
 
-    # wait until backends threads started properly before asking for an image
-    time.sleep(5)
-
     try:
         with Image.open(
             io.BytesIO(
