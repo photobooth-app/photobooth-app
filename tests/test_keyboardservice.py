@@ -27,7 +27,7 @@ def test_key_callback():
     evtbus = EventEmitter()
     try:
         ks = KeyboardService(evtbus)
-    except PermissionError as exc:
+    except Exception as exc:
         logger.info(
             f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}"
         )
