@@ -472,9 +472,9 @@ if __name__ == "__main__":
     ins.start()
     try:
         wledservice.start()
-    except RuntimeError as exc:
+    except RuntimeError as wledservice_exc:
         # catch exception to make app continue without wled service in case there is a connection problem
-        logger.warning(f"WLED module init failed {exc}")
+        logger.warning(f"WLED module init failed {wledservice_exc}")
 
     # log_level="trace", default info
     config = uvicorn.Config(
