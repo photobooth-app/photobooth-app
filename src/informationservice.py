@@ -84,7 +84,10 @@ class InformationService:
                     for i in file.readlines()
                 )
 
-            cma = {"CmaTotal": meminfo["CmaTotal"], "CmaFree": meminfo["CmaFree"]}
+            cma = {
+                "CmaTotal": meminfo.get("CmaTotal", None),
+                "CmaFree": meminfo.get("CmaFree", None),
+            }
         except FileNotFoundError:
             # linux only
             cma = {"CmaTotal": None, "CmaFree": None}

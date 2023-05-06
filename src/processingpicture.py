@@ -49,6 +49,15 @@ class ProcessingPicture(StateMachine):
     copy = capture_still.to(copy_still) | postprocess_still.to(copy_still)
     finalize = postprocess_still.to(idle) | copy_still.to(idle)
 
+    _reset = (
+        idle.to(idle)
+        | thrilled.to(idle)
+        | counting.to(idle)
+        | capture_still.to(idle)
+        | postprocess_still.to(idle)
+        | copy_still.to(idle)
+    )
+
     @dataclass
     class Stateinfo:
         """_summary_"""

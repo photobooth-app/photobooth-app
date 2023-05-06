@@ -16,10 +16,11 @@ logger = logging.getLogger(name=None)
 
 
 def test_disabled():
-    """should just now fail if forced to disable"""
-    try:
-        settings.wled.ENABLED = False
+    """should just fail in silence if disabled but app triggers some presets"""
 
+    settings.wled.ENABLED = False
+
+    try:
         ws = WledService(EventEmitter())
         ws.start()
         time.sleep(1)
@@ -30,6 +31,21 @@ def test_disabled():
         ws.stop()
     except:
         raise AssertionError("init failed")
+
+
+def test_enabled_nonexistentserialport():
+    """should just fail in silence if disabled but app triggers some presets"""
+
+    settings.wled.ENABLED = True
+    settings.wled.SERIAL_PORT = "nonexistentserialport"
+
+    ws = WledService(EventEmitter())
+    with pytest.raises(RuntimeError):
+        ws.start()
+
+    time.sleep(1)
+
+    ws.stop()
 
 
 def test_restart_class():
