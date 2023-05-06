@@ -1,7 +1,7 @@
 import sys
 import os
 import time
-import tempfile
+import io
 import logging
 from PIL import Image
 
@@ -16,27 +16,19 @@ logger = logging.getLogger(name=None)
 
 
 def capture(client):
-    tmpfilepath = tempfile.mktemp(suffix=".jpg", prefix="pytest_booth_")
-    settings.misc.photoboothproject_image_directory = os.path.dirname(
-        os.path.realpath(tmpfilepath)
-    )
-    response = client.post(
-        "/cmd/capture",
-        content=tmpfilepath,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    # post returns and in this moment the file should be available...
-
-    assert response.status_code == 200
-    assert response.text == "Done"
+    response = client.get("/api/imageservers/still")
     try:
-        with Image.open(tmpfilepath) as img:
+        with Image.open(io.BytesIO(response.content)) as img:
             img.verify()
     except Exception as exc:
-        raise AssertionError(f"backend did not return valid image bytes {exc}") from exc
+        raise AssertionError(
+            f"backend did not return valid image bytes, {exc}"
+        ) from exc
+
+    assert response.status_code == 200
 
 
-def test_capturewithcountdown():
+def test_capturewithcapturemode():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
@@ -46,16 +38,15 @@ def test_capturewithcountdown():
     ins.start()
 
     try:
-        response = client.get("/cmd/imageserver/capturemode")
+        response = client.get("/api/imageservers/capturemode")
         assert response.status_code == 202
-        # bring statemachine to idle again
 
         # virtual countdown
         time.sleep(1)
 
         capture(client)
 
-        response = client.get("/cmd/imageserver/previewmode")
+        response = client.get("/api/imageservers/previewmode")
         assert response.status_code == 202
 
     except Exception as exc:
@@ -66,7 +57,7 @@ def test_capturewithcountdown():
         ins.stop()
 
 
-def test_capturenocountdown():
+def test_capturewithoutcapturemode():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
@@ -81,7 +72,7 @@ def test_capturenocountdown():
         ins.stop()
 
 
-def test_collagewithcountdown():
+def test_collagewithcapturemode():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
@@ -91,7 +82,7 @@ def test_collagewithcountdown():
 
     try:
         for i in range(1, 4):
-            response = client.get("/cmd/imageserver/capturemode")
+            response = client.get("/api/imageservers/capturemode")
             assert response.status_code == 202
             # bring statemachine to idle again
 
@@ -100,7 +91,7 @@ def test_collagewithcountdown():
 
             capture(client)
 
-            response = client.get("/cmd/imageserver/previewmode")
+            response = client.get("/api/imageservers/previewmode")
             assert response.status_code == 202
 
     except Exception as exc:
@@ -111,7 +102,7 @@ def test_collagewithcountdown():
         ins.stop()
 
 
-def test_collagenocountdown():
+def test_collagewithoutcapturemode():
     from start import app, imageServers, ins, processingpicture
 
     client = TestClient(app)
