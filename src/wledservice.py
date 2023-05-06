@@ -101,9 +101,13 @@ class WledService:
 
         # we have come this far: wled is properly connected, register listener
         logger.info("register events for WLED")
-        self._evtbus.on("statemachine/on_thrill", self.preset_countdown)
+        self._evtbus.on("statemachine/on_thrill", self.preset_thrill)
         self._evtbus.on("frameserver/onCapture", self.preset_shoot)
         self._evtbus.on("frameserver/onCaptureFinished", self.preset_standby)
+
+        self._evtbus.on("wled/preset_standby", self.preset_standby)
+        self._evtbus.on("wled/preset_thrill", self.preset_thrill)
+        self._evtbus.on("wled/preset_shoot", self.preset_shoot)
 
         self.preset_standby()
 
@@ -123,9 +127,9 @@ class WledService:
         logger.info("WledService preset_standby triggered")
         self._write_request(_request_preset(PRESET_ID_STANDBY))
 
-    def preset_countdown(self):
+    def preset_thrill(self):
         """_summary_"""
-        logger.info("WledService preset_countdown triggered")
+        logger.info("WledService preset_thrill triggered")
         self._write_request(_request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):

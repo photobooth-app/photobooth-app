@@ -54,19 +54,16 @@ def test_restart_class():
     # reset settings to defaults
     settings = ConfigSettings()
 
-    try:
-        ws = WledService(EventEmitter())
-        ws.start()
-        time.sleep(1)
-        ws.stop()
+    ws = WledService(EventEmitter())
+    ws.start()
+    time.sleep(1)
+    ws.stop()
 
-        time.sleep(2)
-        ws = WledService(EventEmitter())
-        ws.start()
-        time.sleep(1)
-        ws.stop()
-    except:
-        raise AssertionError("failed")
+    # time.sleep(2)
+    ws = WledService(EventEmitter())
+    ws.start()
+    time.sleep(1)
+    ws.stop()
 
 
 def test_change_presets():
@@ -75,19 +72,16 @@ def test_change_presets():
     # reset settings to defaults
     settings = ConfigSettings()
 
-    try:
-        ws = WledService(EventEmitter())
-        ws.start()
+    ws = WledService(EventEmitter())
+    ws.start()
 
-        time.sleep(1)
+    time.sleep(1)
 
-        ws.preset_countdown()
-        time.sleep(2)
-        ws.preset_shoot()
-        time.sleep(1)
-        ws.preset_standby()
-        time.sleep(0.5)
+    ws.preset_thrill()
+    time.sleep(2)
+    ws.preset_shoot()
+    time.sleep(1)
+    ws.preset_standby()
+    time.sleep(0.5)
 
-        ws.stop()
-    except:
-        raise AssertionError("failed")
+    ws.stop()

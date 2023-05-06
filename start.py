@@ -160,22 +160,28 @@ def api_post_config_current(updated_settings: ConfigSettings):
     util_systemd_control("restart")
 
 
-@app.get(
-    "/cmd/frameserver/capturemode", status_code=status.HTTP_202_ACCEPTED
-)  # deprecated
 @app.get("/api/imageservers/capturemode", status_code=status.HTTP_202_ACCEPTED)
-# photobooth compatibility
-def api_cmd_imageserver_capturemode_get():
+def api_cmd_imageserver_capturemode_get(wled_control: bool = True):
+    """_summary_
+
+    Args:
+        wled_control (bool, optional): Also control wled module. Request WLED module preset thrill. Defaults to True.
+    """
     ee.emit("onCaptureMode")
+    if wled_control:
+        ee.emit("wled/preset_thrill")
 
 
-@app.get(
-    "/cmd/frameserver/previewmode", status_code=status.HTTP_202_ACCEPTED
-)  # deprecated
 @app.get("/api/imageservers/previewmode", status_code=status.HTTP_202_ACCEPTED)
-# photobooth compatibility
-def api_cmd_imageserver_previewmode_get():
+def api_cmd_imageserver_previewmode_get(wled_control: bool = True):
+    """_summary_
+
+    Args:
+        wled_control (bool, optional): Also control wled module. Request WLED module preset standby. Defaults to True.
+    """
     ee.emit("onPreviewMode")
+    if wled_control:
+        ee.emit("wled/preset_standby")
 
 
 @app.get("/cmd/{action}/{param}")
@@ -464,7 +470,11 @@ if __name__ == "__main__":
     # start services
     imageServers.start()
     ins.start()
-    wledservice.start()
+    try:
+        wledservice.start()
+    except RuntimeError as exc:
+        # catch exception to make app continue without wled service in case there is a connection problem
+        logger.warning(f"WLED module init failed {exc}")
 
     # log_level="trace", default info
     config = uvicorn.Config(
