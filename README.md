@@ -74,10 +74,10 @@ Following commands have to be set in photobooth project to use this app as image
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
-take_picture_cmd: curl -X POST http://photobooth:8000/cmd/capture -d '"%s"'
+take_picture_cmd: curl -o "%s" localhost:8000/api/imageservers/still | echo Done
 take_picture_msg: Done
-pre_photo_cmd: curl http://photobooth:8000/cmd/imageserver/capturemode
-post_photo_cmd: curl http://photobooth:8000/cmd/imageserver/previewmode
+pre_photo_cmd: curl http://photobooth:8000/api/imageservers/capturemode
+post_photo_cmd: curl http://photobooth:8000/api/imageservers/previewmode
 preview_url: url("http://photobooth:8000/stream.mjpg")
 background_defaults: url("http://photobooth:8000/stream.mjpg")
 ```
