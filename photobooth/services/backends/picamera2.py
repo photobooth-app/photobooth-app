@@ -28,7 +28,6 @@ except Exception as import_exc:
     ) from import_exc
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()  # TODO: remove!
 
 
 class Picamera2Backend(AbstractBackend):
@@ -68,14 +67,13 @@ class Picamera2Backend(AbstractBackend):
                 self.frame = buf
                 self.condition.notify_all()
 
-    def __init__(self, evtbus: EventEmitter):
-        super().__init__(evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus, config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
         self._picamera2: Picamera2 = None
-        self._evtbus: EventEmitter = evtbus
         self._autofocus_module = None
 
         self._count = 0
@@ -94,25 +92,25 @@ class Picamera2Backend(AbstractBackend):
         self._current_config = None
         self._last_config = None
 
-        if not settings.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
+        if not self._config.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
             logger.info(
                 f"loading autofocus module: "
-                f"picamera2_{settings.backends.picamera2_focuser_module.lower()}"
-                f"{__name__=}"
-                f"{__package__=}"
+                f"picamera2_{self._config.backends.picamera2_focuser_module}"
             )
             if (
-                settings.backends.picamera2_focuser_module
+                self._config.backends.picamera2_focuser_module
                 == EnumFocuserModule.LIBCAM_AF_CONTINUOUS
             ):
                 self._autofocus_module = Picamera2LibcamAfContinuous(
-                    self, evtbus=evtbus
+                    self, evtbus=evtbus, config=config
                 )
             elif (
-                settings.backends.picamera2_focuser_module
+                self._config.backends.picamera2_focuser_module
                 == EnumFocuserModule.LIBCAM_AF_INTERVAL
             ):
-                self._autofocus_module = Picamera2LibcamAfInterval(self, evtbus=evtbus)
+                self._autofocus_module = Picamera2LibcamAfInterval(
+                    self, evtbus=evtbus, config=config
+                )
             else:
                 self._autofocus_module = None
 
@@ -136,22 +134,22 @@ class Picamera2Backend(AbstractBackend):
         self._capture_config = self._picamera2.create_still_configuration(
             main={
                 "size": (
-                    settings.common.CAPTURE_CAM_RESOLUTION_WIDTH,
-                    settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+                    self._config.common.CAPTURE_CAM_RESOLUTION_WIDTH,
+                    self._config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    settings.common.LIVEVIEW_RESOLUTION_WIDTH,
-                    settings.common.LIVEVIEW_RESOLUTION_HEIGHT,
+                    self._config.common.LIVEVIEW_RESOLUTION_WIDTH,
+                    self._config.common.LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=settings.common.CAMERA_TRANSFORM_HFLIP,
-                vflip=settings.common.CAMERA_TRANSFORM_VFLIP,
+                hflip=self._config.common.CAMERA_TRANSFORM_HFLIP,
+                vflip=self._config.common.CAMERA_TRANSFORM_VFLIP,
             ),
         )
 
@@ -159,22 +157,22 @@ class Picamera2Backend(AbstractBackend):
         self._preview_config = self._picamera2.create_video_configuration(
             main={
                 "size": (
-                    settings.common.PREVIEW_CAM_RESOLUTION_WIDTH,
-                    settings.common.PREVIEW_CAM_RESOLUTION_HEIGHT,
+                    self._config.common.PREVIEW_CAM_RESOLUTION_WIDTH,
+                    self._config.common.PREVIEW_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    settings.common.LIVEVIEW_RESOLUTION_WIDTH,
-                    settings.common.LIVEVIEW_RESOLUTION_HEIGHT,
+                    self._config.common.LIVEVIEW_RESOLUTION_WIDTH,
+                    self._config.common.LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=settings.common.CAMERA_TRANSFORM_HFLIP,
-                vflip=settings.common.CAMERA_TRANSFORM_VFLIP,
+                hflip=self._config.common.CAMERA_TRANSFORM_HFLIP,
+                vflip=self._config.common.CAMERA_TRANSFORM_VFLIP,
             ),
         )
 
@@ -183,21 +181,21 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.configure(self._current_config)
 
         # capture_file image quality
-        self._picamera2.options["quality"] = settings.common.HIRES_STILL_QUALITY
+        self._picamera2.options["quality"] = self._config.common.HIRES_STILL_QUALITY
 
         logger.info(f"camera_config: {self._picamera2.camera_config}")
         logger.info(f"camera_controls: {self._picamera2.camera_controls}")
         logger.info(f"controls: {self._picamera2.controls}")
 
-        self.set_ae_exposure(settings.backends.picamera2_AE_EXPOSURE_MODE)
+        self.set_ae_exposure(self._config.backends.picamera2_AE_EXPOSURE_MODE)
         logger.info(
-            f"stream quality {Quality[settings.backends.picamera2_stream_quality.name]=}"
+            f"stream quality {Quality[self._config.backends.picamera2_stream_quality.name]=}"
         )
         # start camera
         self._picamera2.start_encoder(
             MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
             FileOutput(self._lores_data),
-            quality=Quality[settings.backends.picamera2_stream_quality.name],
+            quality=Quality[self._config.backends.picamera2_stream_quality.name],
         )
         self._picamera2.start()
 
@@ -376,7 +374,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.start_encoder(
             MJPEGEncoder(),
             FileOutput(self._lores_data),
-            quality=Quality[settings.backends.picamera2_stream_quality.name],
+            quality=Quality[self._config.backends.picamera2_stream_quality.name],
         )
         logger.info("switchmode finished successfully")
 

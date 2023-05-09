@@ -97,7 +97,7 @@ class LoggingService(BaseService):
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
 
-        # set level based on users settings
+        # set level based on users config
         root_logger.setLevel(self.debug_level)
 
         ## handler ##

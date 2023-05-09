@@ -321,11 +321,11 @@ class GroupMisc(BaseModel):
         title = "Miscellaneous Config"
 
 
-def json_config_settings_source(_settings: BaseSettings) -> dict[str, Any]:
+def json_config_settings_source(_config: BaseSettings) -> dict[str, Any]:
     """
     custom parser to read json config file
     """
-    encoding = _settings.__config__.env_file_encoding
+    encoding = _config.__config__.env_file_encoding
     json_config = {}
     try:
         json_config = json.loads(Path(CONFIG_FILENAME).read_text(encoding))

@@ -13,7 +13,7 @@ from pymitter import EventEmitter
 from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()  # TODO: remove!
+
 
 # retry some times to get image for stream
 MAX_ATTEMPTS = 3
@@ -46,7 +46,7 @@ class AbstractBackend(ABC):
     """
 
     @abstractmethod
-    def __init__(self, evtbus: EventEmitter):
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
         # public
         self.metadata = {}
 
@@ -54,6 +54,8 @@ class AbstractBackend(ABC):
         self._fps = 0
 
         self._evtbus = evtbus
+        self._config = config
+
         self._evtbus.on("statemachine/on_thrill", self._on_capture_mode)
 
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
@@ -155,7 +157,7 @@ class AbstractBackend(ABC):
 
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (
-                1 / settings.common.LIVEPREVIEW_FRAMERATE
+                1 / self._config.common.LIVEPREVIEW_FRAMERATE
             ):
                 last_time = now_time
 

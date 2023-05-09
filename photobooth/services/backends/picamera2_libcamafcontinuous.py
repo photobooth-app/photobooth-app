@@ -4,6 +4,8 @@ autofocus control using native libcamera functions
 """
 import logging
 
+from ...appconfig import AppConfig
+
 try:
     from libcamera import controls
 except Exception as import_exc:
@@ -26,9 +28,12 @@ class Picamera2LibcamAfContinuous:
     option to trigger focus on thrill also possible
     """
 
-    def __init__(self, imageserver: AbstractBackend, evtbus: EventEmitter):
+    def __init__(
+        self, imageserver: AbstractBackend, evtbus: EventEmitter, config: AppConfig
+    ):
         self._imageserver: AbstractBackend = imageserver
 
+        self._config = config
         self._evtbus = evtbus
         self._evtbus.on("statemachine/on_thrill", self._on_thrill)
         self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)

@@ -16,7 +16,6 @@ from ...appconfig import AppConfig
 from ...utils.repeatedtimer import RepeatedTimer
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()  # TODO: remove!
 
 
 class Picamera2LibcamAfInterval:
@@ -30,13 +29,16 @@ class Picamera2LibcamAfInterval:
     option to trigger focus on thrill also possible
     """
 
-    def __init__(self, imageserver: AbstractBackend, evtbus: EventEmitter):
+    def __init__(
+        self, imageserver: AbstractBackend, evtbus: EventEmitter, config: AppConfig
+    ):
         self._imageserver: AbstractBackend = imageserver
 
         self._evtbus = evtbus
+        self._config = config
 
         self._autofocus_trigger_timer_thread: RepeatedTimer = RepeatedTimer(
-            interval=settings.backends.picamera2_focuser_interval,
+            interval=self._config.backends.picamera2_focuser_interval,
             function=self._autofocus_trigger_timer_fun,
         )
         # unmute to actually trigger focus requests:

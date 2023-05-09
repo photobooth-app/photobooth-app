@@ -185,9 +185,9 @@ def cv2_img_aquisition(
     _event_hq_capture: Event,
     _condition_img_buffer_lores_ready: Condition,
     _condition_img_buffer_hires_ready: Condition,
-    # need to pass settings, because unittests can change settings,
-    # if not passed, the settings are not available in the separate process!
-    _settings,
+    # need to pass config, because unittests can change config,
+    # if not passed, the config are not available in the separate process!
+    _config,
     _event_proc_shutdown: Event,
 ):
     """
@@ -202,27 +202,27 @@ def cv2_img_aquisition(
         logger.info(
             "force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)"
         )
-        _video = cv2.VideoCapture(_settings.backends.cv2_device_index, cv2.CAP_DSHOW)
+        _video = cv2.VideoCapture(_config.backends.cv2_device_index, cv2.CAP_DSHOW)
     else:
-        _video = cv2.VideoCapture(_settings.backends.cv2_device_index)
+        _video = cv2.VideoCapture(_config.backends.cv2_device_index)
 
     # activate preview mode on init
     _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
     _video_set_check(
-        _video, cv2.CAP_PROP_FRAME_WIDTH, _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH
+        _video, cv2.CAP_PROP_FRAME_WIDTH, _config.common.CAPTURE_CAM_RESOLUTION_WIDTH
     )
     _video_set_check(
         _video,
         cv2.CAP_PROP_FRAME_HEIGHT,
-        _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+        _config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
     )
 
     if not _video.isOpened():
-        raise OSError(f"cannot open camera index {_settings.backends.cv2_device_index}")
+        raise OSError(f"cannot open camera index {_config.backends.cv2_device_index}")
 
     if not _video.read()[0]:
-        raise OSError(f"cannot read camera index {_settings.backends.cv2_device_index}")
+        raise OSError(f"cannot read camera index {_config.backends.cv2_device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
     logger.info(
@@ -241,9 +241,9 @@ def cv2_img_aquisition(
             raise OSError("error reading camera frame")
 
         # apply flip image to stream only:
-        if _settings.common.CAMERA_TRANSFORM_HFLIP:
+        if _config.common.CAMERA_TRANSFORM_HFLIP:
             array = cv2.flip(array, 1)
-        if _settings.common.CAMERA_TRANSFORM_VFLIP:
+        if _config.common.CAMERA_TRANSFORM_VFLIP:
             array = cv2.flip(array, 0)
 
         if _event_hq_capture.is_set():
@@ -257,7 +257,7 @@ def cv2_img_aquisition(
 
             # convert frame to jpeg buffer
             jpeg_buffer = turbojpeg.encode(
-                array, quality=_settings.common.HIRES_STILL_QUALITY
+                array, quality=_config.common.HIRES_STILL_QUALITY
             )
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_hires_lock:
@@ -269,7 +269,7 @@ def cv2_img_aquisition(
         else:
             # preview livestream
             jpeg_buffer = turbojpeg.encode(
-                array, quality=_settings.common.LIVEPREVIEW_QUALITY
+                array, quality=_config.common.LIVEPREVIEW_QUALITY
             )
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lores_lock:
