@@ -219,10 +219,10 @@ def cv2_img_aquisition(
     )
 
     if not _video.isOpened():
-        raise IOError(f"cannot open camera index {_settings.backends.cv2_device_index}")
+        raise OSError(f"cannot open camera index {_settings.backends.cv2_device_index}")
 
     if not _video.read()[0]:
-        raise IOError(f"cannot read camera index {_settings.backends.cv2_device_index}")
+        raise OSError(f"cannot read camera index {_settings.backends.cv2_device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
     logger.info(
@@ -238,7 +238,7 @@ def cv2_img_aquisition(
         ret, array = _video.read()
         # ret=True successful read, otherwise False?
         if not ret:
-            raise IOError("error reading camera frame")
+            raise OSError("error reading camera frame")
 
         # apply flip image to stream only:
         if _settings.common.CAMERA_TRANSFORM_HFLIP:

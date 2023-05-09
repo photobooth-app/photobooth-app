@@ -30,8 +30,11 @@ concurrency = ["thread","multiprocessing"]
 line-length = 120
 select = [
   "E",   # pycodestyle
+  "W",   # pycodestyle
   "F",   # pyflakes
   "B",   # bugbear
+  "UP",  # pyupgrade
+  "I",   # isort
   #"D",   # pydocstyle   # add later
 ]
 ignore = [

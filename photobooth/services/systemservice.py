@@ -6,6 +6,7 @@ import subprocess
 
 from pymitter import EventEmitter
 
+from ..appconfig import AppConfig
 from .baseservice import BaseService
 
 # constants
@@ -15,8 +16,8 @@ SERVICE_NAME = "imageserver"
 class SystemService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter):
-        super().__init__(evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus, config)
 
         self._logger.info("initialized systemservice")
 

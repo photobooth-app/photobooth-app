@@ -82,7 +82,7 @@ class Gphoto2Backend(AbstractBackend):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
         # check for available devices
         if not available_camera_indexes():
-            raise IOError("no camera detected. abort start")
+            raise OSError("no camera detected. abort start")
 
         # start camera
         try:

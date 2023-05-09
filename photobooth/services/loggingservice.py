@@ -1,4 +1,4 @@
-""" 
+"""
 Control logging for the app
 """
 

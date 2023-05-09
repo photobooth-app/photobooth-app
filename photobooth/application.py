@@ -21,7 +21,7 @@ from .routers.processing import processing_router
 from .routers.sse import sse_router
 from .routers.system import system_router
 
-description = """
+FASTAPI_DECRIPTION = """
 Photobooth App 🚀
 
 The photobooth app is written in Python and coming along with a modern Vue frontend.
@@ -37,9 +37,9 @@ def _create_app() -> FastAPI:
     application_container = ApplicationContainer()
     logger = logging.getLogger(f"{__name__}")
 
-    app = FastAPI(
+    _app = FastAPI(
         title="Photobooth App API",
-        description=description,
+        description=FASTAPI_DECRIPTION,
         version="0.0.1",
         contact={
             "name": "mgrl",
@@ -55,18 +55,18 @@ def _create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    app.include_router(config_router)
-    app.include_router(home_router)
-    app.include_router(aquisition_router)
-    app.include_router(log_router)
-    app.include_router(mediacollection_router)
-    app.include_router(sse_router)
-    app.include_router(system_router)
-    app.include_router(processing_router)
+    _app.include_router(config_router)
+    _app.include_router(home_router)
+    _app.include_router(aquisition_router)
+    _app.include_router(log_router)
+    _app.include_router(mediacollection_router)
+    _app.include_router(sse_router)
+    _app.include_router(system_router)
+    _app.include_router(processing_router)
     # serve data directory holding images, thumbnails, ...
-    app.mount("/data", StaticFiles(directory="data"), name="data")
+    _app.mount("/data", StaticFiles(directory="data"), name="data")
     # if not match anything above, default to deliver static files from web directory
-    app.mount("/", StaticFiles(directory="web"), name="web")
+    _app.mount("/", StaticFiles(directory="web"), name="web")
 
     async def custom_http_exception_handler(request, exc):
         logger.error(f"HTTPException: {repr(exc)}")
@@ -76,14 +76,14 @@ def _create_app() -> FastAPI:
         logger.error(f"RequestValidationError: {exc}")
         return await request_validation_exception_handler(request, exc)
 
-    app.add_exception_handler(HTTPException, custom_http_exception_handler)
-    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    _app.add_exception_handler(HTTPException, custom_http_exception_handler)
+    _app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     # store container here and wire routers, to inject providers
-    app.container = application_container
-    app.container.wire(modules=[__name__], packages=[".routers"])
+    _app.container = application_container
+    _app.container.wire(modules=[__name__], packages=[".routers"])
 
-    return app
+    return _app
 
 
 app = _create_app()

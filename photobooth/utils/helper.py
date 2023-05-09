@@ -13,7 +13,7 @@ def is_rpi():
     """
     if platform.system() == "Linux":
         if os.path.isfile("/proc/device-tree/model"):
-            with open("/proc/device-tree/model", "r", encoding="utf-8") as file:
+            with open("/proc/device-tree/model", encoding="utf-8") as file:
                 model = file.read()
                 return "Raspberry" in model
 

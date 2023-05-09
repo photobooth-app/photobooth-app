@@ -88,7 +88,7 @@ class InformationService(BaseService):
                     "memory": memory,
                     "cma": cma,
                     "disk": disk,
-                    "imageserver_stats": None,  # fixme: move to imageserver
+                    "imageserver_stats": None,  # FIXME: move to imageserver
                 }
             ),
         )

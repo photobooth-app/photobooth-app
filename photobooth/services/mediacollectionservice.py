@@ -9,7 +9,6 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 from PIL import Image
 from pymitter import EventEmitter
@@ -197,7 +196,7 @@ class MediacollectionService(BaseService):
 
         # the database ;)
         # sorted list containing type MediaItem. always newest image first in list.
-        self._db: List[MediaItem] = []
+        self._db: list[MediaItem] = []
 
         # ensure data directories exist
         os.makedirs(f"{PATH_ORIGINAL}", exist_ok=True)

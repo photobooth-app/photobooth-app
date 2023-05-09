@@ -23,7 +23,7 @@ class KeyboardService(BaseService):
     """_summary_"""
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus=evtbus)
+        super().__init__(evtbus=evtbus, config=config)
 
         self._config_hardwareinput = config.hardwareinput
 
