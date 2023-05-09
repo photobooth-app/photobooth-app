@@ -30,6 +30,9 @@ def test_singleinstance():
     instance1_thread = threading.Thread(target=instance1_function, daemon=True)
     instance1_thread.start()
 
+    # give app some time to start up and block the port
+    time.sleep(5)
+
     # server2 is expected to SystemExit, this is tested here
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         server2 = __main__.main()
