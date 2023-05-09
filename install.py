@@ -13,7 +13,7 @@ import platform
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
-from src.utils import is_rpi
+from photobooth.utils.helper import is_rpi
 
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
@@ -504,7 +504,7 @@ if _is_linux() or _is_windows():
     print_spacer("checking for available opencv2 cameras")
     # suppress warnings during index probing
     os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
-    from src.imageserverwebcamcv2 import available_camera_indexes
+    from photobooth.services.backends.webcamcv2 import available_camera_indexes
 
     ind_cv2 = available_camera_indexes()
     if ind_cv2:
@@ -516,7 +516,7 @@ if _is_linux() or _is_windows():
 
 if _is_linux():
     print_spacer("checking for available v4l cameras")
-    from src.imageserverwebcamv4l import available_camera_indexes
+    from photobooth.services.backends.webcamv4l import available_camera_indexes
 
     ind_v4l = available_camera_indexes()
     if ind_v4l:

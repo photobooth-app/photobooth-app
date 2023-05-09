@@ -1,7 +1,6 @@
 import logging
 import time
 
-# from src.configsettings import settings
 import pytest
 from dependency_injector import providers
 from pymitter import EventEmitter

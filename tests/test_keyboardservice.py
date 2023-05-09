@@ -1,6 +1,5 @@
 import logging
 
-# from src.configsettings import settings
 import pytest
 from dependency_injector import providers
 from keyboard import KEY_DOWN, KeyboardEvent

@@ -24,7 +24,7 @@
     {
       "label": "statemachine diagram (needs pydot and graphviz)",
       "type": "shell",
-      "command": "python -m statemachine.contrib.diagram src.processingpicture.ProcessingPicture diagram_ProcessingPicture.png"
+      "command": "python -m statemachine.contrib.diagram photobooth.services.processing.ProcessingPicture diagram_ProcessingPicture.png"
     },
     {
       "label": "startBoothPi",

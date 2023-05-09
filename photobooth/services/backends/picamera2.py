@@ -20,10 +20,10 @@ except Exception as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
     ) from import_exc
-from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
 from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig, EnumFocuserModule
+from .abstractbackend import AbstractBackend, BackendStats
 
 logger = logging.getLogger(__name__)
 settings = AppConfig()
@@ -96,10 +96,10 @@ class Picamera2Backend(AbstractBackend):
         if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
             logger.info(
                 f"loading autofocus module: "
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+                f".imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
             )
             autofocus_module = import_module(
-                f"src.imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+                f".imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
             )
             autofocus_class_ = getattr(
                 autofocus_module,
