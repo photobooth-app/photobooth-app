@@ -64,9 +64,11 @@ def test_autofocus(autofocus_algorithm):
     backend = BackendsContainer(
         evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
     )
-    picamera2_backend = backend.picamera2_backend()
 
+    # reconfigure
     backend.config().backends.picamera2_focuser_module = autofocus_algorithm
+
+    picamera2_backend = backend.picamera2_backend()
     picamera2_backend.start()
 
     backend.evtbus().emit("statemachine/on_thrill")
