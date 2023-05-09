@@ -1,3 +1,7 @@
+[project]
+# Support Python 3.9+.
+requires-python = ">=3.9"
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "DEBUG"
@@ -14,3 +18,19 @@ omit = [
     ]
 parallel = true
 concurrency = ["thread","multiprocessing"]
+
+[tool.ruff]
+line-length = 120
+select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  #"D",   # pydocstyle   # add later
+]
+#extend-exclude = ["./tests","./scripts", "install.py"]
+extend-exclude = ["./scripts", "install.py"]
+
+[tool.ruff.per-file-ignores]
+"photobooth/appconfig.py" = ["E501"]
+
+[tool.ruff.pydocstyle]
+convention = "google"

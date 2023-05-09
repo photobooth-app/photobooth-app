@@ -2,6 +2,16 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "pydeps",
+      "type": "shell",
+      "command": "pydeps photobooth"
+    },
+    {
+      "label": "pydeps internal only",
+      "type": "shell",
+      "command": "pydeps photobooth --max-bacon=1"
+    },
+    {
       "label": "pytest with coverage",
       "type": "shell",
       "command": "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
@@ -9,7 +19,7 @@
     {
       "label": "pylint",
       "type": "shell",
-      "command": "pylint -v *.py ./src/*.py"
+      "command": "pylint -v *.py ./photobooth/*.py"
     },
     {
       "label": "statemachine diagram (needs pydot and graphviz)",

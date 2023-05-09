@@ -9,7 +9,7 @@
       "host": "${config:sshEndpoint}",
       "pathMappings": [
         {
-          "localRoot": "${workspaceFolder}/imageserver_backend",
+          "localRoot": "${workspaceFolder}/photobooth-app",
           "remoteRoot": "~/imageserver"
         }
       ],
