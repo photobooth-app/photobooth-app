@@ -6,7 +6,6 @@ import logging
 import multiprocessing
 import os
 import socket
-import sys
 
 import uvicorn
 from dependency_injector.wiring import Provide, inject
@@ -26,13 +25,6 @@ def main(
     logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
 ) -> uvicorn.Server:
     logger.info("Welcome to photobooth-app")
-    # guard to start only one instance at a time.
-    try:
-        s = socket.socket()
-        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
-    except OSError:
-        logger.error("startup aborted. another instance is running. exiting.")
-        sys.exit(-1)
 
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
@@ -70,8 +62,24 @@ def main(
     return server
 
 
+def guard(port: int):
+    # guard to start only one instance at a time.
+    try:
+        s = socket.socket()
+        s.bind(("0.0.0.0", port))  # bind fails on second instance, raising OSError
+        s.close()
+    except OSError as exc:
+        print("startup aborted. another instance is running. exiting.")
+        logger.critical("startup aborted. another instance is running. exiting.")
+        raise SystemExit("webserver port not avail") from exc
+
+
 if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
     application_container = ApplicationContainer()
+
+    # allow one instance at a time, set whether webserver port is avail as sign it's good or not
+    guard(application_container.config().common.webserver_port)
+
     application_container.init_resources()
     application_container.wire(modules=[__name__], packages=[".routers"])
 
@@ -79,6 +87,7 @@ if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
     server = main()
 
     # serve files forever, loops endless
+    # this one is not executed in tests because it's not stoppable from within
     if __name__ == "__main__":
         server.run()
 
