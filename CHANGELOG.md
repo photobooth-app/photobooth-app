@@ -1,0 +1,41 @@
+# Photobooth App
+
+## :mega: Changelog
+
+- 2023-05-09
+  - breaking change in config; delete old config and start over
+  - introduce dependency injection framework
+  - ruff linter instead pylint
+- 2023-04-13
+  - revised statemachine
+  - changed api commands for photobooth
+  - removed locationservice and extended exif for now
+  - FIX: switch_mode/configure hang forever. removed for now, so no metadata currently avail.
+- 2023-04-08
+  - picamera2 now with gpu hardware acceleration reduce cpu load
+  - gphoto2 implemented
+  - frontend polished
+  - removed custom autofocus method (not compatible with gpu acceleration)
+  - many smaller improvements
+  - many bugfixes
+- 2023-02-26
+  - added pytest and set up automated tests
+  - fixed some performance issues using separate processes to exploit cpu better
+  - fixed performance issue when connecting multiple clients on eventstream
+  - improved installer
+  - pydantic config management fully presented in user interface via blitzar
+  - many smaller improvements
+  - many bugfixes
+- 2023-02-05
+  - added several camera backends (working: v4l, opencv, simulated, picamera2; not yet working: gphoto2, digicamcontrol)
+  - added installer
+  - removed rpiws2811 and integrated WLED to be platform independent
+  - keyboard reads without root permission - whole app now runs as normal user
+  - pydantic config management via json and env files
+- 2022-10-03
+  - introduced led ring
+- 2022-11-06
+  - refactoring
+  - rclone to sync photos online for easier download
+  - store exif data to images
+  - changed to exposure mode short as per default
