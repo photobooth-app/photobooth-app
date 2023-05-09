@@ -24,7 +24,7 @@ from .mediacollectionservice import (
 )
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 
 MAX_ATTEMPTS = 3
 

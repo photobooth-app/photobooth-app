@@ -16,7 +16,7 @@ from ...appconfig import AppConfig
 from ...utils.repeatedtimer import RepeatedTimer
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 
 
 class Picamera2LibcamAfInterval:
@@ -36,7 +36,7 @@ class Picamera2LibcamAfInterval:
         self._evtbus = evtbus
 
         self._autofocus_trigger_timer_thread: RepeatedTimer = RepeatedTimer(
-            interval=settings.backends.picam2_focuser_interval,
+            interval=settings.backends.picamera2_focuser_interval,
             function=self._autofocus_trigger_timer_fun,
         )
         # unmute to actually trigger focus requests:
@@ -89,7 +89,7 @@ class Picamera2LibcamAfInterval:
         and trigger regularly
         """
         try:
-            self._imageserver._picam2.set_controls(
+            self._imageserver._picamera2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
             logger.info("libcamautofocus AfSpeed set to fast mode")
@@ -98,10 +98,10 @@ class Picamera2LibcamAfInterval:
 
     def _autofocus_cycle(self):
         try:
-            # success = self._imageserver._picam2.autofocus_cycle(wait=False)
+            # success = self._imageserver._picamera2.autofocus_cycle(wait=False)
             # this command breaks the frameserver - reason not yet clear, so currently
             # autofocus invoked like this:
-            self._imageserver._picam2.set_controls(
+            self._imageserver._picamera2.set_controls(
                 {
                     "AfMode": controls.AfModeEnum.Auto,
                     "AfTrigger": controls.AfTriggerEnum.Start,

@@ -49,7 +49,7 @@ STARTER_CONFIGURATIONS_COMMON = [
     (
         "windows-and-linux_webcam_opencv2",
         """
-backends__MAIN_BACKEND="ImageServerWebcamCv2"
+backends__MAIN_BACKEND="WebcamCv2"
 backends__cv2_device_index=##cv2_device_index##
 common__CAPTURE_CAM_RESOLUTION_WIDTH=10000
 common__CAPTURE_CAM_RESOLUTION_HEIGHT=10000
@@ -61,7 +61,7 @@ STARTER_CONFIGURATIONS_LINUX = [
     (
         "linux_webcam_v4l",
         """
-backends__MAIN_BACKEND="ImageServerWebcamV4l"
+backends__MAIN_BACKEND="WebcamV4l"
 backends__v4l_device_index=##v4l_device_index##
 """,
     ),
@@ -73,10 +73,10 @@ STARTER_CONFIGURATIONS_WIN = [
 
 STARTER_CONFIGURATIONS_RPI = [
     (
-        "rpi_picam2_cameramodule3_native_libcamera",
+        "rpi_picamera2_cameramodule3_native_libcamera",
         """
-backends__MAIN_BACKEND="ImageServerPicam2"
-backends__picam2_focuser_module="LibcamAfContinuous"
+backends__MAIN_BACKEND="Picamera2"
+backends__picamera2_focuser_module="LibcamAfContinuous"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4608"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="2592"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2304"
@@ -84,10 +84,10 @@ common__PREVIEW_CAM_RESOLUTION_HEIGHT="1296"
 """,
     ),
     (
-        "rpi_picam2_arducam_imx519_native_libcamera",
+        "rpi_picamera2_arducam_imx519_native_libcamera",
         """
-backends__MAIN_BACKEND="ImageServerPicam2"
-backends__picam2_focuser_module="LibcamAfInterval"
+backends__MAIN_BACKEND="Picamera2"
+backends__picamera2_focuser_module="LibcamAfInterval"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4656"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3496"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2328"
@@ -95,10 +95,10 @@ common__PREVIEW_CAM_RESOLUTION_HEIGHT="1748"
 """,
     ),
     (
-        "rpi_picam2_arducam_64mp_arducams_libcamera",
+        "rpi_picamera2_arducam_64mp_arducams_libcamera",
         """
-backends__MAIN_BACKEND="ImageServerPicam2"
-backends__picam2_focuser_module="LibcamAfInterval"
+backends__MAIN_BACKEND="Picamera2"
+backends__picamera2_focuser_module="LibcamAfInterval"
 common__CAPTURE_CAM_RESOLUTION_WIDTH="4624"
 common__CAPTURE_CAM_RESOLUTION_HEIGHT="3472"
 common__PREVIEW_CAM_RESOLUTION_WIDTH="2312"

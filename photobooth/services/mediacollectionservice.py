@@ -18,7 +18,7 @@ from ..appconfig import AppConfig
 from .baseservice import BaseService
 
 turbojpeg = TurboJPEG()
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"

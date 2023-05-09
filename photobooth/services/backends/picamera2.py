@@ -1,12 +1,11 @@
 """
-Picam2 backend implementation
+Picamera2 backend implementation
 
 """
 import dataclasses
 import io
 import logging
 import time
-from importlib import import_module
 from threading import Condition, Event
 
 from pymitter import EventEmitter
@@ -24,14 +23,16 @@ from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig, EnumFocuserModule
 from .abstractbackend import AbstractBackend, BackendStats
+from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
+from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 
 
 class Picamera2Backend(AbstractBackend):
     """
-    The backend implementation using picam2
+    The backend implementation using picamera2
     """
 
     @dataclasses.dataclass
@@ -72,7 +73,7 @@ class Picamera2Backend(AbstractBackend):
         self.metadata = {}
 
         # private props
-        self._picam2: Picamera2 = None
+        self._picamera2: Picamera2 = None
         self._evtbus: EventEmitter = evtbus
         self._autofocus_module = None
 
@@ -92,24 +93,31 @@ class Picamera2Backend(AbstractBackend):
         self._current_config = None
         self._last_config = None
 
-        # load autofocus module as chosen by config. if none, don't load
-        if not settings.backends.picam2_focuser_module == EnumFocuserModule.NULL:
+        if not settings.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
             logger.info(
                 f"loading autofocus module: "
-                f".imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
+                f"picamera2_{settings.backends.picamera2_focuser_module.lower()}"
+                f"{__name__=}"
+                f"{__package__=}"
             )
-            autofocus_module = import_module(
-                f".imageserverpicam2_{settings.backends.picam2_focuser_module.lower()}"
-            )
-            autofocus_class_ = getattr(
-                autofocus_module,
-                f"ImageServerPicam2{settings.backends.picam2_focuser_module.value}",
-            )
-            self._autofocus_module = autofocus_class_(self, evtbus)
+            if (
+                settings.backends.picamera2_focuser_module
+                == EnumFocuserModule.LIBCAM_AF_CONTINUOUS
+            ):
+                self._autofocus_module = Picamera2LibcamAfContinuous(
+                    self, evtbus=evtbus
+                )
+            elif (
+                settings.backends.picamera2_focuser_module
+                == EnumFocuserModule.LIBCAM_AF_INTERVAL
+            ):
+                self._autofocus_module = Picamera2LibcamAfInterval(self, evtbus=evtbus)
+            else:
+                self._autofocus_module = None
 
         else:
             logger.info(
-                "picam2_focuser_module is disabled. "
+                "picamera2_focuser_module is disabled. "
                 "Select a focuser module in config to enable autofocus."
             )
 
@@ -121,10 +129,10 @@ class Picamera2Backend(AbstractBackend):
             data=None, request_ready=Event(), condition=Condition()
         )
 
-        self._picam2: Picamera2 = Picamera2()
+        self._picamera2: Picamera2 = Picamera2()
 
         # config HQ mode (used for picture capture and live preview on countdown)
-        self._capture_config = self._picam2.create_still_configuration(
+        self._capture_config = self._picamera2.create_still_configuration(
             main={
                 "size": (
                     settings.common.CAPTURE_CAM_RESOLUTION_WIDTH,
@@ -147,7 +155,7 @@ class Picamera2Backend(AbstractBackend):
         )
 
         # config preview mode (used for permanent live view)
-        self._preview_config = self._picam2.create_video_configuration(
+        self._preview_config = self._picamera2.create_video_configuration(
             main={
                 "size": (
                     settings.common.PREVIEW_CAM_RESOLUTION_WIDTH,
@@ -171,26 +179,26 @@ class Picamera2Backend(AbstractBackend):
 
         # activate preview mode on init
         self._on_preview_mode()
-        self._picam2.configure(self._current_config)
+        self._picamera2.configure(self._current_config)
 
         # capture_file image quality
-        self._picam2.options["quality"] = settings.common.HIRES_STILL_QUALITY
+        self._picamera2.options["quality"] = settings.common.HIRES_STILL_QUALITY
 
-        logger.info(f"camera_config: {self._picam2.camera_config}")
-        logger.info(f"camera_controls: {self._picam2.camera_controls}")
-        logger.info(f"controls: {self._picam2.controls}")
+        logger.info(f"camera_config: {self._picamera2.camera_config}")
+        logger.info(f"camera_controls: {self._picamera2.camera_controls}")
+        logger.info(f"controls: {self._picamera2.controls}")
 
-        self.set_ae_exposure(settings.backends.picam2_AE_EXPOSURE_MODE)
+        self.set_ae_exposure(settings.backends.picamera2_AE_EXPOSURE_MODE)
         logger.info(
-            f"stream quality {Quality[settings.backends.picam2_stream_quality.name]=}"
+            f"stream quality {Quality[settings.backends.picamera2_stream_quality.name]=}"
         )
         # start camera
-        self._picam2.start_encoder(
+        self._picamera2.start_encoder(
             MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
             FileOutput(self._lores_data),
-            quality=Quality[settings.backends.picam2_stream_quality.name],
+            quality=Quality[settings.backends.picamera2_stream_quality.name],
         )
-        self._picam2.start()
+        self._picamera2.start()
 
         self._generate_images_thread = StoppableThread(
             name="_generateImagesThread", target=self._generate_images_fun, daemon=True
@@ -236,9 +244,9 @@ class Picamera2Backend(AbstractBackend):
         self._generate_images_thread.join(timeout=5)
         self._stats_thread.join(timeout=5)
 
-        self._picam2.stop_encoder()
-        self._picam2.stop()
-        self._picam2.close()  # need to close camera so it can be used by other processes also (or be started again)
+        self._picamera2.stop_encoder()
+        self._picamera2.stop()
+        self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
         logger.debug(
             f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}"
@@ -334,14 +342,14 @@ class Picamera2Backend(AbstractBackend):
         """
         logger.info(f"set_ae_exposure, try to set to {newmode}")
         try:
-            self._picam2.set_controls({"AeExposureMode": newmode})
+            self._picamera2.set_controls({"AeExposureMode": newmode})
         except RuntimeError as exc:
             # catch runtimeerror and no reraise, can fail and being logged but continue.
             logger.error(f"set_ae_exposure failed! Mode {newmode} not available {exc}")
 
         logger.info(
-            f"current picam2.controls.get_libcamera_controls():"
-            f"{self._picam2.controls.get_libcamera_controls()}"
+            f"current picamera2.controls.get_libcamera_controls():"
+            f"{self._picamera2.controls.get_libcamera_controls()}"
         )
 
     def _switch_mode(self):
@@ -352,22 +360,22 @@ class Picamera2Backend(AbstractBackend):
         # sometimes picamera2 got stuck calling switch_mode.
         # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
         # some further information here: https://github.com/raspberrypi/picamera2/issues/554
-        self._picam2.stop_encoder()
+        self._picamera2.stop_encoder()
         self._last_config = self._current_config
 
         logger.critical(
-            f"_switch_mode: {self._picam2.is_open=}, {self._picam2.started=}"
+            f"_switch_mode: {self._picamera2.is_open=}, {self._picamera2.started=}"
         )
 
         logger.critical("_switch_mode: pre")
         # logger.critical(f"{self._currentmode=}")
-        self._picam2.switch_mode(self._current_config)
+        self._picamera2.switch_mode(self._current_config)
         logger.critical("_switch_mode: post")
 
-        self._picam2.start_encoder(
+        self._picamera2.start_encoder(
             MJPEGEncoder(),
             FileOutput(self._lores_data),
-            quality=Quality[settings.backends.picam2_stream_quality.name],
+            quality=Quality[settings.backends.picamera2_stream_quality.name],
         )
         logger.info("switchmode finished successfully")
 
@@ -424,7 +432,7 @@ class Picamera2Backend(AbstractBackend):
 
                 # capture hq picture
                 data = io.BytesIO()
-                self._picam2.capture_file(data, format="jpeg")
+                self._picamera2.capture_file(data, format="jpeg")
                 self._hires_data.data = data.getbuffer()
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
@@ -437,7 +445,7 @@ class Picamera2Backend(AbstractBackend):
 
             # capture metadata blocks until new metadata is avail
             # fixme: following seems to block occasionally the switch_mode function. # pylint: disable=fixme
-            # self.metadata = self._picam2.capture_metadata()
+            # self.metadata = self._picamera2.capture_metadata()
             time.sleep(0.1)
 
             # counter to calc the fps

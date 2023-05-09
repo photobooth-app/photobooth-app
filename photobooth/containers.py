@@ -35,7 +35,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
     backends = providers.Container(
         BackendsContainer,
         evtbus=evtbus,
-        # settings=settings,
         config=config,
     )
     # for provider in backends.traverse():

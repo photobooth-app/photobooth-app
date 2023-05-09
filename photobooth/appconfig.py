@@ -218,13 +218,13 @@ class GroupBackends(BaseModel):
     )
 
     picamera2_focuser_module: EnumFocuserModule = Field(
-        title="Picam2 Focuser Module",
+        title="Picamera2 Focuser Module",
         default=EnumFocuserModule.NULL,
         description="Choose continuous or interval mode to trigger autofocus of picamera2 cam.",
     )
 
     picamera2_stream_quality: EnumPicamStreamQuality = Field(
-        title="Picam2 Stream Quality (for livepreview)",
+        title="Picamera2 Stream Quality (for livepreview)",
         default=EnumPicamStreamQuality.MEDIUM,
         description="Lower quality results in less data to be transferred and may reduce load on display device.",
     )

@@ -23,7 +23,7 @@ except Exception as import_exc:
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 
 
 class WebcamV4lBackend(AbstractBackend):

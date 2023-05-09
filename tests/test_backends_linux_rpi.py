@@ -26,8 +26,8 @@ def check_focusavail_skip():
     if is_rpi():
         from picamera2 import Picamera2
 
-        with Picamera2() as picam2:
-            if "AfMode" not in picam2.camera_controls:
+        with Picamera2() as picamera2:
+            if "AfMode" not in picamera2.camera_controls:
                 pytest.skip("SKIPPED (no AF available)")
 
 

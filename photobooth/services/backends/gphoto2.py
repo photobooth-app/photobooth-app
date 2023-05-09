@@ -24,7 +24,7 @@ turbojpeg = TurboJPEG()
 
 class Gphoto2Backend(AbstractBackend):
     """
-    The backend implementation using picam2
+    The backend implementation using gphoto2
     """
 
     @dataclasses.dataclass

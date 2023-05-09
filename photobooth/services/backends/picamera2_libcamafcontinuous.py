@@ -64,7 +64,7 @@ class Picamera2LibcamAfContinuous:
         """
         logger.info(f"{__name__} _init_autofocus call")
         try:
-            self._imageserver._picam2.set_controls(
+            self._imageserver._picamera2.set_controls(
                 {"AfMode": controls.AfModeEnum.Continuous}
             )
             logger.info("libcamautofocus set to continuous mode")
@@ -74,7 +74,7 @@ class Picamera2LibcamAfContinuous:
             )
 
         try:
-            self._imageserver._picam2.set_controls(
+            self._imageserver._picamera2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
             logger.info("libcamautofocus AfSpeed set to fast mode")

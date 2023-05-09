@@ -13,7 +13,7 @@ from pymitter import EventEmitter
 from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()
+settings = AppConfig()  # TODO: remove!
 
 # retry some times to get image for stream
 MAX_ATTEMPTS = 3
