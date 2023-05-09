@@ -18,6 +18,8 @@ from turbojpeg import TurboJPEG
 from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
 from photobooth.utils.stoppablethread import StoppableThread
 
+from ...appconfig import AppConfig
+
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
 
@@ -42,15 +44,14 @@ class Gphoto2Backend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self, evtbus: EventEmitter):
-        super().__init__(evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus, config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
-        self._evtbus = evtbus
 
         self._hires_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
             data=None, request_ready=Event(), condition=Condition()

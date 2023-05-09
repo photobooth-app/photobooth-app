@@ -30,7 +30,7 @@ class WebcamCv2Backend(AbstractBackend):
     """
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus)
+        super().__init__(evtbus, config)
         # public props (defined in abstract class also)
         self.metadata = {}
 

@@ -10,6 +10,7 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from PIL import Image, ImageDraw, ImageFont
 from pymitter import EventEmitter
 
+from ...appconfig import AppConfig
 from .abstractbackend import (
     AbstractBackend,
     BackendStats,
@@ -25,11 +26,8 @@ logger = logging.getLogger(__name__)
 class SimulatedBackend(AbstractBackend):
     """simulated backend to test photobooth"""
 
-    def __init__(
-        self,
-        evtbus: EventEmitter,
-    ):
-        super().__init__(evtbus=evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus, config)
 
         # public props (defined in abstract class also)
         self.metadata = {}
