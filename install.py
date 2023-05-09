@@ -13,7 +13,7 @@ import platform
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
-from photobooth.utils.helper import is_rpi
+
 
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
@@ -106,6 +106,21 @@ common__PREVIEW_CAM_RESOLUTION_HEIGHT="1736"
 """,
     ),
 ]
+
+
+def is_rpi():
+    """detect if computer is a raspberry pi (any model)
+
+    Returns:
+        bool: true is raspberry pi, false is other
+    """
+    if platform.system() == "Linux":
+        if os.path.isfile("/proc/device-tree/model"):
+            with open("/proc/device-tree/model", encoding="utf-8") as file:
+                model = file.read()
+                return "Raspberry" in model
+
+    return False
 
 
 def install_system_packages_win():
