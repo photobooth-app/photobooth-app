@@ -17,12 +17,32 @@ from .appconfig import AppConfig
 from .containers import ApplicationContainer
 from .services.loggingservice import LoggingService
 
+logger = logging.getLogger(f"{__name__}")
+
 
 @inject
 def main(
     config: AppConfig = Provide[ApplicationContainer.config],
     logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
-) -> None:
+) -> uvicorn.Server:
+    logger.info("Welcome to photobooth-app")
+    # guard to start only one instance at a time.
+    try:
+        s = socket.socket()
+        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
+    except OSError:
+        logger.error("startup aborted. another instance is running. exiting.")
+        sys.exit(-1)
+
+    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
+    # spawn will be the default for all systems in future so it's set here now to have same
+    # results on all platforms
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"{multiprocessing_start_method=}, before forcing")
+    multiprocessing.set_start_method(method="spawn", force=True)
+    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
+    logger.info(f"{multiprocessing_start_method=}, forced")
+
     # log_level="trace", default info
     server = uvicorn.Server(
         uvicorn.Config(
@@ -47,42 +67,19 @@ def main(
     # adjust logging after uvicorn setup
     logging_service.uvicorn()
 
-    # serve files forever, loops endless
-    server.run()
+    return server
 
 
-if (
-    __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ
-):  # FIXME: pytest handling needs to be redone
-    logger = logging.getLogger(f"{__name__}")
-
-    # guard to start only one instance at a time.
-    try:
-        s = socket.socket()
-        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
-    except OSError:
-        logger.error("startup aborted. another instance is running. exiting.")
-        sys.exit(-1)
-
-    # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
-    # spawn will be the default for all systems in future so it's set here now to have same
-    # results on all platforms
-    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"{multiprocessing_start_method=}, before forcing")
-    multiprocessing.set_start_method(method="spawn", force=True)
-    multiprocessing_start_method = multiprocessing.get_start_method(allow_none=True)
-    logger.info(f"{multiprocessing_start_method=}, forced")
-
+if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
     application_container = ApplicationContainer()
-
-    # init after wiring?! correct? # FIXME: check docs
     application_container.init_resources()
-
     application_container.wire(modules=[__name__], packages=[".routers"])
 
-    logger.info("Welcome to qPhotobooth")
-
     # start main application
-    main()
+    server = main()
+
+    # serve files forever, loops endless
+    if __name__ == "__main__":
+        server.run()
 
     application_container.shutdown_resources()
