@@ -1,5 +1,4 @@
 from pymitter import EventEmitter
-from src.configsettings import settings
 import pytest
 import platform
 import logging

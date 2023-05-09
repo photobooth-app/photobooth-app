@@ -1,10 +1,14 @@
-from .utils import get_images
-from src.utils import is_rpi
-from pymitter import EventEmitter
-from src.configsettings import settings, ConfigSettings, EnumFocuserModule
-import pytest
-import time
 import logging
+import time
+
+import pytest
+from pymitter import EventEmitter
+
+from photobooth.appconfig import EnumFocuserModule
+from photobooth.containers import ApplicationContainer
+from photobooth.utils.helper import is_rpi
+
+from .utils import get_images
 
 logger = logging.getLogger(name=None)
 
@@ -48,23 +52,21 @@ def autofocus_algorithm(request):
 
 
 def test_getImages():
-    from src.imageserverpicam2 import ImageServerPicam2
+    from photobooth.services.backends.picamera2 import Picamera2Backend
 
-    backend = ImageServerPicam2(EventEmitter(), True)
+    backend = Picamera2Backend(EventEmitter())
 
     get_images(backend)
 
 
 def test_autofocus(autofocus_algorithm):
     check_focusavail_skip()
-
-    from src.imageserverpicam2 import ImageServerPicam2
-    from src.configsettings import settings
+    from photobooth.services.backends.picamera2 import Picamera2Backend
 
     evtbus = EventEmitter()
 
-    settings.backends.picam2_focuser_module = autofocus_algorithm
-    backend = ImageServerPicam2(evtbus, True)
+    ApplicationContainer.settings().backends.picam2_focuser_module = autofocus_algorithm
+    backend = Picamera2Backend(evtbus)
     backend.start()
 
     evtbus.emit("statemachine/on_thrill")

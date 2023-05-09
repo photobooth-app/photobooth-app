@@ -1,8 +1,12 @@
-from pymitter import EventEmitter
-from src.configsettings import settings
-import pytest
-import platform
 import logging
+import platform
+
+# from src.configsettings import settings
+import pytest
+from pymitter import EventEmitter
+
+from photobooth.containers import ApplicationContainer
+
 from .utils import get_images
 
 logger = logging.getLogger(name=None)
@@ -23,7 +27,10 @@ if not platform.system() == "Linux":
 
 
 def test_getImages():
-    from src.imageserverwebcamv4l import ImageServerWebcamV4l, available_camera_indexes
+    from photobooth.services.backends.webcamv4l import (
+        WebcamV4lBackend,
+        available_camera_indexes,
+    )
 
     _availableCameraIndexes = available_camera_indexes()
     if not _availableCameraIndexes:
@@ -35,9 +42,9 @@ def test_getImages():
     logger.info(f"using first camera index to test: {cameraIndex}")
 
     # modify config:
-    settings.backends.v4l_device_index = cameraIndex
+    ApplicationContainer.settings().backends.v4l_device_index = cameraIndex
 
     # ImageServerSimulated backend: test on every platform
-    backend = ImageServerWebcamV4l(EventEmitter(), True)
+    backend = WebcamV4lBackend(EventEmitter())
 
     get_images(backend)
