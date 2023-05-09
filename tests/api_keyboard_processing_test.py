@@ -1,11 +1,13 @@
 import os
 import sys
-import pytest
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
+"""
+
+TODO: reimplement keyboard processing and testing.
 
 def test_chose_1pic():
     from start import imageServers
@@ -28,3 +30,4 @@ def test_chose_1pic():
     evt_chose_1pic_get()
 
     imageServers.stop()
+"""

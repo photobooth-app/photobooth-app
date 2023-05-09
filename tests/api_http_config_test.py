@@ -1,14 +1,14 @@
-import os
-import sys
-
 import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.appconfig import AppConfig
 from photobooth.application import app
 
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+@pytest.fixture
+def client() -> TestClient:
+    with TestClient(app=app, base_url="http://test") as client:
+        yield client
 
 
 @pytest.fixture(
@@ -25,20 +25,12 @@ def config_endpoint(request):
     # cleanup
 
 
-def test_config_endpoints(config_endpoint):
-    # from start import app
-
-    client = TestClient(app)
-
+def test_config_endpoints(client: TestClient, config_endpoint):
     response = client.get(config_endpoint)
     assert response.status_code == 200
 
 
-def test_config_post():
-    # from start import app
-
-    client = TestClient(app)
-
+def test_config_post(client: TestClient):
     response = client.post(
         "/config/current", json={"updated_settings": AppConfig().dict()}
     )

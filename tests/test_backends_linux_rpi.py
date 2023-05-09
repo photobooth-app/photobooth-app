@@ -2,13 +2,14 @@ import logging
 import time
 
 import pytest
+from dependency_injector import providers
 from pymitter import EventEmitter
 
-from photobooth.appconfig import EnumFocuserModule
-from photobooth.containers import ApplicationContainer
+from photobooth.appconfig import AppConfig, EnumFocuserModule
+from photobooth.services.backends.containers import BackendsContainer
 from photobooth.utils.helper import is_rpi
 
-from .utils import get_images
+from .backends_utils import get_images
 
 logger = logging.getLogger(name=None)
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 if not is_rpi():
     pytest.skip(
-        "platform not raspberry pi, test of Picam2 backend skipped",
+        "platform not raspberry pi, test of backends skipped",
         allow_module_level=True,
     )
 
@@ -43,42 +44,41 @@ def check_focusavail_skip():
 def autofocus_algorithm(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
-
     # cleanup
-    # os.remove(request.param)
 
 
 ## tests
 
 
 def test_getImages():
-    from photobooth.services.backends.picamera2 import Picamera2Backend
+    backend = BackendsContainer(
+        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
+    )
+    picamera2_backend = backend.picamera2_backend()
 
-    backend = Picamera2Backend(EventEmitter())
-
-    get_images(backend)
+    get_images(picamera2_backend)
 
 
 def test_autofocus(autofocus_algorithm):
     check_focusavail_skip()
-    from photobooth.services.backends.picamera2 import Picamera2Backend
+    backend = BackendsContainer(
+        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
+    )
+    picamera2_backend = backend.picamera2_backend()
 
-    evtbus = EventEmitter()
+    backend.config().backends.picamera2_focuser_module = autofocus_algorithm
+    picamera2_backend.start()
 
-    ApplicationContainer.settings().backends.picam2_focuser_module = autofocus_algorithm
-    backend = Picamera2Backend(evtbus)
-    backend.start()
-
-    evtbus.emit("statemachine/on_thrill")
+    backend.evtbus().emit("statemachine/on_thrill")
     time.sleep(1)
-    evtbus.emit("statemachine/on_exit_capture_still")
+    backend.evtbus().emit("statemachine/on_exit_capture_still")
     time.sleep(1)
-    evtbus.emit("onCaptureMode")
+    backend.evtbus().emit("onCaptureMode")
     time.sleep(1)
-    evtbus.emit("onPreviewMode")
+    backend.evtbus().emit("onPreviewMode")
     time.sleep(1)
 
     # wait so some cycles had happen
-    time.sleep(11)
+    time.sleep(1)
 
-    backend.stop()
+    picamera2_backend.stop()

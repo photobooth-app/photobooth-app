@@ -1,17 +1,16 @@
-import os
-import sys
-
+import pytest
 from fastapi.testclient import TestClient
 
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from photobooth.application import app
 
 
-def test_read_main():
-    from start import app
+@pytest.fixture
+def client() -> TestClient:
+    with TestClient(app=app, base_url="http://test") as client:
+        yield client
 
-    client = TestClient(app)
 
+def test_read_main(client: TestClient):
     response = client.get("/")
     assert response.status_code == 200
 
@@ -22,10 +21,6 @@ def test_read_main():
     )
 
 
-def test_read_log():
-    from start import app
-
-    client = TestClient(app)
-
+def test_read_log(client: TestClient):
     response = client.get("/log/latest")
     assert response.status_code == 200

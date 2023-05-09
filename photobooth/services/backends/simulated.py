@@ -17,7 +17,7 @@ from .abstractbackend import (
     decompile_buffer,
 )
 
-SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
+SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class SimulatedBackend(AbstractBackend):
 
         self._img_buffer_shm = shared_memory.SharedMemory(
             create=True,
-            size=SHARED_MEMORY_BUFFER_BYTES,  # pylint: disable=W0212
+            size=SHARED_MEMORY_BUFFER_BYTES,
         )
 
         self._p = Process(

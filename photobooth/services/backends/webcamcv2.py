@@ -18,10 +18,10 @@ from .abstractbackend import (
     decompile_buffer,
 )
 
+SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
+
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
-settings = AppConfig()
-SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
 
 class WebcamCv2Backend(AbstractBackend):
@@ -29,13 +29,14 @@ class WebcamCv2Backend(AbstractBackend):
     opencv2 backend implementation for webcameras
     """
 
-    def __init__(self, evtbus: EventEmitter):
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
         self._evtbus = evtbus
+        self._config = config
 
         self._img_buffer_lores: SharedMemoryDataExch = None
         self._img_buffer_hires: SharedMemoryDataExch = None
@@ -80,7 +81,7 @@ class WebcamCv2Backend(AbstractBackend):
                 self._event_hq_capture,
                 self._img_buffer_lores.condition,
                 self._img_buffer_hires.condition,
-                settings,
+                self._config,
                 self._event_proc_shutdown,
             ),
             daemon=True,

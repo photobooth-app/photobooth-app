@@ -1,34 +1,35 @@
-import os
-import sys
-
+import pytest
 from fastapi.testclient import TestClient
 
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from photobooth.application import app
 
 
-def test_chose_1pic():
-    from start import app, imageServers, processingpicture
+@pytest.fixture
+def client() -> TestClient:
+    with TestClient(app=app, base_url="http://test") as client:
+        yield client
 
-    client = TestClient(app)
-    processingpicture._reset()
 
-    # no imageserver started yet, result 500
-    response = client.get("/chose/1pic")
-    assert response.status_code == 500
-
-    # reset statemachine for next test
-    processingpicture._reset()
-
-    imageServers.start()
-
-    response = client.get("/chose/1pic")
+def test_chose_1pic(client: TestClient):
+    response = client.get("/processing/chose/1pic")
     assert response.status_code == 200
 
-    # set statemachine to non-idle state and check next request is rejected
-    processingpicture.thrill()
+    processing_service = client.app.container.services.processing_service()
 
-    response = client.get("/chose/1pic")
+    processing_service.thrill()
+
+    response = client.get("/processing/chose/1pic")
     assert response.status_code == 400
 
-    imageServers.stop()
+    processing_service._reset()
+
+    response = client.get("/processing/chose/1pic")
+    assert response.status_code == 200
+
+
+def test_chose_1pic_with_capturemode(client: TestClient):
+    response = client.get("/aquisition/mode/capture")
+    assert response.status_code == 200
+
+    response = client.get("/aquisition/still")
+    assert response.status_code == 200

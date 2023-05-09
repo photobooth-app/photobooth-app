@@ -55,8 +55,6 @@ def _create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    app.container = application_container
-
     app.include_router(config_router)
     app.include_router(home_router)
     app.include_router(aquisition_router)
@@ -80,6 +78,10 @@ def _create_app() -> FastAPI:
 
     app.add_exception_handler(HTTPException, custom_http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+    # store container here and wire routers, to inject providers
+    app.container = application_container
+    app.container.wire(modules=[__name__], packages=[".routers"])
 
     return app
 

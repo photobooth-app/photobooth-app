@@ -1,17 +1,13 @@
 import logging
-import os
-import sys
 import time
 
 # from src.configsettings import settings
 import pytest
+from dependency_injector import providers
 from pymitter import EventEmitter
 
-from photobooth.containers import ApplicationContainer
-
-# https://docs.python-guide.org/writing/structure/
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+from photobooth.appconfig import AppConfig
+from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
 
@@ -19,17 +15,18 @@ logger = logging.getLogger(name=None)
 def test_disabled():
     """should just fail in silence if disabled but app triggers some presets"""
 
-    ApplicationContainer.settings().wled.ENABLED = False
+    services = ServicesContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
+    services.config().wled.ENABLED = False
 
     try:
-        ws = ApplicationContainer.wled_service(EventEmitter())
-        ws.start()
-        time.sleep(1)
+        wled_service = services.wled_service()
 
         # test this, because should be ignored, no error
-        ws.preset_standby()
+        wled_service.preset_standby()
 
-        ws.stop()
     except Exception:
         raise AssertionError("init failed")
 
@@ -37,52 +34,48 @@ def test_disabled():
 def test_enabled_nonexistentserialport():
     """should just fail in silence if disabled but app triggers some presets"""
 
-    ApplicationContainer.settings().wled.ENABLED = True
-    ApplicationContainer.settings().wled.SERIAL_PORT = "nonexistentserialport"
+    services = ServicesContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
+    services.config().wled.ENABLED = True
+    services.config().wled.SERIAL_PORT = "nonexistentserialport"
 
-    ws = ApplicationContainer.wled_service(EventEmitter())
     with pytest.raises(RuntimeError):
-        ws.start()
-
-    time.sleep(1)
-
-    ws.stop()
+        # getting service starts automatically. here an Runtime Exception shall be thrown if connection fails.
+        services.wled_service()
 
 
 def test_restart_class():
-    # from src.wledservice import WledService
+    services = ServicesContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
 
-    # reset settings to defaults
-    ApplicationContainer.settings.reset()
+    logger.debug("getting service, starting resource")
+    services.wled_service()
 
-    ws = ApplicationContainer.wled_service(EventEmitter())
-    ws.start()
-    time.sleep(1)
-    ws.stop()
+    logger.debug("shutdown resource")
+    services.wled_service.shutdown()
 
-    # time.sleep(2)
-    ws = ApplicationContainer.wled_service(EventEmitter())
-    ws.start()
-    time.sleep(1)
-    ws.stop()
+    logger.debug("getting service, starting resource again")
+    services.wled_service()
 
 
 def test_change_presets():
-    # from src.wledservice import WledService
+    services = ServicesContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
 
-    # reset settings to defaults
-    ApplicationContainer.settings.reset()
-
-    ws = ApplicationContainer.wled_service(EventEmitter())
-    ws.start()
+    logger.debug("getting service, starting resource")
+    wled_service = services.wled_service()
 
     time.sleep(1)
 
-    ws.preset_thrill()
+    wled_service.preset_thrill()
     time.sleep(2)
-    ws.preset_shoot()
+    wled_service.preset_shoot()
     time.sleep(1)
-    ws.preset_standby()
+    wled_service.preset_standby()
     time.sleep(0.5)
-
-    ws.stop()

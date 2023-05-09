@@ -31,8 +31,9 @@ def init_aquisition_resource(evtbus, config, primary, secondary):
         logger.critical(f"failed to start acquisition {exc}")
     else:
         yield resource
-    finally:
         resource.stop()
+    finally:
+        pass
 
 
 def init_information_resource(evtbus):
@@ -49,8 +50,12 @@ def init_wled_resource(evtbus, config):
     except RuntimeError as wledservice_exc:
         # catch exception to make app continue without wled service in case there is a connection problem
         logging.warning(f"WLED module init failed {wledservice_exc}")
-    yield resource
-    resource.stop()
+        raise wledservice_exc
+    else:
+        yield resource
+        resource.stop()
+    finally:
+        pass
 
 
 class ServicesContainer(containers.DeclarativeContainer):
@@ -86,6 +91,4 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_wled_resource,
         evtbus=evtbus,
         config=config,
-        # enabled=config.wled.ENABLED,
-        # serial_port=config.wled.SERIAL_PORT,
     )
