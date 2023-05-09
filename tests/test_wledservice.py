@@ -26,8 +26,8 @@ def test_disabled():
         # test this, because should be ignored, no error
         wled_service.preset_standby()
 
-    except Exception:
-        raise AssertionError("init failed")
+    except Exception as exc:
+        raise AssertionError("init failed") from exc
 
 
 def test_enabled_nonexistentserialport():

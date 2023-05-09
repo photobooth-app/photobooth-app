@@ -1,6 +1,13 @@
 [project]
-# Support Python 3.9+.
+name = "photobooth app"
 requires-python = ">=3.9"
+version = "0.0.1"
+description = "Photobooth app written in Python"
+authors = [{ name = "Michael G", email = "me@mgrl.de" }]
+maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
+readme = "README.md"
+license = { file = "LICENSE.md" }
+urls = { repository = "https://github.com/mgrl/photobooth-app" }
 
 [tool.pytest.ini_options]
 log_cli = true
@@ -24,8 +31,12 @@ line-length = 120
 select = [
   "E",   # pycodestyle
   "F",   # pyflakes
+  "B",   # bugbear
   #"D",   # pydocstyle   # add later
 ]
+ignore = [
+  "B008" #used for DI injection
+  ]
 extend-exclude = ["./scripts", "install.py"]
 
 [tool.ruff.per-file-ignores]

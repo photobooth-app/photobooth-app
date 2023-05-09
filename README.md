@@ -1,20 +1,20 @@
 # Photobooth App
 
-The photobooth app is written in Python and coming along with a modern Vue frontend.
-
 ![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)
-![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
+![rpi, linux and windows platform supported](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
 [![pylint](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pylint.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml)
 [![codecov](https://codecov.io/gh/mgrl/photobooth-app/branch/dev/graph/badge.svg?token=SBB5DGX17V)](https://codecov.io/gh/mgrl/photobooth-app)
 
+The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
+
 ## :heart_eyes: Features
 
-- camera live preview with shortest delay as possible
-- permanent video live view in background
-- autofocus based on the live preview
-- several camera backends supported for high quality stills and livestream
-- WLED support signaling photo countdown and feedback to the user when the photo is actually taken
+- 📹 camera live preview with shortest delay as possible, permanent video live view in background
+- ⚡️ optimized for speed, live stream hardware accelerated on rpi, cpu load < 20%
+- 🫶 several camera backends supported for high quality stills and livestream
+- 💡 WLED support signaling photo countdown and feedback to the user when the photo is actually taken
+- 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported
 
 ## :camera: Supported Cameras
 
@@ -29,7 +29,7 @@ The photobooth app's Python backend allows to use different camera types on Linu
 
 The app controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
-The booth is made from 3d printed parts, [see the documentation over here](https://github.com/mgrl/photobooth-3d).
+The booth is made from 3d printed parts, [see the documentation ✍ over here](https://github.com/mgrl/photobooth-3d).
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
@@ -199,7 +199,7 @@ cat ~/imageserver/log/qbooth.log
 cat /proc/meminfo
 ```
 
-If service crashed, kill the python process:
+If service crashed 💀, kill the python process:
 
 ```zsh
 sudo pkill -9 python3

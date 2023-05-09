@@ -36,7 +36,7 @@ def test_aquire_still_capturemode(client: TestClient):
 
 
 def test_aquire_multiple_withmodechange(client: TestClient):
-    for i in range(0, 4):
+    for _i in range(0, 4):
         response = client.get("/aquisition/mode/capture")
         assert response.status_code == 202
 
@@ -50,5 +50,5 @@ def test_aquire_multiple_withmodechange(client: TestClient):
 
 
 def test_aquire_multiple_nomodechange(client: TestClient):
-    for i in range(0, 4):
+    for _i in range(0, 4):
         capture(client)
