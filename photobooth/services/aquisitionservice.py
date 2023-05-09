@@ -1,5 +1,5 @@
 """
-manage up to two imageserver backends in this module
+manage up to two photobooth-app backends in this module
 """
 import dataclasses
 
@@ -13,7 +13,7 @@ from .baseservice import BaseService
 class AquisitionService(BaseService):
 
     """
-    Class managing imageserver backends
+    Class managing photobooth-app backends
     MAIN: used for high quality still pictures
     LIVE: used for streams and live previews
           (can be used additionally if MAIN is not capable to deliver video)
@@ -101,8 +101,6 @@ class AquisitionService(BaseService):
             else None
         )
 
-        imageservers_stats = {"primary": stats_primary, "secondary": stats_secondary}
+        aquisition_stats = {"primary": stats_primary, "secondary": stats_secondary}
 
-        # self._logger.debug(f"{imageservers_stats=}")
-
-        return imageservers_stats
+        return aquisition_stats

@@ -1,1 +1,0 @@
-python3 -m cProfile -s cumulative imageserver.py > profile_results.txt

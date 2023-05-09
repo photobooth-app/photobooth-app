@@ -1,5 +1,5 @@
 [Unit]
-Description=photoboothapp
+Description=photobooth-app
 #After=multi-user.target #only for system units
 After=default.target
 
@@ -15,8 +15,8 @@ ExecStart=/usr/bin/python -O -m photobooth
 WantedBy=default.target
 
 ## enable service and autostart on system startup:
-#1 cp imageserver.service ~/.local/share/systemd/user
+#1 cp photobooth-app.service ~/.local/share/systemd/user
 #1b systemctl --user daemon-reload 
-#2 systemctl --user enable imageserver.service
-#3 systemctl start imageserver.service
-#4 systemctl status imageserver.service
+#2 systemctl --user enable photobooth-app.service
+#3 systemctl --user start photobooth-app.service
+#4 systemctl --user status photobooth-app.service

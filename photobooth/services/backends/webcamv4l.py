@@ -29,10 +29,16 @@ class WebcamV4lBackend(AbstractBackend):
     """_summary_
 
     Args:
-        ImageServerAbstract (_type_): _description_
+        AbstractBackend (_type_): _description_
     """
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        """_summary_
+
+        Args:
+            evtbus (EventEmitter): _description_
+            config (AppConfig): _description_
+        """
         super().__init__(evtbus, config)
         # public props (defined in abstract class also)
         self.metadata = {}
@@ -66,7 +72,7 @@ class WebcamV4lBackend(AbstractBackend):
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
-            name="ImageServerWebcamV4lAquisitionProcess",
+            name="WebcamV4lAquisitionProcess",
             args=(
                 self._img_buffer.sharedmemory.name,
                 self._img_buffer.condition,

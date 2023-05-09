@@ -52,7 +52,7 @@ class SimulatedBackend(AbstractBackend):
 
         self._p = Process(
             target=img_aquisition,
-            name="ImageServerSimulatedAquisitionProcess",
+            name="SimulatedAquisitionProcess",
             args=(
                 self._img_buffer_shm.name,
                 self._condition_img_buffer_ready,
@@ -164,7 +164,7 @@ def img_aquisition(
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    img_original = Image.open("./photobooth/assets/imageserversimulated_background.jpg")
+    img_original = Image.open("./photobooth/assets/simulated_background.jpg")
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():

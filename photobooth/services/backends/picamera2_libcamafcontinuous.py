@@ -29,12 +29,12 @@ class Picamera2LibcamAfContinuous:
     """
 
     def __init__(
-        self, imageserver: AbstractBackend, evtbus: EventEmitter, config: AppConfig
+        self, backend: AbstractBackend, evtbus: EventEmitter, config: AppConfig
     ):
-        self._imageserver: AbstractBackend = imageserver
-
+        self._backend: AbstractBackend = backend
         self._config = config
         self._evtbus = evtbus
+
         self._evtbus.on("statemachine/on_thrill", self._on_thrill)
         self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)
         self._evtbus.on("onCaptureMode", self._on_capturemode)
@@ -69,7 +69,7 @@ class Picamera2LibcamAfContinuous:
         """
         logger.info(f"{__name__} _init_autofocus call")
         try:
-            self._imageserver._picamera2.set_controls(
+            self._backend._picamera2.set_controls(
                 {"AfMode": controls.AfModeEnum.Continuous}
             )
             logger.info("libcamautofocus set to continuous mode")
@@ -79,7 +79,7 @@ class Picamera2LibcamAfContinuous:
             )
 
         try:
-            self._imageserver._picamera2.set_controls(
+            self._backend._picamera2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
             logger.info("libcamautofocus AfSpeed set to fast mode")

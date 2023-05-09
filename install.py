@@ -25,7 +25,7 @@ if os.path.isfile("pyproject.toml"):
     SUPPRESS_INSTALLATION = True
 else:
     # default install in subdirectory of current workingdir:
-    INSTALL_DIR = "./imageserver/"
+    INSTALL_DIR = "./photobooth-app/"
     SUPPRESS_INSTALLATION = False
     sys.path.append(INSTALL_DIR)
     # ensure dir exists
@@ -381,7 +381,7 @@ if not SUPPRESS_INSTALLATION and not INSTALLDIR_HAS_GIT_REPO:
             pass  # silent ignore if already exists
 
         # subdir has no git repo yet - considered as new installation
-        print("Installing qBooth to ./imageserver/")
+        print(f"Installing app to {INSTALL_DIR}")
         if query_yes_no("install dev preview? if no install stable", "no"):
             _syscall(
                 f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}"
@@ -410,10 +410,12 @@ if query_yes_no("Install/Upgrade pip packages for booth?", "yes"):
 if query_yes_no("Install booth service?", "no"):
     if _is_linux():
         with open(
-            f"{INSTALL_DIR}/misc/installer/imageserver.service", "rt", encoding="utf-8"
+            f"{INSTALL_DIR}/misc/installer/photobooth-app.service",
+            "rt",
+            encoding="utf-8",
         ) as fin:
             compiled_service_file = Path(
-                f"{str(Path.home())}/.local/share/systemd/user/imageserver.service"
+                f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service"
             )
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
             print_blue(f"creating service file '{compiled_service_file}'")
@@ -426,11 +428,11 @@ if query_yes_no("Install booth service?", "no"):
                         )
                     )
 
-        _syscall("systemctl --user enable imageserver.service")
+        _syscall("systemctl --user enable photobooth-app.service")
 
     if _is_windows():
         print_red(
-            "not yet supported. pls start imageserver manually and browse to photobooth website."
+            "not supported. pls start photobooth-app manually and browse to photobooth website."
         )
 
 #
@@ -565,7 +567,7 @@ else:
 print_spacer("Installer finished")
 print()
 print()
-print("Start imageserver (start.sh/start.bat) and")
+print("Start photobooth-app with start.(sh|bat) and")
 print(f"browse to http://{socket.gethostname()}:8000")
 print()
 print()

@@ -30,10 +30,9 @@ class Picamera2LibcamAfInterval:
     """
 
     def __init__(
-        self, imageserver: AbstractBackend, evtbus: EventEmitter, config: AppConfig
+        self, backend: AbstractBackend, evtbus: EventEmitter, config: AppConfig
     ):
-        self._imageserver: AbstractBackend = imageserver
-
+        self._backend: AbstractBackend = backend
         self._evtbus = evtbus
         self._config = config
 
@@ -91,7 +90,7 @@ class Picamera2LibcamAfInterval:
         and trigger regularly
         """
         try:
-            self._imageserver._picamera2.set_controls(
+            self._backend._picamera2.set_controls(
                 {"AfSpeed": controls.AfSpeedEnum.Fast}
             )
             logger.info("libcamautofocus AfSpeed set to fast mode")
@@ -100,10 +99,10 @@ class Picamera2LibcamAfInterval:
 
     def _autofocus_cycle(self):
         try:
-            # success = self._imageserver._picamera2.autofocus_cycle(wait=False)
+            # success = self._backend._picamera2.autofocus_cycle(wait=False)
             # this command breaks the frameserver - reason not yet clear, so currently
             # autofocus invoked like this:
-            self._imageserver._picamera2.set_controls(
+            self._backend._picamera2.set_controls(
                 {
                     "AfMode": controls.AfModeEnum.Auto,
                     "AfTrigger": controls.AfTriggerEnum.Start,

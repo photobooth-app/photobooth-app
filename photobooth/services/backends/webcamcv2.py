@@ -72,7 +72,7 @@ class WebcamCv2Backend(AbstractBackend):
 
         self._cv2_process = Process(
             target=cv2_img_aquisition,
-            name="ImageServerWebcamCv2AquisitionProcess",
+            name="WebcamCv2AquisitionProcess",
             args=(
                 self._img_buffer_lores.sharedmemory.name,
                 self._img_buffer_hires.sharedmemory.name,

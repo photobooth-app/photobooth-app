@@ -22,42 +22,20 @@
       "command": "pylint -v *.py ./photobooth/*.py"
     },
     {
+      "label": "ruff with --fix",
+      "type": "shell",
+      "command": "ruff check . --fix"
+    },
+    {
       "label": "statemachine diagram (needs pydot and graphviz)",
       "type": "shell",
       "command": "python -m statemachine.contrib.diagram photobooth.services.processing.ProcessingPicture diagram_ProcessingPicture.png"
     },
     {
-      "label": "startBoothPi",
-      "type": "shell",
-      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo python3 -m ptvsd --host 0.0.0.0 --port 5678 --wait ~/imageserver/imageserver.py > /dev/null 2>&1 &'"
-    },
-    {
-      "label": "stopBoothServicePi",
-      "type": "shell",
-      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'cd ~/imageserver/; nohup sudo systemctl stop imageserver.service > /dev/null 2>&1 &'"
-    },
-    {
-      "label": "wait",
-      "type": "shell",
-      "command": "timeout 1"
-    },
-    {
-      "label": "copyAndStartOnPi",
-      "dependsOrder": "sequence",
-      "dependsOn": ["stopBoothServicePi", "startBoothPi", "wait"]
-    },
-    {
-      "label": "cleanupOnPi",
-      "type": "shell",
-      "command": "ssh ${config:sshUser}@${config:sshEndpoint} 'sudo pkill -9 python3'"
-    },
-
-    {
       "label": "list outdated pip packages",
       "type": "shell",
       "command": "pip list --outdated"
     },
-
     {
       "label": "gather requirements.txt pip packages",
       "type": "shell",

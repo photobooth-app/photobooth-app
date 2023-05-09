@@ -121,7 +121,7 @@ class Picamera2Backend(AbstractBackend):
             )
 
     def start(self):
-        """To start the imageserver, configure picamera2"""
+        """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
         self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(

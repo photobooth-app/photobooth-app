@@ -1,5 +1,5 @@
 """
-abstract for the imageserver backends
+abstract for the photobooth-app backends
 """
 import dataclasses
 import json
@@ -42,7 +42,7 @@ class BackendStats:
 
 class AbstractBackend(ABC):
     """
-    Imageserver abstract to create backends.
+    photobooth-app abstract to create backends.
     """
 
     @abstractmethod

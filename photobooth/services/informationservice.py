@@ -76,7 +76,7 @@ class InformationService(BaseService):
         memory = self._gather_memory()
         cma = self._gather_cma()
         disk = self._gather_disk()
-        # imageservers_stats = self._gather_imageservers_stats()
+        # aqusitionservice_stats = self._gather_aquisitionservice_stats()
 
         self._evtbus.emit(
             "publishSSE",
@@ -88,7 +88,7 @@ class InformationService(BaseService):
                     "memory": memory,
                     "cma": cma,
                     "disk": disk,
-                    "imageserver_stats": None,  # FIXME: move to imageserver
+                    "aquisitionservice_stats": None,  # FIXME: move to separate class
                 }
             ),
         )

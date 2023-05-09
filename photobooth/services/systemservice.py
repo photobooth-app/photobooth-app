@@ -10,7 +10,7 @@ from ..appconfig import AppConfig
 from .baseservice import BaseService
 
 # constants
-SERVICE_NAME = "imageserver"
+SERVICE_NAME = "photobooth-app"
 
 
 class SystemService(BaseService):

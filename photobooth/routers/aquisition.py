@@ -79,7 +79,7 @@ def api_still_get(
 
 @aquisition_router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
 @inject
-def api_cmd_imageserver_capturemode_get(
+def api_cmd_aquisition_capturemode_get(
     mode: str = "preview",
     wled_control: bool = True,
     evtbus: EventEmitter = Depends(Provide[ApplicationContainer.evtbus]),

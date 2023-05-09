@@ -64,13 +64,13 @@ python install.py
 Start the app and browse to <http://localhost:8000>, start using the app.
 
 ```sh
-cd imageserver
-python start.py
+cd photobooth-app
+python -m photobooth
 ```
 
 ### Integrate Photobooth-Project and this Photobooth-App
 
-Following commands have to be set in photobooth project to use this app as imageserver.
+Following commands have to be set in photobooth project to use this app as streamingserver.
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
@@ -109,8 +109,8 @@ rclone config
 Setup the remote named "boothupload"!
 
 ```sh
-chmod u+x ~/imageserver/boothupload.sh
-cp ~/imageserver/boothupload.service ~/.config/systemd/user/
+chmod u+x ~/photobooth-app/boothupload.sh
+cp ~/photobooth-app/boothupload.service ~/.config/systemd/user/
 systemctl --user enable boothupload.service
 systemctl --user start boothupload
 systemctl --user status boothupload
@@ -192,9 +192,9 @@ Check following commands and files for error messages:
 
 ```zsh
 # logfiles from service (last 200 lines)
-journalctl --user --unit=imageserver -n 200 --no-pager
+journalctl --user --unit=photobooth -n 200 --no-pager
 # logfiles created by photobooth
-cat ~/imageserver/log/qbooth.log
+cat ~/photobooth-app/log/qbooth.log
 # check CmaFree especially for Arducams if low:
 cat /proc/meminfo
 ```

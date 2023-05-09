@@ -5,13 +5,13 @@ Description=rclone upload service
 [Service]
 Type=simple
 Restart=always
-ExecStart=%h/imageserver/boothupload.sh
+ExecStart=%h/photobooth-app/boothupload.sh
 
 [Install]
 WantedBy=default.target
 
 ## enable service and autostart on system startup:
-#1 cp ~/imageserver/boothupload.service ~/.config/systemd/user/
+#1 cp ~/photobooth-app/boothupload.service ~/.config/systemd/user/
 #2 systemctl --user enable boothupload.service
 #3 systemctl --user start boothupload
 #4 systemctl --user status boothupload

@@ -1,7 +1,6 @@
 /config/*.json
 data/*/*
 !.empty
-profile_results*
 __pycache__
 log/*.log*
 .env
