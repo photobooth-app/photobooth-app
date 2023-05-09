@@ -11,4 +11,4 @@ python -Bc "for p in __import__('pathlib').Path('.').rglob('__pycache__'): p.rmd
 
 REM start application
 REM -O for optimized, means all "assert" statement are removed from bytecode
-python -O ./start.py
+python -O -m photobooth
