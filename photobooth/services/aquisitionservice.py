@@ -26,7 +26,7 @@ class AquisitionService(BaseService):
         secondary: AbstractBackend,
         config: AppConfig,
     ):
-        super().__init__(evtbus=evtbus)
+        super().__init__(evtbus=evtbus, config=config)
 
         self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 

@@ -20,11 +20,9 @@ from .mediacollectionservice import (
     PATH_ORIGINAL,
     MediacollectionService,
     MediaItem,
-    create_imageset_from_originalimage,
 )
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()  # TODO: remove!
 
 MAX_ATTEMPTS = 3
 
@@ -35,6 +33,13 @@ class ProcessingService(StateMachine):
         machine.thrill()
         machine.shoot()
     """
+
+    @dataclass
+    class Stateinfo:
+        """_summary_"""
+
+        state: str
+        countdown: float = 0
 
     ## STATES
 
@@ -65,20 +70,15 @@ class ProcessingService(StateMachine):
         | copy_still.to(idle)
     )
 
-    @dataclass
-    class Stateinfo:
-        """_summary_"""
-
-        state: str
-        countdown: float = 0
-
     def __init__(
         self,
         evtbus: EventEmitter,
+        config: AppConfig,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
     ):
         self._evtbus: EventEmitter = evtbus
+        self._config: AppConfig = config
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
 
@@ -126,8 +126,10 @@ class ProcessingService(StateMachine):
         # create JPGs and add to db
         start_time_postproc = time.time()
 
-        item: MediaItem = create_imageset_from_originalimage(
-            os.path.basename(self._filepath_originalimage_processing)
+        item: MediaItem = (
+            self._mediacollection_service.create_imageset_from_originalimage(
+                os.path.basename(self._filepath_originalimage_processing)
+            )
         )
 
         _ = self._mediacollection_service.db_add_item(item)
@@ -170,8 +172,8 @@ class ProcessingService(StateMachine):
     def on_enter_counting(self):
         """_summary_"""
         self.timer_countdown = (
-            settings.common.PROCESS_COUNTDOWN_TIMER
-            + settings.common.PROCESS_COUNTDOWN_OFFSET
+            self._config.common.PROCESS_COUNTDOWN_TIMER
+            + self._config.common.PROCESS_COUNTDOWN_OFFSET
         )
         logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
         logger.info("starting timer")
@@ -187,7 +189,7 @@ class ProcessingService(StateMachine):
             self.timer_countdown -= 0.1
 
             if (
-                self.timer_countdown <= settings.common.PROCESS_COUNTDOWN_OFFSET
+                self.timer_countdown <= self._config.common.PROCESS_COUNTDOWN_OFFSET
                 and self.counting.is_active
             ):
                 return

@@ -21,10 +21,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
     logging_service = providers.Resource(
         loggingservice.LoggingService,
         evtbus=evtbus,
-        debug_level=config().common.DEBUG_LEVEL,
+        config=config,
     )
 
-    # TODO: split config (settings and service)
+    # TODO: split config (config and service)
     config_service = providers.Singleton(AppConfig)
 
     # init loggingservice explicitly at first to ensure it is already instanciated and

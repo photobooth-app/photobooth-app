@@ -23,7 +23,6 @@ except Exception as import_exc:
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
 logger = logging.getLogger(__name__)
-settings = AppConfig()  # TODO: remove!
 
 
 class WebcamV4lBackend(AbstractBackend):
@@ -33,13 +32,14 @@ class WebcamV4lBackend(AbstractBackend):
         ImageServerAbstract (_type_): _description_
     """
 
-    def __init__(self, evtbus: EventEmitter):
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
         self._evtbus = evtbus
+        self._config = config
 
         self._img_buffer: SharedMemoryDataExch = None
         self._event_proc_shutdown: Event = Event()
@@ -60,6 +60,10 @@ class WebcamV4lBackend(AbstractBackend):
             lock=Lock(),
         )
 
+        logger.info(
+            f"starting webcam process, {self._config.backends.v4l_device_index=}"
+        )
+
         self._v4l_process = Process(
             target=v4l_img_aquisition,
             name="ImageServerWebcamV4lAquisitionProcess",
@@ -67,9 +71,9 @@ class WebcamV4lBackend(AbstractBackend):
                 self._img_buffer.sharedmemory.name,
                 self._img_buffer.condition,
                 self._img_buffer.lock,
-                # need to pass settings, because unittests can change settings,
-                # if not passed, the settings are not available in the separate process!
-                settings,
+                # need to pass config, because unittests can change config,
+                # if not passed, the config are not available in the separate process!
+                self._config,
                 self._event_proc_shutdown,
             ),
             daemon=True,
@@ -166,7 +170,7 @@ def v4l_img_aquisition(
     shm_buffer_name,
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
-    _settings,
+    _config,
     _event_proc_shutdown: Event,
 ):
     """_summary_
@@ -180,19 +184,17 @@ def v4l_img_aquisition(
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    with Device.from_id(_settings.backends.v4l_device_index) as cam:
-        logger.info(
-            f"webcam devices index {_settings.backends.v4l_device_index} opened"
-        )
+    with Device.from_id(_config.backends.v4l_device_index) as cam:
+        logger.info(f"webcam devices index {_config.backends.v4l_device_index} opened")
         try:
             cam.video_capture.set_format(
-                _settings.common.CAPTURE_CAM_RESOLUTION_WIDTH,
-                _settings.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+                _config.common.CAPTURE_CAM_RESOLUTION_WIDTH,
+                _config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
                 "MJPG",
             )
         except (AttributeError, FileNotFoundError) as exc:
             logger.error(
-                f"cannot open camera {_settings.backends.v4l_device_index} properly."
+                f"cannot open camera {_config.backends.v4l_device_index} properly."
             )
             logger.exception(exc)
             raise exc

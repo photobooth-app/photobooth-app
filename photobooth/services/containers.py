@@ -36,15 +36,15 @@ def init_aquisition_resource(evtbus, config, primary, secondary):
         pass
 
 
-def init_information_resource(evtbus):
-    resource = InformationService(evtbus=evtbus)
+def init_information_resource(evtbus, config):
+    resource = InformationService(evtbus=evtbus, config=config)
     resource.start()
     yield resource
     resource.stop()
 
 
 def init_wled_resource(evtbus, config):
-    resource = WledService(evtbus=evtbus, config_wled=config.wled)
+    resource = WledService(evtbus=evtbus, config=config)
     try:
         resource.start()
     except RuntimeError as wledservice_exc:
@@ -64,7 +64,9 @@ class ServicesContainer(containers.DeclarativeContainer):
     backends = providers.DependenciesContainer()
 
     # Services: Core
-    mediacollection_service = providers.Singleton(MediacollectionService, evtbus=evtbus)
+    mediacollection_service = providers.Singleton(
+        MediacollectionService, evtbus=evtbus, config=config
+    )
 
     aquisition_service = providers.Resource(
         init_aquisition_resource,
@@ -74,18 +76,21 @@ class ServicesContainer(containers.DeclarativeContainer):
         secondary=backends.secondary_backend,
     )
 
-    information_service = providers.Resource(init_information_resource, evtbus=evtbus)
+    information_service = providers.Resource(
+        init_information_resource, evtbus=evtbus, config=config
+    )
 
     keyboard_service = providers.Factory(KeyboardService, evtbus=evtbus, config=config)
 
     processing_service = providers.Singleton(
         ProcessingService,
         evtbus=evtbus,
+        config=config,
         aquisition_service=aquisition_service,
         mediacollection_service=mediacollection_service,
     )
 
-    system_service = providers.Factory(SystemService, evtbus=evtbus)
+    system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(
         init_wled_resource,

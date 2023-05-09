@@ -13,6 +13,7 @@ from logging.handlers import RotatingFileHandler
 
 from pymitter import EventEmitter
 
+from ..appconfig import AppConfig
 from .baseservice import BaseService
 
 
@@ -70,15 +71,15 @@ class LoggingService(BaseService):
 
     debug_level = logging.DEBUG
 
-    def __init__(self, evtbus: EventEmitter, debug_level):
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
         """Setup logger
 
         Args:
             evtbus (EventEmitter): _description_
         """
-        super().__init__(evtbus=evtbus)
+        super().__init__(evtbus=evtbus, config=config)
 
-        self.debug_level = debug_level.value
+        self.debug_level = config.common.DEBUG_LEVEL.value
 
         ## formatter ##
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"

@@ -12,13 +12,14 @@ from pathlib import Path
 from typing import List
 
 from PIL import Image
+from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
 
 turbojpeg = TurboJPEG()
-settings = AppConfig()  # TODO: remove!
+
 logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"
@@ -49,7 +50,8 @@ class MediaItem:
 
     @property
     def ext_download_url(self) -> str:
-        return settings.common.EXT_DOWNLOAD_URL.format(filename=self.filename)
+        return "placeholder, needs revision! This is not the right place. TODO: "
+        # return self._config.common.EXT_DOWNLOAD_URL.format(filename=self.filename)
 
     @property
     def path_original(self) -> Path:
@@ -187,75 +189,11 @@ def get_scaled_jpeg_by_jpeg(buffer_in, quality, scaled_min_width):
     return buffer_out
 
 
-def create_scaled_files(buffer_full, filepath):
-    """_summary_
-
-    Args:
-        buffer_full (_type_): _description_
-        filepath (_type_): _description_
-    """
-    filename = os.path.basename(filepath)
-
-    ## full version
-    with open(f"{PATH_FULL}{filename}", "wb") as file:
-        file.write(buffer_full)
-
-    ## preview version
-    buffer_preview = get_scaled_jpeg_by_jpeg(
-        buffer_full,
-        settings.common.PREVIEW_STILL_QUALITY,
-        settings.common.PREVIEW_STILL_WIDTH,
-    )
-    with open(f"{PATH_PREVIEW}{filename}", "wb") as file:
-        file.write(buffer_preview)
-
-    ## thumbnail version
-    buffer_thumbnail = get_scaled_jpeg_by_jpeg(
-        buffer_full,
-        settings.common.THUMBNAIL_STILL_QUALITY,
-        settings.common.THUMBNAIL_STILL_WIDTH,
-    )
-    with open(f"{PATH_THUMBNAIL}{filename}", "wb") as file:
-        file.write(buffer_thumbnail)
-
-    logger.debug(f"filesize full image: {round(len(buffer_full)/1024,1)}kb")
-    logger.debug(f"filesize preview: {round(len(buffer_preview)/1024,1)}kb")
-    logger.debug(f"filesize thumbnail: {round(len(buffer_thumbnail)/1024,1)}kb")
-    logger.info(f"created and saved scaled media items for {filename=}")
-
-
-def create_imageset_from_originalimage(filename):
-    """
-    A newly captured frame was taken by camera,
-    now its up to this class to create the thumbnail,
-    preview finally event is sent when processing is finished
-    """
-
-    # read original file
-
-    with open(Path(PATH_ORIGINAL, filename), "rb") as file:
-        buffer_original = file.read()
-    logger.debug(f"filesize original image: {round(len(buffer_original)/1024,1)}kb")
-
-    ##
-    # this could be a place to add a filter pipeline later
-    # 1) remove background
-    # 2) beauty filter
-    # 3) ...
-
-    # create scaled versions of full image
-    create_scaled_files(buffer_original, filename)
-
-    item = MediaItem(filename)
-
-    return item
-
-
 class MediacollectionService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, evtbus):
-        super().__init__(evtbus=evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus=evtbus, config=config)
 
         # the database ;)
         # sorted list containing type MediaItem. always newest image first in list.
@@ -292,7 +230,7 @@ class MediacollectionService(BaseService):
 
                 # try create missing preview/thumbnail and retry. otherwise fail completely
                 try:
-                    create_imageset_from_originalimage(filename)
+                    self.create_imageset_from_originalimage(filename)
                     counter_processed_images += 1
                 except (FileNotFoundError, PermissionError, OSError) as exc:
                     self._logger.error(
@@ -332,6 +270,68 @@ class MediacollectionService(BaseService):
 
     def _db_delete_items(self):
         self._db.clear()
+
+    def _create_scaled_files(self, buffer_full, filepath):
+        """_summary_
+
+        Args:
+            buffer_full (_type_): _description_
+            filepath (_type_): _description_
+        """
+        filename = os.path.basename(filepath)
+
+        ## full version
+        with open(f"{PATH_FULL}{filename}", "wb") as file:
+            file.write(buffer_full)
+
+        ## preview version
+        buffer_preview = get_scaled_jpeg_by_jpeg(
+            buffer_full,
+            self._config.common.PREVIEW_STILL_QUALITY,
+            self._config.common.PREVIEW_STILL_WIDTH,
+        )
+        with open(f"{PATH_PREVIEW}{filename}", "wb") as file:
+            file.write(buffer_preview)
+
+        ## thumbnail version
+        buffer_thumbnail = get_scaled_jpeg_by_jpeg(
+            buffer_full,
+            self._config.common.THUMBNAIL_STILL_QUALITY,
+            self._config.common.THUMBNAIL_STILL_WIDTH,
+        )
+        with open(f"{PATH_THUMBNAIL}{filename}", "wb") as file:
+            file.write(buffer_thumbnail)
+
+        logger.debug(f"filesize full image: {round(len(buffer_full)/1024,1)}kb")
+        logger.debug(f"filesize preview: {round(len(buffer_preview)/1024,1)}kb")
+        logger.debug(f"filesize thumbnail: {round(len(buffer_thumbnail)/1024,1)}kb")
+        logger.info(f"created and saved scaled media items for {filename=}")
+
+    def create_imageset_from_originalimage(self, filename):
+        """
+        A newly captured frame was taken by camera,
+        now its up to this class to create the thumbnail,
+        preview finally event is sent when processing is finished
+        """
+
+        # read original file
+
+        with open(Path(PATH_ORIGINAL, filename), "rb") as file:
+            buffer_original = file.read()
+        logger.debug(f"filesize original image: {round(len(buffer_original)/1024,1)}kb")
+
+        ##
+        # this could be a place to add a filter pipeline later
+        # 1) remove background
+        # 2) beauty filter
+        # 3) ...
+
+        # create scaled versions of full image
+        self._create_scaled_files(buffer_original, filename)
+
+        item = MediaItem(filename)
+
+        return item
 
     @property
     def number_of_images(self) -> int:

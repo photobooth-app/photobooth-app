@@ -533,30 +533,26 @@ if chosen_starter_configuration_str:
     chosen_starter_configuration_name = availableConfigurations[
         chosen_starter_configuration_idx
     ][0]
-    chosen_starter_configuration_settings = availableConfigurations[
+    chosen_starter_configuration = availableConfigurations[
         chosen_starter_configuration_idx
     ][1]
 
     CV2_DEVICE_INDEX = ind_cv2[0] if ind_cv2 else 0
     V4L_DEVICE_INDEX = ind_v4l[0] if ind_v4l else 0
-    chosen_starter_configuration_settings = (
-        chosen_starter_configuration_settings.replace(
-            "##cv2_device_index##", str(CV2_DEVICE_INDEX)
-        )
+    chosen_starter_configuration = chosen_starter_configuration.replace(
+        "##cv2_device_index##", str(CV2_DEVICE_INDEX)
     )
-    chosen_starter_configuration_settings = (
-        chosen_starter_configuration_settings.replace(
-            "##v4l_device_index##", str(V4L_DEVICE_INDEX)
-        )
+    chosen_starter_configuration = chosen_starter_configuration.replace(
+        "##v4l_device_index##", str(V4L_DEVICE_INDEX)
     )
 
     print_blue(
         f"chosen starter configuration number {chosen_starter_configuration_idx}: "
         f"{chosen_starter_configuration_name}"
     )
-    print(f"{chosen_starter_configuration_settings}")
+    print(f"{chosen_starter_configuration}")
     with open(str(f"{INSTALL_DIR}.env.installer"), "wt", encoding="utf-8") as fout:
-        fout.writelines(chosen_starter_configuration_settings)
+        fout.writelines(chosen_starter_configuration)
     print_blue("start configuration written to .env.installer")
 
 else:

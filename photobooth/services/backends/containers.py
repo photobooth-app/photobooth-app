@@ -22,6 +22,38 @@ class BackendsContainer(containers.DeclarativeContainer):
     gphoto2_backend = providers.Object(None)
     webcamv4l_backend = providers.Object(None)
 
+    # picamera2 backend import
+    try:
+        from .picamera2 import Picamera2Backend
+
+        picamera2_backend = providers.Singleton(Picamera2Backend, evtbus, config)
+        print("added provider for picamera2 backend")
+    except Exception:
+        # logger is not avail at this point yet, so print:
+        print("skipped import picamera2 backend")
+
+    # gphoto2 backend import
+    try:
+        from .gphoto2 import Gphoto2Backend
+
+        gphoto2_backend = providers.Singleton(Gphoto2Backend, evtbus, config)
+        print("added provider for gphoto2 backend")
+    except Exception:
+        # logger is not avail at this point yet, so print:
+        print("skipped import gphoto2 backend")
+
+    # gphoto2 backend import
+    try:
+        from .webcamv4l import WebcamV4lBackend
+
+        webcamv4l_backend = providers.Singleton(WebcamV4lBackend, evtbus, config)
+        print("added provider for webcamv4l backend")
+    except Exception:
+        # logger is not avail at this point yet, so print:
+        print("skipped import webcamv4l backend")
+
+    # following are to be used in aquisitionservice
+
     backends_set = {
         "disabled": disabled_backend,
         "simulated": simulated_backend,
@@ -31,38 +63,6 @@ class BackendsContainer(containers.DeclarativeContainer):
         "webcamv4l": webcamv4l_backend,
     }
 
-    # picamera2 backend import
-    try:
-        from .picamera2 import Picamera2Backend
-
-        backends_set.update(
-            {"picamera2": providers.Singleton(Picamera2Backend, evtbus)}
-        )
-    except Exception:
-        # logger is not avail at this point yet, so print:
-        print("skipped import picamera2 backend")
-
-    # gphoto2 backend import
-    try:
-        from .gphoto2 import Gphoto2Backend
-
-        backends_set.update({"gphoto2": providers.Singleton(Gphoto2Backend, evtbus)})
-    except Exception:
-        # logger is not avail at this point yet, so print:
-        print("skipped import gphoto2 backend")
-
-    # gphoto2 backend import
-    try:
-        from .webcamv4l import WebcamV4lBackend
-
-        backends_set.update(
-            {"webcamv4l": providers.Singleton(WebcamV4lBackend, evtbus)}
-        )
-    except Exception:
-        # logger is not avail at this point yet, so print:
-        print("skipped import webcamv4l backend")
-
-    # following are to be used in aquisitionservice
     primary_backend = providers.Selector(
         providers.Callable(
             lambda cfg_enum: cfg_enum.backends.MAIN_BACKEND.lower(), cfg_enum=config

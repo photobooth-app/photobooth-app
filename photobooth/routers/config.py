@@ -67,11 +67,11 @@ def api_get_config_current():
 @config_router.post("/current")
 @inject
 def api_post_config_current(
-    updated_configsettings: AppConfig,
+    updated_config: AppConfig,
     system_service: SystemService = Depends(
         Provide[ApplicationContainer.services.system_service]
     ),
 ):
-    updated_configsettings.persist()  # save settings to disc
+    updated_config.persist()  # save settings to disc
     # restart service to load new config
     system_service.util_systemd_control("restart")

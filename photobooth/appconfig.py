@@ -1,5 +1,5 @@
 """
-ConfigSettings class providing central settings service to app
+AppConfig class providing central config
 
 """
 
@@ -29,10 +29,10 @@ class EnumDebugLevel(str, Enum):
 
 
 class GroupCommon(BaseModel):
-    """Common settings for photobooth."""
+    """Common config for photobooth."""
 
     class Config:
-        title = "Common Settings"
+        title = "Common Config"
 
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
@@ -187,7 +187,7 @@ class GroupBackends(BaseModel):
     """
 
     class Config:
-        title = "Camera Backend Settings"
+        title = "Camera Backend Config"
 
     MAIN_BACKEND: EnumImageBackendsMain = Field(
         title="Main Backend",
@@ -239,7 +239,7 @@ class GroupHardwareInput(BaseModel):
     """Configure GPIO, keyboard and more."""
 
     class Config:
-        title = "Hardware Input/Output Settings"
+        title = "Hardware Input/Output Config"
 
     keyboard_input_enabled: bool = Field(
         default=False,
@@ -299,9 +299,9 @@ class GroupWled(BaseModel):
     """
 
     class Config:
-        title = "WLED Integration Settings"
+        title = "WLED Integration Config"
 
-    # WledService settings
+    # WledService Config
     ENABLED: bool = Field(
         default=False,
         description="Enable WLED integration for user feedback during countdown and capture by LEDs.",
@@ -318,7 +318,7 @@ class GroupMisc(BaseModel):
     """
 
     class Config:
-        title = "Miscellaneous Settings"
+        title = "Miscellaneous Config"
 
 
 def json_config_settings_source(_settings: BaseSettings) -> dict[str, Any]:
@@ -339,7 +339,7 @@ def json_config_settings_source(_settings: BaseSettings) -> dict[str, Any]:
 
 class AppConfig(BaseSettings):
     """
-    Settings class glueing all together
+    AppConfig class glueing all together
 
     In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows (in descending order of priority):
 
@@ -398,15 +398,15 @@ class AppConfig(BaseSettings):
         return self.schema()
 
     def persist(self):
-        """Persist settings to file"""
-        logger.debug("persist settings to json file")
+        """Persist config to file"""
+        logger.debug("persist config to json file")
 
         with open(CONFIG_FILENAME, mode="w", encoding="utf-8") as write_file:
             write_file.write(self.json(indent=2))
 
     def deleteconfig(self):
         """Reset to defaults"""
-        logger.debug("settings reset to default")
+        logger.debug("config reset to default")
 
         try:
             os.remove(CONFIG_FILENAME)

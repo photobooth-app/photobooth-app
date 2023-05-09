@@ -10,6 +10,7 @@ import threading
 import psutil
 from pymitter import EventEmitter
 
+from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
 
@@ -19,8 +20,8 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter):
-        super().__init__(evtbus)
+    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+        super().__init__(evtbus, config)
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(

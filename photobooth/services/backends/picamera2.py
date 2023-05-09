@@ -10,6 +10,13 @@ from threading import Condition, Event
 
 from pymitter import EventEmitter
 
+from photobooth.utils.stoppablethread import StoppableThread
+
+from ...appconfig import AppConfig, EnumFocuserModule
+from .abstractbackend import AbstractBackend, BackendStats
+from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
+from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
+
 try:
     from libcamera import Transform  # type: ignore
     from picamera2 import Picamera2  # type: ignore
@@ -19,12 +26,6 @@ except Exception as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
     ) from import_exc
-from photobooth.utils.stoppablethread import StoppableThread
-
-from ...appconfig import AppConfig, EnumFocuserModule
-from .abstractbackend import AbstractBackend, BackendStats
-from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
-from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
 
 logger = logging.getLogger(__name__)
 settings = AppConfig()  # TODO: remove!
