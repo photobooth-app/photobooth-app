@@ -74,12 +74,12 @@ Following commands have to be set in photobooth project to use this app as image
 Replace <http://photobooth> by the actual hostname or localhost if on same server.
 
 ```text
-take_picture_cmd: curl -o "%s" localhost:8000/api/imageservers/still | echo Done
+take_picture_cmd: curl -o "%s" localhost:8000/aquisition/still | echo Done
 take_picture_msg: Done
-pre_photo_cmd: curl http://photobooth:8000/api/imageservers/capturemode
-post_photo_cmd: curl http://photobooth:8000/api/imageservers/previewmode
-preview_url: url("http://photobooth:8000/stream.mjpg")
-background_defaults: url("http://photobooth:8000/stream.mjpg")
+pre_photo_cmd: curl http://photobooth:8000/aquisition/mode/capture
+post_photo_cmd: curl http://photobooth:8000/aquisition/mode/preview
+preview_url: url("http://photobooth:8000/aquisition/stream.mjpg")
+background_defaults: url("http://photobooth:8000/aquisition/stream.mjpg")
 ```
 
 ### WLED integration for LED signaling
@@ -208,8 +208,8 @@ sudo pkill -9 python3
 ### Check available webcam device numbers
 
 ```zsh
-python -c "from src.imageserverwebcamv4l import *; print(available_camera_indexes())"
-python -c "from src.imageserverwebcamcv2 import *; print(available_camera_indexes())"
+python -c "from photobooth.services.backends.webcamv4l import *; print(available_camera_indexes())"
+python -c "from photobooth.services.backends.webcamcv2 import *; print(available_camera_indexes())"
 
 ```
 

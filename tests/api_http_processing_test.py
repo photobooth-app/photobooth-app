@@ -29,7 +29,7 @@ def test_chose_1pic(client: TestClient):
 
 def test_chose_1pic_with_capturemode(client: TestClient):
     response = client.get("/aquisition/mode/capture")
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     response = client.get("/aquisition/still")
     assert response.status_code == 200
