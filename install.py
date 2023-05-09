@@ -433,18 +433,6 @@ if query_yes_no("Install booth service?", "no"):
             "not yet supported. pls start imageserver manually and browse to photobooth website."
         )
 
-
-# compatibility for photobooth? photobooth runs as www-data;
-# the imageserver needs to write the image to given location - only possible with www-data rights:
-if _is_linux():
-    if query_yes_no(
-        "Fix permissions to be compatible to https://photoboothproject.github.io/",
-        "no",
-    ):
-        _syscall(f"usermod --append --groups www-data {USERNAME}", True)
-        _syscall("chmod -R 775 /var/www/html", True)
-
-
 #
 # Post install checks
 #
