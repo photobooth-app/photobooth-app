@@ -17,10 +17,10 @@ config_router = APIRouter(
 @config_router.get("/ui")
 @inject
 def index(
-    uisettings: AppConfig = Depends(Provide[ApplicationContainer.config.uisettings]),
+    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
 ):
     """get part of the config dedicated for UI only. UI requests this on startup"""
-    return uisettings
+    return config.uisettings
 
 
 @config_router.get("/schema")
@@ -30,6 +30,23 @@ def api_get_config_schema(schema_type: str = "default"):
     :param str schema_type: default or dereferenced.
     """
     return AppConfig().get_schema(schema_type=schema_type)
+
+
+@config_router.get("/reset")
+@inject
+def api_reset_config(
+    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
+    system_service: SystemService = Depends(
+        Provide[ApplicationContainer.services.system_service]
+    ),
+):
+    """
+    Reset config, deleting config.json file
+
+    """
+    config.deleteconfig()  #  delete file
+    # restart service to load new config
+    system_service.util_systemd_control("restart")
 
 
 @config_router.get("/currentActive")

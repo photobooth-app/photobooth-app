@@ -13,14 +13,14 @@ from dependency_injector.wiring import Provide, inject
 
 from photobooth.application import app
 
-# from .routers import home, config, mediacollection
+from .appconfig import AppConfig
 from .containers import ApplicationContainer
 from .services.loggingservice import LoggingService
 
 
 @inject
 def main(
-    webserver_port=Provide[ApplicationContainer.config.common.webserver_port],
+    config: AppConfig = Provide[ApplicationContainer.config],
     logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
 ) -> None:
     # log_level="trace", default info
@@ -28,7 +28,7 @@ def main(
         uvicorn.Config(
             app=app,
             host="0.0.0.0",
-            port=webserver_port,
+            port=config.common.webserver_port,
             log_level="debug",
         )
     )
@@ -74,11 +74,7 @@ if (
     logger.info(f"{multiprocessing_start_method=}, forced")
 
     application_container = ApplicationContainer()
-    # application_container.config.from_pydantic(AppConfig())
-    # print(application_container.config)
-    # print(application_container.config.common.DEBUG_LEVEL().lower())
-    # print(application_container.config.backends.MAIN_BACKEND().lower())
-    # init all resources
+
     # init after wiring?! correct? # FIXME: check docs
     application_container.init_resources()
 

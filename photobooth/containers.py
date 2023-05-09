@@ -16,25 +16,21 @@ logger = logging.getLogger(f"{__name__}")
 
 class ApplicationContainer(containers.DeclarativeContainer):
     evtbus = providers.Singleton(pymitter.EventEmitter)
-    # settings = providers.Singleton(AppConfig)
-    # config = providers.Configuration()
-    # config: ConfigSettings = providers.Configuration()
-    config: AppConfig = providers.Configuration(pydantic_settings=[AppConfig()])
-
-    print(config.common.DEBUG_LEVEL)
+    config = providers.Singleton(AppConfig)
 
     logging_service = providers.Resource(
         loggingservice.LoggingService,
         evtbus=evtbus,
-        debug_level=config.common.DEBUG_LEVEL,
+        debug_level=config().common.DEBUG_LEVEL,
     )
 
+    # TODO: split config (settings and service)
     config_service = providers.Singleton(AppConfig)
 
     # init loggingservice explicitly at first to ensure it is already instanciated and
     # configured when other services are initialized
     # not working, cause config is not avail yet.
-    # logging_service.init()
+    logging_service.init()
 
     backends = providers.Container(
         BackendsContainer,
@@ -50,4 +46,4 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
 
     # shutdown before leave and reinit in __main__ again. If in init state, an error is thrown.
-    # logging_service.shutdown()
+    logging_service.shutdown()

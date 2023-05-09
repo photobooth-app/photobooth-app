@@ -27,12 +27,7 @@ def api_cmd(
 ):
     logger.info(f"cmd api requested action={action}, param={param}")
 
-    if action == "config" and param == "reset":
-        config_service.deleteconfig()
-        system_service.util_systemd_control("restart")
-    elif action == "config" and param == "restore":
-        os.system("reboot")
-    elif action == "server" and param == "reboot":
+    if action == "server" and param == "reboot":
         os.system("reboot")
     elif action == "server" and param == "shutdown":
         os.system("shutdown now")

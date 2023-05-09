@@ -6,6 +6,7 @@ import time
 import serial
 from pymitter import EventEmitter
 
+from ..appconfig import GroupWled
 from .baseservice import BaseService
 
 # these presets are set on WLED module to control lights:
@@ -17,11 +18,11 @@ PRESET_ID_SHOOT = 3
 class WledService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, enabled: bool, serial_port: str):
+    def __init__(self, evtbus: EventEmitter, config_wled: GroupWled):
         super().__init__(evtbus)
 
-        self._enabled = enabled
-        self._serial_port = serial_port
+        self._enabled = config_wled.ENABLED
+        self._serial_port = config_wled.SERIAL_PORT
 
         self._serial: serial.Serial = None
 

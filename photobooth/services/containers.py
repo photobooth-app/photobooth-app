@@ -6,6 +6,7 @@ import logging
 from dependency_injector import containers, providers
 from pymitter import EventEmitter
 
+from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
 from .informationservice import InformationService
 from .keyboardservice import KeyboardService
@@ -17,12 +18,12 @@ from .wledservice import WledService
 logger = logging.getLogger(__name__)
 
 
-def init_aquisition_resource(evtbus, LIVEPREVIEW_ENABLED, primary, secondary):
+def init_aquisition_resource(evtbus, config, primary, secondary):
     resource = AquisitionService(
         evtbus=evtbus,
+        config=config,
         primary=primary,
         secondary=secondary,
-        LIVEPREVIEW_ENABLED=LIVEPREVIEW_ENABLED,
     )
     try:
         resource.start()
@@ -41,8 +42,8 @@ def init_information_resource(evtbus):
     resource.stop()
 
 
-def init_wled_resource(evtbus, enabled, serial_port):
-    resource = WledService(evtbus=evtbus, enabled=enabled, serial_port=serial_port)
+def init_wled_resource(evtbus, config):
+    resource = WledService(evtbus=evtbus, config_wled=config.wled)
     try:
         resource.start()
     except RuntimeError as wledservice_exc:
@@ -54,10 +55,7 @@ def init_wled_resource(evtbus, enabled, serial_port):
 
 class ServicesContainer(containers.DeclarativeContainer):
     evtbus = providers.Dependency(instance_of=EventEmitter)
-    # settings = providers.Dependency(instance_of=AppConfig)
-    # config = providers.Dependency()
-    config = providers.Configuration()
-
+    config = providers.Dependency(instance_of=AppConfig)
     backends = providers.DependenciesContainer()
 
     # Services: Core
@@ -66,8 +64,7 @@ class ServicesContainer(containers.DeclarativeContainer):
     aquisition_service = providers.Resource(
         init_aquisition_resource,
         evtbus=evtbus,
-        # settings=settings,
-        LIVEPREVIEW_ENABLED=config.backends.LIVEPREVIEW_ENABLED,
+        config=config,
         primary=backends.primary_backend,
         secondary=backends.secondary_backend,
     )
@@ -88,6 +85,7 @@ class ServicesContainer(containers.DeclarativeContainer):
     wled_service = providers.Resource(
         init_wled_resource,
         evtbus=evtbus,
-        enabled=config.wled.ENABLED,
-        serial_port=config.wled.SERIAL_PORT,
+        config=config,
+        # enabled=config.wled.ENABLED,
+        # serial_port=config.wled.SERIAL_PORT,
     )

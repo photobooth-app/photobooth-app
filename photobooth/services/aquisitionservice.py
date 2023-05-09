@@ -5,6 +5,7 @@ import dataclasses
 
 from pymitter import EventEmitter
 
+from ..appconfig import AppConfig
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
 
@@ -23,11 +24,11 @@ class AquisitionService(BaseService):
         evtbus: EventEmitter,
         primary: AbstractBackend,
         secondary: AbstractBackend,
-        LIVEPREVIEW_ENABLED: bool,
+        config: AppConfig,
     ):
         super().__init__(evtbus=evtbus)
 
-        self._LIVEPREVIEW_ENABLED = LIVEPREVIEW_ENABLED
+        self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 
         # public
         self.primary_backend: AbstractBackend = primary
