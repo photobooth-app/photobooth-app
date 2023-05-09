@@ -1,21 +1,25 @@
 """
 Handle all media collection related functions
 """
-import io
-from dataclasses import dataclass
 import glob
+import hashlib
+import io
+import logging
 import os
 import time
-import logging
-import hashlib
-from typing import List
+from dataclasses import dataclass
 from pathlib import Path
+from typing import List
+
 from PIL import Image
 from turbojpeg import TurboJPEG
-from src.configsettings import settings
 
-logger = logging.getLogger(__name__)
+from ..appconfig import AppConfig
+from .baseservice import BaseService
+
 turbojpeg = TurboJPEG()
+settings = AppConfig()
+logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"
 PATH_ORIGINAL = "".join([DATA_PATH, "original/"])
@@ -247,12 +251,11 @@ def create_imageset_from_originalimage(filename):
     return item
 
 
-class ImageDb:
+class MediacollectionService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, evtbus, imageserver):
-        self._evtbus = evtbus
-        self._imageserver = imageserver
+    def __init__(self, evtbus):
+        super().__init__(evtbus=evtbus)
 
         # the database ;)
         # sorted list containing type MediaItem. always newest image first in list.
@@ -267,7 +270,7 @@ class ImageDb:
         self._init_db()
 
     def _init_db(self):
-        logger.info(
+        self._logger.info(
             "init database and creating missing scaled images. this might take some time."
         )
         image_paths = sorted(glob.glob(f"{PATH_ORIGINAL}*.jpg"))
@@ -283,7 +286,7 @@ class ImageDb:
 
             except FileNotFoundError:
                 # MediaItem raises FileNotFoundError if original/full/preview/thumb is missing.
-                logger.debug(
+                self._logger.debug(
                     f"file {filename} misses its scaled versions, try to create now"
                 )
 
@@ -292,23 +295,25 @@ class ImageDb:
                     create_imageset_from_originalimage(filename)
                     counter_processed_images += 1
                 except (FileNotFoundError, PermissionError, OSError) as exc:
-                    logger.error(
+                    self._logger.error(
                         f"file {filename} processing failed. file ignored. {exc}"
                     )
                     counter_failed_images += 1
                 else:
                     self.db_add_item(MediaItem(filename))
 
-        logger.info(f"initialized image DB, added {self.number_of_images} valid images")
-        logger.info(
+        self._logger.info(
+            f"initialized image DB, added {self.number_of_images} valid images"
+        )
+        self._logger.info(
             f"initialize process time: {round((time.time() - start_time_initialize), 2)}s"
         )
         if counter_processed_images:
-            logger.warning(
+            self._logger.warning(
                 f"#{counter_processed_images} items processed due to missing scaled version"
             )
         if counter_failed_images:
-            logger.error(
+            self._logger.error(
                 f"#{counter_failed_images} erroneous files, check the data dir for problems"
             )
 
@@ -362,18 +367,18 @@ class ImageDb:
         item = next((x for x in self._db if x.id == item_id), None)
 
         if item is None:
-            logger.debug(f"image {item_id} not found!")
+            self._logger.debug(f"image {item_id} not found!")
             raise FileNotFoundError(f"image {item_id} not found!")
 
         return item
 
     def delete_image_by_id(self, item_id):
         """delete single file and it's related thumbnails"""
-        logger.info(f"request delete item id {item_id}")
+        self._logger.info(f"request delete item id {item_id}")
 
         try:
             item = self.db_get_image_by_id(item_id)
-            logger.debug(f"found item={item}")
+            self._logger.debug(f"found item={item}")
 
             os.remove(item.original)
             os.remove(item.full)
@@ -381,8 +386,8 @@ class ImageDb:
             os.remove(item.thumbnail)
             self._db_delete_item_by_item(item)
         except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"error deleting item id={item_id}")
+            self._logger.exception(exc)
+            self._logger.error(f"error deleting item id={item_id}")
             raise exc
 
     def delete_images(self):
@@ -398,5 +403,5 @@ class ImageDb:
                 os.remove(file)
             self._db_delete_items()
         except OSError as exc:
-            logger.exception(exc)
-            logger.error(f"error deleting file {file}")
+            self._logger.exception(exc)
+            self._logger.error(f"error deleting file {file}")

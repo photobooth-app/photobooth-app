@@ -6,17 +6,20 @@ import logging
 
 try:
     from libcamera import controls
-except ImportError as import_exc:
+except Exception as import_exc:
     raise OSError("libcamera not supported on windows platform") from import_exc
 from pymitter import EventEmitter
-from src.imageserverabstract import ImageServerAbstract
-from src.repeatedtimer import RepeatedTimer
-from src.configsettings import settings
+
+from photobooth.services.backends.abstractbackend import AbstractBackend
+
+from ...appconfig import AppConfig
+from ...utils.repeatedtimer import RepeatedTimer
 
 logger = logging.getLogger(__name__)
+settings = AppConfig()
 
 
-class ImageServerPicam2LibcamAfInterval:
+class Picamera2LibcamAfInterval:
     """
     native libcamera control autofocus implementation
     usage according to official documentation chapter 5.2:
@@ -27,8 +30,8 @@ class ImageServerPicam2LibcamAfInterval:
     option to trigger focus on thrill also possible
     """
 
-    def __init__(self, imageserver: ImageServerAbstract, evtbus: EventEmitter):
-        self._imageserver: ImageServerAbstract = imageserver
+    def __init__(self, imageserver: AbstractBackend, evtbus: EventEmitter):
+        self._imageserver: AbstractBackend = imageserver
 
         self._evtbus = evtbus
 

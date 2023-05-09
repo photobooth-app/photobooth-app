@@ -1,19 +1,14 @@
 import os
-import io
 import sys
-from PIL import Image
+
+from fastapi.testclient import TestClient
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from fastapi.testclient import TestClient
-from src.configsettings import ConfigSettings
-
 
 def test_chose_1pic():
-    from start import app
-    from start import imageServers
-    from start import processingpicture
+    from start import app, imageServers, processingpicture
 
     client = TestClient(app)
     processingpicture._reset()

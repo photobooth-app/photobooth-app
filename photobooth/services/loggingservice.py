@@ -2,16 +2,18 @@
 Control logging for the app
 """
 
+import datetime
+import json
+import logging
 import os
 import sys
 import threading
-import logging
-import datetime
-import json
-from logging.handlers import RotatingFileHandler
 from logging import LogRecord
+from logging.handlers import RotatingFileHandler
+
 from pymitter import EventEmitter
-from src.configsettings import settings
+
+from .baseservice import BaseService
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -63,15 +65,20 @@ class EventstreamLogHandler(logging.Handler):
         )
 
 
-class LoggingService:
+class LoggingService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter):
+    debug_level = logging.DEBUG
+
+    def __init__(self, evtbus: EventEmitter, debug_level):
         """Setup logger
 
         Args:
             evtbus (EventEmitter): _description_
         """
+        super().__init__(evtbus=evtbus)
+
+        self.debug_level = debug_level.value
 
         ## formatter ##
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
@@ -90,7 +97,7 @@ class LoggingService:
             logging.root.removeHandler(handler)
 
         # set level based on users settings
-        root_logger.setLevel(settings.common.DEBUG_LEVEL.value)
+        root_logger.setLevel(self.debug_level)
 
         ## handler ##
 
@@ -156,7 +163,7 @@ class LoggingService:
             "uvicorn",
         ]:
             lgr = logging.getLogger(name=name)
-            lgr.setLevel(settings.common.DEBUG_LEVEL.value)
+            lgr.setLevel(self.debug_level)
             lgr.propagate = False
             lgr.handlers = [
                 self.rotatingfile_handler,

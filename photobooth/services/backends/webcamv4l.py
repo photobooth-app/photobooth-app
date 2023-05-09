@@ -2,34 +2,39 @@
 v4l webcam implementation backend
 """
 import logging
-from multiprocessing import Process, shared_memory, Condition, Lock, Event
+from multiprocessing import Condition, Event, Lock, Process, shared_memory
+
 from pymitter import EventEmitter
-from src.imageserverabstract import (
-    ImageServerAbstract,
-    decompile_buffer,
-    compile_buffer,
-    SharedMemoryDataExch,
+
+from ...appconfig import AppConfig
+from .abstractbackend import (
+    AbstractBackend,
     BackendStats,
+    SharedMemoryDataExch,
+    compile_buffer,
+    decompile_buffer,
 )
-from src.configsettings import settings
 
 try:
     from v4l2py import Device
-except ImportError as import_exc:
+except Exception as import_exc:
     raise OSError("backend v4l2py not supported on windows platform") from import_exc
 
+SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
+
 logger = logging.getLogger(__name__)
+settings = AppConfig()
 
 
-class ImageServerWebcamV4l(ImageServerAbstract):
+class WebcamV4lBackend(AbstractBackend):
     """_summary_
 
     Args:
         ImageServerAbstract (_type_): _description_
     """
 
-    def __init__(self, evtbus: EventEmitter, enable_stream):
-        super().__init__(evtbus, enable_stream)
+    def __init__(self, evtbus: EventEmitter):
+        super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -49,8 +54,7 @@ class ImageServerWebcamV4l(ImageServerAbstract):
 
         self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
-                create=True,
-                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+                create=True, size=SHARED_MEMORY_BUFFER_BYTES
             ),
             condition=Condition(),
             lock=Lock(),

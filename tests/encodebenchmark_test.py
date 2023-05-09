@@ -1,13 +1,13 @@
-from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT
-import simplejpeg
-import pytest
+import io
 import logging
 
-turbojpeg = TurboJPEG()
-import io
 import cv2
+import pytest
+import simplejpeg
 from PIL import Image
+from turbojpeg import TurboJPEG
 
+turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
@@ -70,5 +70,5 @@ def image(request):
 
 # needs pip install pytest-benchmark
 def test_libraries_encode(library, image, benchmark):
-    result = benchmark(eval(library), frame_from_camera=image)
+    benchmark(eval(library), frame_from_camera=image)
     assert True

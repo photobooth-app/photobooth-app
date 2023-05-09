@@ -1,16 +1,15 @@
-import sys
-import os
-import time
 import io
 import logging
-from PIL import Image
+import os
+import sys
+import time
 
+from fastapi.testclient import TestClient
+from PIL import Image
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.configsettings import settings
-from fastapi.testclient import TestClient
 
 logger = logging.getLogger(name=None)
 

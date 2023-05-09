@@ -1,16 +1,19 @@
 """
 abstract for the imageserver backends
 """
-import logging
 import dataclasses
-import time
 import json
-from multiprocessing import shared_memory, Condition, Lock
+import logging
+import time
 from abc import ABC, abstractmethod
+from multiprocessing import Condition, Lock, shared_memory
+
 from pymitter import EventEmitter
-from src.configsettings import settings
+
+from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
+settings = AppConfig()
 
 # retry some times to get image for stream
 MAX_ATTEMPTS = 3
@@ -37,18 +40,17 @@ class BackendStats:
     sharpness: int = None
 
 
-class ImageServerAbstract(ABC):
+class AbstractBackend(ABC):
     """
     Imageserver abstract to create backends.
     """
 
     @abstractmethod
-    def __init__(self, evtbus: EventEmitter, enable_stream: bool):
+    def __init__(self, evtbus: EventEmitter):
         # public
         self.metadata = {}
 
         # private
-        self._enable_stream = enable_stream
         self._fps = 0
 
         self._evtbus = evtbus
@@ -57,9 +59,10 @@ class ImageServerAbstract(ABC):
         self._evtbus.on("onCaptureMode", self._on_capture_mode)
         self._evtbus.on("onPreviewMode", self._on_preview_mode)
 
-        logger.info(f"{self._enable_stream=}")
-
         super().__init__()
+
+    def __repr__(self):
+        return f"{self.__class__}"
 
     # @property
     # @abstractmethod
@@ -125,6 +128,8 @@ class ImageServerAbstract(ABC):
         this function may be overriden by backends, but this is the default one
         relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
+        logger.info(f"livestream started on backend {self=}")
+
         last_time = time.time_ns()
         while True:
             for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -154,10 +159,17 @@ class ImageServerAbstract(ABC):
             ):
                 last_time = now_time
 
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                )
+                try:
+                    yield (
+                        b"--frame\r\n"
+                        b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
+                    )
+
+                except GeneratorExit:
+                    # TODO: this is not triggered unfortunately. could be useful for cleanup if no stream is
+                    # requested any more. otherwise consider delete
+                    logger.debug(f"request exit! {self=}")
+                    break
 
     def _publish_sse_initial(self):
         self._publish_sse_metadata()

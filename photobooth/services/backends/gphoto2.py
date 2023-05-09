@@ -2,26 +2,27 @@
 Gphoto2 backend implementation
 
 """
-from threading import Condition, Event
-import time
 import dataclasses
 import logging
-from pymitter import EventEmitter
+import time
+from threading import Condition, Event
 
 try:
     import gphoto2 as gp
-except ImportError as import_exc:
+except Exception as import_exc:
     raise OSError("gphoto2 not supported on windows platform") from import_exc
-from turbojpeg import TurboJPEG
-from src.stoppablethread import StoppableThread
-from src.imageserverabstract import ImageServerAbstract, BackendStats
 
+from pymitter import EventEmitter
+from turbojpeg import TurboJPEG
+
+from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
+from photobooth.utils.stoppablethread import StoppableThread
 
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
 
 
-class ImageServerGphoto2(ImageServerAbstract):
+class Gphoto2Backend(AbstractBackend):
     """
     The backend implementation using picam2
     """
@@ -41,8 +42,8 @@ class ImageServerGphoto2(ImageServerAbstract):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self, evtbus: EventEmitter, enableStream):
-        super().__init__(evtbus, enableStream)
+    def __init__(self, evtbus: EventEmitter):
+        super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -51,14 +52,12 @@ class ImageServerGphoto2(ImageServerAbstract):
         self._camera_context = gp.Context()
         self._evtbus = evtbus
 
-        self._hires_data: ImageServerGphoto2.Gphoto2DataBytes = (
-            ImageServerGphoto2.Gphoto2DataBytes(
-                data=None, request_ready=Event(), condition=Condition()
-            )
+        self._hires_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
+            data=None, request_ready=Event(), condition=Condition()
         )
 
-        self._lores_data: ImageServerGphoto2.Gphoto2DataBytes = (
-            ImageServerGphoto2.Gphoto2DataBytes(data=None, condition=Condition())
+        self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
+            data=None, condition=Condition()
         )
 
         self._camera_connected = False
@@ -210,7 +209,9 @@ class ImageServerGphoto2(ImageServerAbstract):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if self._enable_stream:
+                if (
+                    True
+                ):  # self._enable_stream: # FIXME: need a solution for this to capture only if livestream is requested
                     capture = self._camera.capture_preview()
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 

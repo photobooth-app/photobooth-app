@@ -1,27 +1,26 @@
 """
 _summary_
 """
-import logging
+
 import json
-import threading
 import platform
+import socket
+import threading
+
 import psutil
 from pymitter import EventEmitter
-from src.repeatedtimer import RepeatedTimer
-from src.imageservers import ImageServerAbstract
 
-logger = logging.getLogger(__name__)
+from ..utils.repeatedtimer import RepeatedTimer
+from .baseservice import BaseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
 
-class InformationService:
+class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, imageservers: ImageServerAbstract):
-        # dependencies
-        self._evtbus: EventEmitter = evtbus
-        self._imageservers: ImageServerAbstract = imageservers
+    def __init__(self, evtbus: EventEmitter):
+        super().__init__(evtbus)
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(
@@ -31,7 +30,33 @@ class InformationService:
         # registered events
         self._evtbus.on("publishSSE/initial", self._on_stats_interval_timer)
 
-        logger.info("initialized information service")
+        # log some very basic common information
+        self._logger.info(f"{platform.system()=}")
+        self._logger.info(f"{platform.release()=}")
+        self._logger.info(f"{platform.machine()=}")
+        self._logger.info(f"{platform.python_version()=}")
+        self._logger.info(f"{platform.node()=}")
+        self._logger.info(f"{psutil.cpu_count()=}")
+        self._logger.info(f"{psutil.cpu_count(logical=False)=}")
+        self._logger.info(f"{psutil.disk_partitions()=}")
+        if platform.system() == "Linux":
+            self._logger.info(f"{psutil.disk_usage('/')=}")
+        elif platform.system() == "Windows":
+            self._logger.info(f"{psutil.disk_usage('C:')=}")
+        self._logger.info(
+            [
+                (
+                    name,
+                    [addr.address for addr in addrs if addr.family == socket.AF_INET],
+                )
+                for name, addrs in psutil.net_if_addrs().items()
+            ]
+        )
+        self._logger.info(f"{psutil.virtual_memory()=}")
+        # run python with -O (optimized) sets debug to false and disables asserts from bytecode
+        self._logger.info(f"{__debug__=}")
+
+        self._logger.info("initialized information service")
 
     def start(self):
         """_summary_"""
@@ -50,7 +75,7 @@ class InformationService:
         memory = self._gather_memory()
         cma = self._gather_cma()
         disk = self._gather_disk()
-        imageservers_stats = self._gather_imageservers_stats()
+        # imageservers_stats = self._gather_imageservers_stats()
 
         self._evtbus.emit(
             "publishSSE",
@@ -62,7 +87,7 @@ class InformationService:
                     "memory": memory,
                     "cma": cma,
                     "disk": disk,
-                    "imageserver_stats": imageservers_stats,
+                    "imageserver_stats": None,  # fixme: move to imageserver
                 }
             ),
         )
@@ -103,6 +128,3 @@ class InformationService:
             raise RuntimeError("platform not supported")
 
         return disk
-
-    def _gather_imageservers_stats(self):
-        return self._imageservers.stats()

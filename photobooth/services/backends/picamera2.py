@@ -2,12 +2,13 @@
 Picam2 backend implementation
 
 """
-from threading import Condition, Event
-import time
-import io
 import dataclasses
+import io
 import logging
+import time
 from importlib import import_module
+from threading import Condition, Event
+
 from pymitter import EventEmitter
 
 try:
@@ -15,19 +16,20 @@ try:
     from picamera2 import Picamera2  # type: ignore
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
-except ImportError as import_exc:
+except Exception as import_exc:
     raise OSError(
         "picamera2/libcamera not supported on windows platform"
     ) from import_exc
-from src.configsettings import settings, EnumFocuserModule
-from src.stoppablethread import StoppableThread
-from src.imageserverabstract import ImageServerAbstract, BackendStats
+from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
+from photobooth.utils.stoppablethread import StoppableThread
 
+from ...appconfig import AppConfig, EnumFocuserModule
 
 logger = logging.getLogger(__name__)
+settings = AppConfig()
 
 
-class ImageServerPicam2(ImageServerAbstract):
+class Picamera2Backend(AbstractBackend):
     """
     The backend implementation using picam2
     """
@@ -64,8 +66,8 @@ class ImageServerPicam2(ImageServerAbstract):
                 self.frame = buf
                 self.condition.notify_all()
 
-    def __init__(self, evtbus: EventEmitter, enableStream):
-        super().__init__(evtbus, enableStream)
+    def __init__(self, evtbus: EventEmitter):
+        super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -78,8 +80,8 @@ class ImageServerPicam2(ImageServerAbstract):
         self._fps = 0
 
         # lores and hires data output
-        self._lores_data: ImageServerPicam2.PicamLoresData = None
-        self._hires_data: ImageServerPicam2.PicamHiresData = None
+        self._lores_data: __class__.PicamLoresData = None
+        self._hires_data: __class__.PicamHiresData = None
 
         # worker threads
         self._generate_images_thread: StoppableThread = None
@@ -113,14 +115,10 @@ class ImageServerPicam2(ImageServerAbstract):
 
     def start(self):
         """To start the imageserver, configure picamera2"""
-        self._lores_data: ImageServerPicam2.PicamLoresData = (
-            ImageServerPicam2.PicamLoresData()
-        )
+        self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
-        self._hires_data: ImageServerPicam2.PicamHiresData = (
-            ImageServerPicam2.PicamHiresData(
-                data=None, request_ready=Event(), condition=Condition()
-            )
+        self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(
+            data=None, request_ready=Event(), condition=Condition()
         )
 
         self._picam2: Picamera2 = Picamera2()

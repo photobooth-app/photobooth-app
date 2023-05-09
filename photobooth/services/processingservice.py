@@ -3,26 +3,33 @@ _summary_
 """
 import json
 import logging
-import time
 import os
-from datetime import datetime
 import shutil
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
-from dataclasses import dataclass, asdict
 from threading import Thread
+
 from pymitter import EventEmitter
-from statemachine import StateMachine, State
-from src.configsettings import settings
-from src.imageservers import ImageServers
-from src.imagedb import MediaItem
-import src.imagedb
+from statemachine import State, StateMachine
+
+from ..appconfig import AppConfig
+from .aquisitionservice import AquisitionService
+from .mediacollectionservice import (
+    PATH_ORIGINAL,
+    MediacollectionService,
+    MediaItem,
+    create_imageset_from_originalimage,
+)
 
 logger = logging.getLogger(__name__)
+settings = AppConfig()
 
 MAX_ATTEMPTS = 3
 
 
-class ProcessingPicture(StateMachine):
+class ProcessingService(StateMachine):
     """
     use it:
         machine.thrill()
@@ -68,12 +75,12 @@ class ProcessingPicture(StateMachine):
     def __init__(
         self,
         evtbus: EventEmitter,
-        imageservers: ImageServers,
-        imagedb: src.imagedb.ImageDb,
+        aquisition_service: AquisitionService,
+        mediacollection_service: MediacollectionService,
     ):
-        self._evtbus: EventEmitter = evtbus  # EventEmitter
-        self._imageservers: ImageServers = imageservers  # ImageServers
-        self._imagedb: src.imagedb.ImageDb = imagedb  # ImageDb
+        self._evtbus: EventEmitter = evtbus
+        self._aquisition_service: AquisitionService = aquisition_service
+        self._mediacollection_service: MediacollectionService = mediacollection_service
 
         self.timer: Thread = None
         self.timer_countdown = 0
@@ -119,11 +126,11 @@ class ProcessingPicture(StateMachine):
         # create JPGs and add to db
         start_time_postproc = time.time()
 
-        item: MediaItem = src.imagedb.create_imageset_from_originalimage(
+        item: MediaItem = create_imageset_from_originalimage(
             os.path.basename(self._filepath_originalimage_processing)
         )
 
-        _ = self._imagedb.db_add_item(item)
+        _ = self._mediacollection_service.db_add_item(item)
 
         logger.info(f"capture {item=} successful")
         logger.info(
@@ -154,7 +161,7 @@ class ProcessingPicture(StateMachine):
 
         # send 0 countdown to UI
         self._sse_processinfo(
-            ProcessingPicture.Stateinfo(
+            __class__.Stateinfo(
                 state=self.current_state.id,
                 countdown=0,
             )
@@ -171,7 +178,7 @@ class ProcessingPicture(StateMachine):
 
         while self.timer_countdown > 0:
             self._sse_processinfo(
-                ProcessingPicture.Stateinfo(
+                __class__.Stateinfo(
                     state=self.current_state.id,
                     countdown=round(self.timer_countdown, 1),
                 )
@@ -193,7 +200,7 @@ class ProcessingPicture(StateMachine):
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
         filepath_neworiginalfile = Path(
-            src.imagedb.PATH_ORIGINAL,
+            PATH_ORIGINAL,
             f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
         )
         logger.debug(f"capture to {filepath_neworiginalfile=}")
@@ -206,7 +213,7 @@ class ProcessingPicture(StateMachine):
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 with open(filepath_neworiginalfile, "wb") as file:
-                    file.write(self._imageservers.wait_for_hq_image())
+                    file.write(self._aquisition_service.wait_for_hq_image())
 
                 # populate image item for further processing:
                 self._filepath_originalimage_processing = filepath_neworiginalfile
@@ -242,7 +249,7 @@ class ProcessingPicture(StateMachine):
 
     def _sse_initial_processinfo(self):
         """_summary_"""
-        self._sse_processinfo(ProcessingPicture.Stateinfo(state=self.current_state.id))
+        self._sse_processinfo(__class__.Stateinfo(state=self.current_state.id))
 
     def _sse_processinfo(self, sse_data: Stateinfo):
         """_summary_"""

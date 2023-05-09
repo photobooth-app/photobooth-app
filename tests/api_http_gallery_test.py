@@ -1,12 +1,11 @@
 import os
 import sys
+
 import pytest
+from fastapi.testclient import TestClient
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from fastapi.testclient import TestClient
-from src.configsettings import ConfigSettings
 
 
 @pytest.fixture(

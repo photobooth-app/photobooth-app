@@ -1,30 +1,35 @@
 """
 Simulated backend for testing.
 """
-import platform
-import time
 import logging
+import time
 from datetime import datetime
 from io import BytesIO
-from multiprocessing import Process, shared_memory, Condition, Lock, Event
+from multiprocessing import Condition, Event, Lock, Process, shared_memory
+
 from PIL import Image, ImageDraw, ImageFont
 from pymitter import EventEmitter
-from src.imageserverabstract import (
-    ImageServerAbstract,
+
+from .abstractbackend import (
+    AbstractBackend,
+    BackendStats,
     compile_buffer,
     decompile_buffer,
-    BackendStats,
 )
-from src.configsettings import settings
+
+SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
 logger = logging.getLogger(__name__)
 
 
-class ImageServerSimulated(ImageServerAbstract):
+class SimulatedBackend(AbstractBackend):
     """simulated backend to test photobooth"""
 
-    def __init__(self, ee: EventEmitter, enableStream):
-        super().__init__(ee, enableStream)
+    def __init__(
+        self,
+        evtbus: EventEmitter,
+    ):
+        super().__init__(evtbus=evtbus)
 
         # public props (defined in abstract class also)
         self.metadata = {}
@@ -44,7 +49,7 @@ class ImageServerSimulated(ImageServerAbstract):
 
         self._img_buffer_shm = shared_memory.SharedMemory(
             create=True,
-            size=settings._shared_memory_buffer_size,  # pylint: disable=W0212
+            size=SHARED_MEMORY_BUFFER_BYTES,  # pylint: disable=W0212
         )
 
         self._p = Process(
@@ -161,7 +166,7 @@ def img_aquisition(
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    img_original = Image.open("./src/assets/imageserversimulated_background.jpg")
+    img_original = Image.open("./photobooth/assets/imageserversimulated_background.jpg")
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():
@@ -180,10 +185,10 @@ def img_aquisition(
         # add text
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(
-            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=22
+            font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=22
         )
         font_small = ImageFont.truetype(
-            font="./vendor/fonts/Roboto/Roboto-Bold.ttf", size=15
+            font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=15
         )
         img_draw.text(
             (25, 100), "simulated image source", fill=text_fill, font=font_large
@@ -199,12 +204,6 @@ def img_aquisition(
         img_draw.text(
             (25, 340),
             "you see this, so installation was successful :)",
-            fill=text_fill,
-            font=font_small,
-        )
-        img_draw.text(
-            (25, 360),
-            f"setup camera: http://{platform.node()}:{settings.common.webserver_port}/#/admin",
             fill=text_fill,
             font=font_small,
         )

@@ -1,17 +1,17 @@
-import os
 import io
+import os
 import sys
+
+from fastapi.testclient import TestClient
 from PIL import Image
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from fastapi.testclient import TestClient
-from src.configsettings import ConfigSettings
-
 
 def test_api_imageservers_modes():
     import time
+
     from start import app
 
     client = TestClient(app)
@@ -26,9 +26,7 @@ def test_api_imageservers_modes():
 
 
 def test_api_imageservers_still():
-    import time
-    from start import app
-    from start import imageServers
+    from start import app, imageServers
 
     client = TestClient(app)
     imageServers.start()

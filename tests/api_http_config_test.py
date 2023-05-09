@@ -1,12 +1,14 @@
 import os
 import sys
+
 import pytest
+from fastapi.testclient import TestClient
+
+from photobooth.appconfig import AppConfig
+from photobooth.application import app
 
 # https://docs.python-guide.org/writing/structure/
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from fastapi.testclient import TestClient
-from src.configsettings import ConfigSettings
 
 
 @pytest.fixture(
@@ -24,7 +26,7 @@ def config_endpoint(request):
 
 
 def test_config_endpoints(config_endpoint):
-    from start import app
+    # from start import app
 
     client = TestClient(app)
 
@@ -33,11 +35,11 @@ def test_config_endpoints(config_endpoint):
 
 
 def test_config_post():
-    from start import app
+    # from start import app
 
     client = TestClient(app)
 
     response = client.post(
-        "/config/current", json={"updated_settings": ConfigSettings().dict()}
+        "/config/current", json={"updated_settings": AppConfig().dict()}
     )
     assert response.status_code == 200

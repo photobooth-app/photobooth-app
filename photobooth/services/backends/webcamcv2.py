@@ -1,32 +1,36 @@
 """
 backend opencv2 for webcameras
 """
-from multiprocessing import Process, Event, shared_memory, Condition, Lock
 import logging
 import platform
+from multiprocessing import Condition, Event, Lock, Process, shared_memory
+
 import cv2
-from turbojpeg import TurboJPEG
 from pymitter import EventEmitter
-from src.imageserverabstract import (
-    ImageServerAbstract,
+from turbojpeg import TurboJPEG
+
+from ...appconfig import AppConfig
+from .abstractbackend import (
+    AbstractBackend,
+    BackendStats,
+    SharedMemoryDataExch,
     compile_buffer,
     decompile_buffer,
-    SharedMemoryDataExch,
-    BackendStats,
 )
-from src.configsettings import settings
 
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
+settings = AppConfig()
+SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
 
-class ImageServerWebcamCv2(ImageServerAbstract):
+class WebcamCv2Backend(AbstractBackend):
     """
     opencv2 backend implementation for webcameras
     """
 
-    def __init__(self, evtbus: EventEmitter, enable_stream):
-        super().__init__(evtbus, enable_stream)
+    def __init__(self, evtbus: EventEmitter):
+        super().__init__(evtbus)
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -51,7 +55,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._img_buffer_lores = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
                 create=True,
-                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+                size=SHARED_MEMORY_BUFFER_BYTES,
             ),
             condition=Condition(),
             lock=Lock(),
@@ -59,7 +63,7 @@ class ImageServerWebcamCv2(ImageServerAbstract):
         self._img_buffer_hires = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
                 create=True,
-                size=settings._shared_memory_buffer_size,  # pylint: disable=protected-access
+                size=SHARED_MEMORY_BUFFER_BYTES,
             ),
             condition=Condition(),
             lock=Lock(),
