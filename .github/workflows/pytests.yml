@@ -44,8 +44,7 @@ jobs:
   tests-hardware:
     env:
       ## Sets environment variable
-      backends__MAIN_BACKEND: ImageServerWebcamV4l
-      backends__cv2_device_index: 0
+      backends__MAIN_BACKEND: Simulated
       wled__ENABLED: True
       wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 
