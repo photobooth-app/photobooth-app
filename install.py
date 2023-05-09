@@ -18,8 +18,8 @@ from photobooth.utils.helper import is_rpi
 MIN_PYTHON_VERSION = (3, 9)
 USERNAME = getpass.getuser()
 
-if os.path.isfile("start.py"):
-    # if imageserver.py is detected, assume the sourcecode was already copied to target computer
+if os.path.isfile("pyproject.toml"):
+    # app directory is detected, assume the sourcecode was already copied to target computer
     # useful if just want to enable service, install desktop shortcut, ...
     INSTALL_DIR = "./"
     SUPPRESS_INSTALLATION = True
