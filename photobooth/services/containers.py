@@ -64,7 +64,7 @@ class ServicesContainer(containers.DeclarativeContainer):
     backends = providers.DependenciesContainer()
 
     # Services: Core
-    mediacollection_service = providers.Singleton(
+    mediacollection_service = providers.Resource(
         MediacollectionService, evtbus=evtbus, config=config
     )
 
@@ -80,8 +80,6 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_information_resource, evtbus=evtbus, config=config
     )
 
-    keyboard_service = providers.Factory(KeyboardService, evtbus=evtbus, config=config)
-
     processing_service = providers.Singleton(
         ProcessingService,
         evtbus=evtbus,
@@ -90,6 +88,12 @@ class ServicesContainer(containers.DeclarativeContainer):
         mediacollection_service=mediacollection_service,
     )
 
+    keyboard_service = providers.Resource(
+        KeyboardService,
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+    )
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(

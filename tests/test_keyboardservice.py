@@ -6,6 +6,7 @@ from keyboard import KEY_DOWN, KeyboardEvent
 from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
+from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -14,18 +15,15 @@ logger = logging.getLogger(name=None)
 def test_key_callback():
     """try to emulate key presses as best as possible without actual hardware/user input"""
 
-    class EventCallbackCalledCheckHelper:
-        def __init__(self):
-            self.was_called = False
-
-        def callback(self):
-            self.was_called = True
-
-    event_chose_1pic_received = EventCallbackCalledCheckHelper()
-
+    evtbus = providers.Singleton(EventEmitter)
+    config = providers.Singleton(AppConfig)
     services = ServicesContainer(
-        evtbus=providers.Singleton(EventEmitter),
-        config=providers.Singleton(AppConfig),
+        evtbus=evtbus,
+        config=config,
+        backends=BackendsContainer(
+            evtbus=evtbus,
+            config=config,
+        ),
     )
 
     # modify config
@@ -41,13 +39,7 @@ def test_key_callback():
         )
         pytest.skip("system does not allow access to input devices")
 
-    services.evtbus().on(
-        "keyboardservice/chose_1pic", event_chose_1pic_received.callback
-    )
-
     # emulate key presses
     keyboard_service._on_key_callback(
         KeyboardEvent(event_type=KEY_DOWN, name="a", scan_code=None)
     )
-
-    assert event_chose_1pic_received.was_called is True

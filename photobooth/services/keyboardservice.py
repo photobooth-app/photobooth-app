@@ -17,17 +17,24 @@ from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .processingservice import ProcessingService
 
 
 class KeyboardService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+    def __init__(
+        self,
+        evtbus: EventEmitter,
+        config: AppConfig,
+        processing_service: ProcessingService,
+    ):
         super().__init__(evtbus=evtbus, config=config)
 
-        self._config_hardwareinput = config.hardwareinput
+        self._processing_service = processing_service
 
-        if self._config_hardwareinput.keyboard_input_enabled:
+        if self._config.hardwareinput.keyboard_input_enabled:
+            self._logger.info("keyboardservice enabled - listeners installed")
             keyboard.on_press(self._on_key_callback)
         else:
             self._logger.info(
@@ -41,15 +48,16 @@ class KeyboardService(BaseService):
             key (_type_): _description_
         """
         self._logger.debug(f"key '{key.name}' triggered.")
+
+        # log to http sse helps finding the right key watching live logs
         self._evtbus.emit(
             "publishSSE",
             sse_event="information",
             sse_data=json.dumps({"lastkeycode": key.name}),
         )
 
-        if key.name == self._config_hardwareinput.keyboard_input_keycode_takepic:
+        if key.name == self._config.hardwareinput.keyboard_input_keycode_takepic:
             self._logger.info(
-                f"keyboard_input_keycode_takepic="
-                f"{self._config_hardwareinput.keyboard_input_keycode_takepic}"
+                f"{self._config.hardwareinput.keyboard_input_keycode_takepic=}"
             )
-            self._evtbus.emit("keyboardservice/chose_1pic")
+            self._processing_service.evt_chose_1pic_get()

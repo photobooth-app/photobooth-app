@@ -245,7 +245,17 @@ class ProcessingService(StateMachine):
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
     ### some external functions
-    # none yet
+
+    def evt_chose_1pic_get(self):
+        logger.info("evt_chose_1pic_get called to take picture")
+        if not self.idle.is_active:
+            raise RuntimeError("bad request, only one request at a time!")
+
+        self.thrill()
+        self.countdown()
+        self.shoot()
+        self.postprocess()
+        self.finalize()
 
     ### some custom helper
 
