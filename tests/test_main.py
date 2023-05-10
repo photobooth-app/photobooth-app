@@ -24,9 +24,11 @@ def test_singleinstance():
 
     # bind fails on second instance, pretend we have an instance here:
     s = socket.socket()
-    s.bind(("0.0.0.0", AppConfig().common.webserver_port))
+    s.bind((AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port))
 
     with pytest.raises(SystemExit):
-        __main__.guard(AppConfig().common.webserver_port)
+        __main__.guard(
+            AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port
+        )
 
     s.close()

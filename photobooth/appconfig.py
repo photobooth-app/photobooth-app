@@ -131,6 +131,10 @@ class GroupCommon(BaseModel):
         default=0.25,
         description="Trigger capture offset in seconds. 0 trigger exactly when countdown is 0. Triggers the capture offset by the given seconds to compensate for delay in camera.",
     )
+    webserver_bind_ip: str = Field(
+        default="0.0.0.0",
+        description="IP/Hostname to bind the webserver to. 0.0.0.0 means bind to all IP adresses of host.",
+    )
     webserver_port: int = Field(
         default=8000,
         description="Port to serve the photobooth website. Ensure the port is available.",

@@ -39,7 +39,7 @@ def main(
     server = uvicorn.Server(
         uvicorn.Config(
             app=app,
-            host="0.0.0.0",
+            host=config.common.webserver_bind_ip,
             port=config.common.webserver_port,
             log_level="debug",
         )
@@ -62,11 +62,11 @@ def main(
     return server
 
 
-def guard(port: int):
+def guard(ip: str, port: int):
     # guard to start only one instance at a time.
     try:
         s = socket.socket()
-        s.bind(("0.0.0.0", port))  # bind fails on second instance, raising OSError
+        s.bind((ip, port))  # bind fails on second instance, raising OSError
         s.close()
     except OSError as exc:
         print("startup aborted. another instance is running. exiting.")
@@ -78,7 +78,10 @@ if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
     application_container = ApplicationContainer()
 
     # allow one instance at a time, set whether webserver port is avail as sign it's good or not
-    guard(application_container.config().common.webserver_port)
+    guard(
+        application_container.config().common.webserver_bind_ip,
+        application_container.config().common.webserver_port,
+    )
 
     application_container.init_resources()
     application_container.wire(modules=[__name__], packages=[".routers"])
