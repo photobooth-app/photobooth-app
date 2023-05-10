@@ -24,7 +24,14 @@ def api_chose_1pic_get(
     try:
         processing_service.evt_chose_1pic_get()
         return "OK"
+    except RuntimeError as exc:
+        # raised if processingservice not idle
+        raise HTTPException(
+            status_code=400,
+            detail=f"only one capture at a time allowed: {exc}",
+        ) from exc
     except Exception as exc:
+        # other errors
         logger.exception(exc)
         raise HTTPException(
             status_code=500,
