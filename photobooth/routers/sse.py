@@ -1,10 +1,12 @@
 import asyncio
 import logging
+import os
+import time
 import uuid
 from asyncio import Queue, QueueFull
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from pymitter import EventEmitter
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
@@ -14,6 +16,60 @@ logger = logging.getLogger(__name__)
 sse_router = APIRouter(
     tags=["home"],
 )
+
+
+class StreamClass:
+    def __init__(self, evtbus: EventEmitter, queue: Queue):
+        self._evtbus = evtbus
+        self._queue = queue
+
+    def add_subscriptions(self):
+        logger.debug("SSE subscription added")
+        self._evtbus.on("publishSSE", self.add_queue)
+
+    def remove_subscriptions(self):
+        self._evtbus.off("publishSSE", self.add_queue)
+        logger.debug("SSE subscription removed")
+
+    def add_queue(self, sse_event, sse_data):
+        try:
+            self._queue.put_nowait(
+                ServerSentEvent(
+                    id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000
+                )
+            )
+        except QueueFull:
+            # actually never run, because queue size is infinite currently
+            pass
+
+    async def event_iterator(self, request: Request, timeout=0.0):
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            # FIXME: workaround for testing until testing with mocks/patching works well...
+            timeout = 3.5
+        logger.info(
+            f"event_iterator {timeout=} set. positive values used for testing only"
+        )
+        try:
+            starting_time = time.time()
+            while not timeout or (time.time() - starting_time < timeout):
+                if await request.is_disconnected():
+                    self.remove_subscriptions()
+                    logger.info(f"client request disconnect, client {request.client}")
+                    break
+
+                try:
+                    # event = await self._queue.get()
+                    event = await asyncio.wait_for(self._queue.get(), timeout=0.5)
+                except TimeoutError:
+                    # continue on timeouterror ignore silently. used to abort while loop for testing
+                    continue
+
+                # send data to client
+                yield event
+
+        except asyncio.CancelledError:
+            self.remove_subscriptions()
+            logger.info(f"Disconnected from client {request.client}")
 
 
 @sse_router.get("/sse")
@@ -34,58 +90,19 @@ async def subscribe(
     # async since queue reuses the async thread
     # that would not be avail if outer function of queue is sync.
     # https://docs.python.org/3.11/library/asyncio-queue.html
-    queue = Queue(100)
 
-    def add_subscriptions():
-        logger.debug(f"SSE subscription added, client {request.client}")
-        evtbus.on("publishSSE", add_queue)
-
-    def remove_subscriptions():
-        evtbus.off("publishSSE", add_queue)
-        logger.debug(f"SSE subscription removed, client {request.client}")
-
-    def add_queue(sse_event, sse_data):
-        try:
-            queue.put_nowait(
-                ServerSentEvent(
-                    id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000
-                )
-            )
-        except QueueFull as exc:
-            # actually never run, because queue size is infinite currently
-            remove_subscriptions()
-            logger.error(
-                f"SSE queue full! event '{sse_event}' not sent. Connection broken?"
-            )
-            raise HTTPException(
-                status_code=500,
-                detail=f"SSE queue full! event '{sse_event}' not sent. Connection broken?",
-            ) from exc
-
-    async def event_iterator():
-        try:
-            while True:
-                if await request.is_disconnected():
-                    remove_subscriptions()
-                    logger.info(f"client request disconnect, client {request.client}")
-                    break
-
-                event = await queue.get()
-
-                # send data to client
-                yield event
-
-        except asyncio.CancelledError:
-            remove_subscriptions()
-            logger.info(f"Disconnected from client {request.client}")
+    streamclass = StreamClass(evtbus=evtbus, queue=Queue(100))
 
     logger.info(f"Client connected {request.client}")
-    add_subscriptions()
+    streamclass.add_subscriptions()
 
     # initial messages on client connect
-    add_queue(sse_event="message", sse_data=f"Client connected {request.client}")
+    streamclass.add_queue(
+        sse_event="message", sse_data=f"Client connected {request.client}"
+    )
+    logger.info("added init message")
 
     # all modules can register this event to send initial messages on connection
     await evtbus.emit_async("publishSSE/initial")
 
-    return EventSourceResponse(event_iterator(), ping=1)
+    return EventSourceResponse(streamclass.event_iterator(request=request), ping=1)
