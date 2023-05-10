@@ -16,7 +16,7 @@ sse_router = APIRouter(
 )
 
 
-@sse_router.get("/eventstream")
+@sse_router.get("/sse")
 @inject
 async def subscribe(
     request: Request,
