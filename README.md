@@ -8,6 +8,10 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
+---
+
+**[Features](#heart_eyes-features)** - **[Supported Cameras](#camera-supported-cameras)** - **[Installation](#wrench-installation)** - **[Troubleshooting](#interrobang-troubleshooting)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
+
 ## :heart_eyes: Features
 
 - 📹 camera live preview with shortest delay as possible, permanent video live view in background
