@@ -61,7 +61,7 @@ class StreamClass:
                 try:
                     # event = await self._queue.get()
                     event = await asyncio.wait_for(self._queue.get(), timeout=0.5)
-                except TimeoutError:
+                except asyncio.exceptions.TimeoutError:
                     # continue on timeouterror ignore silently. used to abort while loop for testing
                     continue
 
