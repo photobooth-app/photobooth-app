@@ -96,47 +96,6 @@ background_defaults: url("http://photobooth:8000/aquisition/stream.mjpg")
 see separate file:
 <https://github.com/mgrl/photobooth-app/blob/main/LICENSE.md>
 
-## :rocket: Contribute
-
-If you find an issue, please post it <https://github.com/mgrl/photobooth-app/issues>
-
-Develop on Windows or Linux using VScode.
-Additional requirements
-
-- backend development
-  - pip install pipreqs
-  - pip install pytest
-- frontend development
-  - nodejs 16 (nodejs 18 fails proxying the devServer)
-  - yarn
-  - quasar cli <https://quasar.dev/start/quasar-cli>
-
-## :interrobang: Troubleshooting
-
-Check following commands and files for error messages:
-
-```zsh
-# logfiles from service (last 200 lines)
-journalctl --user --unit=photobooth -n 200 --no-pager
-# logfiles created by photobooth
-cat ~/photobooth-app/log/qbooth.log
-# check CmaFree especially for Arducams if low:
-cat /proc/meminfo
-```
-
-If service crashed 💀, kill the python process:
-
-```zsh
-sudo pkill -9 python3
-```
-
-### Check available webcam device numbers
-
-```zsh
-python -c "from photobooth.services.backends.webcamv4l import *; print(available_camera_indexes())"
-python -c "from photobooth.services.backends.webcamcv2 import *; print(available_camera_indexes())"
-
-```
 
 ### :copyright: License
 
