@@ -4,6 +4,7 @@ import os
 import time
 import uuid
 from asyncio import Queue, QueueFull
+from datetime import datetime
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
@@ -105,4 +106,10 @@ async def subscribe(
     # all modules can register this event to send initial messages on connection
     await evtbus.emit_async("publishSSE/initial")
 
-    return EventSourceResponse(streamclass.event_iterator(request=request), ping=1)
+    return EventSourceResponse(
+        streamclass.event_iterator(request=request),
+        ping=1,
+        ping_message_factory=lambda: ServerSentEvent(
+            datetime.utcnow(), event="ping"
+        ).encode(),
+    )
