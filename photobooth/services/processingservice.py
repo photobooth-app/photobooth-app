@@ -214,8 +214,9 @@ class ProcessingService(StateMachine):
         # waitforpic and store to disk
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
+                image_bytes = self._aquisition_service.wait_for_hq_image()
                 with open(filepath_neworiginalfile, "wb") as file:
-                    file.write(self._aquisition_service.wait_for_hq_image())
+                    file.write(image_bytes)
 
                 # populate image item for further processing:
                 self._filepath_originalimage_processing = filepath_neworiginalfile
