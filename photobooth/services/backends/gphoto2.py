@@ -112,7 +112,7 @@ class Gphoto2Backend(AbstractBackend):
             logger.debug(f"{self.__module__} started")
 
         if self._config.backends.LIVEPREVIEW_ENABLED:
-            self._preview_available = self._check_preview_available()
+            self._camera_preview_available = self._check_camera_preview_available()
 
         self._generate_images_thread.start()
         self._stats_thread.start()
@@ -163,7 +163,7 @@ class Gphoto2Backend(AbstractBackend):
     # INTERNAL FUNCTIONS
     #
 
-    def _check_preview_available(self):
+    def _check_camera_preview_available(self):
         """Test on init whether preview is available for this camera."""
         preview_available = False
         try:
