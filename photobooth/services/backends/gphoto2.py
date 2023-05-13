@@ -270,31 +270,30 @@ class Gphoto2Backend(AbstractBackend):
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
-                if True:  # TODO: make it a setting
+                if self._config.backends.gphoto2_disable_viewfinder_before_capture:
+                    logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
-                logger.info("taking hq picture")
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
+                logger.info("taking hq picture")
                 file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
-                # refresh images on camera
-                # self._camera.wait_for_event(1000)
                 logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
-                camera_file = gp.check_result(
-                    gp.gp_camera_file_get(
-                        self._camera,
-                        file_path.folder,
-                        file_path.name,
-                        gp.GP_FILE_TYPE_NORMAL,
-                    )
-                )
-                file_data = gp.check_result(gp.gp_file_get_data_and_size(camera_file))
-                img_bytes = memoryview(file_data).tobytes()
 
-                ##logger.info(self.metadata)
+                if self._config.backends.gphoto2_wait_event_after_capture_trigger:
+                    self._camera.wait_for_event(1000)
+
+                camera_file = self._camera.file_get(
+                    file_path.folder,
+                    file_path.name,
+                    gp.GP_FILE_TYPE_NORMAL,
+                )
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
+
+                file_data = camera_file.get_data_and_size()
+                img_bytes = memoryview(file_data).tobytes()
 
                 with self._hires_data.condition:
                     self._hires_data.data = img_bytes
