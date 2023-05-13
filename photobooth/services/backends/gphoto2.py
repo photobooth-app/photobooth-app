@@ -46,6 +46,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus, config)
+
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -62,6 +63,9 @@ class Gphoto2Backend(AbstractBackend):
         )
 
         self._camera_connected = False
+        self._camera_preview_disabled = (
+            False  # Force disable camera stream if not supported
+        )
         self._count = 0
         self._fps = 0
 
@@ -79,8 +83,22 @@ class Gphoto2Backend(AbstractBackend):
             f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}"
         )
 
+        # enable logging to python. need to store callback, otherwise logging does not work.
+        # gphoto2 logging is too verbose, reduce mapping
+        self._logger_callback = gp.check_result(
+            gp.use_python_logging(
+                mapping={
+                    gp.GP_LOG_ERROR: logging.INFO,
+                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,
+                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,
+                    gp.GP_LOG_DATA: logging.DEBUG - 6,
+                }
+            )
+        )
+
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
+
         # check for available devices
         if not available_camera_indexes():
             raise OSError("no camera detected. abort start")
@@ -98,18 +116,8 @@ class Gphoto2Backend(AbstractBackend):
         self._generate_images_thread.start()
         self._stats_thread.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
-        while True:
-            with self._lores_data.condition:
-                if self._lores_data.condition.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        # short sleep until backend started.
+        time.sleep(0.5)
 
         logger.debug(f"{self.__module__} started")
 
@@ -156,6 +164,11 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        if self._camera_preview_disabled:
+            raise RuntimeError(
+                "camera cannot deliver preview stream, please disable livestream on gphoto2 backend!"
+            )
+
         if self._generate_images_thread.stopped():
             raise RuntimeError("shutdown already in progress, abort early")
 
@@ -183,7 +196,10 @@ class Gphoto2Backend(AbstractBackend):
         self._camera.set_config(config, self._camera_context)
 
     def _viewfinder(self, val=0):
-        self._gp_set_config("viewfinder", val)
+        try:
+            self._gp_set_config("viewfinder", val)
+        except gp.GPhoto2Error as exc:
+            logger.warning(f"cannot set viewfinder, command ignored {exc}")
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -210,33 +226,39 @@ class Gphoto2Backend(AbstractBackend):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if (
-                    True
-                ):  # self._enable_stream: # FIXME: need a solution for this to capture only if livestream is requested
-                    capture = self._camera.capture_preview()
+                if not self._camera_preview_disabled:
+                    try:
+                        capture = self._camera.capture_preview()
+                    except Exception as exc:
+                        self._camera_preview_disabled = True
+                        logger.error(
+                            f"camera does not support capture_preview function, preview stream disabled {exc}"
+                        )
+                        # abort this loop iteration and continue sleeping...
+                        continue
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 
                     with self._lores_data.condition:
                         self._lores_data.data = img_bytes
                         self._lores_data.condition.notify_all()
                 else:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
             else:
                 # only capture one pic and return to lores streaming afterwards
                 self._hires_data.request_ready.clear()
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
-                self._viewfinder(0)
+                if True:  # TODO: make it a setting
+                    self._viewfinder(0)
 
                 logger.info("taking hq picture")
-
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
                 file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
                 # refresh images on camera
-                self._camera.wait_for_event(1000)
+                # self._camera.wait_for_event(1000)
                 logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
                 camera_file = gp.check_result(
                     gp.gp_camera_file_get(
@@ -258,7 +280,8 @@ class Gphoto2Backend(AbstractBackend):
 
                     self._hires_data.condition.notify_all()
 
-            self._count += 1
+            # self._count += 1
+        logger.warning("_generate_images_fun exits")
 
 
 def available_camera_indexes():
