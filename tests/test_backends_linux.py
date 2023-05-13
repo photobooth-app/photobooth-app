@@ -71,10 +71,10 @@ def test_get_images_gphoto2():
 
     if not gphoto2_backend._camera_preview_available:
         with pytest.raises(RuntimeError):
-            with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+            with Image.open(io.BytesIO(gphoto2_backend._wait_for_lores_image())) as img:
                 img.verify()
 
-    with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
+    with Image.open(io.BytesIO(gphoto2_backend.wait_for_hq_image())) as img:
         img.verify()
 
     gphoto2_backend.stop()
