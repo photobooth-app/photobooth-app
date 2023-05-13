@@ -65,4 +65,8 @@ def test_get_images_gphoto2():
 
     # get lores and hires images from backend and assert
     gphoto2_backend = backend.gphoto2_backend()
-    get_images(gphoto2_backend)
+    if not gphoto2_backend._preview_available:
+        with pytest.raises(AssertionError):
+            get_images(gphoto2_backend)
+    else:
+        get_images(gphoto2_backend)
