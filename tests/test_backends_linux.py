@@ -1,8 +1,10 @@
+import io
 import logging
 import platform
 
 import pytest
 from dependency_injector import providers
+from PIL import Image
 from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
@@ -65,8 +67,14 @@ def test_get_images_gphoto2():
 
     # get lores and hires images from backend and assert
     gphoto2_backend = backend.gphoto2_backend()
+    gphoto2_backend.start()
+
     if not gphoto2_backend._camera_preview_available:
-        with pytest.raises(AssertionError):
-            get_images(gphoto2_backend)
-    else:
-        get_images(gphoto2_backend)
+        with pytest.raises(RuntimeError):
+            with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+                img.verify()
+
+    with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
+        img.verify()
+
+    gphoto2_backend.stop()

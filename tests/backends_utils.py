@@ -10,11 +10,7 @@ def get_images(backend: AbstractBackend):
     backend.start()
 
     try:
-        with Image.open(
-            io.BytesIO(
-                backend._wait_for_lores_image()  # pylint:disable=protected-access
-            )
-        ) as img:
+        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(
@@ -22,7 +18,7 @@ def get_images(backend: AbstractBackend):
         ) from exc
 
     try:
-        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
+        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(
