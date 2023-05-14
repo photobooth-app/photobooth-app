@@ -214,6 +214,16 @@ class GroupBackends(BaseModel):
         default=0, description="Device index of webcam opened in v4l backend"
     )
 
+    gphoto2_disable_viewfinder_before_capture: bool = Field(
+        default=True,
+        description="Disable viewfinder before capture might speed up following capture autofocus. Might not work with every camera.",
+    )
+
+    gphoto2_wait_event_after_capture_trigger: bool = Field(
+        default=False,
+        description="Usually wait_for_event not necessary before downloading the file from camera. Adjust if necessary.",
+    )
+
     picamera2_AE_EXPOSURE_MODE: int = Field(
         default=1,
         ge=0,

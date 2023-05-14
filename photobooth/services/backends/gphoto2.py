@@ -63,9 +63,7 @@ class Gphoto2Backend(AbstractBackend):
         )
 
         self._camera_connected = False
-        self._camera_preview_disabled = (
-            False  # Force disable camera stream if not supported
-        )
+        self._camera_preview_available = False
         self._count = 0
         self._fps = 0
 
@@ -112,6 +110,9 @@ class Gphoto2Backend(AbstractBackend):
         else:
             self._camera_connected = True
             logger.debug(f"{self.__module__} started")
+
+        if self._config.backends.LIVEPREVIEW_ENABLED:
+            self._camera_preview_available = self._check_camera_preview_available()
 
         self._generate_images_thread.start()
         self._stats_thread.start()
@@ -162,11 +163,29 @@ class Gphoto2Backend(AbstractBackend):
     # INTERNAL FUNCTIONS
     #
 
+    def _check_camera_preview_available(self):
+        """Test on init whether preview is available for this camera."""
+        preview_available = False
+        try:
+            self._camera.capture_preview()
+        except Exception as exc:
+            logger.info(
+                f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}"
+            )
+        else:
+            preview_available = True
+
+        return preview_available
+
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._camera_preview_disabled:
+        if (
+            self._config.backends.LIVEPREVIEW_ENABLED
+            and not self._camera_preview_available
+        ):
             raise RuntimeError(
-                "camera cannot deliver preview stream, please disable livestream on gphoto2 backend!"
+                "Camera cannot deliver preview stream, capture preview is disabled in this session. "
+                "Consider disable livestream on gphoto2 backend permanently."
             )
 
         if self._generate_images_thread.stopped():
@@ -226,13 +245,15 @@ class Gphoto2Backend(AbstractBackend):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if not self._camera_preview_disabled:
+                if (
+                    self._config.backends.LIVEPREVIEW_ENABLED
+                    and self._camera_preview_available
+                ):
                     try:
                         capture = self._camera.capture_preview()
                     except Exception as exc:
-                        self._camera_preview_disabled = True
-                        logger.error(
-                            f"camera does not support capture_preview function, preview stream disabled {exc}"
+                        logger.critical(
+                            f"error capturing frame despite general availability. {exc}"
                         )
                         # abort this loop iteration and continue sleeping...
                         continue
@@ -249,31 +270,30 @@ class Gphoto2Backend(AbstractBackend):
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
-                if True:  # TODO: make it a setting
+                if self._config.backends.gphoto2_disable_viewfinder_before_capture:
+                    logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
-                logger.info("taking hq picture")
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture
+                logger.info("taking hq picture")
                 file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
-                # refresh images on camera
-                # self._camera.wait_for_event(1000)
                 logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
-                camera_file = gp.check_result(
-                    gp.gp_camera_file_get(
-                        self._camera,
-                        file_path.folder,
-                        file_path.name,
-                        gp.GP_FILE_TYPE_NORMAL,
-                    )
-                )
-                file_data = gp.check_result(gp.gp_file_get_data_and_size(camera_file))
-                img_bytes = memoryview(file_data).tobytes()
 
-                ##logger.info(self.metadata)
+                if self._config.backends.gphoto2_wait_event_after_capture_trigger:
+                    self._camera.wait_for_event(1000)
+
+                camera_file = self._camera.file_get(
+                    file_path.folder,
+                    file_path.name,
+                    gp.GP_FILE_TYPE_NORMAL,
+                )
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
+
+                file_data = camera_file.get_data_and_size()
+                img_bytes = memoryview(file_data).tobytes()
 
                 with self._hires_data.condition:
                     self._hires_data.data = img_bytes
