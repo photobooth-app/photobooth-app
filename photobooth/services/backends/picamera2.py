@@ -427,6 +427,10 @@ class Picamera2Backend(AbstractBackend):
                 # only capture one pic and return to lores streaming afterwards
                 self._hires_data.request_ready.clear()
 
+                # ensure before shoot that no focus is active; module may decide how to handle or cancel current run
+                if self._autofocus_module:
+                    self._autofocus_module.ensure_focused()
+
                 self._evtbus.emit("frameserver/onCapture")
 
                 # capture hq picture

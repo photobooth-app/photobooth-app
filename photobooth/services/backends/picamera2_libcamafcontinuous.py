@@ -49,6 +49,10 @@ class Picamera2LibcamAfContinuous:
     def stop(self):
         """stop backend"""
 
+    def ensure_focused(self):
+        """ensure before shoot the focus algorithm is not currently in progress"""
+        # nothing to do here.
+
     def _on_thrill(self):
         """nothing to do in continous mode here"""
 

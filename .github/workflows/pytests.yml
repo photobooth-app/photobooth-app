@@ -5,11 +5,7 @@ name: pytest
 # after all jobs finished, coverage is uploaded as described here
 # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
 
-on:
-  push:
-    branches: ["main", "dev"]
-  pull_request:
-    branches: ["main"]
+on: [push, pull_request]
 
 permissions:
   contents: read

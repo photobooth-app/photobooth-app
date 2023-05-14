@@ -3,6 +3,7 @@
 autofocus control using native libcamera functions
 """
 import logging
+import time
 
 try:
     from libcamera import controls
@@ -59,20 +60,34 @@ class Picamera2LibcamAfInterval:
         """stop timer thread; missing this will lead to halt on program exit."""
         self._autofocus_trigger_timer_thread.stop()
 
+    def ensure_focused(self):
+        """Use to ensure focus is finished (or cancel/failed if no success) before capture."""
+        # interval can only cancel current focus run if active
+        # currently no reliable way to receive the current focus state until capture_metadata is reimplemented again.
+        self._backend._picamera2.set_controls({"AfTrigger": controls.AfTrigger.Cancel})
+
+        # wait typical time, the motor needs to move back to previous position
+        time.sleep(0.04)
+
     def _autofocus_trigger_timer_fun(self):
         """_summary_"""
         if not self._mute_cyclic_trigger_requests:
+            logger.info(
+                "autofocus trigger request ignored because muted in capture mode"
+            )
             self._autofocus_cycle()
 
     def _on_thrill(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_thrill")
         self._mute_cyclic_trigger_requests = True
+        logger.info("autofocus trigger request muted")
 
     def _on_capture_finished(self):
         """_summary_"""
         logger.info("called libcamautofocus _on_capture_finished")
         self._mute_cyclic_trigger_requests = False
+        logger.info("autofocus trigger request unmuted")
 
     def _on_capturemode(self):
         """_summary_"""
@@ -99,15 +114,7 @@ class Picamera2LibcamAfInterval:
 
     def _autofocus_cycle(self):
         try:
-            # success = self._backend._picamera2.autofocus_cycle(wait=False)
-            # this command breaks the frameserver - reason not yet clear, so currently
-            # autofocus invoked like this:
-            self._backend._picamera2.set_controls(
-                {
-                    "AfMode": controls.AfModeEnum.Auto,
-                    "AfTrigger": controls.AfTriggerEnum.Start,
-                }
-            )
+            self._backend._picamera2.autofocus_cycle(wait=False)
         except RuntimeError as exc:
             logger.critical(
                 f"control not available on camera - autofocus not working properly {exc}"
