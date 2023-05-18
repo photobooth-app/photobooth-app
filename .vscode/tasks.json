@@ -40,6 +40,11 @@
       "label": "gather requirements.txt pip packages",
       "type": "shell",
       "command": "pipreqs.exe --ignore experiments --encoding utf8 --force"
+    },
+    {
+      "label": "create openapi.json schema http api description",
+      "type": "shell",
+      "command": "python -m photobooth.utils.fastapi_get_openapi"
     }
   ]
 }
