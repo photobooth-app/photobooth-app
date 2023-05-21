@@ -6,7 +6,7 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 from turbojpeg import TurboJPEG
@@ -23,7 +23,7 @@ PATH_PREVIEW = "".join([DATA_PATH, "preview/"])
 PATH_THUMBNAIL = "".join([DATA_PATH, "thumbnail/"])
 
 
-class MediaItemTypes(StrEnum):
+class MediaItemTypes(str, Enum):
     IMAGE = "image"
     COLLAGE = "collage"
     VIDEO = "video"
