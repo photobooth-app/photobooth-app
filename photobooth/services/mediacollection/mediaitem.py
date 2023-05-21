@@ -9,11 +9,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from turbojpeg import TurboJPEG
-
-turbojpeg = TurboJPEG()
-
-
 logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"
