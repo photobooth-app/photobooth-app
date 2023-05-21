@@ -68,7 +68,7 @@ def api_get_config_current():
 @inject
 def api_post_config_current(
     updated_config: AppConfig,
-    appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
+    # appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
     config: AppConfig = Depends(Provide[ApplicationContainer.config]),
 ):
     # save settings to disc
@@ -78,5 +78,5 @@ def api_post_config_current(
     # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
     config.__dict__.update(updated_config)
 
-    appcontainer.shutdown_resources()
-    appcontainer.init_resources()
+    # appcontainer.shutdown_resources()
+    # appcontainer.init_resources()

@@ -4,7 +4,6 @@ import os
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..appconfig import AppConfig
 from ..containers import ApplicationContainer
 from ..services.systemservice import SystemService
 
@@ -20,10 +19,10 @@ system_router = APIRouter(
 def api_cmd(
     action,
     param,
-    config_service: AppConfig = Depends(Provide[ApplicationContainer.config_service]),
     system_service: SystemService = Depends(
         Provide[ApplicationContainer.services.system_service]
     ),
+    appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
 ):
     logger.info(f"cmd api requested action={action}, param={param}")
 
@@ -31,6 +30,9 @@ def api_cmd(
         os.system("reboot")
     elif action == "server" and param == "shutdown":
         os.system("shutdown now")
+    elif action == "service" and param == "reload":
+        appcontainer.shutdown_resources()
+        appcontainer.init_resources()
     elif action == "service" and param == "restart":
         system_service.util_systemd_control("restart")
     elif action == "service" and param == "stop":
