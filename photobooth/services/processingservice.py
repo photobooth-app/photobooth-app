@@ -7,8 +7,6 @@ import os
 import shutil
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime
-from pathlib import Path
 from threading import Thread
 
 from pymitter import EventEmitter
@@ -16,11 +14,11 @@ from statemachine import State, StateMachine
 
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
+from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
-    PATH_ORIGINAL,
     MediacollectionService,
-    MediaItem,
 )
+from .mediaprocessingservice import MediaprocessingService
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +74,13 @@ class ProcessingService(StateMachine):
         config: AppConfig,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
+        mediaprocessing_service: MediaprocessingService,
     ):
         self._evtbus: EventEmitter = evtbus
         self._config: AppConfig = config
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
+        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 
         self.timer: Thread = None
         self.timer_countdown = 0
@@ -124,26 +124,39 @@ class ProcessingService(StateMachine):
 
     def on_postprocess(self):
         # create JPGs and add to db
-        start_time_postproc = time.time()
 
-        item: MediaItem = (
-            self._mediacollection_service.create_imageset_from_originalimage(
-                os.path.basename(self._filepath_originalimage_processing)
+        # TODO: collage: separate postprocessing step 2 mount collage and create a new original.
+
+        # create mediaitem for further processing
+        mediaitem = MediaItem(os.path.basename(self._filepath_originalimage_processing))
+
+        # apply 1pic pipeline:
+        if self._config.mediaprocessing.pic1_enable_pipeline:
+            tms = time.time()
+            self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
+            logger.info(
+                f"apply pipeline process time: {round((time.time() - tms), 2)}s"
             )
-        )
+        else:
+            logger.info("1pic pipeline disabled in config.")
 
-        _ = self._mediacollection_service.db_add_item(item)
-
-        logger.info(f"capture {item=} successful")
+        # create resized versions
+        tms = time.time()
+        self._mediaprocessing_service.create_scaled_repr(mediaitem)
         logger.info(
-            f"post process time: {round((time.time() - start_time_postproc), 2)}s"
+            f"create scaled images process time: {round((time.time() - tms), 2)}s"
         )
+
+        # add result to db
+        _ = self._mediacollection_service.db_add_item(mediaitem)
+
+        logger.info(f"capture {mediaitem=} successful")
 
         # to inform frontend about new image to display
         self._evtbus.emit(
             "publishSSE",
             sse_event="imagedb/newarrival",
-            sse_data=json.dumps(item.asdict()),
+            sse_data=json.dumps(mediaitem.asdict()),
         )
 
     def on_copy(self, filename: str = None):
@@ -201,10 +214,7 @@ class ProcessingService(StateMachine):
         """_summary_"""
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
-        filepath_neworiginalfile = Path(
-            PATH_ORIGINAL,
-            f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
-        )
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         start_time_capture = time.time()
