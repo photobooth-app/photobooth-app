@@ -69,6 +69,7 @@ class WledService(BaseService):
             )
             raise RuntimeError("fail to write identify request to WLED module") from exc
 
+        wled_detected = False
         try:
             # readline blocks for timeout seconds (set to 1sec on init), afterwards fails
             wled_response = self._serial.readline()
