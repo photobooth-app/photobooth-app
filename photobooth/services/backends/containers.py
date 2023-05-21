@@ -16,7 +16,7 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     ## Services: Backends (for image aquisition)
     disabled_backend = providers.Object(None)
-    simulated_backend = providers.Singleton(SimulatedBackend, evtbus, config)
+    simulated_backend = providers.Factory(SimulatedBackend, evtbus, config)
     webcamcv2_backend = providers.Singleton(WebcamCv2Backend, evtbus, config)
     picamera2_backend = providers.Object(None)
     gphoto2_backend = providers.Object(None)
