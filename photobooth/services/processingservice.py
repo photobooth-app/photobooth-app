@@ -131,20 +131,10 @@ class ProcessingService(StateMachine):
         mediaitem = MediaItem(os.path.basename(self._filepath_originalimage_processing))
 
         # apply 1pic pipeline:
-        if self._config.mediaprocessing.pic1_enable_pipeline:
-            tms = time.time()
-            self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
-            logger.info(
-                f"apply pipeline process time: {round((time.time() - tms), 2)}s"
-            )
-        else:
-            logger.info("1pic pipeline disabled in config.")
-
-        # create resized versions
         tms = time.time()
-        self._mediaprocessing_service.create_scaled_repr(mediaitem)
+        self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
         logger.info(
-            f"create scaled images process time: {round((time.time() - tms), 2)}s"
+            f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline"
         )
 
         # add result to db
@@ -225,6 +215,15 @@ class ProcessingService(StateMachine):
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 image_bytes = self._aquisition_service.wait_for_hq_image()
+
+                # send 0 countdown to UI
+                self._sse_processinfo(
+                    __class__.Stateinfo(
+                        state=self.current_state.id,
+                        countdown=0,
+                    )
+                )
+
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
 
@@ -248,7 +247,7 @@ class ProcessingService(StateMachine):
             )
 
         logger.info(
-            f"capture still took time: {round((time.time() - start_time_capture), 2)}s"
+            f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still"
         )
 
     def on_exit_capture_still(self):

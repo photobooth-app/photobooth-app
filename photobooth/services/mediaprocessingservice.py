@@ -3,6 +3,7 @@ Handle all media collection related functions
 """
 import io
 import logging
+import time
 
 from PIL import Image
 from pymitter import EventEmitter
@@ -29,9 +30,28 @@ class MediaprocessingService(BaseService):
 
     def apply_pipeline_1pic(self, mediaitem: MediaItem):
         """always apply preconfigured pipeline."""
+        tms = time.time()
+
+        if not self._config.mediaprocessing.pic1_enable_pipeline:
+            # quick: only create scaled versions
+            logger.info("1pic pipeline disabled in config.")
+
+            self.create_scaled_repr(mediaitem)
+            logger.info(
+                f"-- process time: {round((time.time() - tms), 2)}s to create scaled images"
+            )
+            return
+
+        ## pipeline is enabled, so start processing now:
+        # prepare: create full version:
+        buffer_full = self.resize_jpeg(
+            self._read_original(mediaitem),
+            self._config.common.HIRES_STILL_QUALITY,
+            self._config.common.FULL_STILL_WIDTH,
+        )
 
         ## start: load original file
-        image = Image.open(mediaitem.path_original)
+        image = Image.open(io.BytesIO(buffer_full))
 
         ## stage 1: remove background
 
@@ -63,11 +83,29 @@ class MediaprocessingService(BaseService):
                     f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue"
                 )
 
-        ## final: save result
+        logger.info(
+            f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline"
+        )
+
+        ## final: save full result and create scaled versions
+        tms = time.time()
+        buffer_full_pipeline_applied = io.BytesIO()
         image.save(
-            mediaitem.path_full,
+            buffer_full_pipeline_applied,
+            format="jpeg",
             quality=self._config.common.HIRES_STILL_QUALITY,
             optimize=True,
+        )
+        # save filtered full
+        with open(mediaitem.path_full, "wb") as file:
+            file.write(buffer_full_pipeline_applied.getbuffer())
+        # save scaled preview (derived from filtered full)
+        self._create_preview_repr(mediaitem, buffer_full_pipeline_applied.getbuffer())
+        # save scaled thumbnail (derived from filtered full)
+        self._create_thumbnail_repr(mediaitem, buffer_full_pipeline_applied.getbuffer())
+
+        logger.info(
+            f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions"
         )
 
     def apply_pipeline_collage(self):
@@ -75,7 +113,10 @@ class MediaprocessingService(BaseService):
         raise NotImplementedError
 
     def apply_pipeline_video(self):
-        """there will probably be no video pipeline or needs to be handled different. focus on images in these pipelines now"""
+        """
+        there will probably be no video pipeline or needs to be handled different.
+        focus on images in these pipelines now
+        """
         raise NotImplementedError
 
     def ensure_scaled_repr_created(self, mediaitem: MediaItem):
@@ -96,32 +137,60 @@ class MediaprocessingService(BaseService):
                 )
                 raise exc
 
-    def create_scaled_repr(self, mediaitem: MediaItem):
+    def create_scaled_repr(self, mediaitem: MediaItem, overwrite: bool = False):
         """_summary_
 
         Args:
             buffer_full (_type_): _description_
             filepath (_type_): _description_
         """
+        buffer_in = self._read_original(mediaitem)
 
-        # read fullres version
-        if mediaitem.path_full.is_file():
-            # if full version exists, there is a pipeline applied to that file and needs resized
-            with open(mediaitem.path_full, "rb") as file:
-                buffer_in = file.read()
+        ## full version
+        if not mediaitem.path_full.is_file() or overwrite is True:
+            self._create_full_repr(mediaitem, buffer_in)
+            logger.debug(f"{mediaitem.path_full=} written to disk")
         else:
-            # if full version NOT exists, just copy to full to be failsafe - usually a full version should exist.
-            with open(mediaitem.path_original, "rb") as file:
-                buffer_in = file.read()
-
-            logger.warning(
-                "full sized file with pipeline applied not found. creating full sized img but no pipeline applied."
-            )
-            ## full version, no pipeline applied, just to not fail
-            with open(mediaitem.path_full, "wb") as file:
-                file.write(buffer_in)
+            logger.debug(f"{mediaitem.path_full=} exists and will not be overwritten")
 
         ## preview version
+        if not mediaitem.path_preview.is_file() or overwrite is True:
+            self._create_preview_repr(mediaitem, buffer_in)
+            logger.debug(f"{mediaitem.path_preview=} written to disk")
+        else:
+            logger.debug(
+                f"{mediaitem.path_preview=} exists and will not be overwritten"
+            )
+
+        ## thumbnail version
+        if not mediaitem.path_thumbnail.is_file() or overwrite is True:
+            self._create_thumbnail_repr(mediaitem, buffer_in)
+            logger.debug(f"{mediaitem.path_thumbnail=} written to disk")
+        else:
+            logger.debug(
+                f"{mediaitem.path_thumbnail=} exists and will not be overwritten"
+            )
+
+        try:
+            mediaitem.fileset_valid()
+        except Exception as exc:
+            logger.warning("something went wrong creating scaled versions!")
+            raise exc
+
+        logger.info(f"created and saved scaled media items for {mediaitem.filename=}")
+
+    def _read_original(self, mediaitem: MediaItem) -> bytes:
+        with open(mediaitem.path_original, "rb") as file:
+            buffer_in = file.read()
+
+        return buffer_in
+
+    def _create_full_repr(self, mediaitem: MediaItem, buffer_in: bytes):
+        ## full version, no pipeline applied, just to not fail
+        with open(mediaitem.path_full, "wb") as file:
+            file.write(buffer_in)
+
+    def _create_preview_repr(self, mediaitem: MediaItem, buffer_in: bytes):
         buffer_preview = self.resize_jpeg(
             buffer_in,
             self._config.common.PREVIEW_STILL_QUALITY,
@@ -130,7 +199,7 @@ class MediaprocessingService(BaseService):
         with open(mediaitem.path_preview, "wb") as file:
             file.write(buffer_preview)
 
-        ## thumbnail version
+    def _create_thumbnail_repr(self, mediaitem: MediaItem, buffer_in: bytes):
         buffer_thumbnail = self.resize_jpeg(
             buffer_in,
             self._config.common.THUMBNAIL_STILL_QUALITY,
@@ -138,20 +207,6 @@ class MediaprocessingService(BaseService):
         )
         with open(mediaitem.path_thumbnail, "wb") as file:
             file.write(buffer_thumbnail)
-
-        try:
-            mediaitem.fileset_valid()
-        except Exception as exc:
-            logger.warning("something went wrong creating scaled versions!")
-            raise exc
-
-        logger.debug(
-            f"filesizes orig/full: {round(len(buffer_in)/1024,1)}kb "
-            f"preview: {round(len(buffer_preview)/1024,1)}kb "
-            f"thumbnail: {round(len(buffer_thumbnail)/1024,1)}kb"
-        )
-
-        logger.info(f"created and saved scaled media items for {mediaitem.filename=}")
 
     @staticmethod
     def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_width: int):
@@ -190,17 +245,22 @@ class MediaprocessingService(BaseService):
             (11, 8),
         ]
         factor_list = [item[0] / item[1] for item in allowed_list]
-        scale_factor_turbojpeg = min(
+        (index, factor) = min(
             enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor)
         )
+
         logger.debug(
-            f"determined scale factor: {scale_factor_turbojpeg[1]},"
-            f"input img width {width}, target img width {scaled_min_width}"
+            f"scaling img by factor {factor}, "
+            f"width input={width} -> target={scaled_min_width}"
         )
+        if factor > 1:
+            logger.warning(
+                "scale factor bigger than 1 - consider optimize config, usually images shall shrink"
+            )
 
         buffer_out = turbojpeg.scale_with_quality(
             buffer_in,
-            scaling_factor=allowed_list[scale_factor_turbojpeg[0]],
+            scaling_factor=allowed_list[index],
             quality=quality,
         )
         return buffer_out

@@ -74,7 +74,7 @@ class MediacollectionService(BaseService):
             f"initialized image DB, added {self.number_of_images} valid images"
         )
         self._logger.info(
-            f"initialize process time: {round((time.time() - start_time_initialize), 2)}s"
+            f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection"
         )
 
         # finally sort the db one time only. resorting never necessary

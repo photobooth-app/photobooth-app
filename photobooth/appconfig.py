@@ -87,6 +87,13 @@ class GroupCommon(BaseModel):
         description="Still JPEG full resolution quality, applied to download images and images with filter",
         ui_component="QSlider",
     )
+
+    FULL_STILL_WIDTH: int = Field(
+        default=1500,
+        ge=800,
+        le=5000,
+        description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
+    )
     PREVIEW_STILL_WIDTH: int = Field(
         default=900,
         ge=200,
