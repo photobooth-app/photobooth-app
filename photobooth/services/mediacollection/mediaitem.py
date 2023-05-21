@@ -34,7 +34,7 @@ def get_new_filename(
 ) -> Path:
     return Path(
         PATH_ORIGINAL,
-        f"{type.value}_{visibility}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
+        f"{type.value}_{visibility}_{datetime.now().astimezone().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
     )
 
 
