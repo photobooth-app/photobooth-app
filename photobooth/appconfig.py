@@ -118,10 +118,7 @@ class GroupCommon(BaseModel):
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
         ui_component="QSlider",
     )
-    EXT_DOWNLOAD_URL: str = Field(
-        default="http://dl.qbooth.net/{filename}",
-        description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
-    )
+
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = Field(
         default=False,
@@ -372,6 +369,10 @@ class GroupUiSettings(BaseModel):
     SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
         default=True,
         description="Show link to admin center, usually only during setup.",
+    )
+    EXT_DOWNLOAD_URL: str = Field(
+        default="http://dl.qbooth.net/{filename}",
+        description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
     )
 
 
