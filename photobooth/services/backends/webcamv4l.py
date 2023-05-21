@@ -7,6 +7,7 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
     BackendStats,
@@ -151,7 +152,7 @@ class WebcamV4lBackend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
 
         if self._event_proc_shutdown.is_set():
-            raise RuntimeError("shutdown already in progress, abort early")
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._img_buffer.condition:
             if not self._img_buffer.condition.wait(timeout=4):

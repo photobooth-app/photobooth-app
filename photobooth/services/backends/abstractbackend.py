@@ -11,6 +11,7 @@ from multiprocessing import Condition, Lock, shared_memory
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +144,8 @@ class AbstractBackend(ABC):
                         f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
                     )
                     # can we do additional error handling here?
+                except ShutdownInProcessError:
+                    logger.warning("gather img failed due to resources shutting down")
                 else:
                     break
             else:

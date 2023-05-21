@@ -83,7 +83,7 @@ class ServicesContainer(containers.DeclarativeContainer):
         evtbus=evtbus,
         config=config,
     )
-    mediacollection_service = providers.Resource(
+    mediacollection_service = providers.Singleton(
         MediacollectionService,
         evtbus=evtbus,
         config=config,

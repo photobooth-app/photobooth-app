@@ -10,6 +10,7 @@ from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
     BackendStats,
@@ -89,7 +90,7 @@ class WebcamCv2Backend(AbstractBackend):
         self._cv2_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
+        remaining_retries = 16
         while True:
             with self._img_buffer_lores.condition:
                 if self._img_buffer_lores.condition.wait(timeout=0.5):
@@ -155,7 +156,7 @@ class WebcamCv2Backend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         if self._event_proc_shutdown.is_set():
-            raise RuntimeError("shutdown already in progress, abort early")
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._img_buffer_lores.condition:
             if not self._img_buffer_lores.condition.wait(timeout=4):
