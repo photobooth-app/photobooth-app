@@ -34,7 +34,7 @@ def video_stream(
             media_type="multipart/x-mixed-replace; boundary=frame",
         )
     except ConnectionRefusedError as exc:
-        logger.exception(exc)
+        logger.warning(exc)
         raise HTTPException(405, "preview not enabled") from exc
     except Exception as exc:
         logger.exception(exc)
