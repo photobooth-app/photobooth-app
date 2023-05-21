@@ -4,7 +4,6 @@ _summary_
 import json
 import logging
 import os
-import shutil
 import time
 from dataclasses import asdict, dataclass
 from threading import Thread
@@ -46,7 +45,6 @@ class ProcessingService(StateMachine):
     counting = State()
     capture_still = State()
     postprocess_still = State()
-    copy_still = State()
 
     ## TRANSITIONS
 
@@ -55,9 +53,8 @@ class ProcessingService(StateMachine):
     shoot = (
         idle.to(capture_still) | thrilled.to(capture_still) | counting.to(capture_still)
     )
-    postprocess = capture_still.to(postprocess_still) | copy_still.to(postprocess_still)
-    copy = capture_still.to(copy_still) | postprocess_still.to(copy_still)
-    finalize = postprocess_still.to(idle) | copy_still.to(idle)
+    postprocess = capture_still.to(postprocess_still)
+    finalize = postprocess_still.to(idle)
 
     _reset = (
         idle.to(idle)
@@ -65,7 +62,6 @@ class ProcessingService(StateMachine):
         | counting.to(idle)
         | capture_still.to(idle)
         | postprocess_still.to(idle)
-        | copy_still.to(idle)
     )
 
     def __init__(
@@ -148,14 +144,6 @@ class ProcessingService(StateMachine):
             sse_event="imagedb/newarrival",
             sse_data=json.dumps(mediaitem.asdict()),
         )
-
-    def on_copy(self, filename: str = None):
-        # also create a copy for photobooth compatibility
-        if filename:
-            # photobooth sends a complete path, where to put the file,
-            # so copy it to requested filepath
-
-            shutil.copy2(self._filepath_originalimage_processing, filename)
 
     ## specific on_state actions:
 
