@@ -12,7 +12,7 @@ pydantic==1.10.7
 pymitter==0.4.0
 PyTurboJPEG==1.7.1
 requests==2.30.0
-sse_starlette==1.6.0
+sse_starlette==1.6.1
 python-statemachine==2.0.0
 uvicorn==0.22.0
 python-dotenv==1.0.0
