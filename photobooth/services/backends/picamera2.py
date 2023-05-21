@@ -362,14 +362,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.stop_encoder()
         self._last_config = self._current_config
 
-        logger.critical(
-            f"_switch_mode: {self._picamera2.is_open=}, {self._picamera2.started=}"
-        )
-
-        logger.critical("_switch_mode: pre")
-        # logger.critical(f"{self._currentmode=}")
         self._picamera2.switch_mode(self._current_config)
-        logger.critical("_switch_mode: post")
 
         self._picamera2.start_encoder(
             MJPEGEncoder(),
