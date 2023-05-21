@@ -13,6 +13,7 @@ from typing import Any
 
 import jsonref
 from pydantic import BaseModel, BaseSettings, Extra, Field, PrivateAttr
+from pydantic.color import Color
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,13 @@ class GroupCommon(BaseModel):
         le=100,
         description="Still JPEG full resolution quality, applied to download images and images with filter",
         ui_component="QSlider",
+    )
+
+    FULL_STILL_WIDTH: int = Field(
+        default=1500,
+        ge=800,
+        le=5000,
+        description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
     )
     PREVIEW_STILL_WIDTH: int = Field(
         default=900,
@@ -249,6 +257,72 @@ class GroupBackends(BaseModel):
     )
 
 
+class EnumPilgramFilter(str, Enum):
+    """enum to choose image filter from, pilgram filter"""
+
+    original = "original"
+
+    _1977 = "_1977"
+    aden = "aden"
+    brannan = "brannan"
+    brooklyn = "brooklyn"
+    clarendon = "clarendon"
+    earlybird = "earlybird"
+    gingham = "gingham"
+    hudson = "hudson"
+    inkwell = "inkwell"
+    kelvin = "kelvin"
+    lark = "lark"
+    lofi = "lofi"
+    maven = "maven"
+    mayfair = "mayfair"
+    moon = "moon"
+    nashville = "nashville"
+    perpetua = "perpetua"
+    reyes = "reyes"
+    rise = "rise"
+    slumber = "slumber"
+    stinson = "stinson"
+    toaster = "toaster"
+    valencia = "valencia"
+    walden = "walden"
+    willow = "willow"
+    xpro2 = "xpro2"
+
+
+class TextStageConfig(BaseModel):
+    text: str = ""
+    pos_x: int = 50
+    pos_y: int = 50
+    # rotation: int = 0 # TODO: not yet implemented
+    font_size: int = 20
+    font: str = "Roboto-Bold.ttf"
+    color: Color = Color("red")
+
+
+class GroupMediaprocessing(BaseModel):
+    """Configure stages how to process images after capture."""
+
+    class Config:
+        title = "Process media after capture"
+
+    pic1_enable_pipeline: bool = Field(
+        default=False,
+        description="Enable/Disable 1pic processing pipeline completely",
+    )
+
+    pic1_filter: EnumPilgramFilter = Field(
+        title="Pic1 Filter",
+        default=EnumPilgramFilter.original,
+        description="Instagram-like filter to apply per default. 'original' applies no filter.",
+    )
+
+    pic1_text_overlay: list[TextStageConfig] = Field(
+        default=[],
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/fonts/",
+    )
+
+
 class GroupHardwareInput(BaseModel):
     """Configure GPIO, keyboard and more."""
 
@@ -370,6 +444,7 @@ class AppConfig(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     wled: GroupWled = GroupWled()

@@ -4,11 +4,8 @@ _summary_
 import json
 import logging
 import os
-import shutil
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime
-from pathlib import Path
 from threading import Thread
 
 from pymitter import EventEmitter
@@ -16,11 +13,11 @@ from statemachine import State, StateMachine
 
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
+from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
-    PATH_ORIGINAL,
     MediacollectionService,
-    MediaItem,
 )
+from .mediaprocessingservice import MediaprocessingService
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +45,6 @@ class ProcessingService(StateMachine):
     counting = State()
     capture_still = State()
     postprocess_still = State()
-    copy_still = State()
 
     ## TRANSITIONS
 
@@ -57,9 +53,8 @@ class ProcessingService(StateMachine):
     shoot = (
         idle.to(capture_still) | thrilled.to(capture_still) | counting.to(capture_still)
     )
-    postprocess = capture_still.to(postprocess_still) | copy_still.to(postprocess_still)
-    copy = capture_still.to(copy_still) | postprocess_still.to(copy_still)
-    finalize = postprocess_still.to(idle) | copy_still.to(idle)
+    postprocess = capture_still.to(postprocess_still)
+    finalize = postprocess_still.to(idle)
 
     _reset = (
         idle.to(idle)
@@ -67,7 +62,6 @@ class ProcessingService(StateMachine):
         | counting.to(idle)
         | capture_still.to(idle)
         | postprocess_still.to(idle)
-        | copy_still.to(idle)
     )
 
     def __init__(
@@ -76,11 +70,13 @@ class ProcessingService(StateMachine):
         config: AppConfig,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
+        mediaprocessing_service: MediaprocessingService,
     ):
         self._evtbus: EventEmitter = evtbus
         self._config: AppConfig = config
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
+        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 
         self.timer: Thread = None
         self.timer_countdown = 0
@@ -108,6 +104,15 @@ class ProcessingService(StateMachine):
     def on_enter_state(self, event, state):
         """_summary_"""
         logger.info(f"Entering '{state.id}' state from '{event}' event.")
+        logger.info(f"current state '{self.current_state.id}' ")
+
+        # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
+        self._sse_processinfo(
+            __class__.Stateinfo(
+                state=self.current_state.id,
+                countdown=self.timer_countdown,
+            )
+        )
 
     def after_transition(self, event, state):
         """_summary_"""
@@ -122,37 +127,32 @@ class ProcessingService(StateMachine):
     def on_shoot(self):
         """_summary_"""
 
-    def on_postprocess(self):
+    def on_enter_postprocess_still(self):
         # create JPGs and add to db
-        start_time_postproc = time.time()
 
-        item: MediaItem = (
-            self._mediacollection_service.create_imageset_from_originalimage(
-                os.path.basename(self._filepath_originalimage_processing)
-            )
-        )
+        # TODO: collage: separate postprocessing step 2 mount collage and create a new original.
 
-        _ = self._mediacollection_service.db_add_item(item)
+        # create mediaitem for further processing
+        mediaitem = MediaItem(os.path.basename(self._filepath_originalimage_processing))
 
-        logger.info(f"capture {item=} successful")
+        # apply 1pic pipeline:
+        tms = time.time()
+        self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
         logger.info(
-            f"post process time: {round((time.time() - start_time_postproc), 2)}s"
+            f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline"
         )
+
+        # add result to db
+        _ = self._mediacollection_service.db_add_item(mediaitem)
+
+        logger.info(f"capture {mediaitem=} successful")
 
         # to inform frontend about new image to display
         self._evtbus.emit(
             "publishSSE",
             sse_event="imagedb/newarrival",
-            sse_data=json.dumps(item.asdict()),
+            sse_data=json.dumps(mediaitem.asdict()),
         )
-
-    def on_copy(self, filename: str = None):
-        # also create a copy for photobooth compatibility
-        if filename:
-            # photobooth sends a complete path, where to put the file,
-            # so copy it to requested filepath
-
-            shutil.copy2(self._filepath_originalimage_processing, filename)
 
     ## specific on_state actions:
 
@@ -160,14 +160,6 @@ class ProcessingService(StateMachine):
         """_summary_"""
         # always remove old reference
         self._filepath_originalimage_processing = None
-
-        # send 0 countdown to UI
-        self._sse_processinfo(
-            __class__.Stateinfo(
-                state=self.current_state.id,
-                countdown=0,
-            )
-        )
 
     def on_enter_counting(self):
         """_summary_"""
@@ -201,10 +193,7 @@ class ProcessingService(StateMachine):
         """_summary_"""
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
-        filepath_neworiginalfile = Path(
-            PATH_ORIGINAL,
-            f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
-        )
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         start_time_capture = time.time()
@@ -215,6 +204,15 @@ class ProcessingService(StateMachine):
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 image_bytes = self._aquisition_service.wait_for_hq_image()
+
+                # send 0 countdown to UI
+                self._sse_processinfo(
+                    __class__.Stateinfo(
+                        state=self.current_state.id,
+                        countdown=0,
+                    )
+                )
+
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
 
@@ -238,7 +236,7 @@ class ProcessingService(StateMachine):
             )
 
         logger.info(
-            f"capture still took time: {round((time.time() - start_time_capture), 2)}s"
+            f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still"
         )
 
     def on_exit_capture_still(self):

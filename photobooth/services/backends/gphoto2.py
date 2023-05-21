@@ -13,7 +13,6 @@ except Exception as import_exc:
     raise OSError("gphoto2 not supported on windows platform") from import_exc
 
 from pymitter import EventEmitter
-from turbojpeg import TurboJPEG
 
 from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
 from photobooth.utils.stoppablethread import StoppableThread
@@ -21,7 +20,6 @@ from photobooth.utils.stoppablethread import StoppableThread
 from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 
 class Gphoto2Backend(AbstractBackend):
