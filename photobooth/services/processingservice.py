@@ -104,6 +104,15 @@ class ProcessingService(StateMachine):
     def on_enter_state(self, event, state):
         """_summary_"""
         logger.info(f"Entering '{state.id}' state from '{event}' event.")
+        logger.info(f"current state '{self.current_state.id}' ")
+
+        # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
+        self._sse_processinfo(
+            __class__.Stateinfo(
+                state=self.current_state.id,
+                countdown=self.timer_countdown,
+            )
+        )
 
     def after_transition(self, event, state):
         """_summary_"""
@@ -118,7 +127,7 @@ class ProcessingService(StateMachine):
     def on_shoot(self):
         """_summary_"""
 
-    def on_postprocess(self):
+    def on_enter_postprocess_still(self):
         # create JPGs and add to db
 
         # TODO: collage: separate postprocessing step 2 mount collage and create a new original.
@@ -151,14 +160,6 @@ class ProcessingService(StateMachine):
         """_summary_"""
         # always remove old reference
         self._filepath_originalimage_processing = None
-
-        # send 0 countdown to UI
-        self._sse_processinfo(
-            __class__.Stateinfo(
-                state=self.current_state.id,
-                countdown=0,
-            )
-        )
 
     def on_enter_counting(self):
         """_summary_"""
