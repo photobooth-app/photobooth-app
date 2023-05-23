@@ -447,3 +447,4 @@ class Picamera2Backend(AbstractBackend):
             # counter to calc the fps
             # broken since capture_metadata is commented.
             # self._count += 1
+        logger.info("_generate_images_fun left")
