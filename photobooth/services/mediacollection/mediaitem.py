@@ -29,8 +29,25 @@ def get_new_filename(
 ) -> Path:
     return Path(
         PATH_ORIGINAL,
-        f"{type.value}_{visibility}_{datetime.now().astimezone().strftime('%Y%m%d_%H%M%S-%f')}.jpg",
+        f"{type.value}_{visibility}_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.jpg",
     )
+
+
+def split_filename(filename):
+    splitted = Path(filename).stem.split("_", 2)
+    return splitted
+
+
+def get_type(filename) -> MediaItemTypes:
+    return MediaItemTypes(value=split_filename(filename)[0])
+
+
+def get_visibility(filename) -> bool:
+    return split_filename(filename)[1].lower() == "true"
+
+
+def get_caption(filename) -> str:
+    return split_filename(filename)[2]
 
 
 @dataclass
@@ -45,25 +62,23 @@ class MediaItem:
 
     @property
     def caption(self) -> str:
-        return Path(self.filename).stem
+        return get_caption(self.filename)
 
     @property
     def datetime(self) -> float:
-        # cache useful here?
         return os.path.getmtime(self.path_full)
 
     @property
-    def type(self) -> MediaItemTypes:
-        return MediaItemTypes.IMAGE  # TODO: derive from filename
+    def media_type(self) -> MediaItemTypes:
+        return get_type(self.filename)
 
     @property
     def visible(self) -> bool:
-        return True  # TODO: derive from filename
+        return get_visibility(self.filename)
 
     @property
-    def ext_download_url(self) -> str:
-        return "placeholder, needs revision! This is not the right place. TODO: "
-        # return self._config.common.EXT_DOWNLOAD_URL.format(filename=self.filename)
+    def data_type(self) -> str:
+        return Path(self.filename).suffix[1:]
 
     @property
     def path_original(self) -> Path:
@@ -117,7 +132,11 @@ class MediaItem:
         if not self.filename:
             raise ValueError("Filename must be given")
 
-        # TODO: if filename has no information about type and visibility: raise Exception
+        # if filename has no information about type and visibility: raise Exception
+        if not (len(split_filename(self.filename)) == 3):
+            raise ValueError(
+                f"the original_file {self.filename} is not a valid filename - ignored"
+            )
 
         if not ((self.path_original).is_file()):
             raise FileNotFoundError(
