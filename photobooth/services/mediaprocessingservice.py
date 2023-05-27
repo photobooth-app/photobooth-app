@@ -186,9 +186,13 @@ class MediaprocessingService(BaseService):
         return buffer_in
 
     def _create_full_repr(self, mediaitem: MediaItem, buffer_in: bytes):
-        ## full version, no pipeline applied, just to not fail
+        buffer_full = self.resize_jpeg(
+            buffer_in,
+            self._config.common.HIRES_STILL_QUALITY,
+            self._config.common.FULL_STILL_WIDTH,
+        )
         with open(mediaitem.path_full, "wb") as file:
-            file.write(buffer_in)
+            file.write(buffer_full)
 
     def _create_preview_repr(self, mediaitem: MediaItem, buffer_in: bytes):
         buffer_preview = self.resize_jpeg(
