@@ -9,6 +9,7 @@ from ..appconfig import EnumPilgramFilter
 from ..containers import ApplicationContainer
 from ..services.mediacollectionservice import MediacollectionService
 from ..services.mediaprocessing.image_pipelinestages import pilgram_stage
+from ..services.mediaprocessingservice import MediaprocessingService
 from ..utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ def api_get_list_filteravail(
 @inject
 def api_get_preview_image_filtered(
     mediaitem_id,
-    filter,
+    filter=None,
     mediacollection_service: MediacollectionService = Depends(
         Provide[ApplicationContainer.services.mediacollection_service]
     ),
@@ -40,8 +41,7 @@ def api_get_preview_image_filtered(
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
-        with open(mediaitem.path_thumbnail, "rb") as file:
-            image_bytes: bytes = file.read()
+        image = Image.open(mediaitem.path_thumbnail)
     except FileNotFoundError as exc:
         # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found
         raise HTTPException(
@@ -49,10 +49,9 @@ def api_get_preview_image_filtered(
             detail=f"{mediaitem_id=} cannot be found. {exc}",
         ) from exc
 
-    image = Image.open(io.BytesIO(image_bytes))
-
     try:
-        image = pilgram_stage(image, filter)
+        if not (filter is None or filter == "original"):
+            image = pilgram_stage(image, filter)
     except PipelineError as exc:
         logger.error(
             f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue"
@@ -72,3 +71,29 @@ def api_get_preview_image_filtered(
     return Response(
         content=buffer_full_pipeline_applied.getvalue(), media_type="image/jpeg"
     )
+
+
+@mediaprocessing_router.get("/applyfilter/{mediaitem_id}/{filter}")
+@inject
+def api_get_applyfilter(
+    mediaitem_id,
+    filter: str = None,
+    mediacollection_service: MediacollectionService = Depends(
+        Provide[ApplicationContainer.services.mediacollection_service]
+    ),
+    mediaprocessing_service: MediaprocessingService = Depends(
+        Provide[ApplicationContainer.services.mediaprocessing_service]
+    ),
+):
+    try:
+        mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
+
+        mediaprocessing_service.apply_pipeline_1pic(
+            mediaitem, force_apply=True, user_filter=filter
+        )
+    except Exception as exc:
+        logger.error(f"apply pipeline failed, reason: {exc}. stage not applied!")
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail=f"apply pipeline failed, reason: {exc}. stage not applied!",
+        ) from exc
