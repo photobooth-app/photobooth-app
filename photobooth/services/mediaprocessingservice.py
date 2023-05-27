@@ -9,7 +9,7 @@ from PIL import Image
 from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
-from ..appconfig import AppConfig, EnumPilgramFilter
+from ..appconfig import AppConfig
 from ..utils.exceptions import PipelineError
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem
@@ -28,11 +28,16 @@ class MediaprocessingService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus=evtbus, config=config)
 
-    def apply_pipeline_1pic(self, mediaitem: MediaItem):
+    def apply_pipeline_1pic(
+        self,
+        mediaitem: MediaItem,
+        force_apply: bool = False,
+        user_filter: str = None,
+    ):
         """always apply preconfigured pipeline."""
         tms = time.time()
 
-        if not self._config.mediaprocessing.pic1_enable_pipeline:
+        if not self._config.mediaprocessing.pic1_enable_pipeline and not force_apply:
             # quick: only create scaled versions
             logger.info("1pic pipeline disabled in config.")
 
@@ -69,15 +74,15 @@ class MediaprocessingService(BaseService):
             )
 
         ## stage 4: pilgram filter
-        if (
-            self._config.mediaprocessing.pic1_filter
-            and not self._config.mediaprocessing.pic1_filter
-            == EnumPilgramFilter.original
-        ):
+        filter = (
+            user_filter
+            if user_filter is not None
+            else self._config.mediaprocessing.pic1_filter.value
+        )
+
+        if filter is not None or filter != "original":
             try:
-                image = pilgram_stage(
-                    image, self._config.mediaprocessing.pic1_filter.value
-                )
+                image = pilgram_stage(image, filter)
             except PipelineError as exc:
                 logger.error(
                     f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue"
