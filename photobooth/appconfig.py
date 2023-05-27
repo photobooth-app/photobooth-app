@@ -369,7 +369,7 @@ class GroupUiSettings(BaseModel):
         description="Offset in seconds, the message above shall be shown.",
     )
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
-        default=15,
+        default=30,
         description="Timeout in seconds a new item popup closes automatically.",
     )
     SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
@@ -379,6 +379,22 @@ class GroupUiSettings(BaseModel):
     EXT_DOWNLOAD_URL: str = Field(
         default="http://dl.qbooth.net/{filename}",
         description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
+    )
+    gallery_show_filter: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_download: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_delete: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_print: bool = Field(
+        default=False,
+        description="",
     )
 
 
