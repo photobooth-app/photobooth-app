@@ -2,7 +2,7 @@
 
 #setup rclone with "rclone config" first! use "boothupload" as remote name
 
-SOURCE_DIR="/var/www/html/data/images/"
+SOURCE_DIR="$HOME/photobooth-app/data/original/"
 DEST_DIR="boothupload:/"
 
 #wait until wifi established for init sync.
