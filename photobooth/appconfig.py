@@ -313,7 +313,13 @@ class GroupMediaprocessing(BaseModel):
         default=EnumPilgramFilter.original,
         description="Instagram-like filter to apply per default. 'original' applies no filter.",
     )
-
+    """#TODO:
+    pic1_filter_userselectable: list[EnumPilgramFilter] = Field(
+        title="Pic1 Filter Userselectable",
+        default=[EnumPilgramFilter.original, EnumPilgramFilter._1977],
+        description="Filter the user may choose from in the gallery. 'original' applies no filter.",
+    )
+    """
     pic1_text_overlay: list[TextStageConfig] = Field(
         default=[],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/fonts/",
