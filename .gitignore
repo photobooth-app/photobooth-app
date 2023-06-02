@@ -1,6 +1,9 @@
 /config/*.json
-data/*/*
-!.empty
+
+/data/original
+/data/processed
+/data/unprocessed
+
 __pycache__
 log/*.log*
 .env
