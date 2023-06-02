@@ -26,6 +26,9 @@ omit = [
 parallel = true
 concurrency = ["thread","multiprocessing"]
 
+[tool.black]
+line-length = 120
+
 [tool.ruff]
 line-length = 120
 select = [
