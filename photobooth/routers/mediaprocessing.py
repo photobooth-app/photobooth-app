@@ -41,7 +41,7 @@ def api_get_preview_image_filtered(
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
-        image = Image.open(mediaitem.path_thumbnail)
+        image = Image.open(mediaitem.path_thumbnail_unprocessed)
     except FileNotFoundError as exc:
         # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found
         raise HTTPException(
@@ -53,24 +53,20 @@ def api_get_preview_image_filtered(
         if not (filter is None or filter == "original"):
             image = pilgram_stage(image, filter)
     except PipelineError as exc:
-        logger.error(
-            f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue"
-        )
+        logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"{filter=} cannot be found. {exc}",
         ) from exc
 
-    buffer_full_pipeline_applied = io.BytesIO()
+    buffer_preview_pipeline_applied = io.BytesIO()
     image.save(
-        buffer_full_pipeline_applied,
+        buffer_preview_pipeline_applied,
         format="jpeg",
         quality=80,
         optimize=True,
     )
-    return Response(
-        content=buffer_full_pipeline_applied.getvalue(), media_type="image/jpeg"
-    )
+    return Response(content=buffer_preview_pipeline_applied.getvalue(), media_type="image/jpeg")
 
 
 @mediaprocessing_router.get("/applyfilter/{mediaitem_id}/{filter}")
@@ -88,9 +84,7 @@ def api_get_applyfilter(
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
-        mediaprocessing_service.apply_pipeline_1pic(
-            mediaitem, force_apply=True, user_filter=filter
-        )
+        mediaprocessing_service.apply_pipeline_1pic(mediaitem, user_filter=filter)
     except Exception as exc:
         logger.error(f"apply pipeline failed, reason: {exc}. stage not applied!")
         raise HTTPException(

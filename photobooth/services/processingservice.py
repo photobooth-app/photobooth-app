@@ -50,19 +50,11 @@ class ProcessingService(StateMachine):
 
     thrill = idle.to(thrilled)
     countdown = thrilled.to(counting)
-    shoot = (
-        idle.to(capture_still) | thrilled.to(capture_still) | counting.to(capture_still)
-    )
+    shoot = idle.to(capture_still) | thrilled.to(capture_still) | counting.to(capture_still)
     postprocess = capture_still.to(postprocess_still)
     finalize = postprocess_still.to(idle)
 
-    _reset = (
-        idle.to(idle)
-        | thrilled.to(idle)
-        | counting.to(idle)
-        | capture_still.to(idle)
-        | postprocess_still.to(idle)
-    )
+    _reset = idle.to(idle) | thrilled.to(idle) | counting.to(idle) | capture_still.to(idle) | postprocess_still.to(idle)
 
     def __init__(
         self,
@@ -135,12 +127,15 @@ class ProcessingService(StateMachine):
         # create mediaitem for further processing
         mediaitem = MediaItem(os.path.basename(self._filepath_originalimage_processing))
 
+        # always create unprocessed versions for later usage
+        tms = time.time()
+        self._mediaprocessing_service.create_scaled_unprocessed_repr(mediaitem)
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
+
         # apply 1pic pipeline:
         tms = time.time()
         self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
-        logger.info(
-            f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline"
-        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
         # add result to db
         _ = self._mediacollection_service.db_add_item(mediaitem)
@@ -164,8 +159,7 @@ class ProcessingService(StateMachine):
     def on_enter_counting(self):
         """_summary_"""
         self.timer_countdown = (
-            self._config.common.PROCESS_COUNTDOWN_TIMER
-            + self._config.common.PROCESS_COUNTDOWN_OFFSET
+            self._config.common.PROCESS_COUNTDOWN_TIMER + self._config.common.PROCESS_COUNTDOWN_OFFSET
         )
         logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
         logger.info("starting timer")
@@ -180,10 +174,7 @@ class ProcessingService(StateMachine):
             time.sleep(0.1)
             self.timer_countdown -= 0.1
 
-            if (
-                self.timer_countdown <= self._config.common.PROCESS_COUNTDOWN_OFFSET
-                and self.counting.is_active
-            ):
+            if self.timer_countdown <= self._config.common.PROCESS_COUNTDOWN_OFFSET and self.counting.is_active:
                 return
 
     def on_exit_counting(self):
@@ -219,25 +210,18 @@ class ProcessingService(StateMachine):
                 # populate image item for further processing:
                 self._filepath_originalimage_processing = filepath_neworiginalfile
             except TimeoutError:
-                logger.error(
-                    f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
-                )
+                logger.error(f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
                 # can we do additional error handling here?
             else:
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
             logger.critical(
-                "critical error capture image. "
-                f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
+                "critical error capture image. " f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
             )
-            raise RuntimeError(
-                f"finally failed after {MAX_ATTEMPTS} attempts to capture image!"
-            )
+            raise RuntimeError(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
 
-        logger.info(
-            f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still"
-        )
+        logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
     def on_exit_capture_still(self):
         """_summary_"""

@@ -13,9 +13,12 @@ from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .mediacollection.mediaitem import (
     PATH_FULL,
+    PATH_FULL_UNPROCESSED,
     PATH_ORIGINAL,
     PATH_PREVIEW,
+    PATH_PREVIEW_UNPROCESSED,
     PATH_THUMBNAIL,
+    PATH_THUMBNAIL_UNPROCESSED,
     MediaItem,
 )
 from .mediaprocessingservice import MediaprocessingService
@@ -45,13 +48,14 @@ class MediacollectionService(BaseService):
         os.makedirs(f"{PATH_FULL}", exist_ok=True)
         os.makedirs(f"{PATH_PREVIEW}", exist_ok=True)
         os.makedirs(f"{PATH_THUMBNAIL}", exist_ok=True)
+        os.makedirs(f"{PATH_FULL_UNPROCESSED}", exist_ok=True)
+        os.makedirs(f"{PATH_PREVIEW_UNPROCESSED}", exist_ok=True)
+        os.makedirs(f"{PATH_THUMBNAIL_UNPROCESSED}", exist_ok=True)
 
         self._init_db()
 
     def _init_db(self):
-        self._logger.info(
-            "init database and creating missing scaled images. this might take some time."
-        )
+        self._logger.info("init database and creating missing scaled images. this might take some time.")
 
         image_paths = sorted(glob.glob(f"{PATH_ORIGINAL}*.jpg"))
 
@@ -66,13 +70,9 @@ class MediacollectionService(BaseService):
                 self.db_add_item(mediaitem)
 
             except Exception as exc:
-                self._logger.error(
-                    f"file {filename} processing failed. file ignored. {exc}"
-                )
+                self._logger.error(f"file {filename} processing failed. file ignored. {exc}")
 
-        self._logger.info(
-            f"initialized image DB, added {self.number_of_images} valid images"
-        )
+        self._logger.info(f"initialized image DB, added {self.number_of_images} valid images")
         self._logger.info(
             f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection"
         )
@@ -140,10 +140,14 @@ class MediacollectionService(BaseService):
             item = self.db_get_image_by_id(item_id)
             self._logger.debug(f"found item={item}")
 
-            os.remove(item.original)
-            os.remove(item.full)
-            os.remove(item.preview)
-            os.remove(item.thumbnail)
+            os.remove(item.path_original)
+            os.remove(item.path_full_unprocessed)
+            os.remove(item.path_full)
+            os.remove(item.path_preview_unprocessed)
+            os.remove(item.path_preview)
+            os.remove(item.path_thumbnail_unprocessed)
+            os.remove(item.path_thumbnail)
+
             self._db_delete_item_by_item(item)
         except Exception as exc:
             self._logger.exception(exc)
@@ -160,6 +164,12 @@ class MediacollectionService(BaseService):
             for file in Path(f"{PATH_PREVIEW}").glob("*.jpg"):
                 os.remove(file)
             for file in Path(f"{PATH_THUMBNAIL}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{PATH_FULL_UNPROCESSED}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{PATH_PREVIEW_UNPROCESSED}").glob("*.jpg"):
+                os.remove(file)
+            for file in Path(f"{PATH_THUMBNAIL_UNPROCESSED}").glob("*.jpg"):
                 os.remove(file)
             self._db_delete_items()
         except OSError as exc:

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-import pilgram
+import pilgram2
 from PIL import Image, ImageDraw, ImageFont
 
 from ...appconfig import TextStageConfig
@@ -16,7 +16,7 @@ def pilgram_stage(image: Image, filter: str) -> Image:
     """ """
     logger.info(f"pilgram filter stage {filter} to apply")
     try:
-        algofun = getattr(pilgram, filter)
+        algofun = getattr(pilgram2, filter)
     except Exception as exc:
         raise PipelineError(f"pilgram filter {filter} does not exist") from exc
     else:

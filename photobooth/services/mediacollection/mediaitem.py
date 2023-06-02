@@ -12,10 +12,20 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"
+# as from image source
 PATH_ORIGINAL = "".join([DATA_PATH, "original/"])
-PATH_FULL = "".join([DATA_PATH, "full/"])
-PATH_PREVIEW = "".join([DATA_PATH, "preview/"])
-PATH_THUMBNAIL = "".join([DATA_PATH, "thumbnail/"])
+# represents unaltered data from image source in S/M/L
+PATH_UNPROCESSED = "".join([DATA_PATH, "unprocessed/"])
+# represents pipeline-applied data of images
+PATH_PROCESSED = "".join([DATA_PATH, "processed/"])
+
+PATH_FULL_UNPROCESSED = "".join([PATH_UNPROCESSED, "full/"])
+PATH_PREVIEW_UNPROCESSED = "".join([PATH_UNPROCESSED, "preview/"])
+PATH_THUMBNAIL_UNPROCESSED = "".join([PATH_UNPROCESSED, "thumbnail/"])
+
+PATH_FULL = "".join([PATH_PROCESSED, "full/"])
+PATH_PREVIEW = "".join([PATH_PROCESSED, "preview/"])
+PATH_THUMBNAIL = "".join([PATH_PROCESSED, "thumbnail/"])
 
 
 class MediaItemTypes(str, Enum):
@@ -24,9 +34,7 @@ class MediaItemTypes(str, Enum):
     VIDEO = "video"
 
 
-def get_new_filename(
-    type: MediaItemTypes = MediaItemTypes.IMAGE, visibility: bool = True
-) -> Path:
+def get_new_filename(type: MediaItemTypes = MediaItemTypes.IMAGE, visibility: bool = True) -> Path:
     return Path(
         PATH_ORIGINAL,
         f"{type.value}_{visibility}_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.jpg",
@@ -66,7 +74,7 @@ class MediaItem:
 
     @property
     def datetime(self) -> float:
-        return os.path.getmtime(self.path_full)
+        return os.path.getmtime(self.path_original)
 
     @property
     def media_type(self) -> MediaItemTypes:
@@ -87,16 +95,33 @@ class MediaItem:
         return Path(PATH_ORIGINAL, self.filename)
 
     @property
+    def path_full_unprocessed(self) -> Path:
+        """filepath of media item full resolution from device but unprocessed, used to reapply pipline chosen by user"""
+        return Path(PATH_FULL_UNPROCESSED, self.filename)
+
+    @property
     def path_full(self) -> Path:
         """filepath of media item full resolution from device but processed, example background/beautyfilter
         internal use in imagedb"""
         return Path(PATH_FULL, self.filename)
 
     @property
+    def path_preview_unprocessed(self) -> Path:
+        """filepath of media item preview resolution scaled represents full_unprocessed
+        internal use in imagedb"""
+        return Path(PATH_PREVIEW_UNPROCESSED, self.filename)
+
+    @property
     def path_preview(self) -> Path:
         """filepath of media item preview resolution scaled represents full
         internal use in imagedb"""
         return Path(PATH_PREVIEW, self.filename)
+
+    @property
+    def path_thumbnail_unprocessed(self) -> Path:
+        """filepath of media item thumbnail resolution scaled represents full_unprocessed
+        internal use in imagedb"""
+        return Path(PATH_THUMBNAIL_UNPROCESSED, self.filename)
 
     @property
     def path_thumbnail(self) -> Path:
@@ -134,9 +159,7 @@ class MediaItem:
 
         # if filename has no information about type and visibility: raise Exception
         if not (len(split_filename(self.filename)) == 3):
-            raise ValueError(
-                f"the original_file {self.filename} is not a valid filename - ignored"
-            )
+            raise ValueError(f"the original_file {self.filename} is not a valid filename - ignored")
 
         if not ((self.path_original).is_file()):
             raise FileNotFoundError(
@@ -149,10 +172,11 @@ class MediaItem:
             and (self.path_full).is_file()
             and (self.path_preview).is_file()
             and (self.path_thumbnail).is_file()
+            and (self.path_full_unprocessed).is_file()
+            and (self.path_preview_unprocessed).is_file()
+            and (self.path_thumbnail_unprocessed).is_file()
         ):
-            raise FileNotFoundError(
-                f"the imageset is incomplete, not adding {self.filename} to database"
-            )
+            raise FileNotFoundError(f"the imageset {self.filename=} is incomplete")
 
     def asdict(self) -> dict:
         """Returns a dict including all properties, excluding __xx__ and other callable functions.
@@ -169,8 +193,6 @@ class MediaItem:
             if (
                 not prop.startswith("__")  # no privates
                 and not callable(getattr(__class__, prop, None))  # no callables
-                and not isinstance(
-                    getattr(self, prop), Path
-                )  # no path instances (not json.serializable)
+                and not isinstance(getattr(self, prop), Path)  # no path instances (not json.serializable)
             )
         }
