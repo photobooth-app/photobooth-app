@@ -64,7 +64,9 @@ class Picamera2LibcamAfInterval:
         """Use to ensure focus is finished (or cancel/failed if no success) before capture."""
         # interval can only cancel current focus run if active
         # currently no reliable way to receive the current focus state until capture_metadata is reimplemented again.
-        self._backend._picamera2.set_controls({"AfTrigger": controls.AfTrigger.Cancel})
+        self._backend._picamera2.set_controls(
+            {"AfTrigger": controls.AfTriggerEnum.Cancel}
+        )
 
         # wait typical time, the motor needs to move back to previous position
         time.sleep(0.04)
