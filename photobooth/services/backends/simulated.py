@@ -183,15 +183,9 @@ def img_aquisition(
 
         # add text
         img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(
-            font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=22
-        )
-        font_small = ImageFont.truetype(
-            font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=15
-        )
-        img_draw.text(
-            (25, 100), "simulated image source", fill=text_fill, font=font_large
-        )
+        font_large = ImageFont.truetype(font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=22)
+        font_small = ImageFont.truetype(font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=15)
+        img_draw.text((25, 100), "simulated image source", fill=text_fill, font=font_large)
 
         img_draw.text(
             (25, 130),

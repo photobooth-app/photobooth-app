@@ -36,14 +36,10 @@ class SystemService(BaseService):
                 check=True,
             )
         except FileNotFoundError:
-            self._logger.info(
-                f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself."
-            )
+            self._logger.info(f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
         except subprocess.CalledProcessError as exc:
             # non zero returncode
-            self._logger.warning(
-                f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}"
-            )
+            self._logger.warning(f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
         except subprocess.TimeoutExpired as exc:
             self._logger.error(f"subprocess timeout {exc}")
         else:

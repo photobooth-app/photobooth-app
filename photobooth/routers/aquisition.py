@@ -18,9 +18,7 @@ aquisition_router = APIRouter(
 @aquisition_router.get("/stream.mjpg")
 @inject
 def video_stream(
-    aquisition_service: AquisitionService = Depends(
-        Provide[ApplicationContainer.services.aquisition_service]
-    ),
+    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
 ):
     """
     endpoint to stream live video to clients
@@ -53,9 +51,7 @@ def video_stream(
 )
 @inject
 def api_still_get(
-    aquisition_service: AquisitionService = Depends(
-        Provide[ApplicationContainer.services.aquisition_service]
-    ),
+    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
 ):
     """Aquire image and serve to download
 

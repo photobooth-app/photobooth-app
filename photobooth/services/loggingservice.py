@@ -35,9 +35,7 @@ class EventstreamLogHandler(logging.Handler):
 
     def _emit_initlogs(self):
         for logrecord in self._initlogrecords:
-            self._evtbus.emit(
-                "publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord)
-            )
+            self._evtbus.emit("publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord))
         # stop adding new records
         self._initlogrecords_emitted = True
 
@@ -45,9 +43,7 @@ class EventstreamLogHandler(logging.Handler):
 
     def emit(self, record: LogRecord):
         logrecord = {
-            "time": datetime.datetime.fromtimestamp(record.created).strftime(
-                "%d.%b.%y %H:%M:%S"
-            ),
+            "time": datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
             "level": record.levelname,
             "message": record.getMessage(),
             "name": record.name,
@@ -61,9 +57,7 @@ class EventstreamLogHandler(logging.Handler):
             # only log first 50 messgaes to not pollute the sse queue
             self._initlogrecords.append(logrecord)
 
-        self._evtbus.emit(
-            "publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord)
-        )
+        self._evtbus.emit("publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord))
 
 
 class LoggingService(BaseService):

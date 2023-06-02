@@ -64,14 +64,10 @@ class BackendsContainer(containers.DeclarativeContainer):
     }
 
     primary_backend = providers.Selector(
-        providers.Callable(
-            lambda cfg_enum: cfg_enum.backends.MAIN_BACKEND.lower(), cfg_enum=config
-        ),
+        providers.Callable(lambda cfg_enum: cfg_enum.backends.MAIN_BACKEND.lower(), cfg_enum=config),
         **backends_set,
     )
     secondary_backend = providers.Selector(
-        providers.Callable(
-            lambda cfg_enum: cfg_enum.backends.LIVE_BACKEND.lower(), cfg_enum=config
-        ),
+        providers.Callable(lambda cfg_enum: cfg_enum.backends.LIVE_BACKEND.lower(), cfg_enum=config),
         **backends_set,
     )

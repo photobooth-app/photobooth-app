@@ -36,9 +36,7 @@ def api_get_config_schema(schema_type: str = "default"):
 @inject
 def api_reset_config(
     config: AppConfig = Depends(Provide[ApplicationContainer.config]),
-    system_service: SystemService = Depends(
-        Provide[ApplicationContainer.services.system_service]
-    ),
+    system_service: SystemService = Depends(Provide[ApplicationContainer.services.system_service]),
 ):
     """
     Reset config, deleting config.json file

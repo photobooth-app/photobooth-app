@@ -23,9 +23,7 @@ try:
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
 except Exception as import_exc:
-    raise OSError(
-        "picamera2/libcamera not supported on windows platform"
-    ) from import_exc
+    raise OSError("picamera2/libcamera not supported on windows platform") from import_exc
 
 logger = logging.getLogger(__name__)
 
@@ -93,31 +91,17 @@ class Picamera2Backend(AbstractBackend):
         self._last_config = None
 
         if not self._config.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
-            logger.info(
-                f"loading autofocus module: "
-                f"picamera2_{self._config.backends.picamera2_focuser_module}"
-            )
-            if (
-                self._config.backends.picamera2_focuser_module
-                == EnumFocuserModule.LIBCAM_AF_CONTINUOUS
-            ):
-                self._autofocus_module = Picamera2LibcamAfContinuous(
-                    self, evtbus=evtbus, config=config
-                )
-            elif (
-                self._config.backends.picamera2_focuser_module
-                == EnumFocuserModule.LIBCAM_AF_INTERVAL
-            ):
-                self._autofocus_module = Picamera2LibcamAfInterval(
-                    self, evtbus=evtbus, config=config
-                )
+            logger.info(f"loading autofocus module: " f"picamera2_{self._config.backends.picamera2_focuser_module}")
+            if self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_CONTINUOUS:
+                self._autofocus_module = Picamera2LibcamAfContinuous(self, evtbus=evtbus, config=config)
+            elif self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_INTERVAL:
+                self._autofocus_module = Picamera2LibcamAfInterval(self, evtbus=evtbus, config=config)
             else:
                 self._autofocus_module = None
 
         else:
             logger.info(
-                "picamera2_focuser_module is disabled. "
-                "Select a focuser module in config to enable autofocus."
+                "picamera2_focuser_module is disabled. " "Select a focuser module in config to enable autofocus."
             )
 
     def start(self):
@@ -188,9 +172,7 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"controls: {self._picamera2.controls}")
 
         self.set_ae_exposure(self._config.backends.picamera2_AE_EXPOSURE_MODE)
-        logger.info(
-            f"stream quality {Quality[self._config.backends.picamera2_stream_quality.name]=}"
-        )
+        logger.info(f"stream quality {Quality[self._config.backends.picamera2_stream_quality.name]=}")
         # start camera
         self._picamera2.start_encoder(
             MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
@@ -204,9 +186,7 @@ class Picamera2Backend(AbstractBackend):
         )
         self._generate_images_thread.start()
 
-        self._stats_thread = StoppableThread(
-            name="_statsThread", target=self._stats_fun, daemon=True
-        )
+        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
 
         if self._autofocus_module:
@@ -272,9 +252,7 @@ class Picamera2Backend(AbstractBackend):
         # exposure time needs math on a possibly None value, do it here separate
         # because None/1000 raises an exception.
         exposure_time = self.metadata.get("ExposureTime", None)
-        exposure_time_ms_raw = (
-            exposure_time / 1000 if exposure_time is not None else None
-        )
+        exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
         return BackendStats(
             backend_name=__name__,
             fps=int(round(self._fps, 0)),
@@ -352,9 +330,7 @@ class Picamera2Backend(AbstractBackend):
         )
 
     def _switch_mode(self):
-        logger.info(
-            "switch_mode invoked, stopping stream encoder, switch mode and restart encoder"
-        )
+        logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
         # revisit later, maybe.
         # sometimes picamera2 got stuck calling switch_mode.
         # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
@@ -395,26 +371,17 @@ class Picamera2Backend(AbstractBackend):
 
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
-            if (
-                self._hires_data.request_ready.is_set() is True
-                and self._current_config != self._capture_config
-            ):
+            if self._hires_data.request_ready.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
-                logger.warning(
-                    "force switchmode to capture config right before taking picture"
-                )
+                logger.warning("force switchmode to capture config right before taking picture")
                 self._on_capture_mode()
 
-            if (
-                not self._current_config == self._last_config
-            ) and self._last_config is not None:
+            if (not self._current_config == self._last_config) and self._last_config is not None:
                 if not self._generate_images_thread.stopped():
                     self._switch_mode()
                 else:
-                    logger.info(
-                        "switch_mode ignored, because shutdown already requested"
-                    )
+                    logger.info("switch_mode ignored, because shutdown already requested")
 
             if self._hires_data.request_ready.is_set():
                 # only capture one pic and return to lores streaming afterwards

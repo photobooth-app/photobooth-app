@@ -208,16 +208,10 @@ class GroupBackends(BaseModel):
         default=EnumImageBackendsLive.DISABLED,
         description="Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability.",
     )
-    LIVEPREVIEW_ENABLED: bool = Field(
-        default=True, description="Enable livestream (if possible)"
-    )
+    LIVEPREVIEW_ENABLED: bool = Field(default=True, description="Enable livestream (if possible)")
 
-    cv2_device_index: int = Field(
-        default=0, description="Device index of webcam opened in cv2 backend"
-    )
-    v4l_device_index: int = Field(
-        default=0, description="Device index of webcam opened in v4l backend"
-    )
+    cv2_device_index: int = Field(default=0, description="Device index of webcam opened in cv2 backend")
+    v4l_device_index: int = Field(default=0, description="Device index of webcam opened in v4l backend")
 
     gphoto2_disable_viewfinder_before_capture: bool = Field(
         default=True,
@@ -461,9 +455,7 @@ class AppConfig(BaseSettings):
     5 The default field values for the Settings model.
     """
 
-    _processed_at: datetime = PrivateAttr(
-        default_factory=datetime.now
-    )  # private attributes
+    _processed_at: datetime = PrivateAttr(default_factory=datetime.now)  # private attributes
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()

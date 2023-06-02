@@ -95,11 +95,7 @@ class AquisitionService(BaseService):
             _type_: _description_
         """
         stats_primary = dataclasses.asdict(self.primary_backend.stats())
-        stats_secondary = (
-            dataclasses.asdict(self.secondary_backend.stats())
-            if self.secondary_backend
-            else None
-        )
+        stats_secondary = dataclasses.asdict(self.secondary_backend.stats()) if self.secondary_backend else None
 
         aquisition_stats = {"primary": stats_primary, "secondary": stats_secondary}
 

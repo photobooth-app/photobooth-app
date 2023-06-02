@@ -74,9 +74,7 @@ class ServicesContainer(containers.DeclarativeContainer):
         secondary=backends.secondary_backend,
     )
 
-    information_service = providers.Resource(
-        init_information_resource, evtbus=evtbus, config=config
-    )
+    information_service = providers.Resource(init_information_resource, evtbus=evtbus, config=config)
 
     mediaprocessing_service = providers.Singleton(
         MediaprocessingService,

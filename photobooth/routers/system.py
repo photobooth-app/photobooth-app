@@ -19,9 +19,7 @@ system_router = APIRouter(
 def api_cmd(
     action,
     param,
-    system_service: SystemService = Depends(
-        Provide[ApplicationContainer.services.system_service]
-    ),
+    system_service: SystemService = Depends(Provide[ApplicationContainer.services.system_service]),
     appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
 ):
     logger.info(f"cmd api requested action={action}, param={param}")

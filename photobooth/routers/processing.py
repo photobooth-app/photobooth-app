@@ -17,9 +17,7 @@ processing_router = APIRouter(
 @processing_router.get("/chose/1pic")
 @inject
 def api_chose_1pic_get(
-    processing_service: ProcessingService = Depends(
-        Provide[ApplicationContainer.services.processing_service]
-    ),
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     try:
         processing_service.evt_chose_1pic_get()
