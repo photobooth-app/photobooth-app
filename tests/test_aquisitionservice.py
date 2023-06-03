@@ -62,9 +62,7 @@ def test_getimages_change_backend_during_runtime():
     aquisition_service = services.aquisition_service()
 
     # main gives image
-    with Image.open(
-        io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())) as img:
         logger.info(img)
         img.verify()
 
@@ -83,15 +81,11 @@ def test_getimages_change_backend_during_runtime():
     aquisition_service = services.aquisition_service()
 
     # now main and secondary provide images
-    with Image.open(
-        io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(
-        io.BytesIO(aquisition_service.secondary_backend.wait_for_hq_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.secondary_backend.wait_for_hq_image())) as img:
         logger.info(img)
         img.verify()
 
@@ -114,26 +108,18 @@ def test_getimages_directlyaccess_backends():
 
     aquisition_service = services.aquisition_service()
 
-    with Image.open(
-        io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.primary_backend.wait_for_hq_image())) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(
-        io.BytesIO(aquisition_service.primary_backend._wait_for_lores_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.primary_backend._wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(
-        io.BytesIO(aquisition_service.secondary_backend.wait_for_hq_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.secondary_backend.wait_for_hq_image())) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(
-        io.BytesIO(aquisition_service.secondary_backend._wait_for_lores_image())
-    ) as img:
+    with Image.open(io.BytesIO(aquisition_service.secondary_backend._wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()

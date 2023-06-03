@@ -27,8 +27,6 @@ def test_singleinstance():
     s.bind((AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port))
 
     with pytest.raises(SystemExit):
-        __main__.guard(
-            AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port
-        )
+        __main__.guard(AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port)
 
     s.close()

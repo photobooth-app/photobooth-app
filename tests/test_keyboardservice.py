@@ -34,12 +34,8 @@ def test_key_callback():
         keyboard_service = services.keyboard_service()
 
     except Exception as exc:
-        logger.info(
-            f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}"
-        )
+        logger.info(f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}")
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
-    keyboard_service._on_key_callback(
-        KeyboardEvent(event_type=KEY_DOWN, name="a", scan_code=None)
-    )
+    keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="a", scan_code=None))

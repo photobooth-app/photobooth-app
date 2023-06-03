@@ -44,9 +44,7 @@ def simplejpeg_encode(frame_from_camera):
     return bytes
 
 
-@pytest.fixture(
-    params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode"]
-)
+@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
