@@ -1,6 +1,6 @@
 [project]
 name = "photobooth app"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.12"
 version = "0.0.1"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
@@ -42,7 +42,7 @@ description = "Photobooth app written in Python supporting DSLR, picamera2, webc
 authors = ["Michael G <me@mgrl.de>"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
+python = ">=3.9,<3.12"
 fastapi = "^0.95.2"
 # https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
 keyboard = {git = "https://github.com/boppreh/keyboard"}
@@ -64,6 +64,7 @@ pilgram2 = "^2.0.2"
 v4l2py = {version = "^2.2.1", platform = "linux"}
 gpiozero = {version = "^1.6.2", platform = "linux"}
 gphoto2 = {version = "^2.3.4", platform = "linux"}
+python-statemachine = "^2.0.0"
 
 
 [tool.poetry.group.dev.dependencies]

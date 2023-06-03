@@ -14,7 +14,12 @@
     {
       "label": "test",
       "type": "shell",
-      "command": "poetry run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
+      "command": "poetry run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./",
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
     },
     {
       "label": "lint",
@@ -34,14 +39,18 @@
     {
       "label": "build",
       "type": "shell",
-      "command": "poetry build"
+      "command": "poetry build",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     },
     {
       "label": "test-upload",
       "type": "shell",
       "command": "poetry publish -r testpypi"
     },
-
     {
       "label": "upload",
       "type": "shell",

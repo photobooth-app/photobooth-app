@@ -3586,6 +3586,17 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "python-statemachine"
+version = "2.0.0"
+description = "Python Finite State Machines made easy."
+optional = false
+python-versions = ">=3.7,<3.12"
+files = [
+    {file = "python_statemachine-2.0.0-py3-none-any.whl", hash = "sha256:90bb9ac523bf24ee2cd7b43c478f84a92ee38e2ced7d387186e15092ea6c77be"},
+    {file = "python_statemachine-2.0.0.tar.gz", hash = "sha256:dd6cafe88fd5eb473afbe365d89c0ac009d71da3b615a5ebd2210c178dfa032b"},
+]
+
+[[package]]
 name = "pyturbojpeg"
 version = "1.7.1"
 description = "A Python wrapper of libjpeg-turbo for decoding and encoding JPEG image."
@@ -3850,5 +3861,5 @@ test = ["ward (>=0.67.0b0)", "ward-coverage (>=0.3.0)"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.9,<4.0"
-content-hash = "546b149ca7dc5f22da92315be144d320fc854aecb41d1bddd89fe7f3e56d2473"
+python-versions = ">=3.9,<3.12"
+content-hash = "c4428392a3a6c8fb8b75ad6bbbcd73ed399e7ae0757029a3a7450ad5306b69c1"
