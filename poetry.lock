@@ -509,7 +509,7 @@ pyobjc = {version = "*", markers = "sys_platform == \"darwin\""}
 [package.source]
 type = "git"
 url = "https://github.com/boppreh/keyboard"
-reference = "HEAD"
+reference = "d232de09bda50ecb5211ebcc59b85bc6da6aaa24"
 resolved_reference = "d232de09bda50ecb5211ebcc59b85bc6da6aaa24"
 
 [[package]]
@@ -3862,4 +3862,4 @@ test = ["ward (>=0.67.0b0)", "ward-coverage (>=0.3.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "c4428392a3a6c8fb8b75ad6bbbcd73ed399e7ae0757029a3a7450ad5306b69c1"
+content-hash = "0b05e254e08fcd843ab636f33f9dbda029bb341df0228666896c5da25ec1c2c7"

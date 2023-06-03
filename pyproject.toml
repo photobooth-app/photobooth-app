@@ -1,5 +1,5 @@
 [project]
-name = "photobooth app"
+name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
 version = "0.0.1"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
@@ -36,16 +36,19 @@ Repository = "https://github.com/mgrl/photobooth-app"
 
 
 [tool.poetry]
-name = "photobooth app"
+name = "photobooth-app"
 version = "0.0.1"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = ["Michael G <me@mgrl.de>"]
+packages = [
+    { include = "photobooth" },
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
 fastapi = "^0.95.2"
 # https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
-keyboard = {git = "https://github.com/boppreh/keyboard"}
+keyboard = {git = "https://github.com/boppreh/keyboard", rev="d232de09bda50ecb5211ebcc59b85bc6da6aaa24"}
 opencv-python = "^4.7.0.72"
 piexif = "^1.1.3"
 pillow = "^9.5.0"
