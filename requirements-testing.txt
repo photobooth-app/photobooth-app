@@ -1,9 +1,0 @@
-#packages required for testing
-#install: pip install --upgrade -r requirements-testing.txt
-pytest
-pytest-benchmark
-pytest-cov
-coverage[toml]
-httpx
-httpx-sse
-simplejpeg
