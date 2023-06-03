@@ -12,34 +12,50 @@
       "command": "pydeps photobooth --max-bacon=1"
     },
     {
-      "label": "pytest with coverage",
+      "label": "test",
       "type": "shell",
-      "command": "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
+      "command": "poetry run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./"
     },
     {
-      "label": "pylint",
+      "label": "lint",
       "type": "shell",
-      "command": "pylint -v *.py ./photobooth/*.py"
+      "command": "poetry run ruff check ."
     },
     {
-      "label": "ruff with --fix",
+      "label": "lint-fix",
       "type": "shell",
-      "command": "ruff check . --fix"
+      "command": "poetry run ruff check . --fix"
+    },
+    {
+      "label": "format",
+      "type": "shell",
+      "command": "poetry run black ."
+    },
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "poetry build"
+    },
+    {
+      "label": "test-upload",
+      "type": "shell",
+      "command": "poetry publish -r testpypi"
+    },
+
+    {
+      "label": "upload",
+      "type": "shell",
+      "command": "poetry publish -r pypi"
+    },
+    {
+      "label": "clean",
+      "type": "shell",
+      "command": "rm -rf dist"
     },
     {
       "label": "statemachine diagram (needs pydot and graphviz)",
       "type": "shell",
       "command": "python -m statemachine.contrib.diagram photobooth.services.processing.ProcessingPicture diagram_ProcessingPicture.png"
-    },
-    {
-      "label": "list outdated pip packages",
-      "type": "shell",
-      "command": "pip list --outdated"
-    },
-    {
-      "label": "gather requirements.txt pip packages",
-      "type": "shell",
-      "command": "pipreqs.exe --ignore experiments --encoding utf8 --force"
     },
     {
       "label": "create openapi.json schema http api description",
