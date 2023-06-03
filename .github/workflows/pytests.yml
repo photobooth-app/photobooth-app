@@ -45,12 +45,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: pip install --user --upgrade pipx
-      - run: pipx install poetry
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2
+          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv
+      - run: pip install --user --upgrade pipx
+      - run: pipx install poetry
       # do not install gphoto2 deps on self-hosted, because there is a virtual ptp device installed manually built from sources.
       # if installing the local source is overridden and virtual ptp device is not found.
       #- name: Install gphoto2 dependencies
