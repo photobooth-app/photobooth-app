@@ -164,9 +164,7 @@ def _syscall(cmd: str, sudo: bool = False, cwd="./"):
             cmd = f"sudo {cmd}"
         result = subprocess.run(cmd, shell=True, text=True, check=False, cwd=cwd)
     elif _is_windows():
-        result = subprocess.run(
-            ["powershell", "-Command", cmd], shell=True, text=True, check=False, cwd=cwd
-        )
+        result = subprocess.run(["powershell", "-Command", cmd], shell=True, text=True, check=False, cwd=cwd)
     else:
         print("unsupported platform, exit")
         sys.exit(-1)
@@ -279,10 +277,7 @@ class _style:
 print_spacer("current user")
 print_blue(f"{USERNAME}")
 if _is_linux() and _is_admin():
-    print_red(
-        "Error, please start installer as normal user, "
-        "for specific tasks the script will ask for permission"
-    )
+    print_red("Error, please start installer as normal user, " "for specific tasks the script will ask for permission")
     sys.exit(-1)
 else:
     print_green("OK")
@@ -292,9 +287,7 @@ if _is_windows():
     if os.path.isfile(r"C:\Program Files (x86)\digiCamControl\CameraControlCmd.exe"):
         print_green("OK, executable found")
     else:
-        print_blue(
-            "Info, digicamcontrol not found - please install if digicamintegration shall be used."
-        )
+        print_blue("Info, digicamcontrol not found - please install if digicamintegration shall be used.")
 
 
 print_spacer(f"python version > {MIN_PYTHON_VERSION}?")
@@ -398,13 +391,9 @@ if not SUPPRESS_INSTALLATION and not INSTALLDIR_HAS_GIT_REPO:
         # subdir has no git repo yet - considered as new installation
         print(f"Installing app to {INSTALL_DIR}")
         if query_yes_no("install dev preview? if no install stable", "no"):
-            _syscall(
-                f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}"
-            )
+            _syscall(f"git clone --branch dev https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
         else:
-            _syscall(
-                f"git clone https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}"
-            )
+            _syscall(f"git clone https://github.com/mgrl/photobooth-app.git {INSTALL_DIR}")
 
 
 if INSTALLDIR_HAS_GIT_REPO:
@@ -429,9 +418,7 @@ if query_yes_no("Install booth service?", "no"):
             "rt",
             encoding="utf-8",
         ) as fin:
-            compiled_service_file = Path(
-                f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service"
-            )
+            compiled_service_file = Path(f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service")
             compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
             print_blue(f"creating service file '{compiled_service_file}'")
             with open(str(compiled_service_file), "wt", encoding="utf-8") as fout:
@@ -446,9 +433,7 @@ if query_yes_no("Install booth service?", "no"):
         _syscall("systemctl --user enable photobooth-app.service")
 
     if _is_windows():
-        print_red(
-            "not supported. pls start photobooth-app manually and browse to photobooth website."
-        )
+        print_red("not supported. pls start photobooth-app manually and browse to photobooth website.")
 
 #
 # Post install checks
@@ -466,10 +451,7 @@ try:
 except RuntimeError as exc:
     print_red(exc)
     print_red("Error! Install turbojpeg from https://libjpeg-turbo.org/")
-    print_red(
-        "On Windows use VC version and ensure its located in this path: "
-        "C:/libjpeg-turbo64/bin/turbojpeg.dll"
-    )
+    print_red("On Windows use VC version and ensure its located in this path: " "C:/libjpeg-turbo64/bin/turbojpeg.dll")
     sys.exit(-1)
 else:
     print_green("OK, turboJpeg detected.")
@@ -479,12 +461,8 @@ try:
     print_spacer("check installed picamera2 version")
     print_blue(version("picamera2"))
 
-    print_blue(
-        "Check the version is up to date. Usually updates received automatically."
-    )
-    print_blue(
-        "If version is outdated, ensure picamera2 is NOT installed via pip. To uninstall:"
-    )
+    print_blue("Check the version is up to date. Usually updates received automatically.")
+    print_blue("If version is outdated, ensure picamera2 is NOT installed via pip. To uninstall:")
     print_blue("pip uninstall picamera2 (might need sudo)")
 except importlib.metadata.PackageNotFoundError:
     print("picamera2 not installed")
@@ -493,10 +471,7 @@ except importlib.metadata.PackageNotFoundError:
 if _is_linux():
     print_spacer("check gphoto2 properly installed")
     if not _syscall("gphoto2 --version") == 0:
-        print_red(
-            "Error, gphoto2 command not found, "
-            "error during installation or installation not selected"
-        )
+        print_red("Error, gphoto2 command not found, " "error during installation or installation not selected")
     else:
         print_green("OK, Gphoto2 installed properly")
 
@@ -542,26 +517,16 @@ if _is_windows():
 choices = list(zip(*availableConfigurations))[0]
 for idx, x in enumerate(choices):
     print(idx, x)
-chosen_starter_configuration_str = input(
-    "Choose number of starter configuration [leave empty to skip]: "
-)
+chosen_starter_configuration_str = input("Choose number of starter configuration [leave empty to skip]: ")
 if chosen_starter_configuration_str:
     chosen_starter_configuration_idx = int(chosen_starter_configuration_str)
-    chosen_starter_configuration_name = availableConfigurations[
-        chosen_starter_configuration_idx
-    ][0]
-    chosen_starter_configuration = availableConfigurations[
-        chosen_starter_configuration_idx
-    ][1]
+    chosen_starter_configuration_name = availableConfigurations[chosen_starter_configuration_idx][0]
+    chosen_starter_configuration = availableConfigurations[chosen_starter_configuration_idx][1]
 
     CV2_DEVICE_INDEX = ind_cv2[0] if ind_cv2 else 0
     V4L_DEVICE_INDEX = ind_v4l[0] if ind_v4l else 0
-    chosen_starter_configuration = chosen_starter_configuration.replace(
-        "##cv2_device_index##", str(CV2_DEVICE_INDEX)
-    )
-    chosen_starter_configuration = chosen_starter_configuration.replace(
-        "##v4l_device_index##", str(V4L_DEVICE_INDEX)
-    )
+    chosen_starter_configuration = chosen_starter_configuration.replace("##cv2_device_index##", str(CV2_DEVICE_INDEX))
+    chosen_starter_configuration = chosen_starter_configuration.replace("##v4l_device_index##", str(V4L_DEVICE_INDEX))
 
     print_blue(
         f"chosen starter configuration number {chosen_starter_configuration_idx}: "
