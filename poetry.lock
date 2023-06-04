@@ -1136,20 +1136,15 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 
 [[package]]
 name = "v4l2py"
-version = "2.2.1"
+version = "0.6.2"
 description = "Human friendly video for linux"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "v4l2py-2.2.1.tar.gz", hash = "sha256:e64b1a641497b56f27e21612de39dda5d55c2e59606d2ffe2daf030a088e4559"},
+    {file = "v4l2py-0.6.2.tar.gz", hash = "sha256:f4926d73cd6495a7d044c74ed3c2ef2e4e73a5d3175a61750cb3c78b790fb91f"},
 ]
-
-[package.extras]
-build = ["build (>=0.10.0)", "twine (>=4.0.2)"]
-dev = ["black (>=23.3.0)", "build (>=0.10.0)", "ruff (>=0.0.261)", "twine (>=4.0.2)", "ward (>=0.67.0b0)", "ward-coverage (>=0.3.0)"]
-test = ["ward (>=0.67.0b0)", "ward-coverage (>=0.3.0)"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "be132b110689b6e03c8c5b133e5890c8172cd5fab17a9c1a088cb67d79e4998b"
+content-hash = "19dbe9733e633cc7589ff880c8963f5e84ddee938c50a1898df64a85b65210a4"

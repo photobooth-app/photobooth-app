@@ -63,7 +63,7 @@ pyserial = "^3.5"
 jsonref = "^1.1.0"
 dependency-injector = "^4.41.0"
 pilgram2 = "^2.0.2"
-v4l2py = {version = "^2.2.1", platform = "linux"}
+v4l2py = {version = "^0.6.2", platform = "linux"}
 gpiozero = {version = "^1.6.2", platform = "linux"}
 gphoto2 = {version = "^2.3.4", platform = "linux"}
 python-statemachine = "^2.0.0"
