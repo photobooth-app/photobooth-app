@@ -5,6 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: pipx install poetry
+      #- run: pipx install poetry
       #- run: poetry install
       - uses: chartboost/ruff-action@v1
