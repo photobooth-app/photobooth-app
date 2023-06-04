@@ -12,7 +12,7 @@ The photobooth app is written in Python 🐍 and coming along with a modern Vue 
 
 **[Features](#heart_eyes-features)** - **[Supported Cameras](#camera-supported-cameras)** - **[Installation](#wrench-installation)** - **[Troubleshooting](#interrobang-troubleshooting)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
 
-## :heart_eyes: Features
+## 😍 Features
 
 - 📹 camera live preview with shortest delay as possible, permanent video live view in background
 - ⚡️ optimized for speed, live stream hardware accelerated on rpi, cpu load < 20%
@@ -20,7 +20,7 @@ The photobooth app is written in Python 🐍 and coming along with a modern Vue 
 - 💡 WLED support signaling photo countdown and feedback to the user when the photo is actually taken
 - 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported
 
-## :camera: Supported Cameras
+## 📷 Supported Cameras
 
 The photobooth app's Python backend allows to use different camera types on Linux and Windows platforms:
 
@@ -37,7 +37,7 @@ The booth is made from 3d printed parts, [see the documentation ✍ over here](h
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
-## :nail_care: Screenshots
+## 💅 Screenshots
 
 ![frontpage](misc/screenshots/frontpage.png)
 ![gallery list](misc/screenshots/gallery_list.png)
@@ -47,7 +47,7 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 ![admin center page config tab userinterface](misc/screenshots/admin_config_ui.png)
 ![admin center page status](misc/screenshots/admin_status.png)
 
-## :wrench: Installation
+## 🔧 Installation
 
 ### Prerequisites
 
@@ -91,17 +91,16 @@ preview_url: url("http://photobooth:8000/aquisition/stream.mjpg")
 background_defaults: url("http://photobooth:8000/aquisition/stream.mjpg")
 ```
 
-## :mega: Changelog
+## 📣 Changelog
 
 see separate file:
 <https://github.com/mgrl/photobooth-app/blob/main/LICENSE.md>
 
-
-### :copyright: License
+### ©️ License
 
 The software is licensed under the MIT license.  
 
-### :tada: Donation
+### 🎉 Donation
 
 If you like my work and like to keep me motivated you can buy me a coconut water:
 
