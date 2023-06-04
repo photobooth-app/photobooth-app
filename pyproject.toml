@@ -44,6 +44,11 @@ packages = [
     { include = "photobooth" },
     #{ include = "vendor/keyboard" },
 ]
+homepage = "https://github.com/mgrl/photobooth-app"
+repository = "https://github.com/mgrl/photobooth-app"
+documentation = "https://mgrl.github.io/photobooth-docs"
+
+
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
@@ -71,6 +76,7 @@ python-statemachine = "^2.0.0"
 # include keyboard as vendor subpackage right now until better solution found. direct references are not allowed on pypi.
 # https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
 # keyboard = {git = "https://github.com/boppreh/keyboard", rev="d232de09bda50ecb5211ebcc59b85bc6da6aaa24"}
+picamera2 = {version = "^0.3.9", platform = "linux"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
