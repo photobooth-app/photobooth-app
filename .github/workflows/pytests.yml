@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: pipx install poetry # on hosted pipx is installed
-      - run: poetry config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
+      - run: pipx install poetry # on hosted pipx is installed
+      - run: poetry config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
       - name: Install apt dependencies
         run: |
           sudo apt-get update
