@@ -13,7 +13,6 @@ sshkeyboard: ?
 import json
 
 from pymitter import EventEmitter
-
 from vendor.keyboard import keyboard
 
 from ..appconfig import AppConfig
