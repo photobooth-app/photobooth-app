@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: pipx install poetry # on hosted pipx is installed
+      - run: poetry config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
@@ -51,6 +52,8 @@ jobs:
           sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev libcap-dev
       - run: pip install --user --upgrade pipx
       - run: pipx install poetry
+      - run: poetry env remove --all # clean env
+      - run: poetry config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
       # do not install gphoto2 deps on self-hosted, because there is a virtual ptp device installed manually built from sources.
       # if installing the local source is overridden and virtual ptp device is not found.
       #- name: Install gphoto2 dependencies
