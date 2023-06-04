@@ -42,7 +42,7 @@ description = "Photobooth app written in Python supporting DSLR, picamera2, webc
 authors = ["Michael G <me@mgrl.de>"]
 packages = [
     { include = "photobooth" },
-    { include = "vendor/keyboard" },
+    #{ include = "vendor/keyboard" },
 ]
 
 [tool.poetry.dependencies]
