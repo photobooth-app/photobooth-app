@@ -35,11 +35,11 @@ jobs:
           path: coverage.xml
 
   tests-hardware:
-    #env:
-    #  ## Sets environment variable
-    #  backends__MAIN_BACKEND: Simulated
-    #  wled__ENABLED: True
-    #  wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+    env:
+      ## Sets environment variable
+      backends__MAIN_BACKEND: Simulated
+      wled__ENABLED: True
+      wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 
     runs-on: self-hosted
 
@@ -48,14 +48,14 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv
+          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev
       - run: pip install --user --upgrade pipx
       - run: pipx install poetry
       # do not install gphoto2 deps on self-hosted, because there is a virtual ptp device installed manually built from sources.
       # if installing the local source is overridden and virtual ptp device is not found.
       #- name: Install gphoto2 dependencies
       #  run: |
-      #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev
+      #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - run: poetry install
       - name: Test with pytest
         run: |
