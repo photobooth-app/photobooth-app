@@ -24,7 +24,7 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install libturbojpeg python3-pip libgl1 git
+          sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
       - run: poetry install
       - name: Test with pytest
         run: |
@@ -48,7 +48,7 @@ jobs:
       - name: Install apt dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev
+          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev libcap-dev
       - run: pip install --user --upgrade pipx
       - run: pipx install poetry
       # do not install gphoto2 deps on self-hosted, because there is a virtual ptp device installed manually built from sources.
