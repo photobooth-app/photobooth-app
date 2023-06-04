@@ -9,7 +9,6 @@ from pymitter import EventEmitter
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
 from .informationservice import InformationService
-from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
 from .processingservice import ProcessingService
@@ -97,12 +96,13 @@ class ServicesContainer(containers.DeclarativeContainer):
         mediaprocessing_service=mediaprocessing_service,
     )
 
-    keyboard_service = providers.Resource(
-        KeyboardService,
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-    )
+    # disable for now as lib used is unmaintained. switch to browser based keycode listeners
+    # keyboard_service = providers.Resource(
+    #    KeyboardService,
+    #    evtbus=evtbus,
+    #    config=config,
+    #    processing_service=processing_service,
+    # )
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(
