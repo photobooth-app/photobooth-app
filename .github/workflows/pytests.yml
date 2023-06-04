@@ -56,10 +56,6 @@ jobs:
       #- name: Install gphoto2 dependencies
       #  run: |
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev
-      # but install reduced gphoto2 dependencies set:
-      - name: Install gphoto2 dependencies
-        run: |
-          sudo apt-get -y install libexif12
       - run: poetry install
       - name: Test with pytest
         run: |
