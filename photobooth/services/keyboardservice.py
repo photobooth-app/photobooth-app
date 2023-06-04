@@ -12,8 +12,9 @@ sshkeyboard: ?
 """
 import json
 
-import keyboard
 from pymitter import EventEmitter
+
+from vendor.keyboard import keyboard
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
