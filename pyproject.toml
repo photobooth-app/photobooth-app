@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.0.1"
+version = "0.0.3"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
@@ -30,16 +30,18 @@ keywords = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mgrl/photobooth-app"
-Repository = "https://github.com/mgrl/photobooth-app"
-"Bug Tracker" = "https://github.com/mgrl/photobooth-app/issues"
+homepage = "https://github.com/mgrl/photobooth-app"
+repository = "https://github.com/mgrl/photobooth-app"
+documentation = "https://mgrl.github.io/photobooth-docs"
 
 
 [tool.poetry]
 name = "photobooth-app"
-version = "0.0.1"
+version = "0.0.3"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = ["Michael G <me@mgrl.de>"]
+readme = "README.md"
+license = "MIT"
 packages = [
     { include = "photobooth" },
     #{ include = "vendor/keyboard" },
@@ -48,6 +50,8 @@ homepage = "https://github.com/mgrl/photobooth-app"
 repository = "https://github.com/mgrl/photobooth-app"
 documentation = "https://mgrl.github.io/photobooth-docs"
 
+[tool.poetry.scripts]
+photobooth = "photobooth.__main__:main"
 
 
 [tool.poetry.dependencies]
