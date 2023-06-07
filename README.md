@@ -8,8 +8,6 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
----
-
 **[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](#-installation)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
 
 ## 😍 Features
@@ -39,13 +37,13 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
 ## 💅 Screenshots
 
-![frontpage](misc/screenshots/frontpage.png)
-![gallery list](misc/screenshots/gallery_list.png)
-![gallery detail](misc/screenshots/gallery_detail.png)
-![admin center page dashboard](misc/screenshots/admin_dashboard.png)
-![admin center page config tab backends](misc/screenshots/admin_config_backends.png)
-![admin center page config tab userinterface](misc/screenshots/admin_config_ui.png)
-![admin center page status](misc/screenshots/admin_status.png)
+![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/frontpage.png)
+![gallery list](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_list.png)
+![gallery detail](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_detail.png)
+![admin center page dashboard](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_dashboard.png)
+![admin center page config tab backends](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_backends.png)
+![admin center page config tab userinterface](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_ui.png)
+![admin center page status](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_status.png)
 
 ## 🔧 Installation
 
