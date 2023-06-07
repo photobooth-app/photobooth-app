@@ -1,13 +1,18 @@
 """
 _summary_
 """
+import logging
 import os
+import platform
 import subprocess
+from pathlib import Path
 
 from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
+
+logger = logging.getLogger(__name__)
 
 # constants
 SERVICE_NAME = "photobooth-app"
@@ -46,3 +51,33 @@ class SystemService(BaseService):
             # no error, service restart ok
             self._logger.info(f"service {SERVICE_NAME} currently active, restarting")
             os.system(f"systemctl --user {state} {SERVICE_NAME}")
+
+    def install_service(self):
+        # install booth service
+        if platform.system() == "Linux":
+            path_photobooth_service_file = (
+                Path(__file__).parent.joinpath("assets", "systemservice", "photobooth-app.service").resolve()
+            )
+            path_photobooth_working_dir = Path.cwd().resolve()
+            with open(path_photobooth_service_file, encoding="utf-8") as fin:
+                compiled_service_file = Path(f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service")
+                compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
+                logger.info(f"creating service file '{compiled_service_file}'")
+                with open(str(compiled_service_file), "w", encoding="utf-8") as fout:
+                    for line in fin:
+                        fout.write(
+                            line.replace(
+                                "##working_dir##",
+                                os.path.normpath(path_photobooth_working_dir),
+                            )
+                        )
+
+            # TODO: _syscall("systemctl --user enable photobooth-app.service")
+
+        else:
+            raise RuntimeError("install service not supported on this platform")
+
+    def uninstall_service(self):
+        # install booth service
+        # TODO: uninstall routing
+        pass

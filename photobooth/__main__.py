@@ -5,6 +5,7 @@ Photobooth Application start script
 import logging
 import multiprocessing
 import socket
+from pathlib import Path
 
 import uvicorn
 from dependency_injector.wiring import Provide, inject
@@ -75,6 +76,11 @@ def _guard(ip: str, port: int):
 
 def main(run_server: bool = True):
     application_container = ApplicationContainer()
+
+    # use to construct paths in app referring to assets
+    logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
+    # use to construct paths to user data
+    logger.info(f"working directory: {Path.cwd().resolve()}")
 
     # allow one instance at a time, set whether webserver port is avail as sign it's good or not
     _guard(

@@ -1,6 +1,8 @@
 """Application module."""
 
 import logging
+import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.exception_handlers import (
@@ -34,9 +36,17 @@ Following api is provided by the app.
 """
 
 
+def _create_basic_folders():
+    os.makedirs("data", exist_ok=True)
+    os.makedirs("log", exist_ok=True)
+    os.makedirs("config", exist_ok=True)
+
+
 def _create_app() -> FastAPI:
     application_container = ApplicationContainer()
     logger = logging.getLogger(f"{__name__}")
+
+    _create_basic_folders()
 
     _app = FastAPI(
         title="Photobooth App API",
@@ -68,7 +78,7 @@ def _create_app() -> FastAPI:
     # serve data directory holding images, thumbnails, ...
     _app.mount("/data", StaticFiles(directory="data"), name="data")
     # if not match anything above, default to deliver static files from web directory
-    _app.mount("/", StaticFiles(directory="web"), name="web")
+    _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
     async def custom_http_exception_handler(request, exc):
         logger.error(f"HTTPException: {repr(exc)}")
