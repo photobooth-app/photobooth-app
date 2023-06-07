@@ -5,6 +5,7 @@ import logging
 import os
 import platform
 import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from pymitter import EventEmitter
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 # constants
 SERVICE_NAME = "photobooth-app"
+PIP_PKG_NAME = "photobooth-app"
+PHOTOBOOTH_APP_SERVICE_FILE = Path(f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service")
 
 
 class SystemService(BaseService):
@@ -54,30 +57,51 @@ class SystemService(BaseService):
 
     def install_service(self):
         # install booth service
-        if platform.system() == "Linux":
-            path_photobooth_service_file = (
-                Path(__file__).parent.joinpath("assets", "systemservice", "photobooth-app.service").resolve()
-            )
-            path_photobooth_working_dir = Path.cwd().resolve()
-            with open(path_photobooth_service_file, encoding="utf-8") as fin:
-                compiled_service_file = Path(f"{str(Path.home())}/.local/share/systemd/user/photobooth-app.service")
-                compiled_service_file.parent.mkdir(exist_ok=True, parents=True)
-                logger.info(f"creating service file '{compiled_service_file}'")
-                with open(str(compiled_service_file), "w", encoding="utf-8") as fout:
-                    for line in fin:
-                        fout.write(
-                            line.replace(
-                                "##working_dir##",
-                                os.path.normpath(path_photobooth_working_dir),
-                            )
-                        )
 
-            # TODO: _syscall("systemctl --user enable photobooth-app.service")
-
-        else:
+        # check for supported platform
+        if not platform.system() == "Linux":
             raise RuntimeError("install service not supported on this platform")
 
+        # check if app is installed via pip; if so can install service
+        try:
+            version(PIP_PKG_NAME)
+        except PackageNotFoundError as exc:
+            raise RuntimeError(
+                "photobooth not installed as pip package, service install only supported for pip installs"
+            ) from exc
+
+        # install service file and enable
+        path_photobooth_service_file = (
+            Path(__file__).parent.joinpath("assets", "systemservice", "photobooth-app.service").resolve()
+        )
+        path_photobooth_working_dir = Path.cwd().resolve()
+        with open(path_photobooth_service_file, encoding="utf-8") as fin:
+            PHOTOBOOTH_APP_SERVICE_FILE.parent.mkdir(exist_ok=True, parents=True)
+            logger.info(f"creating service file '{PHOTOBOOTH_APP_SERVICE_FILE}'")
+            with open(PHOTOBOOTH_APP_SERVICE_FILE, "w", encoding="utf-8") as fout:
+                for line in fin:
+                    fout.write(
+                        line.replace(
+                            "##working_dir##",
+                            os.path.normpath(path_photobooth_working_dir),
+                        )
+                    )
+        result = subprocess.run("systemctl --user enable photobooth-app.service", shell=True, text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError("error enable the service")
+
+        logger.info("service installed and enabled")
+
     def uninstall_service(self):
-        # install booth service
-        # TODO: uninstall routing
-        pass
+        # uninstall booth service
+
+        result = subprocess.run("systemctl --user disable photobooth-app.service", shell=True, text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError("error disable the service")
+
+        try:
+            os.remove(PHOTOBOOTH_APP_SERVICE_FILE)
+        except Exception as exc:
+            raise RuntimeError("could not delete service file") from exc
+
+        logger.info("service disabled and uninstalled service")

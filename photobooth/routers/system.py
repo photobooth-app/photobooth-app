@@ -37,6 +37,16 @@ def api_cmd(
         system_service.util_systemd_control("stop")
     elif action == "service" and param == "start":
         system_service.util_systemd_control("start")
+    elif action == "service" and param == "install":
+        try:
+            system_service.install_service()
+        except Exception as exc:
+            raise HTTPException(500, f"service install failed: {exc}") from exc
+    elif action == "service" and param == "uninstall":
+        try:
+            system_service.uninstall_service()
+        except Exception as exc:
+            raise HTTPException(500, f"service uninstall failed: {exc}") from exc
 
     else:
         raise HTTPException(500, f"invalid request action={action}, param={param}")
