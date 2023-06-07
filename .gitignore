@@ -1,8 +1,8 @@
-/config/*.json
 
-/data/original
-/data/processed
-/data/unprocessed
+# ignore userdata folders
+/config
+/data
+/log
 
 __pycache__
 log/*.log*
