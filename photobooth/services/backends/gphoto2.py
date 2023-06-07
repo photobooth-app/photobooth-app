@@ -10,10 +10,9 @@ from threading import Condition, Event
 try:
     import gphoto2 as gp
 except Exception as import_exc:
-    raise OSError("gphoto2 not supported on windows platform") from import_exc
+    raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
 from pymitter import EventEmitter
-from turbojpeg import TurboJPEG
 
 from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
 from photobooth.utils.stoppablethread import StoppableThread
@@ -21,7 +20,6 @@ from photobooth.utils.stoppablethread import StoppableThread
 from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 
 class Gphoto2Backend(AbstractBackend):
@@ -58,9 +56,7 @@ class Gphoto2Backend(AbstractBackend):
             data=None, request_ready=Event(), condition=Condition()
         )
 
-        self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
-            data=None, condition=Condition()
-        )
+        self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(data=None, condition=Condition())
 
         self._camera_connected = False
         self._camera_preview_available = False
@@ -71,15 +67,11 @@ class Gphoto2Backend(AbstractBackend):
         self._generate_images_thread = StoppableThread(
             name="_generateImagesThread", target=self._generate_images_fun, daemon=True
         )
-        self._stats_thread = StoppableThread(
-            name="_statsThread", target=self._stats_fun, daemon=True
-        )
+        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
 
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-        logger.info(
-            f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}"
-        )
+        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
@@ -179,10 +171,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if (
-            self._config.backends.LIVEPREVIEW_ENABLED
-            and not self._camera_preview_available
-        ):
+        if self._config.backends.LIVEPREVIEW_ENABLED and not self._camera_preview_available:
             raise RuntimeError(
                 "Camera cannot deliver preview stream, capture preview is disabled in this session. "
                 "Consider disable livestream on gphoto2 backend permanently."
@@ -245,16 +234,11 @@ class Gphoto2Backend(AbstractBackend):
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if (
-                    self._config.backends.LIVEPREVIEW_ENABLED
-                    and self._camera_preview_available
-                ):
+                if self._config.backends.LIVEPREVIEW_ENABLED and self._camera_preview_available:
                     try:
                         capture = self._camera.capture_preview()
                     except Exception as exc:
-                        logger.critical(
-                            f"error capturing frame despite general availability. {exc}"
-                        )
+                        logger.critical(f"error capturing frame despite general availability. {exc}")
                         # abort this loop iteration and continue sleeping...
                         continue
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()

@@ -1,6 +1,9 @@
-/config/*.json
-data/*/*
-!.empty
+
+# ignore userdata folders
+/config
+/data
+/log
+
 __pycache__
 log/*.log*
 .env
@@ -10,3 +13,5 @@ log/*.log*
 coverage.xml
 junit/*
 
+poetry.toml
+dist/*

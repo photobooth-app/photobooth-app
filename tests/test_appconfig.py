@@ -13,9 +13,7 @@ logger = logging.getLogger(name=None)
 
 
 def test_appconfig_singleton():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     # modify config:
     backend.config().common.DEBUG_LEVEL = 99
@@ -23,9 +21,7 @@ def test_appconfig_singleton():
 
 
 def test_appconfig_factory():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Factory(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Factory(AppConfig))
 
     # modify config:
     backend.config().common.DEBUG_LEVEL = 99
@@ -33,9 +29,7 @@ def test_appconfig_factory():
 
 
 def test_appconfig_dependency_singleton():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     original_value = backend.config().backends.cv2_device_index
     modified_value = original_value + 1

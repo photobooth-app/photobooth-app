@@ -4,8 +4,8 @@ Photobooth Application start script
 """
 import logging
 import multiprocessing
-import os
 import socket
+from pathlib import Path
 
 import uvicorn
 from dependency_injector.wiring import Provide, inject
@@ -20,7 +20,7 @@ logger = logging.getLogger(f"{__name__}")
 
 
 @inject
-def main(
+def _server(
     config: AppConfig = Provide[ApplicationContainer.config],
     logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
 ) -> uvicorn.Server:
@@ -62,7 +62,7 @@ def main(
     return server
 
 
-def guard(ip: str, port: int):
+def _guard(ip: str, port: int):
     # guard to start only one instance at a time.
     try:
         s = socket.socket()
@@ -74,11 +74,18 @@ def guard(ip: str, port: int):
         raise SystemExit("webserver port not avail") from exc
 
 
-if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
+def main(run_server: bool = True):
     application_container = ApplicationContainer()
 
+    # use to construct paths in app referring to assets
+    logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
+    # use to construct paths to user data
+    logger.info(f"working directory: {Path.cwd().resolve()}")
+    # __version__ = importlib.metadata.version("photobooth-app")
+    # logger.info(f"{__version__=}")
+
     # allow one instance at a time, set whether webserver port is avail as sign it's good or not
-    guard(
+    _guard(
         application_container.config().common.webserver_bind_ip,
         application_container.config().common.webserver_port,
     )
@@ -87,11 +94,15 @@ if __name__ == "__main__" or "PYTEST_CURRENT_TEST" in os.environ:
     application_container.wire(modules=[__name__], packages=[".routers"])
 
     # start main application
-    server = main()
+    server = _server()
 
-    # serve files forever, loops endless
+    # serve, loops endless
     # this one is not executed in tests because it's not stoppable from within
-    if __name__ == "__main__":
+    if run_server:
         server.run()
 
     application_container.shutdown_resources()
+
+
+if __name__ == "__main__":
+    main()

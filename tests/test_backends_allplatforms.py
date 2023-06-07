@@ -16,9 +16,7 @@ logger = logging.getLogger(name=None)
 
 
 def test_get_images_simulated():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
     simulated_backend = backend.simulated_backend()
 
     """get lores and hires images from backend and assert"""
@@ -26,9 +24,7 @@ def test_get_images_simulated():
 
 
 def test_get_images_webcamcv2():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     from photobooth.services.backends.webcamcv2 import available_camera_indexes
 

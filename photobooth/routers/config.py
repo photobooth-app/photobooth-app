@@ -36,9 +36,7 @@ def api_get_config_schema(schema_type: str = "default"):
 @inject
 def api_reset_config(
     config: AppConfig = Depends(Provide[ApplicationContainer.config]),
-    system_service: SystemService = Depends(
-        Provide[ApplicationContainer.services.system_service]
-    ),
+    system_service: SystemService = Depends(Provide[ApplicationContainer.services.system_service]),
 ):
     """
     Reset config, deleting config.json file
@@ -68,10 +66,15 @@ def api_get_config_current():
 @inject
 def api_post_config_current(
     updated_config: AppConfig,
-    system_service: SystemService = Depends(
-        Provide[ApplicationContainer.services.system_service]
-    ),
+    # appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
+    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
 ):
-    updated_config.persist()  # save settings to disc
-    # restart service to load new config
-    system_service.util_systemd_control("restart")
+    # save settings to disc
+    updated_config.persist()
+
+    # update central config to make new config avail immediately
+    # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
+    config.__dict__.update(updated_config)
+
+    # appcontainer.shutdown_resources()
+    # appcontainer.init_resources()

@@ -51,9 +51,7 @@ def autofocus_algorithm(request):
 
 
 def test_getImages():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
     picamera2_backend = backend.picamera2_backend()
 
     get_images(picamera2_backend)
@@ -61,9 +59,7 @@ def test_getImages():
 
 def test_autofocus(autofocus_algorithm):
     check_focusavail_skip()
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     # reconfigure
     backend.config().backends.picamera2_focuser_module = autofocus_algorithm

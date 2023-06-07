@@ -13,6 +13,7 @@ from typing import Any
 
 import jsonref
 from pydantic import BaseModel, BaseSettings, Extra, Field, PrivateAttr
+from pydantic.color import Color
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,13 @@ class GroupCommon(BaseModel):
         description="Still JPEG full resolution quality, applied to download images and images with filter",
         ui_component="QSlider",
     )
+
+    FULL_STILL_WIDTH: int = Field(
+        default=1500,
+        ge=800,
+        le=5000,
+        description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
+    )
     PREVIEW_STILL_WIDTH: int = Field(
         default=900,
         ge=200,
@@ -110,10 +118,7 @@ class GroupCommon(BaseModel):
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
         ui_component="QSlider",
     )
-    EXT_DOWNLOAD_URL: str = Field(
-        default="http://dl.qbooth.net/{filename}",
-        description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
-    )
+
     # flip camera source horizontal/vertical
     CAMERA_TRANSFORM_HFLIP: bool = Field(
         default=False,
@@ -203,16 +208,10 @@ class GroupBackends(BaseModel):
         default=EnumImageBackendsLive.DISABLED,
         description="Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability.",
     )
-    LIVEPREVIEW_ENABLED: bool = Field(
-        default=True, description="Enable livestream (if possible)"
-    )
+    LIVEPREVIEW_ENABLED: bool = Field(default=True, description="Enable livestream (if possible)")
 
-    cv2_device_index: int = Field(
-        default=0, description="Device index of webcam opened in cv2 backend"
-    )
-    v4l_device_index: int = Field(
-        default=0, description="Device index of webcam opened in v4l backend"
-    )
+    cv2_device_index: int = Field(default=0, description="Device index of webcam opened in cv2 backend")
+    v4l_device_index: int = Field(default=0, description="Device index of webcam opened in v4l backend")
 
     gphoto2_disable_viewfinder_before_capture: bool = Field(
         default=True,
@@ -246,6 +245,78 @@ class GroupBackends(BaseModel):
     picamera2_focuser_interval: int = Field(
         default=10,
         description="Every x seconds trigger autofocus",
+    )
+
+
+class EnumPilgramFilter(str, Enum):
+    """enum to choose image filter from, pilgram filter"""
+
+    original = "original"
+
+    _1977 = "_1977"
+    aden = "aden"
+    brannan = "brannan"
+    brooklyn = "brooklyn"
+    clarendon = "clarendon"
+    earlybird = "earlybird"
+    gingham = "gingham"
+    hudson = "hudson"
+    inkwell = "inkwell"
+    kelvin = "kelvin"
+    lark = "lark"
+    lofi = "lofi"
+    maven = "maven"
+    mayfair = "mayfair"
+    moon = "moon"
+    nashville = "nashville"
+    perpetua = "perpetua"
+    reyes = "reyes"
+    rise = "rise"
+    slumber = "slumber"
+    stinson = "stinson"
+    toaster = "toaster"
+    valencia = "valencia"
+    walden = "walden"
+    willow = "willow"
+    xpro2 = "xpro2"
+
+
+class TextStageConfig(BaseModel):
+    text: str = ""
+    pos_x: int = 50
+    pos_y: int = 50
+    # rotation: int = 0 # TODO: not yet implemented
+    font_size: int = 20
+    font: str = "Roboto-Bold.ttf"
+    color: Color = Color("red")
+
+
+class GroupMediaprocessing(BaseModel):
+    """Configure stages how to process images after capture."""
+
+    class Config:
+        title = "Process media after capture"
+
+    pic1_enable_pipeline: bool = Field(
+        default=False,
+        description="Enable/Disable 1pic processing pipeline completely",
+    )
+
+    pic1_filter: EnumPilgramFilter = Field(
+        title="Pic1 Filter",
+        default=EnumPilgramFilter.original,
+        description="Instagram-like filter to apply per default. 'original' applies no filter.",
+    )
+    """#TODO:
+    pic1_filter_userselectable: list[EnumPilgramFilter] = Field(
+        title="Pic1 Filter Userselectable",
+        default=[EnumPilgramFilter.original, EnumPilgramFilter._1977],
+        description="Filter the user may choose from in the gallery. 'original' applies no filter.",
+    )
+    """
+    pic1_text_overlay: list[TextStageConfig] = Field(
+        default=[],
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/fonts/",
     )
 
 
@@ -292,12 +363,32 @@ class GroupUiSettings(BaseModel):
         description="Offset in seconds, the message above shall be shown.",
     )
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
-        default=15,
+        default=30,
         description="Timeout in seconds a new item popup closes automatically.",
     )
     SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
         default=True,
         description="Show link to admin center, usually only during setup.",
+    )
+    EXT_DOWNLOAD_URL: str = Field(
+        default="http://dl.qbooth.net/{filename}",
+        description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
+    )
+    gallery_show_filter: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_download: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_delete: bool = Field(
+        default=False,
+        description="",
+    )
+    gallery_show_print: bool = Field(
+        default=False,
+        description="",
     )
 
 
@@ -364,12 +455,11 @@ class AppConfig(BaseSettings):
     5 The default field values for the Settings model.
     """
 
-    _processed_at: datetime = PrivateAttr(
-        default_factory=datetime.now
-    )  # private attributes
+    _processed_at: datetime = PrivateAttr(default_factory=datetime.now)  # private attributes
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     wled: GroupWled = GroupWled()

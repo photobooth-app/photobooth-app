@@ -24,9 +24,7 @@ def api_getitems(
         return mediacollection_service.db_get_images()
     except Exception as exc:
         logger.exception(exc)
-        raise HTTPException(
-            status_code=500, detail=f"something went wrong, Exception: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @mediacollection_router.get("/delete", status_code=status.HTTP_204_NO_CONTENT)

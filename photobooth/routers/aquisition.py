@@ -18,9 +18,7 @@ aquisition_router = APIRouter(
 @aquisition_router.get("/stream.mjpg")
 @inject
 def video_stream(
-    aquisition_service: AquisitionService = Depends(
-        Provide[ApplicationContainer.services.aquisition_service]
-    ),
+    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
 ):
     """
     endpoint to stream live video to clients
@@ -34,7 +32,7 @@ def video_stream(
             media_type="multipart/x-mixed-replace; boundary=frame",
         )
     except ConnectionRefusedError as exc:
-        logger.exception(exc)
+        logger.warning(exc)
         raise HTTPException(405, "preview not enabled") from exc
     except Exception as exc:
         logger.exception(exc)
@@ -53,9 +51,7 @@ def video_stream(
 )
 @inject
 def api_still_get(
-    aquisition_service: AquisitionService = Depends(
-        Provide[ApplicationContainer.services.aquisition_service]
-    ),
+    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
 ):
     """Aquire image and serve to download
 

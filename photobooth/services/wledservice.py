@@ -33,9 +33,7 @@ class WledService(BaseService):
             _type_: _description_
         """
         if self._enabled is True:
-            self._logger.info(
-                f"WledService enabled, trying to setup and connect, {self._serial_port=}"
-            )
+            self._logger.info(f"WledService enabled, trying to setup and connect, {self._serial_port=}")
 
         else:
             self._logger.info("WledService disabled")
@@ -64,20 +62,17 @@ class WledService(BaseService):
         try:
             self._serial.write(b"v")
         except serial.SerialTimeoutException as exc:
-            self._logger.critical(
-                f"error sending request to identify WLED module - wrong port? {exc}"
-            )
+            self._logger.critical(f"error sending request to identify WLED module - wrong port? {exc}")
             raise RuntimeError("fail to write identify request to WLED module") from exc
 
+        wled_detected = False
         try:
             # readline blocks for timeout seconds (set to 1sec on init), afterwards fails
             wled_response = self._serial.readline()
 
             if wled_response == b"":
                 # timeout is defined by response being empty
-                raise TimeoutError(
-                    "no answer from serial WLED device received within timeout"
-                )
+                raise TimeoutError("no answer from serial WLED device received within timeout")
 
             # indicates WLED module found:
             wled_detected = "WLED" in wled_response.decode("ascii").strip()
@@ -86,9 +81,7 @@ class WledService(BaseService):
         except UnicodeDecodeError as exc:
             self._logger.critical(f"message from WLED module not understood {exc}")
         except TimeoutError as exc:
-            self._logger.critical(
-                f"WLED device did not respond during setup. Check device and connections! {exc}"
-            )
+            self._logger.critical(f"WLED device did not respond during setup. Check device and connections! {exc}")
 
         self._logger.debug(f"{wled_detected=}")
 
@@ -96,12 +89,8 @@ class WledService(BaseService):
             # abort init due to problems
             # program continues this way, but no light integration available,
             # use error log to find out how to solve
-            self._logger.critical(
-                "WLED module failed. Please check wiring, device, connection and config."
-            )
-            raise RuntimeError(
-                "WLED module failed. Please check wiring, device, connection and config."
-            )
+            self._logger.critical("WLED module failed. Please check wiring, device, connection and config.")
+            raise RuntimeError("WLED module failed. Please check wiring, device, connection and config.")
 
         # we have come this far: wled is properly connected, register listener
         self._logger.info("register events for WLED")
@@ -151,12 +140,8 @@ class WledService(BaseService):
         try:
             self._serial.write(request)
         except serial.SerialException as exc:
-            self._logger.fatal(
-                f"error accessing WLED device, connection loss? device unpowered? {exc}"
-            )
-            raise RuntimeError(
-                f"error accessing WLED device, connection loss? device unpowered? {exc}"
-            ) from exc
+            self._logger.fatal(f"error accessing WLED device, connection loss? device unpowered? {exc}")
+            raise RuntimeError(f"error accessing WLED device, connection loss? device unpowered? {exc}") from exc
 
     @staticmethod
     def _request_preset(preset_id: int = -1):

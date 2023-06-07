@@ -10,6 +10,7 @@ from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
     BackendStats,
@@ -89,7 +90,7 @@ class WebcamCv2Backend(AbstractBackend):
         self._cv2_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
+        remaining_retries = 16
         while True:
             with self._img_buffer_lores.condition:
                 if self._img_buffer_lores.condition.wait(timeout=0.5):
@@ -155,7 +156,7 @@ class WebcamCv2Backend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         if self._event_proc_shutdown.is_set():
-            raise RuntimeError("shutdown already in progress, abort early")
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._img_buffer_lores.condition:
             if not self._img_buffer_lores.condition.wait(timeout=4):
@@ -199,9 +200,7 @@ def cv2_img_aquisition(
     shm_hires = shared_memory.SharedMemory(shm_buffer_hires_name)
 
     if platform.system() == "Windows":
-        logger.info(
-            "force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)"
-        )
+        logger.info("force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
         _video = cv2.VideoCapture(_config.backends.cv2_device_index, cv2.CAP_DSHOW)
     else:
         _video = cv2.VideoCapture(_config.backends.cv2_device_index)
@@ -209,9 +208,7 @@ def cv2_img_aquisition(
     # activate preview mode on init
     _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
-    _video_set_check(
-        _video, cv2.CAP_PROP_FRAME_WIDTH, _config.common.CAPTURE_CAM_RESOLUTION_WIDTH
-    )
+    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.common.CAPTURE_CAM_RESOLUTION_WIDTH)
     _video_set_check(
         _video,
         cv2.CAP_PROP_FRAME_HEIGHT,
@@ -256,9 +253,7 @@ def cv2_img_aquisition(
             # HD frame needs like 2sec, not suitable for realtime processing
 
             # convert frame to jpeg buffer
-            jpeg_buffer = turbojpeg.encode(
-                array, quality=_config.common.HIRES_STILL_QUALITY
-            )
+            jpeg_buffer = turbojpeg.encode(array, quality=_config.common.HIRES_STILL_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_hires_lock:
                 compile_buffer(shm_hires, jpeg_buffer)
@@ -268,9 +263,7 @@ def cv2_img_aquisition(
                 _condition_img_buffer_hires_ready.notify_all()
         else:
             # preview livestream
-            jpeg_buffer = turbojpeg.encode(
-                array, quality=_config.common.LIVEPREVIEW_QUALITY
-            )
+            jpeg_buffer = turbojpeg.encode(array, quality=_config.common.LIVEPREVIEW_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lores_lock:
                 compile_buffer(shm_lores, jpeg_buffer)

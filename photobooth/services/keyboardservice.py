@@ -12,8 +12,8 @@ sshkeyboard: ?
 """
 import json
 
-import keyboard
 from pymitter import EventEmitter
+from vendor.keyboard import keyboard
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
@@ -37,9 +37,7 @@ class KeyboardService(BaseService):
             self._logger.info("keyboardservice enabled - listeners installed")
             keyboard.on_press(self._on_key_callback)
         else:
-            self._logger.info(
-                "keyboardservice not enabled - enable for keyboard triggers"
-            )
+            self._logger.info("keyboardservice not enabled - enable for keyboard triggers")
 
     def _on_key_callback(self, key):
         """_summary_
@@ -57,7 +55,5 @@ class KeyboardService(BaseService):
         )
 
         if key.name == self._config.hardwareinput.keyboard_input_keycode_takepic:
-            self._logger.info(
-                f"{self._config.hardwareinput.keyboard_input_keycode_takepic=}"
-            )
+            self._logger.info(f"{self._config.hardwareinput.keyboard_input_keycode_takepic=}")
             self._processing_service.evt_chose_1pic_get()

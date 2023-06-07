@@ -8,11 +8,9 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
----
+**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](#-installation)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
 
-**[Features](#heart_eyes-features)** - **[Supported Cameras](#camera-supported-cameras)** - **[Installation](#wrench-installation)** - **[Troubleshooting](#interrobang-troubleshooting)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
-
-## :heart_eyes: Features
+## 😍 Features
 
 - 📹 camera live preview with shortest delay as possible, permanent video live view in background
 - ⚡️ optimized for speed, live stream hardware accelerated on rpi, cpu load < 20%
@@ -20,7 +18,7 @@ The photobooth app is written in Python 🐍 and coming along with a modern Vue 
 - 💡 WLED support signaling photo countdown and feedback to the user when the photo is actually taken
 - 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported
 
-## :camera: Supported Cameras
+## 📷 Supported Cameras
 
 The photobooth app's Python backend allows to use different camera types on Linux and Windows platforms:
 
@@ -37,44 +35,85 @@ The booth is made from 3d printed parts, [see the documentation ✍ over here](h
 The camera support is mostly ready to use, the frontend is not production ready yet.
 Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
-## :nail_care: Screenshots
+## 💅 Screenshots
 
-![frontpage](misc/screenshots/frontpage.png)
-![gallery list](misc/screenshots/gallery_list.png)
-![gallery detail](misc/screenshots/gallery_detail.png)
-![admin center page dashboard](misc/screenshots/admin_dashboard.png)
-![admin center page config tab backends](misc/screenshots/admin_config_backends.png)
-![admin center page config tab userinterface](misc/screenshots/admin_config_ui.png)
-![admin center page status](misc/screenshots/admin_status.png)
+![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/frontpage.png)
+![gallery list](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_list.png)
+![gallery detail](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_detail.png)
+![admin center page dashboard](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_dashboard.png)
+![admin center page config tab backends](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_backends.png)
+![admin center page config tab userinterface](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_ui.png)
+![admin center page status](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_status.png)
 
-## :wrench: Installation
+## 🔧 Installation
 
 ### Prerequisites
 
 - Python 3.9 or later
-- Camera supported by one of the backends
-- Raspberry Pi Bullseye with libcamera stack for picamera modules
-- git installed (automatic install on linux, download manually for windows platform)
+- Camera, can be one or two (first camera for stills, second camera for live view)
+  - DSLR: [gphoto2](https://github.com/gonzalo/gphoto2-updater) on linx
+  - Picamera2: installed and working (test with `libcamera-hello`)
+  - Webcamera: no additional prerequisites, ensure camera is working using native system apps
+- Raspberry Pi Bullseye for Picamera2 or any other linux/windows system
+- Turbojpeg (via apt on linux, manually install on windows)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
 The photobooth app can be used standalone but is not feature complete yet.
 Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
 see description below how to achieve integration.
 
-### Installer
+### Install via pip
 
-Execute the installer following the commands below, helping to setup on a Linux or Windows system:
+On a fresh Raspberry Pi OS 64bit, run following commands:
 
 ```sh
-curl -o install.py https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
-python install.py
+sudo apt-get update
+sudo apt-get upgrade # system should be up to date
+
+# install some system dependencies
+sudo apt-get -y install libturbojpeg0 python3-pip libgl1 python3-picamera2 libgphoto2-dev
+
+# add user to input group for keyboard events
+usermod --append --groups tty,input {USERNAME}
+
+# install app
+pip install photobooth-app
+
+# create data folder
+mkdir ~/photobooth-data
+cd ~/photobooth-data
+
+# start app
+photobooth
 ```
 
-Start the app and browse to <http://localhost:8000>, start using the app.
+Browse to <http://localhost:8000> and see if the app is working properly.
+
+#### Photobooth command not found
+
+If there is a warning as following during pip installation and photobooth can't start check the PATH variable
+
+```text
+WARNING: The script photobooth is installed in '/home/pi/.local/bin' which is not on PATH.
+Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+```
+
+See following is fine, might just need a restart after installation because the path .local/bin did not exist before.
+
+```sh  # ~/.profile
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+```
+
+#### Install development versions
+
+Stable releases are published at pypi registry.
+To test the latest development version install directly from git:
 
 ```sh
-cd photobooth-app
-python -m photobooth
+pip install git+https://github.com/mgrl/photobooth-app.git@dev
 ```
 
 ### Integrate Photobooth-Project and this Photobooth-App
@@ -91,17 +130,16 @@ preview_url: url("http://photobooth:8000/aquisition/stream.mjpg")
 background_defaults: url("http://photobooth:8000/aquisition/stream.mjpg")
 ```
 
-## :mega: Changelog
+## 📣 Changelog
 
 see separate file:
 <https://github.com/mgrl/photobooth-app/blob/main/LICENSE.md>
 
-
-### :copyright: License
+### ©️ License
 
 The software is licensed under the MIT license.  
 
-### :tada: Donation
+### 🎉 Donation
 
 If you like my work and like to keep me motivated you can buy me a coconut water:
 

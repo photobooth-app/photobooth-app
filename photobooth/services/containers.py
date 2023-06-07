@@ -9,8 +9,8 @@ from pymitter import EventEmitter
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
 from .informationservice import InformationService
-from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
+from .mediaprocessingservice import MediaprocessingService
 from .processingservice import ProcessingService
 from .systemservice import SystemService
 from .wledservice import WledService
@@ -64,9 +64,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     backends = providers.DependenciesContainer()
 
     # Services: Core
-    mediacollection_service = providers.Resource(
-        MediacollectionService, evtbus=evtbus, config=config
-    )
 
     aquisition_service = providers.Resource(
         init_aquisition_resource,
@@ -76,8 +73,18 @@ class ServicesContainer(containers.DeclarativeContainer):
         secondary=backends.secondary_backend,
     )
 
-    information_service = providers.Resource(
-        init_information_resource, evtbus=evtbus, config=config
+    information_service = providers.Resource(init_information_resource, evtbus=evtbus, config=config)
+
+    mediaprocessing_service = providers.Singleton(
+        MediaprocessingService,
+        evtbus=evtbus,
+        config=config,
+    )
+    mediacollection_service = providers.Singleton(
+        MediacollectionService,
+        evtbus=evtbus,
+        config=config,
+        mediaprocessing_service=mediaprocessing_service,
     )
 
     processing_service = providers.Singleton(
@@ -86,14 +93,16 @@ class ServicesContainer(containers.DeclarativeContainer):
         config=config,
         aquisition_service=aquisition_service,
         mediacollection_service=mediacollection_service,
+        mediaprocessing_service=mediaprocessing_service,
     )
 
-    keyboard_service = providers.Resource(
-        KeyboardService,
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-    )
+    # disable for now as lib used is unmaintained. switch to browser based keycode listeners
+    # keyboard_service = providers.Resource(
+    #    KeyboardService,
+    #    evtbus=evtbus,
+    #    config=config,
+    #    processing_service=processing_service,
+    # )
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(

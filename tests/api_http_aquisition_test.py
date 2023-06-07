@@ -20,9 +20,7 @@ def capture(client: TestClient):
         with Image.open(io.BytesIO(response.content)) as img:
             img.verify()
     except Exception as exc:
-        raise AssertionError(
-            f"backend did not return valid image bytes, {exc}"
-        ) from exc
+        raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
 
     assert response.status_code == 200
 

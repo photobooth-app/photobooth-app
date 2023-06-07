@@ -7,6 +7,7 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
     BackendStats,
@@ -59,16 +60,12 @@ class WebcamV4lBackend(AbstractBackend):
         self._event_proc_shutdown.clear()
 
         self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
-            sharedmemory=shared_memory.SharedMemory(
-                create=True, size=SHARED_MEMORY_BUFFER_BYTES
-            ),
+            sharedmemory=shared_memory.SharedMemory(create=True, size=SHARED_MEMORY_BUFFER_BYTES),
             condition=Condition(),
             lock=Lock(),
         )
 
-        logger.info(
-            f"starting webcam process, {self._config.backends.v4l_device_index=}"
-        )
+        logger.info(f"starting webcam process, {self._config.backends.v4l_device_index=}")
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
@@ -151,7 +148,7 @@ class WebcamV4lBackend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
 
         if self._event_proc_shutdown.is_set():
-            raise RuntimeError("shutdown already in progress, abort early")
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._img_buffer.condition:
             if not self._img_buffer.condition.wait(timeout=4):
@@ -199,9 +196,7 @@ def v4l_img_aquisition(
                 "MJPG",
             )
         except (AttributeError, FileNotFoundError) as exc:
-            logger.error(
-                f"cannot open camera {_config.backends.v4l_device_index} properly."
-            )
+            logger.error(f"cannot open camera {_config.backends.v4l_device_index} properly.")
             logger.exception(exc)
             raise exc
 

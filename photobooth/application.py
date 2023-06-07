@@ -1,6 +1,8 @@
 """Application module."""
 
 import logging
+import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.exception_handlers import (
@@ -17,6 +19,7 @@ from .routers.config import config_router
 from .routers.home import home_router
 from .routers.log import log_router
 from .routers.mediacollection import mediacollection_router
+from .routers.mediaprocessing import mediaprocessing_router
 from .routers.processing import processing_router
 from .routers.sse import sse_router
 from .routers.system import system_router
@@ -33,9 +36,17 @@ Following api is provided by the app.
 """
 
 
+def _create_basic_folders():
+    os.makedirs("data", exist_ok=True)
+    os.makedirs("log", exist_ok=True)
+    os.makedirs("config", exist_ok=True)
+
+
 def _create_app() -> FastAPI:
     application_container = ApplicationContainer()
     logger = logging.getLogger(f"{__name__}")
+
+    _create_basic_folders()
 
     _app = FastAPI(
         title="Photobooth App API",
@@ -60,13 +71,14 @@ def _create_app() -> FastAPI:
     _app.include_router(aquisition_router)
     _app.include_router(log_router)
     _app.include_router(mediacollection_router)
+    _app.include_router(mediaprocessing_router)
     _app.include_router(sse_router)
     _app.include_router(system_router)
     _app.include_router(processing_router)
     # serve data directory holding images, thumbnails, ...
     _app.mount("/data", StaticFiles(directory="data"), name="data")
     # if not match anything above, default to deliver static files from web directory
-    _app.mount("/", StaticFiles(directory="web"), name="web")
+    _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
     async def custom_http_exception_handler(request, exc):
         logger.error(f"HTTPException: {repr(exc)}")

@@ -34,11 +34,7 @@ class StreamClass:
 
     def add_queue(self, sse_event, sse_data):
         try:
-            self._queue.put_nowait(
-                ServerSentEvent(
-                    id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000
-                )
-            )
+            self._queue.put_nowait(ServerSentEvent(id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
         except QueueFull:
             # actually never run, because queue size is infinite currently
             pass
@@ -47,9 +43,7 @@ class StreamClass:
         if "PYTEST_CURRENT_TEST" in os.environ:
             # FIXME: workaround for testing until testing with mocks/patching works well...
             timeout = 3.5
-        logger.info(
-            f"event_iterator {timeout=} set. positive values used for testing only"
-        )
+        logger.info(f"event_iterator {timeout=} set. positive values used for testing only")
         try:
             starting_time = time.time()
             while not timeout or (time.time() - starting_time < timeout):
@@ -98,9 +92,7 @@ async def subscribe(
     streamclass.add_subscriptions()
 
     # initial messages on client connect
-    streamclass.add_queue(
-        sse_event="message", sse_data=f"Client connected {request.client}"
-    )
+    streamclass.add_queue(sse_event="message", sse_data=f"Client connected {request.client}")
     logger.info("added init message")
 
     # all modules can register this event to send initial messages on connection
@@ -109,7 +101,5 @@ async def subscribe(
     return EventSourceResponse(
         streamclass.event_iterator(request=request),
         ping=1,
-        ping_message_factory=lambda: ServerSentEvent(
-            datetime.utcnow(), event="ping"
-        ).encode(),
+        ping_message_factory=lambda: ServerSentEvent(datetime.utcnow(), event="ping").encode(),
     )

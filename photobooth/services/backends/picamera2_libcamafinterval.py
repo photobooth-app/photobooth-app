@@ -30,9 +30,7 @@ class Picamera2LibcamAfInterval:
     option to trigger focus on thrill also possible
     """
 
-    def __init__(
-        self, backend: AbstractBackend, evtbus: EventEmitter, config: AppConfig
-    ):
+    def __init__(self, backend: AbstractBackend, evtbus: EventEmitter, config: AppConfig):
         self._backend: AbstractBackend = backend
         self._evtbus = evtbus
         self._config = config
@@ -64,9 +62,7 @@ class Picamera2LibcamAfInterval:
         """Use to ensure focus is finished (or cancel/failed if no success) before capture."""
         # interval can only cancel current focus run if active
         # currently no reliable way to receive the current focus state until capture_metadata is reimplemented again.
-        self._backend._picamera2.set_controls(
-            {"AfTrigger": controls.AfTriggerEnum.Cancel}
-        )
+        self._backend._picamera2.set_controls({"AfTrigger": controls.AfTriggerEnum.Cancel})
 
         # wait typical time, the motor needs to move back to previous position
         time.sleep(0.04)
@@ -74,9 +70,7 @@ class Picamera2LibcamAfInterval:
     def _autofocus_trigger_timer_fun(self):
         """_summary_"""
         if not self._mute_cyclic_trigger_requests:
-            logger.info(
-                "autofocus trigger request ignored because muted in capture mode"
-            )
+            logger.info("autofocus trigger request ignored because muted in capture mode")
             self._autofocus_cycle()
 
     def _on_thrill(self):
@@ -107,9 +101,7 @@ class Picamera2LibcamAfInterval:
         and trigger regularly
         """
         try:
-            self._backend._picamera2.set_controls(
-                {"AfSpeed": controls.AfSpeedEnum.Fast}
-            )
+            self._backend._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
             logger.info("libcamautofocus AfSpeed set to fast mode")
         except RuntimeError as exc:
             logger.info(f"control not available on all cameras - can ignore {exc}")
@@ -118,6 +110,4 @@ class Picamera2LibcamAfInterval:
         try:
             self._backend._picamera2.autofocus_cycle(wait=False)
         except RuntimeError as exc:
-            logger.critical(
-                f"control not available on camera - autofocus not working properly {exc}"
-            )
+            logger.critical(f"control not available on camera - autofocus not working properly {exc}")

@@ -30,9 +30,7 @@ if not platform.system() == "Linux":
 
 
 def test_get_images_webcamv4l():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     from photobooth.services.backends.webcamv4l import available_camera_indexes
 
@@ -53,9 +51,7 @@ def test_get_images_webcamv4l():
 
 
 def test_get_images_gphoto2():
-    backend = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig)
-    )
+    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
     from photobooth.services.backends.gphoto2 import available_camera_indexes
 
     _availableCameraIndexes = available_camera_indexes()

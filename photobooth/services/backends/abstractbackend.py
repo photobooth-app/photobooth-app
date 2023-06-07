@@ -11,6 +11,7 @@ from multiprocessing import Condition, Lock, shared_memory
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 
 logger = logging.getLogger(__name__)
 
@@ -139,10 +140,11 @@ class AbstractBackend(ABC):
                     buffer = self._wait_for_lores_image()
                 except TimeoutError:
                     logger.error(
-                        "error capture lores image for stream. "
-                        f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
+                        "error capture lores image for stream. " f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
                     )
                     # can we do additional error handling here?
+                except ShutdownInProcessError:
+                    logger.warning("gather img failed due to resources shutting down")
                 else:
                     break
             else:
@@ -156,16 +158,11 @@ class AbstractBackend(ABC):
                 return
 
             now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (
-                1 / self._config.common.LIVEPREVIEW_FRAMERATE
-            ):
+            if (now_time - last_time) / 1000**3 >= (1 / self._config.common.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    yield (
-                        b"--frame\r\n"
-                        b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
-                    )
+                    yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n")
 
                 except GeneratorExit:
                     # TODO: this is not triggered unfortunately. could be useful for cleanup if no stream is
