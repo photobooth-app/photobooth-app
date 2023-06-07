@@ -52,29 +52,40 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 ### Prerequisites
 
 - Python 3.9 or later
-- Camera supported by one of the backends
-- Raspberry Pi Bullseye with libcamera stack for picamera modules
-- git installed (automatic install on linux, download manually for windows platform)
+- Camera, can be one or two (first camera for stills, second camera for live view)
+  - DSLR: [gphoto2](https://github.com/gonzalo/gphoto2-updater) on linx
+  - Picamera2: installed and working (test with `libcamera-hello`)
+  - Webcamera: no additional prerequisites, ensure camera is working using native system apps
+- Raspberry Pi Bullseye for Picamera2 or any other linux/windows system
+- Turbojpeg (via apt on linux, manually install on windows)
 - [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
 
 The photobooth app can be used standalone but is not feature complete yet.
 Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
 see description below how to achieve integration.
 
-### Installer
+### Install via pip
 
-Execute the installer following the commands below, helping to setup on a Linux or Windows system:
+On a fresh Raspberry Pi OS 64bit, run following commands:
 
 ```sh
-curl -o install.py https://raw.githubusercontent.com/mgrl/photobooth-app/main/install.py
-python install.py
+sudo apt-get update
+sudo apt-get upgrade # system should be up to date
+
+# install some system dependencies
+sudo apt-get -y install libturbojpeg0 python3-pip libgl1 python3-picamera2
+
+# add user to input group for keyboard events
+usermod --append --groups tty,input {USERNAME}
+
+# install app
+pip install photobooth-app
 ```
 
-Start the app and browse to <http://localhost:8000>, start using the app.
+Start the app and browse to <http://localhost:8000>.
 
 ```sh
-cd photobooth-app
-python -m photobooth
+photobooth # photobooth should be available globally. if file is not found check PATH
 ```
 
 ### Integrate Photobooth-Project and this Photobooth-App
