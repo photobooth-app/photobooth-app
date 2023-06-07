@@ -71,7 +71,7 @@ sudo apt-get update
 sudo apt-get upgrade # system should be up to date
 
 # install some system dependencies
-sudo apt-get -y install libturbojpeg0 python3-pip libgl1 python3-picamera2
+sudo apt-get -y install libturbojpeg0 python3-pip libgl1 python3-picamera2 libgphoto2-dev
 
 # add user to input group for keyboard events
 usermod --append --groups tty,input {USERNAME}
@@ -80,10 +80,26 @@ usermod --append --groups tty,input {USERNAME}
 pip install photobooth-app
 ```
 
-Start the app and browse to <http://localhost:8000>.
+Now create empty folder which is the data folder. Change directory in a terminal to the newly created folder.
+Start the app by typing `photobooth` in the terminal.
+Browse to <http://localhost:8000> and see if the app is working properly.
 
-```sh
-photobooth # photobooth should be available globally. if file is not found check PATH
+#### Photobooth command not found
+
+If there is a warning as following during pip installation and photobooth can't start check the PATH variable
+
+```text
+WARNING: The script photobooth is installed in '/home/pi/.local/bin' which is not on PATH.
+Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
+```
+
+See following is fine, might just need a restart after installation because the path .local/bin did not exist before.
+
+```sh  # ~/.profile
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
 ```
 
 ### Integrate Photobooth-Project and this Photobooth-App
