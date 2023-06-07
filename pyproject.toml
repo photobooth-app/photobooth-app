@@ -56,7 +56,7 @@ photobooth = "photobooth.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-fastapi = "^0.95.2"
+fastapi = ">=0.95.2,<0.97.0"
 opencv-python = "^4.7.0.72"
 piexif = "^1.1.3"
 pillow = "^9.5.0"
