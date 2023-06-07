@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from io import BytesIO
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 from pymitter import EventEmitter
@@ -165,7 +166,10 @@ def img_aquisition(
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    img_original = Image.open("./photobooth/assets/simulated_background.jpg")
+    path_live_img = Path(__file__).parent.joinpath("assets", "backend_simulated", "simulated_background.jpg").resolve()
+    path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
+
+    img_original = Image.open(path_live_img)
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():
@@ -183,8 +187,8 @@ def img_aquisition(
 
         # add text
         img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=22)
-        font_small = ImageFont.truetype(font="./photobooth/vendor/fonts/Roboto/Roboto-Bold.ttf", size=15)
+        font_large = ImageFont.truetype(font=str(path_font), size=22)
+        font_small = ImageFont.truetype(font=str(path_font), size=15)
         img_draw.text((25, 100), "simulated image source", fill=text_fill, font=font_large)
 
         img_draw.text(
