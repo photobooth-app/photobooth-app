@@ -10,7 +10,7 @@ from threading import Condition, Event
 try:
     import gphoto2 as gp
 except Exception as import_exc:
-    raise OSError("gphoto2 not supported on windows platform") from import_exc
+    raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
 from pymitter import EventEmitter
 
