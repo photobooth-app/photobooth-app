@@ -1,12 +1,13 @@
 name: cicd
 
-on:
-  push:
-    branches:
-      - packaging
-  label:
-    types:
-      - created
+on: [push]
+#on:
+#  push:
+#    branches:
+#      - packaging
+#  label:
+#    types:
+#      - created
 
 jobs:
   pypi-publish:
