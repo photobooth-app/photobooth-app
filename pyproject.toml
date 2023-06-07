@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.0.3"
+version = "0.0.4"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
@@ -37,7 +37,7 @@ documentation = "https://mgrl.github.io/photobooth-docs"
 
 [tool.poetry]
 name = "photobooth-app"
-version = "0.0.3"
+version = "0.0.4"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = ["Michael G <me@mgrl.de>"]
 readme = "README.md"

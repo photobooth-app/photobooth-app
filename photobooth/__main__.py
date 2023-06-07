@@ -81,6 +81,8 @@ def main(run_server: bool = True):
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
     # use to construct paths to user data
     logger.info(f"working directory: {Path.cwd().resolve()}")
+    # __version__ = importlib.metadata.version("photobooth-app")
+    # logger.info(f"{__version__=}")
 
     # allow one instance at a time, set whether webserver port is avail as sign it's good or not
     _guard(
