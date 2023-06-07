@@ -78,10 +78,15 @@ usermod --append --groups tty,input {USERNAME}
 
 # install app
 pip install photobooth-app
+
+# create data folder
+mkdir ~/photobooth-data
+cd ~/photobooth-data
+
+# start app
+photobooth
 ```
 
-Now create empty folder which is the data folder. Change directory in a terminal to the newly created folder.
-Start the app by typing `photobooth` in the terminal.
 Browse to <http://localhost:8000> and see if the app is working properly.
 
 #### Photobooth command not found
