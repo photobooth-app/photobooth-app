@@ -1,6 +1,6 @@
 name: cicd
 
-on: [push, pull_request]
+on: [push]
 #on:
 #  push:
 #    branches:
@@ -33,3 +33,4 @@ jobs:
         with:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
