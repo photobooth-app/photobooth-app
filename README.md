@@ -107,6 +107,15 @@ if [ -d "$HOME/.local/bin" ] ; then
 fi
 ```
 
+#### Install development versions
+
+Stable releases are published at pypi registry.
+To test the latest development version install directly from git:
+
+```sh
+pip install git+https://github.com/mgrl/photobooth-app.git@dev
+```
+
 ### Integrate Photobooth-Project and this Photobooth-App
 
 Following commands have to be set in photobooth project to use this app as streamingserver.
