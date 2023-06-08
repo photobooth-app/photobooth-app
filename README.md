@@ -51,7 +51,7 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
 - Python 3.9 or later
 - Camera, can be one or two (first camera for stills, second camera for live view)
-  - DSLR: [gphoto2](https://github.com/gonzalo/gphoto2-updater) on linx
+  - DSLR: [gphoto2](https://github.com/gonzalo/gphoto2-updater) on Linux
   - Picamera2: installed and working (test with `libcamera-hello`)
   - Webcamera: no additional prerequisites, ensure camera is working using native system apps
 - Raspberry Pi Bullseye for Picamera2 or any other linux/windows system
