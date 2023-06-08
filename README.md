@@ -37,13 +37,13 @@ Use [photobooth project](https://photoboothproject.github.io/) as frontend.
 
 ## 💅 Screenshots
 
-![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/frontpage.png)
-![gallery list](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_list.png)
-![gallery detail](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/gallery_detail.png)
-![admin center page dashboard](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_dashboard.png)
-![admin center page config tab backends](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_backends.png)
-![admin center page config tab userinterface](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_config_ui.png)
-![admin center page status](https://raw.githubusercontent.com/mgrl/photobooth-app/main/misc/screenshots/admin_status.png)
+![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/frontpage.png)
+![gallery list](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/gallery_list.png)
+![gallery detail](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/gallery_detail.png)
+![admin center page dashboard](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_dashboard.png)
+![admin center page config tab backends](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_config_backends.png)
+![admin center page config tab userinterface](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_config_ui.png)
+![admin center page status](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_status.png)
 
 ## 🔧 Installation
 
