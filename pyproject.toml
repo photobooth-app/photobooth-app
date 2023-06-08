@@ -131,7 +131,7 @@ select = [
 ignore = [
   "B008" #used for DI injection
   ]
-extend-exclude = ["./scripts", "install.py"]
+extend-exclude = ["vendor"]
 
 [tool.ruff.per-file-ignores]
 "photobooth/appconfig.py" = ["E501"]
