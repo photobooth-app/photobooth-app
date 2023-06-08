@@ -42,6 +42,7 @@ jobs:
       wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 
     runs-on: self-hosted
+    if: ${{ github.repository_owner == 'mgrl' }}
 
     steps:
       - uses: actions/checkout@v3
@@ -70,6 +71,7 @@ jobs:
   upload-to-codecov:
     needs: [tests, tests-hardware]
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'mgrl' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
