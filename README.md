@@ -1,6 +1,6 @@
 # Photobooth App
 
-![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11-blue)
+![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/pypi/pyversions/photobooth-app)
 ![rpi, linux and windows platform supported](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
 [![ruff](https://github.com/mgrl/photobooth-app/actions/workflows/ruff.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/ruff.yml)
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml)
@@ -8,7 +8,7 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
-**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](#-installation)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)**
+**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](#-installation)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)**
 
 ## 😍 Features
 
@@ -64,6 +64,7 @@ see description below how to achieve integration.
 
 ### Install via pip
 
+The app is available as [PyPI package](https://pypi.org/project/photobooth-app/).
 On a fresh Raspberry Pi OS 64bit, run following commands:
 
 ```sh
@@ -105,15 +106,6 @@ See following is fine, might just need a restart after installation because the 
 if [ -d "$HOME/.local/bin" ] ; then
     PATH="$HOME/.local/bin:$PATH"
 fi
-```
-
-#### Install development versions
-
-Stable releases are published at pypi registry.
-To test the latest development version install directly from git:
-
-```sh
-pip install git+https://github.com/mgrl/photobooth-app.git@dev
 ```
 
 ### Integrate Photobooth-Project and this Photobooth-App
