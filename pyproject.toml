@@ -1,12 +1,12 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.1.0b3"
+version = "0.1.0rc1"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
 readme = "README.md"
-license = { file = "LICENSE.md" }
+license-files = { paths = ["LICENSE.md"] }
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
@@ -29,73 +29,65 @@ keywords = [
   "picamera2"
 ]
 
+dependencies= [
+ "python>=3.9,<3.12",
+ "fastapi~=0.95.2",
+ "opencv-python~=4.7.0",
+ "piexif~=1.1.3",
+ "pillow~=9.5.0",
+ "psutil~=5.9.5",
+ "pydantic~=1.10.8",
+ "pymitter~=0.4.0",
+ "pyturbojpeg~=1.7.1",
+ "requests~=2.31.0",
+ "sse-starlette~=1.6.1",
+ "uvicorn~=0.22.0",
+ "python-dotenv~=1.0.0",
+ "pyserial~=3.5",
+ "jsonref~=1.1.0",
+ "dependency-injector~=4.41.0",
+ "pilgram2~=2.0.2",
+ "v4l2py~=0.6.2; platform_system == 'linux'",
+ "gpiozero~=1.6.2; platform_system == 'linux'",
+ "gphoto2~=2.3.4; platform_system == 'linux'",
+ "python-statemachine~=2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest~=7.2.0",
+  "pytest-benchmark~=4.0.0",
+  "pytest-cov~=4.0.0",
+  "ruff~=0.0.270",
+  "httpx-sse~=0.3.1",
+  "httpx~=0.24.1",
+  "simplejpeg~=1.6.6",
+  "coverage[toml]~=7.2.7"
+]
+
 [project.urls]
 homepage = "https://github.com/mgrl/photobooth-app"
 repository = "https://github.com/mgrl/photobooth-app"
 documentation = "https://mgrl.github.io/photobooth-docs"
 
 
-[tool.poetry]
-name = "photobooth-app"
-version = "0.1.0b3"
-description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
-authors = ["Michael G <me@mgrl.de>"]
-readme = "README.md"
-license = "MIT"
-packages = [
-    { include = "photobooth" },
-    #{ include = "vendor/keyboard" },
-]
-homepage = "https://github.com/mgrl/photobooth-app"
-repository = "https://github.com/mgrl/photobooth-app"
-documentation = "https://mgrl.github.io/photobooth-docs"
-
-[tool.poetry.scripts]
+[project.scripts]
 photobooth = "photobooth.__main__:main"
 
 
-[tool.poetry.dependencies]
-python = ">=3.9,<3.12"
-fastapi = ">=0.95.2,<0.97.0"
-opencv-python = "^4.7.0.72"
-piexif = "^1.1.3"
-pillow = "^9.5.0"
-psutil = "^5.9.5"
-pydantic = "^1.10.8"
-pymitter = "^0.4.0"
-pyturbojpeg = "^1.7.1"
-requests = "^2.31.0"
-sse-starlette = "^1.6.1"
-uvicorn = "^0.22.0"
-python-dotenv = "^1.0.0"
-pyserial = "^3.5"
-jsonref = "^1.1.0"
-dependency-injector = "^4.41.0"
-pilgram2 = "^2.0.2"
-v4l2py = {version = "^0.6.2", platform = "linux"}
-gpiozero = {version = "^1.6.2", platform = "linux"}
-gphoto2 = {version = "^2.3.4", platform = "linux"}
-python-statemachine = "^2.0.0"
-# keyboard is unmaintained but latest master version needed to support non-sudo keyboard access.
-# include keyboard as vendor subpackage right now until better solution found. direct references are not allowed on pypi.
-# https://github.com/boppreh/keyboard/issues/420#issuecomment-1364100975
-# keyboard = {git = "https://github.com/boppreh/keyboard", rev="d232de09bda50ecb5211ebcc59b85bc6da6aaa24"}
+[tool.hatch.build]
+include = [
+  "/photobooth",
+]
+[tool.hatch.build.targets.sdist]
 
+[tool.hatch.build.targets.wheel]
+packages = ["photobooth"]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.2.0"
-pytest-benchmark = "^4.0.0"
-pytest-cov = "^4.0.0"
-ruff = ">=0.0.270,<0.0.273"
-httpx-sse = "^0.3.1"
-httpx = "^0.24.1"
-simplejpeg = "^1.6.6"
-coverage = {extras = ["toml"], version = "^7.2.7"}
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 log_cli = true
