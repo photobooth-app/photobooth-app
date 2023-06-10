@@ -8,7 +8,7 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
-**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](https://mgrl.github.io/photobooth-docs/installation/)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)** - **[3d printed box](https://mgrl.github.io/photobooth-docs/photobox3dprint/)**
+**[Installation](https://mgrl.github.io/photobooth-docs/installation/)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)** - **[3d printed box](https://mgrl.github.io/photobooth-docs/photobox3dprint/)**
 
 ## 😍 Features
 
