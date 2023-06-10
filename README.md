@@ -8,7 +8,7 @@
 
 The photobooth app is written in Python 🐍 and coming along with a modern Vue frontend.
 
-**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](#-installation)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)**
+**[Features](#-features)** - **[Supported Cameras](#-supported-cameras)** - **[Installation](https://mgrl.github.io/photobooth-docs/installation/)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)** - **[3d printed box](https://mgrl.github.io/photobooth-docs/photobox3dprint/)**
 
 ## 😍 Features
 
@@ -31,108 +31,32 @@ The photobooth app's Python backend allows to use different camera types on Linu
 
 The app controls camera's autofocus, handles led signaling when a photo is taken and streams live video to photobooth.
 
-The booth is made from 3d printed parts, [see the documentation ✍ over here](https://github.com/mgrl/photobooth-3d).
-The camera support is mostly ready to use, the frontend is not production ready yet.
-Use [photobooth project](https://photoboothproject.github.io/) as frontend.
+The reference photobooth box is made from 3d printed parts, [see the 3d printed reference box over here](https://mgrl.github.io/photobooth-docs/photobox3dprint/).
 
 ## 💅 Screenshots
 
 ![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/frontpage.png)
-![gallery list](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/gallery_list.png)
-![gallery detail](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/gallery_detail.png)
-![admin center page dashboard](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_dashboard.png)
-![admin center page config tab backends](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_config_backends.png)
-![admin center page config tab userinterface](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_config_ui.png)
-![admin center page status](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/admin_status.png)
+[Find more screenshots in the documentation](https://mgrl.github.io/photobooth-docs/screenshots)
 
 ## 🔧 Installation
 
-### Prerequisites
-
-- Python 3.9 or later
-- Camera, can be one or two (first camera for stills, second camera for live view)
-  - DSLR: [gphoto2](https://github.com/gonzalo/gphoto2-updater) on Linux
-  - Picamera2: installed and working (test with `libcamera-hello`)
-  - Webcamera: no additional prerequisites, ensure camera is working using native system apps
-- Raspberry Pi Bullseye for Picamera2 or any other linux/windows system
-- Turbojpeg (via apt on linux, manually install on windows)
-- [works probably best with 3d printed photobooth and parts listed in the BOM](https://github.com/mgrl/photobooth-3d)
+[See separate installation instructions in the documentation](https://mgrl.github.io/photobooth-docs/installation/).
 
 The photobooth app can be used standalone but is not feature complete yet.
 Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
-see description below how to achieve integration.
-
-### Install via pip
-
-The app is available as [PyPI package](https://pypi.org/project/photobooth-app/).
-On a fresh Raspberry Pi OS 64bit, run following commands:
-
-```sh
-sudo apt-get update
-sudo apt-get upgrade # system should be up to date
-
-# install some system dependencies
-sudo apt-get -y install libturbojpeg0 python3-pip libgl1 python3-picamera2 libgphoto2-dev
-
-# add user to input group for keyboard events
-usermod --append --groups tty,input {USERNAME}
-
-# install app
-pip install photobooth-app
-
-# create data folder
-mkdir ~/photobooth-data
-cd ~/photobooth-data
-
-# start app
-photobooth
-```
-
-Browse to <http://localhost:8000> and see if the app is working properly.
-
-#### Photobooth command not found
-
-If there is a warning as following during pip installation and photobooth can't start check the PATH variable
-
-```text
-WARNING: The script photobooth is installed in '/home/pi/.local/bin' which is not on PATH.
-Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
-```
-
-See following is fine, might just need a restart after installation because the path .local/bin did not exist before.
-
-```sh  # ~/.profile
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/.local/bin" ] ; then
-    PATH="$HOME/.local/bin:$PATH"
-fi
-```
-
-### Integrate Photobooth-Project and this Photobooth-App
-
-Following commands have to be set in photobooth project to use this app as streamingserver.
-Replace <http://photobooth> by the actual hostname or localhost if on same server.
-
-```text
-take_picture_cmd: curl -o "%s" localhost:8000/aquisition/still | echo Done
-take_picture_msg: Done
-pre_photo_cmd: curl http://photobooth:8000/aquisition/mode/capture
-post_photo_cmd: curl http://photobooth:8000/aquisition/mode/preview
-preview_url: url("http://photobooth:8000/aquisition/stream.mjpg")
-background_defaults: url("http://photobooth:8000/aquisition/stream.mjpg")
-```
+see [description how to achieve integration](https://mgrl.github.io/photobooth-docs/reference/photoboothprojectintegration/).
 
 ## 📣 Changelog
 
 see separate file:
-<https://github.com/mgrl/photobooth-app/blob/main/LICENSE.md>
+<https://github.com/mgrl/photobooth-app/blob/main/CHANGELOG.md>
 
 ### ©️ License
 
-The software is licensed under the MIT license.  
+The software is licensed under the MIT license.
 
 ### 🎉 Donation
 
-If you like my work and like to keep me motivated you can buy me a coconut water:
+If you like my work and like to keep me motivated you can sponsor me:
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=8255Y566TBNEC)
