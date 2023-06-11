@@ -69,20 +69,13 @@ homepage = "https://github.com/mgrl/photobooth-app"
 repository = "https://github.com/mgrl/photobooth-app"
 documentation = "https://mgrl.github.io/photobooth-docs"
 
-
 [project.scripts]
 photobooth = "photobooth.__main__:main"
-
 
 [tool.hatch.build]
 include = [
   "/photobooth",
 ]
-[tool.hatch.build.targets.sdist]
-
-[tool.hatch.build.targets.wheel]
-packages = ["photobooth"]
-
 
 [build-system]
 requires = ["hatchling"]
