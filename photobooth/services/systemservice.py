@@ -86,18 +86,20 @@ class SystemService(BaseService):
                             os.path.normpath(path_photobooth_working_dir),
                         )
                     )
-        result = subprocess.run("systemctl --user enable photobooth-app.service", shell=True, text=True, check=False)
-        if result.returncode != 0:
-            raise RuntimeError("error enable the service")
+        try:
+            subprocess.run("systemctl --user enable photobooth-app.service", shell=True)
+        except Exception as exc:
+            raise RuntimeError("error enable the service") from exc
 
         logger.info("service installed and enabled")
 
     def uninstall_service(self):
         # uninstall booth service
 
-        result = subprocess.run("systemctl --user disable photobooth-app.service", shell=True, text=True, check=False)
-        if result.returncode != 0:
-            raise RuntimeError("error disable the service")
+        try:
+            subprocess.run("systemctl --user disable photobooth-app.service", shell=True)
+        except Exception as exc:
+            raise RuntimeError("error disable the service") from exc
 
         try:
             os.remove(PHOTOBOOTH_APP_SERVICE_FILE)
