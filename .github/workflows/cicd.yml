@@ -18,7 +18,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/photobooth-app
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       # setup
       - uses: actions/checkout@v3
@@ -26,14 +26,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      
-      # install poetry to build
+
+      # install hatch to build
       - run: pip install --user --upgrade pipx
-      - run: pipx install poetry
-      
+      - run: pipx install hatch
+
       # build
-      - run: poetry build
-        
+      - run: hatch build
+
       # publish test pypi
       - name: Publish distribution 📦 to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -41,7 +41,7 @@ jobs:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
-      
+
       # publish pypi if there is a tag with commit
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.ref, 'refs/tags')

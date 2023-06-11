@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.1.0rc1"
+version = "0.1.0rc2"
 description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
@@ -30,7 +30,6 @@ keywords = [
 ]
 
 dependencies= [
- "python>=3.9,<3.12",
  "fastapi~=0.95.2",
  "opencv-python~=4.7.0",
  "piexif~=1.1.3",
