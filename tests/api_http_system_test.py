@@ -1,4 +1,5 @@
 
+import platform
 from unittest import mock
 from unittest.mock import patch
 
@@ -17,17 +18,9 @@ def client() -> TestClient:
 
 @pytest.fixture(
     params=[
-        #"/system/server/reboot",
-        #"/system/server/shutdown",
-
-        #"/system/service/reload",
-
         "/system/service/start",
         "/system/service/restart",
         "/system/service/stop",
-
-        #"/system/service/install",
-        #"/system/service/uninstall",
     ]
 )
 def system_service_startstop_endpoint(request):
@@ -50,6 +43,16 @@ def system_service_reload_endpoint(request):
     ]
 )
 def system_server_endpoint(request):
+    yield request.param
+
+
+@pytest.fixture(
+    params=[
+        "/system/service/install",
+        "/system/service/uninstall",
+    ]
+)
+def system_service_installuninstall_endpoint(request):
     yield request.param
 
 
@@ -83,6 +86,17 @@ def test_system_server_endpoints(mock_system, client: TestClient, system_server_
     assert response.status_code == 200
 
     mock_system.assert_called()
+
+@patch('subprocess.run')
+def test_system_service_installuninstall_endpoints(mock_run, client: TestClient, system_service_installuninstall_endpoint):
+
+    response = client.get(system_service_installuninstall_endpoint)
+
+    if platform.system() == "Linux":
+        assert response.status_code == 200
+        mock_run.assert_called()
+    else:
+        assert response.status_code == 500
 
 
 def test_system_nonexistant_endpoint(client: TestClient):
