@@ -58,7 +58,6 @@ jobs:
       #- name: Install gphoto2 dependencies
       #  run: |
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
-      - run: hatch env run --env test pip install picamera2 # workaround for now until picamera2 install recommendation changes
       - name: Test with pytest
         run: |
           hatch run test:test
