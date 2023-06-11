@@ -91,9 +91,9 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 # disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
 disable_warnings = ["couldnt-parse"]
 omit = [
-    "install.py",
     "test_*.py",
-    "./tests/*"
+    "./tests/*",
+    "./photobooth/vendor/*"
     ]
 parallel = true
 concurrency = ["thread","multiprocessing"]
