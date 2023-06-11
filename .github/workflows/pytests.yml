@@ -25,7 +25,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
-      - run: hatch install
       - name: Test with pytest
         run: |
           hatch run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./
@@ -60,7 +59,6 @@ jobs:
       #  run: |
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - run: hatch run pip install picamera2 # workaround for now until picamera2 install recommendation changes
-      - run: hatch install
       - name: Test with pytest
         run: |
           hatch run pytest -v --cov-report=term --cov-report=xml:coverage-hardware.xml --cov ./
