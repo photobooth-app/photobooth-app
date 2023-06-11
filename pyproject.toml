@@ -52,6 +52,18 @@ dependencies= [
  "python-statemachine~=2.0.0"
 ]
 
+[tool.hatch.envs.test]
+dependencies = [
+  "pytest~=7.2.0",
+  "pytest-benchmark~=4.0.0",
+  "pytest-cov~=4.0.0",
+  "ruff~=0.0.270",
+  "httpx-sse~=0.3.1",
+  "httpx~=0.24.1",
+  "simplejpeg~=1.6.6",
+  "coverage[toml]~=7.2.7"
+]
+
 [project.optional-dependencies]
 dev = [
   "pytest~=7.2.0",
