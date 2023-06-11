@@ -27,7 +27,7 @@ jobs:
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
       - name: Test with pytest
         run: |
-          hatch env run --env test:test
+          hatch run test:test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
@@ -61,7 +61,7 @@ jobs:
       - run: hatch run pip install picamera2 # workaround for now until picamera2 install recommendation changes
       - name: Test with pytest
         run: |
-          hatch env run --env test:test
+          hatch run test:test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
