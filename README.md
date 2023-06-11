@@ -1,3 +1,5 @@
+# Photobooth App
+
 ![photobooth-app logo](https://raw.githubusercontent.com/mgrl/photobooth-app/dev/assets/logo/logo-text-black-transparent.png)
 
 ![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/pypi/pyversions/photobooth-app)
