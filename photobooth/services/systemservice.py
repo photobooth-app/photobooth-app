@@ -77,7 +77,6 @@ class SystemService(BaseService):
         path_photobooth_working_dir = Path.cwd().resolve()
         with open(path_photobooth_service_file, encoding="utf-8") as fin:
             PHOTOBOOTH_APP_SERVICE_FILE.parent.mkdir(exist_ok=True, parents=True)
-            logger.info(f"creating service file '{PHOTOBOOTH_APP_SERVICE_FILE}'")
             with open(PHOTOBOOTH_APP_SERVICE_FILE, "w", encoding="utf-8") as fout:
                 for line in fin:
                     fout.write(
@@ -86,12 +85,14 @@ class SystemService(BaseService):
                             os.path.normpath(path_photobooth_working_dir),
                         )
                     )
+            logger.info(f"created service file '{PHOTOBOOTH_APP_SERVICE_FILE}'")
+            logger.info(f"using working directory '{path_photobooth_working_dir}'")
         try:
             subprocess.run("systemctl --user enable photobooth-app.service", shell=True)
+            logger.info("service enabled")
         except Exception as exc:
             raise RuntimeError("error enable the service") from exc
 
-        logger.info("service installed and enabled")
 
     def uninstall_service(self):
         # uninstall booth service
