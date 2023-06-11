@@ -23,7 +23,7 @@ try:
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
 except Exception as import_exc:
-    raise OSError("picamera2/libcamera not supported on windows platform") from import_exc
+    raise OSError("picamera2/libcamera import error; check picamera2/libcamera installation") from import_exc
 
 logger = logging.getLogger(__name__)
 

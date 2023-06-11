@@ -19,7 +19,7 @@ from .abstractbackend import (
 try:
     from v4l2py import Device
 except Exception as import_exc:
-    raise OSError("backend v4l2py not supported on windows platform") from import_exc
+    raise OSError("v4l2py import error; check v4l2py installation") from import_exc
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
