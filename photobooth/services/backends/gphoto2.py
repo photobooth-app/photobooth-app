@@ -267,7 +267,7 @@ class Gphoto2Backend(AbstractBackend):
 
                     logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
 
-                except gp.Gphoto2Error as exc:
+                except gp.GPhoto2Error as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
 
                     # inform finished anyway to signal WLED turn off lights
@@ -291,7 +291,7 @@ class Gphoto2Backend(AbstractBackend):
 
                     file_data = camera_file.get_data_and_size()
                     img_bytes = memoryview(file_data).tobytes()
-                except gp.Gphoto2Error as exc:
+                except gp.GPhoto2Error as exc:
                     logger.critical(f"error reading camera file! check logs for errors. {exc}")
 
                     # try again in next loop
