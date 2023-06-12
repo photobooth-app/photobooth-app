@@ -61,7 +61,8 @@ dependencies = [
   "httpx-sse~=0.3.1",
   "httpx~=0.24.1",
   "simplejpeg~=1.6.6",
-  "coverage[toml]~=7.2.7"
+  "coverage[toml]~=7.2.7",
+  "black"
 ]
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
 system-packages = true
