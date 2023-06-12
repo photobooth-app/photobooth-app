@@ -12,6 +12,7 @@ from pymitter import EventEmitter
 from statemachine import State, StateMachine
 
 from ..appconfig import AppConfig
+from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
@@ -216,9 +217,7 @@ class ProcessingService(StateMachine):
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
-            logger.critical(
-                "critical error capture image. " f"failed to get image after {MAX_ATTEMPTS} attempts. giving up!"
-            )
+            logger.critical(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
             raise RuntimeError(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
@@ -232,13 +231,19 @@ class ProcessingService(StateMachine):
     def evt_chose_1pic_get(self):
         logger.info("evt_chose_1pic_get called to take picture")
         if not self.idle.is_active:
-            raise RuntimeError("bad request, only one request at a time!")
+            raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
-        self.thrill()
-        self.countdown()
-        self.shoot()
-        self.postprocess()
-        self.finalize()
+        try:
+            self.thrill()
+            self.countdown()
+            self.shoot()
+            self.postprocess()
+            self.finalize()
+        except Exception as exc:
+            logger.critical(f"something went wrong :( {exc}")
+            self._reset()
+            raise RuntimeError(f"something went wrong :( {exc}") from exc
+
 
     ### some custom helper
 

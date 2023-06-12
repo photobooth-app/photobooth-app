@@ -15,6 +15,7 @@ import json
 from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
+from ..utils.exceptions import ProcessMachineOccupiedError
 from ..vendor.packages.keyboard import keyboard
 from .baseservice import BaseService
 from .processingservice import ProcessingService
@@ -55,5 +56,16 @@ class KeyboardService(BaseService):
         )
 
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takepic:
-            self._logger.info(f"{self._config.hardwareinputoutput.keyboard_input_keycode_takepic=}")
-            self._processing_service.evt_chose_1pic_get()
+            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takepic}")
+            self._logger.info("trigger evt_chose_1pic_get")
+
+            try:
+                self._processing_service.evt_chose_1pic_get()
+            except ProcessMachineOccupiedError as exc:
+                # raised if processingservice not idle
+                self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+            except Exception as exc:
+                # other errors
+                self._logger.critical(exc)
+
+

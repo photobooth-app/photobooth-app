@@ -30,6 +30,7 @@ def init_aquisition_resource(evtbus, config, primary, secondary):
         resource.start()
     except Exception as exc:
         logger.critical(f"failed to start acquisition {exc}")
+        raise RuntimeError(f"cannot start backend, app fails, check configuration {exc}") from exc
     else:
         yield resource
         resource.stop()

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..containers import ApplicationContainer
 from ..services.processingservice import ProcessingService
+from ..utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(__name__)
 processing_router = APIRouter(
@@ -22,7 +23,7 @@ def api_chose_1pic_get(
     try:
         processing_service.evt_chose_1pic_get()
         return "OK"
-    except RuntimeError as exc:
+    except ProcessMachineOccupiedError as exc:
         # raised if processingservice not idle
         raise HTTPException(
             status_code=400,
@@ -30,7 +31,7 @@ def api_chose_1pic_get(
         ) from exc
     except Exception as exc:
         # other errors
-        logger.exception(exc)
+        logger.critical(exc)
         raise HTTPException(
             status_code=500,
             detail=f"something went wrong, Exception: {exc}",
