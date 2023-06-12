@@ -326,12 +326,15 @@ class GroupMediaprocessing(BaseModel):
     )
 
 
-class GroupHardwareInput(BaseModel):
-    """Configure GPIO, keyboard and more."""
+class GroupHardwareInputOutput(BaseModel):
+    """
+    Configure hardware GPIO, keyboard and more. Find integration information in the documentation.
+    """
 
     class Config:
         title = "Hardware Input/Output Config"
 
+    # keyboardservice config
     keyboard_input_enabled: bool = Field(
         default=False,
         description="Enable keyboard input globally",
@@ -340,6 +343,17 @@ class GroupHardwareInput(BaseModel):
         default="down",
         description="Keycode triggers capture of one image",
     )
+
+    # WledService Config
+    wled_enabled: bool = Field(
+        default=False,
+        description="Enable WLED integration for user feedback during countdown and capture by LEDs.",
+    )
+    wled_serial_port: str = Field(
+        default="",
+        description="Serial port the WLED device is connected to.",
+    )
+
 
 
 class GroupUiSettings(BaseModel):
@@ -402,30 +416,6 @@ class GroupUiSettings(BaseModel):
         description="",
     )
 
-class GroupWled(BaseModel):
-    """
-    WLED integration for countdown led / shoot animation
-    needs WLED module connected via USB serial port and
-    three presets:
-    1: standby (usually LEDs off)
-    2: countdown (animates countdown)
-    3: shoot (imitate a flash)
-    Please define presets on your own in WLED webfrontend
-    """
-
-    class Config:
-        title = "WLED Integration Config"
-
-    # WledService Config
-    ENABLED: bool = Field(
-        default=False,
-        description="Enable WLED integration for user feedback during countdown and capture by LEDs.",
-    )
-    SERIAL_PORT: str = Field(
-        default="",
-        description="Serial port the WLED device is connected to.",
-    )
-
 
 class GroupMisc(BaseModel):
     """
@@ -472,8 +462,7 @@ class AppConfig(BaseSettings):
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
-    wled: GroupWled = GroupWled()
-    hardwareinput: GroupHardwareInput = GroupHardwareInput()
+    hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
     misc: GroupMisc = GroupMisc()
 
     class Config:

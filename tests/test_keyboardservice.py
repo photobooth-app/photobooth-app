@@ -28,8 +28,8 @@ def test_key_callback():
     )
 
     # modify config
-    services.config().hardwareinput.keyboard_input_enabled = True
-    services.config().hardwareinput.keyboard_input_keycode_takepic = "a"
+    services.config().hardwareinputoutput.keyboard_input_enabled = True
+    services.config().hardwareinputoutput.keyboard_input_keycode_takepic = "a"
 
     try:
         keyboard_service = services.keyboard_service()

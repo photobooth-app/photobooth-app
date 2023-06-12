@@ -21,8 +21,8 @@ class WledService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus, config=config)
 
-        self._enabled = config.wled.ENABLED
-        self._serial_port = config.wled.SERIAL_PORT
+        self._enabled = config.hardwareinputoutput.wled_enabled
+        self._serial_port = config.hardwareinputoutput.wled_serial_port
 
         self._serial: serial.Serial = None
 

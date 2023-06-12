@@ -33,7 +33,7 @@ class KeyboardService(BaseService):
 
         self._processing_service = processing_service
 
-        if self._config.hardwareinput.keyboard_input_enabled:
+        if self._config.hardwareinputoutput.keyboard_input_enabled:
             self._logger.info("keyboardservice enabled - listeners installed")
             keyboard.on_press(self._on_key_callback)
         else:
@@ -54,6 +54,6 @@ class KeyboardService(BaseService):
             sse_data=json.dumps({"lastkeycode": key.name}),
         )
 
-        if key.name == self._config.hardwareinput.keyboard_input_keycode_takepic:
-            self._logger.info(f"{self._config.hardwareinput.keyboard_input_keycode_takepic=}")
+        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takepic:
+            self._logger.info(f"{self._config.hardwareinputoutput.keyboard_input_keycode_takepic=}")
             self._processing_service.evt_chose_1pic_get()
