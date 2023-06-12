@@ -18,7 +18,7 @@ def test_disabled():
         evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
-    services.config().wled.ENABLED = False
+    services.config().hardwareinputoutput.wled_enabled = False
 
     try:
         wled_service = services.wled_service()
@@ -37,8 +37,8 @@ def test_enabled_nonexistentserialport():
         evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
-    services.config().wled.ENABLED = True
-    services.config().wled.SERIAL_PORT = "nonexistentserialport"
+    services.config().hardwareinputoutput.wled_enabled = True
+    services.config().hardwareinputoutput.wled_serial_port = "nonexistentserialport"
 
     with pytest.raises(RuntimeError):
         # getting service starts automatically. here an Runtime Exception shall be thrown if connection fails.
