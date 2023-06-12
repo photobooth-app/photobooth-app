@@ -2,6 +2,12 @@
 
 ## :mega: Changelog
 
+- 2023-06-12
+  - breaking change in config; delete old config and start over
+  - implemented filter pipeline
+  - text overlay added to pipeline
+  - improved error handling on camera failure
+  - many bugfixes and smaller improvements
 - 2023-05-09
   - breaking change in config; delete old config and start over
   - introduce dependency injection framework
