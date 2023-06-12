@@ -1,13 +1,14 @@
 name: Publish 🐍 📦 to PyPI and TestPyPI
 
-on: [push]
-#on:
-#  push:
-#    branches:
-#      - packaging
-#  label:
-#    types:
-#      - created
+#on: [push]
+on:
+  push:
+    branches:
+      - main
+  label:
+    types:
+      - created
+      - edited
 
 jobs:
   pypi-publish:
