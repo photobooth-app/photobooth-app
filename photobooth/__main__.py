@@ -92,6 +92,9 @@ def main(run_server: bool = True):
     if run_server:
         server.run()
 
+    # close single instance port
+    s.close()
+
     application_container.shutdown_resources()
 
 

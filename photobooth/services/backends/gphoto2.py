@@ -262,22 +262,40 @@ class Gphoto2Backend(AbstractBackend):
 
                 # capture hq picture
                 logger.info("taking hq picture")
-                file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
-                logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
+                try:
+                    file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
 
-                if self._config.backends.gphoto2_wait_event_after_capture_trigger:
-                    self._camera.wait_for_event(1000)
+                    logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
 
-                camera_file = self._camera.file_get(
-                    file_path.folder,
-                    file_path.name,
-                    gp.GP_FILE_TYPE_NORMAL,
-                )
+                except gp.Gphoto2Error as exc:
+                    logger.critical(f"error capture! check logs for errors. {exc}")
+
+                    # inform finished anyway to signal WLED turn off lights
+                    self._evtbus.emit("frameserver/onCaptureFinished")
+
+                    # try again in next loop
+                    continue
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
 
-                file_data = camera_file.get_data_and_size()
-                img_bytes = memoryview(file_data).tobytes()
+                # read from camera
+                try:
+                    if self._config.backends.gphoto2_wait_event_after_capture_trigger:
+                        self._camera.wait_for_event(1000)
+
+                    camera_file = self._camera.file_get(
+                        file_path.folder,
+                        file_path.name,
+                        gp.GP_FILE_TYPE_NORMAL,
+                    )
+
+                    file_data = camera_file.get_data_and_size()
+                    img_bytes = memoryview(file_data).tobytes()
+                except gp.Gphoto2Error as exc:
+                    logger.critical(f"error reading camera file! check logs for errors. {exc}")
+
+                    # try again in next loop
+                    continue
 
                 with self._hires_data.condition:
                     self._hires_data.data = img_bytes
