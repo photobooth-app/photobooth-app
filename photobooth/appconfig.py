@@ -315,19 +315,11 @@ class GroupMediaprocessing(BaseModel):
         default=False,
         description="Enable/Disable 1pic processing pipeline completely",
     )
-
     pic1_filter: EnumPilgramFilter = Field(
         title="Pic1 Filter",
         default=EnumPilgramFilter.original,
         description="Instagram-like filter to apply per default. 'original' applies no filter.",
     )
-    """#TODO:
-    pic1_filter_userselectable: list[EnumPilgramFilter] = Field(
-        title="Pic1 Filter Userselectable",
-        default=[EnumPilgramFilter.original, EnumPilgramFilter._1977],
-        description="Filter the user may choose from in the gallery. 'original' applies no filter.",
-    )
-    """
     pic1_text_overlay: list[TextStageConfig] = Field(
         default=[],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/fonts/",
@@ -389,22 +381,26 @@ class GroupUiSettings(BaseModel):
         description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
     )
     gallery_show_filter: bool = Field(
-        default=False,
+        default=True,
         description="",
     )
+    gallery_filter_userselectable: list[EnumPilgramFilter] = Field(
+        title="Pic1 Filter Userselectable",
+        default=[EnumPilgramFilter.original, EnumPilgramFilter.clarendon, EnumPilgramFilter.moon],
+        description="Filter the user may choose from in the gallery. 'original' applies no filter.",
+    )
     gallery_show_download: bool = Field(
-        default=False,
+        default=True,
         description="",
     )
     gallery_show_delete: bool = Field(
-        default=False,
+        default=True,
         description="",
     )
     gallery_show_print: bool = Field(
-        default=False,
+        default=True,
         description="",
     )
-
 
 class GroupWled(BaseModel):
     """
