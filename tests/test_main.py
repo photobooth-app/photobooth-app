@@ -6,8 +6,6 @@ import socket
 
 import pytest
 
-from photobooth.appconfig import AppConfig
-
 logger = logging.getLogger(name=None)
 
 
@@ -22,9 +20,9 @@ def test_singleinstance():
 
     # bind fails on second instance, pretend we have an instance here:
     s = socket.socket()
-    s.bind((AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port))
+    s.bind(("localhost", 19988))
 
     with pytest.raises(SystemExit):
-        __main__._guard(AppConfig().common.webserver_bind_ip, AppConfig().common.webserver_port)
+        __main__.main(False)
 
     s.close()

@@ -62,19 +62,16 @@ def _server(
     return server
 
 
-def _guard(ip: str, port: int):
+def main(run_server: bool = True):
     # guard to start only one instance at a time.
     try:
         s = socket.socket()
-        s.bind((ip, port))  # bind fails on second instance, raising OSError
-        s.close()
+        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
     except OSError as exc:
         print("startup aborted. another instance is running. exiting.")
         logger.critical("startup aborted. another instance is running. exiting.")
-        raise SystemExit("webserver port not avail") from exc
+        raise SystemExit("only one instance allowed") from exc
 
-
-def main(run_server: bool = True):
     application_container = ApplicationContainer()
 
     # use to construct paths in app referring to assets
@@ -83,12 +80,6 @@ def main(run_server: bool = True):
     logger.info(f"working directory: {Path.cwd().resolve()}")
     # __version__ = importlib.metadata.version("photobooth-app")
     # logger.info(f"{__version__=}")
-
-    # allow one instance at a time, set whether webserver port is avail as sign it's good or not
-    _guard(
-        application_container.config().common.webserver_bind_ip,
-        application_container.config().common.webserver_port,
-    )
 
     application_container.init_resources()
     application_container.wire(modules=[__name__], packages=[".routers"])
