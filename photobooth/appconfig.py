@@ -358,7 +358,7 @@ class GroupHardwareInputOutput(BaseModel):
         default=False,
         description="Enable Raspberry Pi GPIOzero integration.",
     )
-    gpio_pin_shutdown: bool = Field(
+    gpio_pin_shutdown: int = Field(
         default=17,
         description="GPIO pin to shutdown after holding it for 2 seconds.",
     )
