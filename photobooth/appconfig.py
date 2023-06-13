@@ -354,6 +354,22 @@ class GroupHardwareInputOutput(BaseModel):
         description="Serial port the WLED device is connected to.",
     )
 
+    gpio_enabled: bool = Field(
+        default=False,
+        description="Enable Raspberry Pi GPIOzero integration.",
+    )
+    gpio_pin_shutdown: bool = Field(
+        default=17,
+        description="GPIO pin to shutdown after holding it for 2 seconds.",
+    )
+    gpio_pin_reboot: int = Field(
+        default=18,
+        description="GPIO pin to reboot after holding it for 2 seconds.",
+    )
+    gpio_pin_take1pic: int = Field(
+        default=27,
+        description="GPIO pin to take one picture.",
+    )
 
 
 class GroupUiSettings(BaseModel):
