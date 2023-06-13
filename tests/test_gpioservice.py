@@ -34,7 +34,7 @@ def services() -> GpioService:
         ),
     )
     # force register listener for testing purposes
-    services.gpio_service()._register_listener()
+    services.gpio_service().init_io()
 
     # deliver
     yield services

@@ -354,6 +354,7 @@ class GroupHardwareInputOutput(BaseModel):
         description="Serial port the WLED device is connected to.",
     )
 
+    # GpioService Config
     gpio_enabled: bool = Field(
         default=False,
         description="Enable Raspberry Pi GPIOzero integration.",

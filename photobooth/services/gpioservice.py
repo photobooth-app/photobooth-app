@@ -41,7 +41,15 @@ class GpioService(BaseService):
         # output signals
         # none yet
 
-        self.init_io()
+        if self._config.hardwareinputoutput.gpio_enabled:
+            if is_rpi():
+                self.init_io()
+                self._logger.info("gpio enabled - listeners installed")
+            else:
+                self._logger.info("platform is not raspberry pi - gpio library is not supported")
+        else:
+            if is_rpi():
+                self._logger.info("gpio not enabled - enable for gpio support on raspberry pi")
 
     def init_io(self):
         self.shutdown_btn = Button(
@@ -54,16 +62,10 @@ class GpioService(BaseService):
             self._config.hardwareinputoutput.gpio_pin_take1pic, bounce_time=DEBOUNCE_TIME
         )
 
+        self._register_listener()
+
     def start(self):
-        if self._config.hardwareinputoutput.gpio_enabled:
-            if is_rpi():
-                self._register_listener()
-                self._logger.info("gpio enabled - listeners installed")
-            else:
-                self._logger.info("platform is not raspberry pi - gpio library is not supported")
-        else:
-            if is_rpi():
-                self._logger.info("gpio not enabled - enable for gpio support on raspberry pi")
+        pass
 
     def stop(self):
         pass
