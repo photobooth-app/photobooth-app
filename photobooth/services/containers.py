@@ -8,6 +8,7 @@ from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
+from .gpioservice import GpioService
 from .informationservice import InformationService
 from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
@@ -60,6 +61,13 @@ def init_wled_resource(evtbus, config):
         pass
 
 
+def init_gpio_resource(evtbus, config, processing_service):
+    resource = GpioService(evtbus=evtbus, config=config, processing_service=processing_service)
+    resource.start()
+    yield resource
+    resource.stop()
+
+
 class ServicesContainer(containers.DeclarativeContainer):
     evtbus = providers.Dependency(instance_of=EventEmitter)
     config = providers.Dependency(instance_of=AppConfig)
@@ -110,4 +118,11 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_wled_resource,
         evtbus=evtbus,
         config=config,
+    )
+
+    gpio_service = providers.Resource(
+        init_gpio_resource,
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
     )
