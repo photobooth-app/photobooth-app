@@ -95,8 +95,6 @@ class GpioService(BaseService):
         self._register_listener_outputs()
 
     def _register_listener_inputs(self):
-        self._logger.warning(f"{self.shutdown_btn=}")
-
         # shutdown
         self.shutdown_btn.when_held = self._shutdown
         # reboot
