@@ -37,8 +37,8 @@ jobs:
     env:
       ## Sets environment variable
       backends__MAIN_BACKEND: Simulated
-      wled__ENABLED: True
-      wled__SERIAL_PORT: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+      hardwareinputoutput__wled_enabled: True
+      hardwareinputoutput__wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 
     runs-on: self-hosted
     if: ${{ github.repository_owner == 'mgrl' }}
