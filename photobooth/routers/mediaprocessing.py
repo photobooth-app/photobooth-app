@@ -5,7 +5,6 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from PIL import Image
 
-from ..appconfig import EnumPilgramFilter
 from ..containers import ApplicationContainer
 from ..services.mediacollectionservice import MediacollectionService
 from ..services.mediaprocessing.image_pipelinestages import pilgram_stage
@@ -17,16 +16,6 @@ mediaprocessing_router = APIRouter(
     prefix="/mediaprocessing",
     tags=["mediaprocessing"],
 )
-
-
-@mediaprocessing_router.get("/list/filter")
-@inject
-def api_get_list_filteravail(
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
-):
-    return [e.value for e in EnumPilgramFilter]
 
 
 @mediaprocessing_router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
