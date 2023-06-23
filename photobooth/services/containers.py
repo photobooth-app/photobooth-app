@@ -14,6 +14,7 @@ from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
 from .processingservice import ProcessingService
+from .shareservice import ShareService
 from .systemservice import SystemService
 from .wledservice import WledService
 
@@ -63,6 +64,13 @@ def init_wled_resource(evtbus, config):
 
 def init_gpio_resource(evtbus, config, processing_service):
     resource = GpioService(evtbus=evtbus, config=config, processing_service=processing_service)
+    resource.start()
+    yield resource
+    resource.stop()
+
+
+def init_share_resource(evtbus, config, mediacollection_service):
+    resource = ShareService(evtbus=evtbus, config=config, mediacollection_service=mediacollection_service)
     resource.start()
     yield resource
     resource.stop()
@@ -125,4 +133,11 @@ class ServicesContainer(containers.DeclarativeContainer):
         evtbus=evtbus,
         config=config,
         processing_service=processing_service,
+    )
+
+    share_service = providers.Resource(
+        init_share_resource,
+        evtbus=evtbus,
+        config=config,
+        mediacollection_service=mediacollection_service,
     )

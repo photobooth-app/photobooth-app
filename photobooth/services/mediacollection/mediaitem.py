@@ -9,6 +9,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from ...appconfig import AppConfig
+
 logger = logging.getLogger(__name__)
 
 DATA_PATH = "./data/"
@@ -152,6 +154,14 @@ class MediaItem:
         """filepath of media item thumbnail resolution scaled represents full
         external use as urls"""
         return Path(PATH_THUMBNAIL, self.filename).as_posix()
+
+    @property
+    def share_url(self) -> str:
+        """share url for example to use in qr code"""
+
+        # exception here for now to use appconfig like this not via container - maybe find better solution in future.
+        # config changes are not reflected like this, always needs restart
+        return f"{AppConfig().common.shareservice_url}?action=download&id={self.id}"
 
     def __post_init__(self):
         if not self.filename:

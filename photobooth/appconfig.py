@@ -145,6 +145,19 @@ class GroupCommon(BaseModel):
         description="Port to serve the photobooth website. Ensure the port is available.",
     )
 
+    shareservice_url: str = Field(
+        default="https://dl.qbooth.net/dl.php",
+        description="URL of php script that is used to serve files and share via QR code.",
+    )
+    shareservice_apikey: str = Field(
+        default="changedefault!",
+        description="Key to secure the download php script. Set the key in dl.php script to same value. Only if correct key is provided the shareservice works properly.",
+    )
+    shareservice_share_original: bool = Field(
+        default=False,
+        description="Upload original image as received from camera. If unchecked, the full processed version is uploaded with filter and texts applied.",
+    )
+
 
 class EnumImageBackendsMain(str, Enum):
     """enum to choose image backend MAIN from"""
