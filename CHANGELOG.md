@@ -2,6 +2,8 @@
 
 ## :mega: Changelog
 
+- 2023-06-23
+  - added QR code share service <https://mgrl.github.io/photobooth-docs/extras/shareservice/>
 - 2023-06-12
   - breaking change in config; delete old config and start over
   - implemented filter pipeline
