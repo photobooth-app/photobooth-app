@@ -49,12 +49,20 @@ class ShareService(BaseService):
 
     def start(self):
         """_summary_"""
+        if not self._config.common.shareservice_enable:
+            self._logger.info("shareservice disabled, start aborted.")
+            return
         self._initialize()
-        self._worker_thread.start()
+        if self._initialized:
+            self._worker_thread.start()
+        else:
+            self._logger.error("shareservice init was not successful. start service aborted.")
 
     def stop(self):
         """_summary_"""
         self._worker_thread.stop()
+        if self._worker_thread.is_alive():
+            self._worker_thread.join()
 
     def _worker_fun(self):
         # init

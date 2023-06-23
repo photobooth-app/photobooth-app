@@ -145,6 +145,10 @@ class GroupCommon(BaseModel):
         description="Port to serve the photobooth website. Ensure the port is available.",
     )
 
+    shareservice_enable: bool = Field(
+        default=False,
+        description="Enable share service. To enable URL needs to be configured and dl.php script setup properly.",
+    )
     shareservice_url: str = Field(
         default="https://dl.qbooth.net/dl.php",
         description="URL of php script that is used to serve files and share via QR code.",
