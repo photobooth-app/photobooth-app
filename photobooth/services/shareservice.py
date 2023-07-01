@@ -134,5 +134,7 @@ class ShareService(BaseService):
                         self._logger.debug("stop workerthread requested")
                         break
 
-            self._logger.info("request timed out or aborted otherwise, restarting loop after 5 seconds")
-            time.sleep(5)
+            self._logger.info("request timed out, error occured or shutdown requested")
+            if not self._worker_thread.stopped():
+                self._logger.info("restarting loop after 5 seconds")
+                time.sleep(5)
