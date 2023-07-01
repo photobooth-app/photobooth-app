@@ -74,7 +74,16 @@ class ShareService(BaseService):
             if r.encoding is None:
                 r.encoding = "utf-8"
 
-            for line in r.iter_lines(decode_unicode=True):
+            iterator = r.iter_lines(decode_unicode=True)
+
+            while not self._worker_thread.stopped():
+                try:
+                    line = next(iterator)
+                except Exception as exc:
+                    print(exc)
+                    self._logger.warning(f"encountered shareservice connection issue. retrying. error: {exc}")
+                    break
+
                 # filter out keep-alive new lines
                 if line:
                     job = json.loads(line)
