@@ -16,8 +16,8 @@ from fastapi.staticfiles import StaticFiles
 from .containers import ApplicationContainer
 from .routers.aquisition import aquisition_router
 from .routers.config import config_router
+from .routers.debug import debug_router
 from .routers.home import home_router
-from .routers.log import log_router
 from .routers.mediacollection import mediacollection_router
 from .routers.mediaprocessing import mediaprocessing_router
 from .routers.processing import processing_router
@@ -69,7 +69,7 @@ def _create_app() -> FastAPI:
     _app.include_router(config_router)
     _app.include_router(home_router)
     _app.include_router(aquisition_router)
-    _app.include_router(log_router)
+    _app.include_router(debug_router)
     _app.include_router(mediacollection_router)
     _app.include_router(mediaprocessing_router)
     _app.include_router(sse_router)

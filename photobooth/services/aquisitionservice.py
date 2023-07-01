@@ -78,6 +78,8 @@ class AquisitionService(BaseService):
         if self.secondary_backend:
             self.secondary_backend.start()
 
+        super().set_status_started()
+
     def stop(self):
         """stop backends"""
         if self.primary_backend:
@@ -85,6 +87,8 @@ class AquisitionService(BaseService):
 
         if self.secondary_backend:
             self.secondary_backend.stop()
+
+        super().set_status_stopped()
 
     def stats(self):
         """

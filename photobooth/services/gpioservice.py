@@ -65,10 +65,10 @@ class GpioService(BaseService):
         self._register_listener()
 
     def start(self):
-        pass
+        super().set_status_started()
 
     def stop(self):
-        pass
+        super().set_status_stopped()
 
     def _shutdown(self):
         self._logger.info("trigger _shutdown")
