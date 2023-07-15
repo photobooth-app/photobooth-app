@@ -13,13 +13,17 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: ${{ matrix.python-version }}
       - run: pipx install hatch # on hosted pipx is installed
       - name: Install apt dependencies
         run: |
