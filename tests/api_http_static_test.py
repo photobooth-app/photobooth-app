@@ -26,7 +26,6 @@ def test_read_log(client: TestClient):
     assert response.status_code == 200
 
 
-"""
 def test_read_services_status(client: TestClient):
     response = client.get("/debug/service/status")
     assert response.status_code == 200
@@ -34,4 +33,3 @@ def test_read_services_status(client: TestClient):
     # add shutdown_resources here, since appcontainer is fully initialized when getting this URI
     # failing to do so leaves threads running infinite.
     client.app.container.shutdown_resources()
-"""
