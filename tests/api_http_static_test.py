@@ -22,5 +22,10 @@ def test_read_main(client: TestClient):
 
 
 def test_read_log(client: TestClient):
-    response = client.get("/log/latest")
+    response = client.get("/debug/log/latest")
+    assert response.status_code == 200
+
+
+def test_read_services_status(client: TestClient):
+    response = client.get("/debug/service/status")
     assert response.status_code == 200
