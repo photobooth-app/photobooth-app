@@ -43,11 +43,14 @@ async def get_service_status(
 ):
     output_service_status = []
     for provider in appcontainer.traverse(types=[providers.Resource, providers.Singleton, providers.Factory]):
-        # print(provider)
-
-        if isinstance(provider(), BaseService):
-            service: BaseService = provider()
-            # print(f"{type(service).__name__} is a service-type, status: {service.get_status()}")
-            output_service_status.append({"service": type(service).__name__, "status": service.get_status().name})
+        provider_instance = provider()
+        if isinstance(provider_instance, BaseService):
+            service_instance: BaseService = provider_instance
+            logger.debug(
+                print(f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}")
+            )
+            output_service_status.append(
+                {"service": type(service_instance).__name__, "status": service_instance.get_status().name}
+            )
 
     return output_service_status
