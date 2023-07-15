@@ -54,10 +54,10 @@ dependencies= [
 
 [tool.hatch.envs.test]
 dependencies = [
-  "pytest~=7.2.0",
+  "pytest~=7.4.0",
   "pytest-benchmark~=4.0.0",
-  "pytest-cov~=4.0.0",
-  "ruff~=0.0.270",
+  "pytest-cov~=4.1.0",
+  "ruff~=0.0.278",
   "httpx-sse~=0.3.1",
   "httpx~=0.24.1",
   "simplejpeg~=1.6.6",
