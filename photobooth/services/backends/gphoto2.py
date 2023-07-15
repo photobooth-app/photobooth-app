@@ -310,7 +310,7 @@ def available_camera_indexes():
     """
     find available cameras, return valid indexes.
     """
-    camera_list = []  # gp.Camera.autodetect()
+    camera_list = gp.Camera.autodetect()
     if len(camera_list) == 0:
         logger.info("no camera detected")
         return []
