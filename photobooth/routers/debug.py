@@ -2,13 +2,8 @@ import logging
 import logging.config
 from pathlib import Path
 
-from dependency_injector import providers
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import Response
-
-from ..containers import ApplicationContainer
-from ..services.baseservice import BaseService
 
 logger = logging.getLogger(__name__)
 debug_router = APIRouter(
@@ -36,6 +31,7 @@ async def get_log_latest():
     )
 
 
+"""
 @debug_router.get("/service/status")
 @inject
 async def get_service_status(
@@ -54,3 +50,4 @@ async def get_service_status(
             )
 
     return output_service_status
+"""
