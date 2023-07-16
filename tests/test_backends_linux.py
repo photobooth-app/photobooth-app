@@ -74,3 +74,11 @@ def test_get_images_gphoto2():
         img.verify()
 
     gphoto2_backend.stop()
+
+
+def test_get_versions_gphoto2():
+    import gphoto2 as gp
+
+    logger.info(f"python-gphoto2: {gp.__version__}")
+    logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
+    logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
