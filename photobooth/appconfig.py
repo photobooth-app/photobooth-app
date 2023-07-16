@@ -69,28 +69,28 @@ class GroupCommon(BaseModel):
         ge=10,
         le=100,
         description="Livepreview stream JPEG image quality on supported backends",
-        ui_component="QSlider",
+        json_schema_extra={"ui_component": "QSlider"},
     )
     THUMBNAIL_STILL_QUALITY: int = Field(
         default=60,
         ge=10,
         le=100,
         description="Still JPEG thumbnail quality, thumbs used in gallery list",
-        ui_component="QSlider",
+        json_schema_extra={"ui_component": "QSlider"},
     )
     PREVIEW_STILL_QUALITY: int = Field(
         default=75,
         ge=10,
         le=100,
         description="Still JPEG preview quality, preview still shown in gallery detail",
-        ui_component="QSlider",
+        json_schema_extra={"ui_component": "QSlider"},
     )
     HIRES_STILL_QUALITY: int = Field(
         default=90,
         ge=10,
         le=100,
         description="Still JPEG full resolution quality, applied to download images and images with filter",
-        ui_component="QSlider",
+        json_schema_extra={"ui_component": "QSlider"},
     )
 
     FULL_STILL_WIDTH: int = Field(
@@ -121,7 +121,7 @@ class GroupCommon(BaseModel):
         ge=5,
         le=30,
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
-        ui_component="QSlider",
+        json_schema_extra={"ui_component": "QSlider"},
     )
 
     # flip camera source horizontal/vertical
@@ -528,7 +528,7 @@ class AppConfig(BaseSettings):
         env_file=[".env.installer", ".env.dev", ".env.prod"],
         env_nested_delimiter="__",
         case_sensitive=True,
-        json_schema_extra=Extra.ignore,
+        extra=Extra.ignore,
     )
 
     @classmethod
