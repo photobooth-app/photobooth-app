@@ -311,10 +311,6 @@ def available_camera_indexes():
     find available cameras, return valid indexes.
     """
 
-    logger.warning(f"python-gphoto2: {gp.__version__}")
-    logger.warning(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-    logger.warning(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
-
     camera_list = gp.Camera.autodetect()
     if len(camera_list) == 0:
         logger.info("no camera detected")
