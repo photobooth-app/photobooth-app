@@ -2,6 +2,9 @@
 
 ## :mega: Changelog
 
+- 2023-07-16
+  - updated dependencies
+  - fix: stick to gphoto2 2.3.4. v2.3.5 produces segfault error
 - 2023-06-23
   - added QR code share service <https://mgrl.github.io/photobooth-docs/extras/shareservice/>
 - 2023-06-12
