@@ -34,7 +34,7 @@ def test_config_endpoints(client: TestClient, config_endpoint):
 
 def test_config_post(client: TestClient):
     # jsonify using pydantic's json function, because fastapi cannot convert all types (like Color)
-    config_dict = {"updated_settings": json.loads(AppConfig().json())}
+    config_dict = {"updated_settings": json.loads(AppConfig().model_dump_json())}
 
     response = client.post("/config/current", json=config_dict)
     assert response.status_code == 200

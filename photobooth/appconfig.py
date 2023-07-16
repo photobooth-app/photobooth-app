@@ -528,7 +528,7 @@ class AppConfig(BaseSettings):
         env_file=[".env.installer", ".env.dev", ".env.prod"],
         env_nested_delimiter="__",
         case_sensitive=True,
-        extra=Extra.ignore,
+        json_schema_extra=Extra.ignore,
     )
 
     @classmethod
