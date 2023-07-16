@@ -34,7 +34,7 @@ jobs:
           sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
         run: |
-          hatch run test:test
+          hatch --verbose run test:test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
@@ -67,7 +67,7 @@ jobs:
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
         run: |
-          hatch run test:test
+          hatch --verbose run test:test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
