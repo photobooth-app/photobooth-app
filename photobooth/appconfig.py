@@ -12,8 +12,14 @@ from pathlib import Path
 from typing import Any
 
 import jsonref
-from pydantic import BaseModel, BaseSettings, Extra, Field, PrivateAttr
-from pydantic.color import Color
+from pydantic import BaseModel, ConfigDict, Extra, Field, PrivateAttr
+from pydantic.fields import FieldInfo
+from pydantic_extra_types.color import Color
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +38,7 @@ class EnumDebugLevel(str, Enum):
 class GroupCommon(BaseModel):
     """Common config for photobooth."""
 
-    class Config:
-        title = "Common Config"
+    model_config = ConfigDict(title="Common Config")
 
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
@@ -129,7 +134,7 @@ class GroupCommon(BaseModel):
         description="Apply vertical flip to image source on supported backends",
     )
     PROCESS_COUNTDOWN_TIMER: float = Field(
-        default=3,
+        default=3.0,
         description="Countdown in seconds, started when user start a capture process",
     )
     PROCESS_COUNTDOWN_OFFSET: float = Field(
@@ -212,8 +217,7 @@ class GroupBackends(BaseModel):
     or main backend.
     """
 
-    class Config:
-        title = "Camera Backend Config"
+    model_config = ConfigDict(title="Camera Backend Config")
 
     MAIN_BACKEND: EnumImageBackendsMain = Field(
         title="Main Backend",
@@ -319,14 +323,13 @@ class TextStageConfig(BaseModel):
     # rotation: int = 0 # TODO: not yet implemented
     font_size: int = 20
     font: str = "Roboto-Bold.ttf"
-    color: Color = Color("red")
+    color: Color = Color("red").as_named()
 
 
 class GroupMediaprocessing(BaseModel):
     """Configure stages how to process images after capture."""
 
-    class Config:
-        title = "Process media after capture"
+    model_config = ConfigDict(title="Process media after capture")
 
     pic1_enable_pipeline: bool = Field(
         default=False,
@@ -348,8 +351,7 @@ class GroupHardwareInputOutput(BaseModel):
     Configure hardware GPIO, keyboard and more. Find integration information in the documentation.
     """
 
-    class Config:
-        title = "Hardware Input/Output Config"
+    model_config = ConfigDict(title="Hardware Input/Output Config")
 
     # keyboardservice config
     keyboard_input_enabled: bool = Field(
@@ -393,8 +395,7 @@ class GroupHardwareInputOutput(BaseModel):
 class GroupUiSettings(BaseModel):
     """Personalize the booth's UI."""
 
-    class Config:
-        title = "Personalize the User Interface"
+    model_config = ConfigDict(title="Personalize the User Interface")
 
     FRONTPAGE_TEXT: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
@@ -456,24 +457,44 @@ class GroupMisc(BaseModel):
     Quite advanced, usually not necessary to touch.
     """
 
-    class Config:
-        title = "Miscellaneous Config"
+    model_config = ConfigDict(title="Miscellaneous Config")
 
 
-def json_config_settings_source(_config: BaseSettings) -> dict[str, Any]:
+class JsonConfigSettingsSource(PydanticBaseSettingsSource):
     """
-    custom parser to read json config file
-    """
-    encoding = _config.__config__.env_file_encoding
-    json_config = {}
-    try:
-        json_config = json.loads(Path(CONFIG_FILENAME).read_text(encoding))
-    except FileNotFoundError:
-        # ignore file not found, because it could have been deleted or not yet initialized
-        # using defaults
-        pass
+    A simple settings source class that loads variables from a JSON file
+    at the project's root.
 
-    return json_config
+    Here we happen to choose to use the `env_file_encoding` from Config
+    when reading `config.json`
+    """
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        encoding = self.config.get("env_file_encoding")
+        field_value = None
+        try:
+            file_content_json = json.loads(Path(CONFIG_FILENAME).read_text(encoding))
+            field_value = file_content_json.get(field_name)
+        except FileNotFoundError:
+            # ignore file not found, because it could have been deleted or not yet initialized
+            # using defaults
+            pass
+
+        return field_value, field_name, False
+
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+        return value
+
+    def __call__(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+
+        for field_name, field in self.settings_cls.model_fields.items():
+            field_value, field_key, value_is_complex = self.get_field_value(field, field_name)
+            field_value = self.prepare_field_value(field_name, field, field_value, value_is_complex)
+            if field_value is not None:
+                d[field_key] = field_value
+
+        return d
 
 
 class AppConfig(BaseSettings):
@@ -499,47 +520,48 @@ class AppConfig(BaseSettings):
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
     misc: GroupMisc = GroupMisc()
 
-    class Config:
-        """
-        pydantic config class modified
-        """
-
-        env_file_encoding = "utf-8"
+    # TODO[pydantic]: We couldn't refactor this class, please create the `model_config` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
+    model_config = SettingsConfigDict(
+        env_file_encoding="utf-8",
         # first in following list is least important; last .env file overwrites the other.
-        env_file = ".env.installer", ".env.dev", ".env.prod"
-        env_nested_delimiter = "__"
-        case_sensitive = True
-        extra = Extra.ignore
+        env_file=[".env.installer", ".env.dev", ".env.prod"],
+        env_nested_delimiter="__",
+        case_sensitive=True,
+        extra=Extra.ignore,
+    )
 
-        @classmethod
-        def customise_sources(
-            cls,
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """customize sources"""
+        return (
             init_settings,
+            JsonConfigSettingsSource(settings_cls),
             env_settings,
             file_secret_settings,
-        ):
-            """customize sources"""
-            return (
-                init_settings,
-                json_config_settings_source,
-                env_settings,
-                file_secret_settings,
-            )
+        )
 
     def get_schema(self, schema_type: str = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
         if schema_type == "dereferenced":
             # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
-            return jsonref.loads(self.schema_json())
+            return jsonref.loads(json.dumps(self.model_json_schema()))
 
-        return self.schema()
+        return self.model_json_schema()
 
     def persist(self):
         """Persist config to file"""
         logger.debug("persist config to json file")
 
         with open(CONFIG_FILENAME, mode="w", encoding="utf-8") as write_file:
-            write_file.write(self.json(indent=2))
+            write_file.write(self.model_dump_json(indent=2))
 
     def deleteconfig(self):
         """Reset to defaults"""

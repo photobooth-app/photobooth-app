@@ -59,7 +59,7 @@ def api_get_config_current_active(
 @config_router.get("/current")
 def api_get_config_current():
     """read settings from drive and return"""
-    return AppConfig().dict()
+    return AppConfig().model_dump()
 
 
 @config_router.post("/current")
