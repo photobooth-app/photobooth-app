@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import jsonref
-from pydantic import BaseModel, ConfigDict, Extra, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_extra_types.color import Color
 from pydantic_settings import (
@@ -525,10 +525,10 @@ class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         # first in following list is least important; last .env file overwrites the other.
-        env_file=[".env.installer", ".env.dev", ".env.prod"],
+        env_file=[".env.installer", ".env.dev", ".env.test", ".env.prod"],
         env_nested_delimiter="__",
         case_sensitive=True,
-        extra=Extra.ignore,
+        extra="ignore",
     )
 
     @classmethod
@@ -544,6 +544,7 @@ class AppConfig(BaseSettings):
         return (
             init_settings,
             JsonConfigSettingsSource(settings_cls),
+            dotenv_settings,
             env_settings,
             file_secret_settings,
         )
