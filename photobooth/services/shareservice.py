@@ -66,7 +66,7 @@ class ShareService(BaseService):
 
     def _worker_fun(self):
         # init
-        # nothing here yet
+        self._logger.info("starting shareservice worker_thread")
 
         while not self._worker_thread.stopped():
             payload = {"action": "upload_queue"}
@@ -116,7 +116,7 @@ class ShareService(BaseService):
                             r = requests.post(
                                 self._config.common.shareservice_url,
                                 files=request_upload_file,
-                                params={
+                                data={
                                     "action": "upload",
                                     "apikey": self._config.common.shareservice_apikey,
                                     "id": job["file_identifier"],
@@ -138,3 +138,5 @@ class ShareService(BaseService):
             if not self._worker_thread.stopped():
                 self._logger.info("restarting loop after 5 seconds")
                 time.sleep(5)
+
+        self._logger.info("leaving shareservice workerthread")
