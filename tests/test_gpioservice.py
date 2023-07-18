@@ -11,7 +11,7 @@ from pymitter import EventEmitter
 from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.containers import ServicesContainer
-from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN, GpioService
+from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
 Device.pin_factory = MockFactory()
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(name=None)
 
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
-def services() -> GpioService:
+def services() -> ServicesContainer:
     # setup
     evtbus = providers.Singleton(EventEmitter)
     config = providers.Singleton(AppConfig)
