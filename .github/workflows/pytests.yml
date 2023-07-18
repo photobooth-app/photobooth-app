@@ -32,9 +32,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
-      - name: Install gphoto2 dependencies to build it # if no wheel avail currently true for gphoto2 2.3.4 and python3.11
-        run: |
-          sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
+      #- name: Install gphoto2 dependencies to build it
+      #  run: |
+      #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
