@@ -33,5 +33,5 @@ def test_read_services_status(client: TestClient):
 
     # add shutdown_resources here, since appcontainer is fully initialized when getting this URI
     # failing to do so leaves threads running infinite.
-    client.app.container.shutdown_resources()   # this might mute logging during pytest. remove test for now, check later again.
+    client.app.container.shutdown_resources()   # this mutes logging during pytest. remove test for now, check later.
 """
