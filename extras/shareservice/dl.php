@@ -3,7 +3,7 @@
 // documentation see https://mgrl.github.io/photobooth-docs/extras/shareservice/
 
 // configuration options
-$APIKEY = "changedefault!";                 // set apikey to a random value. The same apikey needs to be set in photobooth app to pair both systems
+$APIKEY = "changedefault!";                 // set apikey to a random value, of at least 8 chars. The same apikey needs to be set in photobooth app to pair both systems
 $WORK_DIRECTORY = __DIR__ . "/uploads";     // __DIR__ is the directory of the current PHP file
 $ALLOWED_UPLOAD_MAX_SIZE = 15 * 2 ** 20;    // 15MB max file size to upload
 $TIMEOUT_DOWNLOAD = 15;                     // if photobooth-app upload is not completed within this timeout, it's considered as an error and error is displayed instead image
@@ -55,9 +55,14 @@ function text_to_image($text, $image_width = 400, $colour = array(0, 244, 34), $
 
 try {
     // die if APIKEY is not set
-    if (empty($APIKEY)) {
-        throw new RuntimeException("APIKEY is not set in dl.php script! Configure APIKEY in dl.php and photoboothapp-config to pair systems.");
+    if (strlen($APIKEY) < 8) {
+        throw new RuntimeException('$APIKEY is empty or too short in dl.php script! Configure $APIKEY in dl.php and photoboothapp-config to pair systems.');
     }
+    if (stripos($APIKEY, "changedefault!") !== false) {
+        throw new RuntimeException('$APIKEY is default in dl.php script! Change $APIKEY in dl.php and photoboothapp-config to pair systems.');
+    }
+
+
 
     // db connection setup
     $db = new SQLite3($DB_FILENAME);
@@ -83,17 +88,16 @@ try {
 
 
 
-    if ($_GET["action"] == "upload" && $_GET["id"]) {
+    if ($_POST["action"] ?? null == "upload" && $_POST["id"] ?? "") {
         // action: upload a file, identified by id.
         // once file uploaded, mark it as "uploaded" in db
         // ongoing download-action would check for "uploaded" mark and return the file then
 
-        $file_identifier = $_GET["id"];
+        $file_identifier = $_POST["id"];
 
         // sanity check for apikey
-        if ($_GET["apikey"] !== $APIKEY) {
+        if ($_POST["apikey"] !== $APIKEY) {
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
-            echo "APIKEY not correct! Check APIKEY in dl.php and photobooth config.";
             throw new RuntimeException("APIKEY not correct! Check APIKEY in dl.php and photobooth config.");
         }
 
@@ -142,7 +146,7 @@ try {
             echo "file successfully saved and ready to download";
         } else
             throw new RuntimeException("error processing job");
-    } elseif ($_GET["action"] == "upload_queue") {
+    } elseif ($_GET["action"] ?? null == "upload_queue") {
         // longrunning task to wait for dl request
         while (true) {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE status = 'pending'", true);
@@ -163,7 +167,7 @@ try {
             # wait before next iteration
             usleep(500 * 1000);
         }
-    } elseif ($_GET["action"] == "download" && $_GET["id"]) {
+    } elseif ($_GET["action"] ?? null == "download" && $_GET["id"]) {
 
         $file_identifier = $_GET["id"];
 
@@ -197,11 +201,10 @@ try {
                     echo file_get_contents($file);
                     exit;
                 } else {
-                    text_to_image("error, cannot find uploaded file");
+
                     throw new RuntimeException("error, cannot find uploaded file");
                 }
             } elseif (!empty($results) && $results["status"] == "upload_failed") {
-                text_to_image("photobooth had problems uploading the file, check photobooth log for errors");
                 throw new RuntimeException("photobooth had problems uploading the file, check photobooth log for errors");
             }
             // continue loop but wait little time (otherwise 100% cpu!)
@@ -210,9 +213,8 @@ try {
             $time_waited += 0.5;
         } while ($time_waited <= $TIMEOUT_DOWNLOAD);
 
-        text_to_image("timeout while waiting for fotobox to upload file");
         throw new RuntimeException("timeout while waiting for fotobox to upload file");
-    } elseif ($_GET["action"] == "list") {
+    } elseif ($_GET["action"] ?? null == "list") {
         echo "<pre>";
         $results = $db->query("SELECT * FROM upload_requests ORDER BY last_modified DESC");
         while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
@@ -227,13 +229,21 @@ try {
         ]);
     } else {
         http_response_code(406);
-        error_log("endpoint does not exist accessed");
+        error_log("endpoint does not exist!");
         error_log(json_encode($_GET));
     }
 } catch (RuntimeException $e) {
     http_response_code(500);
 
+    if (!(($_GET["action"] ?? null) == "download")) {
+        # if download action, output exception as image, otherwise as text
+        echo "runtime error: {$e->getMessage()}";
+    } else {
+        text_to_image("runtime error: {$e->getMessage()}");
+    }
+
     error_log("runtime error: {$e->getMessage()}");
     error_log(json_encode($_GET));
+    error_log(json_encode($_POST));
     error_log(json_encode($_FILES));
 }
