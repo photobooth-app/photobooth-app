@@ -102,12 +102,12 @@ class MediacollectionService(BaseService):
         """
         return len(self._db)
 
-    def db_get_images(self) -> dict:
+    def db_get_images(self) -> list:
         """Get dict of mediaitems. Most recent item is at index 0.
 
 
         Returns:
-            dict: _description_
+            list: _description_
         """
         return [item.asdict() for item in self._db]
 
