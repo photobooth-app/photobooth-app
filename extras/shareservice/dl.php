@@ -105,7 +105,7 @@ try {
         if (!isset($_FILES["upload_file"])) {
             # set status to fail so ongoing download can stop waiting
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
-            throw new RuntimeException("There is no file uploaded");
+            throw new RuntimeException("There is no file uploaded ($file_identifier)");
         }
         $filepath = $_FILES['upload_file']['tmp_name'];
         $fileinfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -221,7 +221,7 @@ try {
             print_r($row);
         }
         echo "</pre>";
-    } elseif ($_GET["action"] == "info") {
+    } elseif ($_GET["action"] ?? null == "info") {
         // endpoint can be used by photobooth-app to check it's communicating with the correct URL
         echo json_encode([
             "version" => $VERSION,
