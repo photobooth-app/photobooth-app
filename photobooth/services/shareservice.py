@@ -80,7 +80,6 @@ class ShareService(BaseService):
                 try:
                     line = next(iterator)
                 except Exception as exc:
-                    print(exc)
                     self._logger.warning(f"encountered shareservice connection issue. retrying. error: {exc}")
                     break
 
@@ -97,16 +96,18 @@ class ShareService(BaseService):
                             mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(
                                 job["file_identifier"]
                             )
+                            self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except FileNotFoundError as exc:
                             self._logger.error(f"mediaitem not found, wrong id? {exc}")
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
                             request_upload_file = {}
                         else:
-                            self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
+                            self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
                             if self._config.common.shareservice_share_original:
                                 filepath_to_upload = mediaitem_to_upload.path_original
                             else:
                                 filepath_to_upload = mediaitem_to_upload.path_full
+
                             self._logger.debug(f"{filepath_to_upload=}")
 
                             request_upload_file = {"upload_file": open(filepath_to_upload, "rb")}
