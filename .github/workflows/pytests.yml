@@ -13,7 +13,6 @@ permissions:
 jobs:
   tests:
     env:
-      common__shareservice_url: ${{ vars.COMMON__SHARESERVICE_URL }}
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
     runs-on: ubuntu-latest
     continue-on-error: false
@@ -36,6 +35,8 @@ jobs:
       #  run: |
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
+        env:
+          common__shareservice_url: "${{ env.COMMON__SHARESERVICE_URL }}/hosted-runner/${{ matrix.python-version }}/dl.php"
         run: |
           hatch --verbose run test:test
       - uses: actions/upload-artifact@v3
@@ -46,7 +47,6 @@ jobs:
   tests-hardware:
     env:
       ## Sets environment variable
-      common__shareservice_url: ${{ vars.COMMON__SHARESERVICE_URL }}
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
       backends__MAIN_BACKEND: Simulated
       hardwareinputoutput__wled_enabled: True
@@ -71,6 +71,8 @@ jobs:
       #  run: |
       #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
+        env:
+          common__shareservice_url: "${{ env.COMMON__SHARESERVICE_URL }}/self-hosted/dl.php"
         run: |
           hatch --verbose run test:test
       - uses: actions/upload-artifact@v3
