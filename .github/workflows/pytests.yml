@@ -14,7 +14,7 @@ jobs:
   tests:
     env:
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
-      COMMON__SHARESERVICE_URL: "http://localhost:8081/dl.php"
+      common__shareservice_url: "http://localhost:8081/dl.php"
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -31,6 +31,7 @@ jobs:
         with:
           find: "changedefault!"
           replace: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
+          include: "extras/shareservice/dl.php"
           regex: false
       - name: start php built-in server to test qr code download
         run: |

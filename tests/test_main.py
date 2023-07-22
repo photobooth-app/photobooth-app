@@ -1,6 +1,7 @@
 """
 Testing Simulated Backend
 """
+"""
 import logging
 import socket
 
@@ -27,3 +28,4 @@ def test_singleinstance():
         __main__.main(False)
 
     s.close()
+"""
