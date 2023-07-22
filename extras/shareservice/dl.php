@@ -88,7 +88,7 @@ try {
 
 
 
-    if ($_POST["action"] ?? null == "upload" && $_POST["id"] ?? "") {
+    if (($_POST["action"] ?? null) == "upload" && ($_POST["id"] ?? null)) {
         // action: upload a file, identified by id.
         // once file uploaded, mark it as "uploaded" in db
         // ongoing download-action would check for "uploaded" mark and return the file then
@@ -146,7 +146,7 @@ try {
             echo "file successfully saved and ready to download";
         } else
             throw new RuntimeException("error processing job");
-    } elseif ($_GET["action"] ?? null == "upload_queue") {
+    } elseif (($_GET["action"] ?? null) == "upload_queue") {
         // longrunning task to wait for dl request
         while (true) {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE status = 'pending'", true);
@@ -167,7 +167,7 @@ try {
             # wait before next iteration
             usleep(500 * 1000);
         }
-    } elseif ($_GET["action"] ?? null == "download" && $_GET["id"]) {
+    } elseif (($_GET["action"] ?? null) == "download" && ($_GET["id"] ?? null)) {
 
         $file_identifier = $_GET["id"];
 
@@ -214,14 +214,14 @@ try {
         } while ($time_waited <= $TIMEOUT_DOWNLOAD);
 
         throw new RuntimeException("timeout while waiting for fotobox to upload file");
-    } elseif ($_GET["action"] ?? null == "list") {
+    } elseif (($_GET["action"] ?? null) == "list") {
         echo "<pre>";
         $results = $db->query("SELECT * FROM upload_requests ORDER BY last_modified DESC");
         while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
             print_r($row);
         }
         echo "</pre>";
-    } elseif ($_GET["action"] ?? null == "info") {
+    } elseif (($_GET["action"] ?? null) == "info") {
         // endpoint can be used by photobooth-app to check it's communicating with the correct URL
         echo json_encode([
             "version" => $VERSION,
