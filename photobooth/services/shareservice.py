@@ -85,16 +85,16 @@ class ShareService(BaseService):
 
                 # filter out keep-alive new lines
                 if line:
-                    job = json.loads(line)
+                    decoded_line = json.loads(line)
 
-                    if job.get("file_identifier", None) and job.get("status", None):
+                    if decoded_line.get("file_identifier", None) and decoded_line.get("status", None):
                         # valid job check whether pending and upload
-                        self._logger.info(f"got share upload job, {job}")
+                        self._logger.info(f"got share upload job, {decoded_line}")
 
                         # set the file to be uploaded
                         try:
                             mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(
-                                job["file_identifier"]
+                                decoded_line["file_identifier"]
                             )
                             self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except FileNotFoundError as exc:
@@ -120,13 +120,16 @@ class ShareService(BaseService):
                                 data={
                                     "action": "upload",
                                     "apikey": self._config.common.shareservice_apikey,
-                                    "id": job["file_identifier"],
+                                    "id": decoded_line["file_identifier"],
                                 },
                             )
 
                             self._logger.debug(f"response from php server: {r.text}")
                             self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
-
+                    elif decoded_line.get("ping", None):
+                        if self._worker_thread.stopped():
+                            self._logger.debug("stop workerthread requested")
+                            break
                     else:
                         self._logger.error(f"invalid queue line, ignore: {line}")
                 else:

@@ -162,7 +162,8 @@ try {
                 $db->exec("UPDATE upload_requests SET status = 'job_assigned' WHERE file_identifier = '" . $results['file_identifier'] . "'");
                 echo json_encode($results);
             } else {
-                # nothing to do; keep silence; maybe replace by a ping message later to ensure connection health
+                # nothing to do; send ping message to ensure connection health and have regular input to shareservice.py
+                echo json_encode(['ping' => time()]);
             }
             # add newline so python backend can read it
             echo "\n";
