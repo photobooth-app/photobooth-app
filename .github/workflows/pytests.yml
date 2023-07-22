@@ -29,6 +29,7 @@ jobs:
       - name: start php built-in server to test qr code download
         run: |
           sed -i 's/changedefault!/${{ secrets.COMMON_SHARESERVICE_APIKEY }}/' extras/shareservice/dl.php
+          cat extras/shareservice/dl.php
           nohup php -S 0.0.0.0:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
