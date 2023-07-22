@@ -26,15 +26,9 @@ jobs:
       - uses: shivammathur/setup-php@verbose
         with:
           php-version: "7.4"
-      - name: update apikey secret in dl.php
-        uses: jacobtomlinson/gha-find-replace@v3
-        with:
-          find: "changedefault!"
-          replace: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
-          include: "extras/shareservice/dl.php"
-          regex: false
       - name: start php built-in server to test qr code download
         run: |
+          sed -i 's/changedefault!/${{ secrets.COMMON_SHARESERVICE_APIKEY }}/' extras/shareservice/dl.php
           nohup php -S 0.0.0.0:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
