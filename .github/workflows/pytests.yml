@@ -14,6 +14,7 @@ jobs:
   tests:
     env:
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
+      COMMON__SHARESERVICE_URL: "http://localhost:8081/dl.php"
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -44,8 +45,6 @@ jobs:
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
-        env:
-          COMMON__SHARESERVICE_URL: "${{vars.SHARESERVICE_BASEDIR}}/hosted-runner/${{matrix.python-version}}/dl.php"
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
@@ -54,11 +53,9 @@ jobs:
   tests-hardware:
     env:
       ## Sets environment variable
-      common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
       backends__MAIN_BACKEND: Simulated
       hardwareinputoutput__wled_enabled: True
       hardwareinputoutput__wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
-
     runs-on: self-hosted
     if: ${{ github.repository_owner == 'mgrl' }}
 
@@ -80,8 +77,6 @@ jobs:
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
-        env:
-          common__shareservice_url: "${{ vars.SHARESERVICE_BASEDIR }}/self-hosted/dl.php"
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
