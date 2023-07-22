@@ -26,7 +26,12 @@ jobs:
       - uses: shivammathur/setup-php@verbose
         with:
           php-version: "7.4"
-          #extensions: sqlite3 #loaded by default already
+      - name: update apikey secret in dl.php
+        uses: jacobtomlinson/gha-find-replace@v3
+        with:
+          find: "changedefault!"
+          replace: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
+          regex: false
       - name: start php built-in server to test qr code download
         run: |
           nohup php -S localhost:8081 -t extras/shareservice > phpd.log 2>&1 &
