@@ -18,6 +18,7 @@ logger = logging.getLogger(name=None)
 config = providers.Singleton(AppConfig)
 r = requests.get(config().common.shareservice_url, params={"action": "info"})
 if not r.status_code == 200:
+    logger.warning(f"no webservice found, skipping tests {config().common.shareservice_url}")
     pytest.skip(
         "no webservice found, skipping tests",
         allow_module_level=True,
