@@ -53,7 +53,10 @@ function text_to_image($text, $image_width = 400, $colour = array(0, 244, 34), $
     imagedestroy($image);
 }
 
-try {
+function api_key_set()
+{
+    global $APIKEY;
+
     // die if APIKEY is not set
     if (strlen($APIKEY) < 8) {
         throw new RuntimeException('$APIKEY is empty or too short in dl.php script! Configure $APIKEY in dl.php and photoboothapp-config to pair systems.');
@@ -61,9 +64,9 @@ try {
     if (stripos($APIKEY, "changedefault!") !== false) {
         throw new RuntimeException('$APIKEY is default in dl.php script! Change $APIKEY in dl.php and photoboothapp-config to pair systems.');
     }
+}
 
-
-
+try {
     // db connection setup
     $db = new SQLite3($DB_FILENAME);
     $db->busyTimeout(5000);
@@ -92,6 +95,8 @@ try {
         // action: upload a file, identified by id.
         // once file uploaded, mark it as "uploaded" in db
         // ongoing download-action would check for "uploaded" mark and return the file then
+
+        api_key_set();
 
         $file_identifier = $_POST["id"];
 
@@ -148,6 +153,7 @@ try {
             throw new RuntimeException("error processing job");
     } elseif (($_GET["action"] ?? null) == "upload_queue") {
         // longrunning task to wait for dl request
+        api_key_set();
         while (true) {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE status = 'pending'", true);
 
@@ -168,7 +174,7 @@ try {
             usleep(500 * 1000);
         }
     } elseif (($_GET["action"] ?? null) == "download" && ($_GET["id"] ?? null)) {
-
+        api_key_set();
         $file_identifier = $_GET["id"];
 
         # this endpoint always has to deliver an image!
@@ -215,6 +221,7 @@ try {
 
         throw new RuntimeException("timeout while waiting for fotobox to upload file");
     } elseif (($_GET["action"] ?? null) == "list") {
+        api_key_set();
         echo "<pre>";
         $results = $db->query("SELECT * FROM upload_requests ORDER BY last_modified DESC");
         while ($row = $results->fetchArray(SQLITE3_ASSOC)) {

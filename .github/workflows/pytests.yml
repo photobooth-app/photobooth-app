@@ -55,6 +55,10 @@ jobs:
         with:
           name: coverage
           path: coverage.xml
+      - uses: actions/upload-artifact@v3
+        with:
+          name: phpd-log
+          path: phpd.log
 
   tests-hardware:
     env:
