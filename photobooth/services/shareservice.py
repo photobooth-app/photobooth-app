@@ -74,6 +74,11 @@ class ShareService(BaseService):
             if r.encoding is None:
                 r.encoding = "utf-8"
 
+            if r.status_code == 200:
+                self._logger.info("successfully connected to shareservice dl.php script")
+            else:
+                self._logger.error("problem connecting to shareservice dl.php script!")
+
             iterator = r.iter_lines(decode_unicode=True)
 
             while not self._worker_thread.stopped():
