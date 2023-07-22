@@ -15,7 +15,7 @@ jobs:
     env:
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
       common__shareservice_url: "http://localhost:8082/dl.php"
-      PHP_CLI_SERVER_WORKERS: 3
+      PHP_CLI_SERVER_WORKERS: 8
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -47,7 +47,10 @@ jobs:
         if: always()
         run: |
           cat phpd.log
-          cat php-error.log
+      - name: output php error logs
+        if: always()
+        run: |
+          cat extras/shareservice/php-error.log
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
