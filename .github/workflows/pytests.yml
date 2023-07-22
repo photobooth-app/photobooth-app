@@ -43,6 +43,11 @@ jobs:
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
+      - name: output php logs
+        if: always()
+        run: |
+          cat phpd.log
+          cat php-error.log
       - uses: actions/upload-artifact@v3
         with:
           name: coverage
