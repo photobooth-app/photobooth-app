@@ -15,6 +15,7 @@ jobs:
     env:
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
       common__shareservice_url: "http://localhost:8082/dl.php"
+      PHP_CLI_SERVER_WORKERS: 3
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -29,8 +30,7 @@ jobs:
       - name: start php built-in server to test qr code download
         run: |
           sed -i '0,/changedefault!/s//${{ secrets.COMMON_SHARESERVICE_APIKEY }}/' extras/shareservice/dl.php
-          cat extras/shareservice/dl.php
-          nohup php -S 0.0.0.0:8082 -t extras/shareservice/ > phpd.log 2>&1 &
+          nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -40,9 +40,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
-      #- name: Install gphoto2 dependencies to build it
-      #  run: |
-      #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
@@ -50,10 +47,6 @@ jobs:
         with:
           name: coverage
           path: coverage.xml
-      - uses: actions/upload-artifact@v3
-        with:
-          name: phpd-log
-          path: phpd.log
 
   tests-hardware:
     env:
