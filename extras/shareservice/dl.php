@@ -154,7 +154,12 @@ try {
     } elseif (($_GET["action"] ?? null) == "upload_queue") {
         // longrunning task to wait for dl request
         api_key_set();
-        while (true) {
+
+        $LOOP_TIME = 0.5; # loop every x seconds
+        $LOOP_TIME_MAX = 10; # after x seconds, the script terminates and the client is expected to create a new connection latest
+
+        $time_processed = 0;
+        do {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE status = 'pending'", true);
 
             if (!empty($results)) {
@@ -169,11 +174,13 @@ try {
             echo "\n";
 
             # flush content to output
-            flush();
+            ob_flush(); # flush internal buffer (needed for php builtin webserver during testing)
+            flush();    # flush output buffer
 
             # wait before next iteration
-            usleep(500 * 1000);
-        }
+            usleep($LOOP_TIME * 1000 * 1000);
+            $time_processed += $LOOP_TIME;
+        } while ($time_processed <= $LOOP_TIME_MAX);
     } elseif (($_GET["action"] ?? null) == "download" && ($_GET["id"] ?? null)) {
         api_key_set();
         $file_identifier = $_GET["id"];
