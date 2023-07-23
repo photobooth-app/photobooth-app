@@ -83,7 +83,7 @@ class ShareService(BaseService):
             else:
                 self._logger.error("problem connecting to shareservice dl.php script!")
 
-            iterator = r.iter_lines(chunk_size=40, decode_unicode=True)
+            iterator = r.iter_lines(chunk_size=24, decode_unicode=True)
 
             while not self._worker_thread.stopped():
                 try:
