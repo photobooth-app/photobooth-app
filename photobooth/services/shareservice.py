@@ -130,13 +130,6 @@ class ShareService(BaseService):
                             request_upload_file = {"upload_file": open(filepath_to_upload, "rb")}
 
                         ## send request
-                        self._logger.debug(f"{request_upload_file=}")
-                        test = {
-                            "action": "upload",
-                            "apikey": self._config.common.shareservice_apikey,
-                            "id": decoded_line["file_identifier"],
-                        }
-                        self._logger.debug(f"{test}")
                         start_time = time.time()
 
                         r = requests.post(
