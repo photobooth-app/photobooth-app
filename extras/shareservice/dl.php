@@ -156,7 +156,7 @@ try {
         api_key_set();
 
         $LOOP_TIME = 0.5; # loop every x seconds
-        $LOOP_TIME_MAX = 10; # after x seconds, the script terminates and the client is expected to create a new connection latest
+        $LOOP_TIME_MAX = 240; # after x seconds, the script terminates and the client is expected to create a new connection latest
 
         $time_processed = 0;
         do {
