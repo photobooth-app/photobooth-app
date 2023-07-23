@@ -59,6 +59,11 @@ class ShareService(BaseService):
         self._initialize()
         if self._initialized:
             self._worker_thread.start()
+
+            # short sleep until workerthread is started and likely to be connected to service.
+            time.sleep(1)
+
+            self._logger.debug(f"{self.__module__} started")
         else:
             self._logger.error("shareservice init was not successful. start service aborted.")
 

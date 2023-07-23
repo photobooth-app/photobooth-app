@@ -46,7 +46,11 @@ def _create_app() -> FastAPI:
     application_container = ApplicationContainer()
     logger = logging.getLogger(f"{__name__}")
 
-    _create_basic_folders()
+    try:
+        _create_basic_folders()
+    except Exception as exc:
+        logger.critical(f"cannot create data folders, error: {exc}")
+        raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
 
     _app = FastAPI(
         title="Photobooth App API",
