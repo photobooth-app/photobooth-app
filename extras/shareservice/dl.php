@@ -174,7 +174,7 @@ try {
             echo "\n";
 
             # flush content to output
-            ob_flush(); # flush internal buffer (needed for php builtin webserver during testing)
+            if (ob_get_level() > 0) ob_flush(); # flush internal buffer (needed for php builtin webserver during testing)
             flush();    # flush output buffer
 
             # wait before next iteration
