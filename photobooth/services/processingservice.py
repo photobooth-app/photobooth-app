@@ -84,20 +84,23 @@ class ProcessingService(StateMachine):
     # general on_ events
     def before_transition(self, event, state):
         """_summary_"""
-        logger.info(f"Before '{event}', on the '{state.id}' state.")
+        pass
+        # logger.info(f"Before '{event}', on the '{state.id}' state.")
 
     def on_transition(self, event, state):
         """_summary_"""
-        logger.info(f"On '{event}', on the '{state.id}' state.")
+        pass
+        # logger.info(f"On '{event}', on the '{state.id}' state.")
 
     def on_exit_state(self, event, state):
         """_summary_"""
-        logger.info(f"Exiting '{state.id}' state from '{event}' event.")
+        pass
+        # logger.info(f"Exiting '{state.id}' state from '{event}' event.")
 
     def on_enter_state(self, event, state):
         """_summary_"""
-        logger.info(f"Entering '{state.id}' state from '{event}' event.")
-        logger.info(f"current state '{self.current_state.id}' ")
+        # logger.info(f"Entering '{state.id}' state from '{event}' event.")
+        logger.info(f"on_enter_state '{self.current_state.id=}' ")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._sse_processinfo(
@@ -109,12 +112,14 @@ class ProcessingService(StateMachine):
 
     def after_transition(self, event, state):
         """_summary_"""
-        logger.info(f"After '{event}', on the '{state.id}' state.")
+        pass
+        # logger.info(f"After '{event}', on the '{state.id}' state.")
 
     ## specific on_ transition actions:
 
     def on_thrill(self):
         """_summary_"""
+        logger.info("on_thrill")
         self._evtbus.emit("statemachine/on_thrill")
 
     def on_shoot(self):
@@ -122,6 +127,7 @@ class ProcessingService(StateMachine):
 
     def on_enter_postprocess_still(self):
         # create JPGs and add to db
+        logger.info("on_enter_postprocess_still")
 
         # TODO: collage: separate postprocessing step 2 mount collage and create a new original.
 
@@ -154,11 +160,13 @@ class ProcessingService(StateMachine):
 
     def on_enter_idle(self):
         """_summary_"""
+        logger.info("on_enter_idle")
         # always remove old reference
         self._filepath_originalimage_processing = None
 
     def on_enter_counting(self):
         """_summary_"""
+        logger.info("on_enter_counting")
         self.timer_countdown = (
             self._config.common.PROCESS_COUNTDOWN_TIMER + self._config.common.PROCESS_COUNTDOWN_OFFSET
         )
@@ -179,10 +187,12 @@ class ProcessingService(StateMachine):
                 return
 
     def on_exit_counting(self):
+        logger.info("on_exit_counting")
         self.timer_countdown = 0
 
     def on_enter_capture_still(self):
         """_summary_"""
+        logger.info("on_enter_capture_still")
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
         filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
@@ -224,6 +234,7 @@ class ProcessingService(StateMachine):
 
     def on_exit_capture_still(self):
         """_summary_"""
+        logger.info("on_exit_capture_still")
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
     ### some external functions
@@ -243,7 +254,6 @@ class ProcessingService(StateMachine):
             logger.critical(f"something went wrong :( {exc}")
             self._reset()
             raise RuntimeError(f"something went wrong :( {exc}") from exc
-
 
     ### some custom helper
 
