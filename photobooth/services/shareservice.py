@@ -109,6 +109,7 @@ class ShareService(BaseService):
                         self._logger.info(f"got share upload job, {decoded_line}")
 
                         # set the file to be uploaded
+                        request_upload_file = {}
                         try:
                             mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(
                                 decoded_line["file_identifier"]
@@ -117,7 +118,6 @@ class ShareService(BaseService):
                         except FileNotFoundError as exc:
                             self._logger.error(f"mediaitem not found, wrong id? {exc}")
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
-                            request_upload_file = {}
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
                             if self._config.common.shareservice_share_original:
@@ -128,21 +128,29 @@ class ShareService(BaseService):
                             self._logger.debug(f"{filepath_to_upload=}")
 
                             request_upload_file = {"upload_file": open(filepath_to_upload, "rb")}
-                        finally:
-                            start_time = time.time()
 
-                            r = requests.post(
-                                self._config.common.shareservice_url,
-                                files=request_upload_file,
-                                data={
-                                    "action": "upload",
-                                    "apikey": self._config.common.shareservice_apikey,
-                                    "id": decoded_line["file_identifier"],
-                                },
-                            )
+                        ## send request
+                        self._logger.debug(f"{request_upload_file=}")
+                        test = {
+                            "action": "upload",
+                            "apikey": self._config.common.shareservice_apikey,
+                            "id": decoded_line["file_identifier"],
+                        }
+                        self._logger.debug(f"{test}")
+                        start_time = time.time()
 
-                            self._logger.debug(f"response from php server: {r.text}")
-                            self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
+                        r = requests.post(
+                            self._config.common.shareservice_url,
+                            files=request_upload_file,
+                            data={
+                                "action": "upload",
+                                "apikey": self._config.common.shareservice_apikey,
+                                "id": decoded_line["file_identifier"],
+                            },
+                        )
+
+                        self._logger.debug(f"response from dl.php script: {r.text}")
+                        self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
                     elif decoded_line.get("ping", None):
                         pass
                     else:
