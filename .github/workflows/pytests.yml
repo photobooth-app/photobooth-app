@@ -24,7 +24,7 @@ jobs:
         python-version: ["3.9", "3.10", "3.11"]
     steps:
       - uses: actions/checkout@v3
-      - uses: shivammathur/setup-php@verbose
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
       - name: start php built-in server to test qr code download
