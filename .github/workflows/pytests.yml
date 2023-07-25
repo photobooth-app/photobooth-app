@@ -15,7 +15,7 @@ jobs:
     env:
       common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
       common__shareservice_url: "http://localhost:8082/dl.php"
-      PHP_CLI_SERVER_WORKERS: 20
+      PHP_CLI_SERVER_WORKERS: 6
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: shivammathur/setup-php@verbose
         with:
-          php-version: "7.4"
+          php-version: "8.2"
       - name: start php built-in server to test qr code download
         run: |
           sed -i '0,/changedefault!/s//${{ secrets.COMMON_SHARESERVICE_APIKEY }}/' extras/shareservice/dl.php

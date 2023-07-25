@@ -60,7 +60,7 @@ class ShareService(BaseService):
         if self._initialized:
             self._worker_thread.start()
 
-            # short sleep until workerthread is started and likely to be connected to service.
+            # short sleep until workerthread is started and likely to be connected to service or failed.
             time.sleep(1)
 
             self._logger.debug(f"{self.__module__} started")
