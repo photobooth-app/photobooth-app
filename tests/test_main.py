@@ -1,7 +1,8 @@
 """
 Testing Simulated Backend
 """
-"""
+
+import importlib
 import logging
 import socket
 
@@ -10,11 +11,15 @@ import pytest
 logger = logging.getLogger(name=None)
 
 
-# TODO: this modifies the main variable -> tests stop logging afterwards due to shutdown ressources
+# this test modifies the main variable -> tests stop logging afterwards due to shutdown ressources
+# needs to call reset afterwards.
 def test_main_package():
     from photobooth import __main__
 
     __main__.main(False)
+
+    # reset module state
+    importlib.reload(__main__)
 
 
 def test_singleinstance():
@@ -28,4 +33,6 @@ def test_singleinstance():
         __main__.main(False)
 
     s.close()
-"""
+
+    # reset module state
+    importlib.reload(__main__)
