@@ -16,13 +16,7 @@ from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
-
-try:
-    from ..vendor.packages.keyboard import keyboard
-except Exception as import_exc:
-    raise RuntimeError("keyboard import error; check error log") from import_exc
-
-
+from ..vendor.packages.keyboard import keyboard
 from .baseservice import BaseService
 from .processingservice import ProcessingService
 
@@ -73,3 +67,5 @@ class KeyboardService(BaseService):
             except Exception as exc:
                 # other errors
                 self._logger.critical(exc)
+
+
