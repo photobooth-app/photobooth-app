@@ -14,25 +14,25 @@ logger = logging.getLogger(name=None)
 # this test modifies the main variable -> tests stop logging afterwards due to shutdown ressources
 # needs to call reset afterwards.
 def test_main_package():
-    import photobooth
+    from photobooth import __main__
 
-    photobooth.__main__.main(False)
+    __main__.main(False)
 
     # reset module state
-    importlib.reload(photobooth)
+    importlib.reload(__main__)
 
 
 def test_singleinstance():
-    import photobooth
+    from photobooth import __main__
 
     # bind fails on second instance, pretend we have an instance here:
     s = socket.socket()
     s.bind(("localhost", 19988))
 
     with pytest.raises(SystemExit):
-        photobooth.__main__.main(False)
+        __main__.main(False)
 
     s.close()
 
     # reset module state
-    importlib.reload(photobooth)
+    importlib.reload(__main__)
