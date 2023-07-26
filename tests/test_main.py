@@ -2,7 +2,6 @@
 Testing Simulated Backend
 """
 
-import importlib
 import logging
 import socket
 
@@ -18,9 +17,6 @@ def test_main_package():
 
     __main__.main(False)
 
-    # reset module state
-    importlib.reload(__main__)
-
 
 def test_singleinstance():
     from photobooth import __main__
@@ -33,6 +29,3 @@ def test_singleinstance():
         __main__.main(False)
 
     s.close()
-
-    # reset module state
-    importlib.reload(__main__)
