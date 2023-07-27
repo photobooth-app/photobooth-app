@@ -53,7 +53,7 @@ class ShareService(BaseService):
 
     def start(self):
         """_summary_"""
-        if not self._config.common.shareservice_enable:
+        if not self._config.common.shareservice_enabled:
             self._logger.info("shareservice disabled, start aborted.")
             return
         self._initialize()

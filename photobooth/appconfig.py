@@ -150,12 +150,12 @@ class GroupCommon(BaseModel):
         description="Port to serve the photobooth website. Ensure the port is available.",
     )
 
-    shareservice_enable: bool = Field(
+    shareservice_enabled: bool = Field(
         default=False,
         description="Enable share service. To enable URL needs to be configured and dl.php script setup properly.",
     )
     shareservice_url: str = Field(
-        default="https://dl.qbooth.net/dl.php",
+        default="https://explain-shareservice.photobooth-app.de/dl.php",
         description="URL of php script that is used to serve files and share via QR code.",
     )
     shareservice_apikey: str = Field(
@@ -401,7 +401,7 @@ class GroupUiSettings(BaseModel):
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
     )
-    GALLERY_ENABLE: bool = Field(
+    GALLERY_ENABLED: bool = Field(
         default=True,
         description="Enable gallery for user.",
     )
@@ -424,10 +424,6 @@ class GroupUiSettings(BaseModel):
     SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
         default=True,
         description="Show link to admin center, usually only during setup.",
-    )
-    EXT_DOWNLOAD_URL: str = Field(
-        default="http://dl.qbooth.net/{filename}",
-        description="URL encoded by QR code to download images from onlineservice. {filename} is replaced by actual filename",
     )
     gallery_show_filter: bool = Field(
         default=True,
