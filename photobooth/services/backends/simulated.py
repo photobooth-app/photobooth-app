@@ -1,7 +1,9 @@
 """
 Simulated backend for testing.
 """
+import glob
 import logging
+import random
 import time
 from datetime import datetime
 from io import BytesIO
@@ -99,13 +101,14 @@ class SimulatedBackend(AbstractBackend):
         """for other threads to receive a hq JPEG image"""
         self._evtbus.emit("frameserver/onCapture")
 
-        # get img off the producing queue
-        with self._condition_img_buffer_ready:
-            if not self._condition_img_buffer_ready.wait(timeout=4):
-                raise TimeoutError("timeout receiving frames")
+        hq_images = glob.glob(
+            f'{Path(__file__).parent.joinpath("assets", "backend_simulated", "hq_img").resolve()}/*.jpg'
+        )
+        current_hq_image_index = random.randint(0, len(hq_images) - 1)
 
-            with self._img_buffer_lock:
-                img = decompile_buffer(self._img_buffer_shm)
+        # get img off the producing queue
+        logger.info(f"provide {hq_images[current_hq_image_index]} as hq_image")
+        img = open(hq_images[current_hq_image_index], "rb").read()
 
         # virtual delay for camera to create picture
         time.sleep(0.1)
@@ -199,7 +202,7 @@ def img_aquisition(
         )
         img_draw.text((25, 160), f"framerate: {fps}", fill=text_fill, font=font_small)
         img_draw.text(
-            (25, 340),
+            (25, 400),
             "you see this, so installation was successful :)",
             fill=text_fill,
             font=font_small,
@@ -211,7 +214,11 @@ def img_aquisition(
 
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:
-            compile_buffer(shm, jpeg_buffer.getvalue())
+            jpeg_bytes = jpeg_buffer.getvalue()
+            if len(jpeg_bytes) >= SHARED_MEMORY_BUFFER_BYTES:
+                raise RuntimeError("shared memory too small!")
+
+            compile_buffer(shm, jpeg_bytes)
 
         with _condition_img_buffer_ready:
             # wait to be notified
