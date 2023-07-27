@@ -83,7 +83,7 @@ def test_shareservice_urls_valid():
 
 def test_shareservice_download_image(services: ServicesContainer):
     """start service and try to download an image"""
-    services.config().common.shareservice_enable = True
+    services.config().common.shareservice_enabled = True
 
     # init share_service when called
     services.share_service()
@@ -111,7 +111,7 @@ def test_shareservice_download_image(services: ServicesContainer):
 
 def test_shareservice_download_nonexistant_image(services: ServicesContainer):
     """start service and try to download an image that does not exist"""
-    services.config().common.shareservice_enable = True
+    services.config().common.shareservice_enabled = True
 
     # init share_service when called
     services.share_service()
