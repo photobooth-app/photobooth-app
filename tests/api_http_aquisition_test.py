@@ -50,3 +50,8 @@ def test_aquire_multiple_withmodechange(client: TestClient):
 def test_aquire_multiple_nomodechange(client: TestClient):
     for _i in range(0, 4):
         capture(client)
+
+
+def test_invalid_modechange(client: TestClient):
+    response = client.get("/aquisition/mode/invalidmode")
+    assert response.status_code == 500
