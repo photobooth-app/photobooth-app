@@ -80,24 +80,22 @@ def main(run_server: bool = True):
     logger.info(f"working directory: {Path.cwd().resolve()}")
     # __version__ = importlib.metadata.version("photobooth-app")
     # logger.info(f"{__version__=}")
-    logger.info(f"{__name__=}")
 
     application_container.wire(modules=[__name__], packages=[".routers"])
-    logger.info(f"{__name__=}")
+    application_container.init_resources()
 
     # start main application
     server = _server()
-    logger.info(f"{__name__=}")
 
     # serve, loops endless
     # this one is not executed in tests because it's not stoppable from within
     if run_server:
-        application_container.init_resources()
         server.run()
-        application_container.shutdown_resources()
 
     # close single instance port
     s.close()
+
+    application_container.shutdown_resources()
 
 
 if __name__ == "__main__":

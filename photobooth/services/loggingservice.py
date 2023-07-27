@@ -73,33 +73,30 @@ class LoggingService(BaseService):
         """
         super().__init__(evtbus=evtbus, config=config)
 
-        self.debug_level = config.common.DEBUG_LEVEL.value
-
         ## formatter ##
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
         log_formatter = logging.Formatter(fmt=fmt)
 
-        logging.basicConfig(level=logging.DEBUG, format=fmt, force=True)
+        ## basic configuration
+        # latest basicConfig adds a streamHandler output to console if not automatically called
+        # earlier by some .warn .info or other
+        # force=False because otherwise the pytest console logger stream handler gets deleted
+        logging.basicConfig(level=logging.DEBUG, format=fmt, force=False)
+        logging.debug("loggingservice __init__ basicConfig set")
+        logging.debug("loggingservice __init__ started")
 
-        ## logger ##
+        self.debug_level = config.common.DEBUG_LEVEL.value
 
+        ## logger
         # default logger (root = None or "")
         # root logger also to be the template for all other loggers,
         # that are created in the app at a later time during run
         root_logger = logging.getLogger(name=None)
-        # Remove all handlers associated with the root logger object.
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
 
         # set level based on users config
         root_logger.setLevel(self.debug_level)
 
-        ## handler ##
-
-        # create console handler
-        self.console_handler = logging.StreamHandler()
-        self.console_handler.setFormatter(log_formatter)
-
+        ## handler
         # create rotatingFileHandler
         self.rotatingfile_handler = RotatingFileHandler(
             filename="./log/qbooth.log", maxBytes=1024**2, backupCount=10, delay=True, encoding="utf-8"
@@ -111,20 +108,19 @@ class LoggingService(BaseService):
         self.eventstream_handler.setFormatter(log_formatter)
 
         ## wire logger and handler ##
-
-        root_logger.addHandler(self.console_handler)
         root_logger.addHandler(self.rotatingfile_handler)
         root_logger.addHandler(self.eventstream_handler)
 
-        # loggers_defined = [logging.getLogger(name)
-        #                   for name in logging.root.manager.loggerDict]
-        # print(loggers_defined)
-
+        ## mute other loggers
         self.other_loggers()
 
+        ## add the exepthooks
         sys.excepthook = self._handle_sys_exception
         threading.excepthook = self._handle_threading_exception
         # no solution to handle exceptions in sep processes yet...
+
+        logging.debug("loggingservice __init__ finished")
+        logging.debug(f"registered handlers: {logging.root.handlers}")
 
     def other_loggers(self):
         """mute some logger by rasing their log level"""
@@ -163,7 +159,6 @@ class LoggingService(BaseService):
             lgr.handlers = [
                 self.rotatingfile_handler,
                 self.eventstream_handler,
-                self.console_handler,
             ]
 
     @staticmethod

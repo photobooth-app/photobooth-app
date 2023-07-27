@@ -31,7 +31,7 @@ The photobooth app is written in Python and coming along with a modern Vue front
 
 Following api is provided by the app.
 
-## Work in progress, API may change any time.
+## API may change any time.
 
 """
 
