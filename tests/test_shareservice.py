@@ -41,7 +41,9 @@ def services() -> ServicesContainer:
     )
 
     # deliver
+    services.init_resources()
     yield services
+    services.shutdown_resources()
 
 
 def test_shareservice_urls_valid():
