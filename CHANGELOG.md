@@ -2,6 +2,9 @@
 
 ## :mega: Changelog
 
+- 2023-07-27
+  - added final version of QR share
+  - fix minor bugs
 - 2023-07-16
   - updated dependencies
   - fix: stick to gphoto2 2.3.4. v2.3.5 produces segfault error

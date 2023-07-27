@@ -1,12 +1,12 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.1.0rc7"
-description = "Photobooth app written in Python supporting DSLR, picamera2, webcameras"
+version = "0.1.0rc8"
+description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
 readme = "README.md"
-license-files = { paths = ["LICENSE.md"] }
+license = "MIT"
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
@@ -16,7 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Topic :: Multimedia :: Graphics",
   "Topic :: Software Development :: Libraries :: Python Modules",
-  "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera"
+  "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
 ]
 keywords = [
   "photobooth",
@@ -26,32 +26,32 @@ keywords = [
   "filter",
   "gphoto2",
   "dslr",
-  "picamera2"
+  "picamera2",
 ]
 
-dependencies= [
- "fastapi>=0.100.0,<0.101.0",
- "opencv-python>=4.7,<4.9",
- "piexif~=1.1.3",
- "pillow>=9.5,<10.1",
- "psutil~=5.9.5",
- "pydantic>=2.0.3",
- "pydantic-extra-types>=2.0.0",
- "pydantic-settings>=2.0.2",
- "pymitter~=0.4.0",
- "pyturbojpeg~=1.7.1",
- "requests~=2.31.0",
- "sse-starlette~=1.6.1",
- "uvicorn>=0.22,<0.24",
- "python-dotenv~=1.0.0",
- "pyserial~=3.5",
- "jsonref~=1.1.0",
- "dependency-injector~=4.41.0",
- "pilgram2~=2.0.2",
- "v4l2py~=0.6.2; platform_system == 'Linux'",
- "gpiozero~=1.6.2",
- "gphoto2~=2.3.6; platform_system == 'Linux'",
- "python-statemachine>=2.0,<2.2"
+dependencies = [
+  "fastapi>=0.100.0,<0.101.0",
+  "opencv-python>=4.7,<4.9",
+  "piexif~=1.1.3",
+  "pillow>=9.5,<10.1",
+  "psutil~=5.9.5",
+  "pydantic>=2.0.3",
+  "pydantic-extra-types>=2.0.0",
+  "pydantic-settings>=2.0.2",
+  "pymitter~=0.4.0",
+  "pyturbojpeg~=1.7.1",
+  "requests~=2.31.0",
+  "sse-starlette~=1.6.1",
+  "uvicorn>=0.22,<0.24",
+  "python-dotenv~=1.0.0",
+  "pyserial~=3.5",
+  "jsonref~=1.1.0",
+  "dependency-injector~=4.41.0",
+  "pilgram2~=2.0.2",
+  "v4l2py~=0.6.2; platform_system == 'Linux'",
+  "gpiozero~=1.6.2",
+  "gphoto2~=2.3.6; platform_system == 'Linux'",
+  "python-statemachine>=2.0,<2.2",
 ]
 
 [tool.hatch.envs.test]
@@ -64,14 +64,13 @@ dependencies = [
   "httpx~=0.24.1",
   "simplejpeg~=1.6.6",
   "coverage[toml]~=7.2.7",
-  "black"
+  "black",
 ]
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
 system-packages = true
 
 [tool.hatch.envs.test.scripts]
 test = "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
-
 
 
 [project.urls]
@@ -83,9 +82,7 @@ documentation = "https://mgrl.github.io/photobooth-docs"
 photobooth = "photobooth.__main__:main"
 
 [tool.hatch.build]
-include = [
-  "/photobooth",
-]
+include = ["/photobooth"]
 
 [build-system]
 requires = ["hatchling"]
@@ -100,13 +97,9 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 # disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
 disable_warnings = ["couldnt-parse"]
-omit = [
-    "test_*.py",
-    "./tests/*",
-    "./photobooth/vendor/*"
-    ]
+omit = ["test_*.py", "./tests/*", "./photobooth/vendor/*"]
 parallel = true
-concurrency = ["thread","multiprocessing"]
+concurrency = ["thread", "multiprocessing"]
 
 [tool.black]
 line-length = 120
@@ -114,17 +107,17 @@ line-length = 120
 [tool.ruff]
 line-length = 120
 select = [
-  "E",   # pycodestyle
-  "W",   # pycodestyle
-  "F",   # pyflakes
-  "B",   # bugbear
-  "UP",  # pyupgrade
-  "I",   # isort
+  "E",  # pycodestyle
+  "W",  # pycodestyle
+  "F",  # pyflakes
+  "B",  # bugbear
+  "UP", # pyupgrade
+  "I",  # isort
   #"D",   # pydocstyle   # add later
 ]
 ignore = [
-  "B008" #used for DI injection
-  ]
+  "B008", #used for DI injection
+]
 extend-exclude = ["vendor"]
 
 [tool.ruff.per-file-ignores]
