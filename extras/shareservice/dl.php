@@ -163,7 +163,7 @@ try {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE status = 'pending'", true);
 
             if (!empty($results)) {
-                // non-empty results is to upload by fotobox
+                // non-empty results is to upload by photobooth-app
                 $db->exec("UPDATE upload_requests SET status = 'job_assigned' WHERE file_identifier = '" . $results['file_identifier'] . "'");
                 echo json_encode($results);
             } else {
@@ -227,7 +227,7 @@ try {
             $time_waited += 0.5;
         } while ($time_waited <= $TIMEOUT_DOWNLOAD);
 
-        throw new RuntimeException("timeout while waiting for fotobox to upload file");
+        throw new RuntimeException("photobooth did not upload the requested image within time :( no internet? service disabled?");
     } elseif (($_GET["action"] ?? null) == "list") {
         api_key_set();
         echo "<pre>";
