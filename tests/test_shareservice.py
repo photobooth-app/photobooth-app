@@ -90,6 +90,9 @@ def test_shareservice_download_image(services: ServicesContainer):
     # init share_service when called
     services.share_service()
 
+    # check that share_service was initialized properly, otherwise fail
+    assert services.share_service()._initialized
+
     # create one image to ensure there is at least one
     services.processing_service().shoot()
     services.processing_service().postprocess()
