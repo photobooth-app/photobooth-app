@@ -165,6 +165,15 @@ def img_aquisition(
     _event_proc_shutdown: Event,
 ):
     """function started in separate process to deliver images"""
+
+    ## Create a logger. INFO: this logger is in separate process and just logs to console.
+    # Could be replaced in future by a more sophisticated solution
+    logger = logging.getLogger()
+    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
+    logging.basicConfig(level=logging.DEBUG, format=fmt)
+
+    logger.info("img_aquisition process started")
+
     target_fps = 15
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
@@ -223,3 +232,5 @@ def img_aquisition(
         with _condition_img_buffer_ready:
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
+
+    logger.info("img_aquisition process finished")
