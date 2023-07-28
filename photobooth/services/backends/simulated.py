@@ -48,8 +48,6 @@ class SimulatedBackend(AbstractBackend):
         """To start the image backend"""
         # ensure shutdown event is cleared (needed for restart during testing)
         self._event_proc_shutdown.clear()
-        self._condition_img_buffer_ready = Condition()
-        self._img_buffer_lock = Lock()
 
         self._img_buffer_shm = shared_memory.SharedMemory(
             create=True,
