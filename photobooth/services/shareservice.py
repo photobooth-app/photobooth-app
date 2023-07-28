@@ -28,8 +28,6 @@ class ShareService(BaseService):
         # registered events
         # self._evtbus.on("publishSSE/initial", self._on_stats_interval_timer)
 
-        self._logger.info("initialized share service")
-
     def _initialize(self):
         self._initialized = False
 
@@ -63,7 +61,7 @@ class ShareService(BaseService):
             # short sleep until workerthread is started and likely to be connected to service or failed.
             time.sleep(1)
 
-            self._logger.debug(f"{self.__module__} started")
+            self._logger.debug(f"{self.__module__} initialized and started")
         else:
             self._logger.error("shareservice init was not successful. start service aborted.")
 

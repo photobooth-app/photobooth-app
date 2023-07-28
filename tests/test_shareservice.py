@@ -121,6 +121,9 @@ def test_shareservice_download_nonexistant_image(services: ServicesContainer):
     # init share_service when called
     services.share_service()
 
+    # check that share_service was initialized properly, otherwise fail
+    assert services.share_service()._initialized
+
     r = requests.get(config().common.shareservice_url, params={"action": "download", "id": "nonexistentidentifier"})
 
     # valid status code is 500 because image not existing.
