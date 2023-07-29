@@ -25,27 +25,6 @@ if not r.status_code == 200:
     )
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
-@pytest.fixture()
-def services() -> ServicesContainer:
-    # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
-
-    # deliver
-    services.init_resources()
-    yield services
-    services.shutdown_resources()
-
-
 def test_shareservice_urls_valid():
     """test some common actions on url"""
     config = providers.Singleton(AppConfig)
@@ -83,15 +62,27 @@ def test_shareservice_urls_valid():
     assert r.status_code == 500
 
 
-def test_shareservice_download_image(services: ServicesContainer):
+def test_shareservice_download_image():
     """start service and try to download an image"""
-    services.config().common.shareservice_enabled = True
+
+    # modify config:
+    evtbus = providers.Singleton(EventEmitter)
+    config = providers.Singleton(AppConfig)
+    services = ServicesContainer(
+        evtbus=evtbus,
+        config=config,
+        backends=BackendsContainer(
+            evtbus=evtbus,
+            config=config,
+        ),
+    )
+    config().common.shareservice_enabled = True
 
     # init share_service when called
-    services.share_service()
+    share_service = services.share_service()
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert share_service._initialized
 
     # create one image to ensure there is at least one
     services.processing_service().shoot()
@@ -114,15 +105,26 @@ def test_shareservice_download_image(services: ServicesContainer):
         raise AssertionError(f"shareservice did not return valid image bytes, {exc}") from exc
 
 
-def test_shareservice_download_nonexistant_image(services: ServicesContainer):
+def test_shareservice_download_nonexistant_image():
     """start service and try to download an image that does not exist"""
-    services.config().common.shareservice_enabled = True
+    # modify config:
+    evtbus = providers.Singleton(EventEmitter)
+    config = providers.Singleton(AppConfig)
+    services = ServicesContainer(
+        evtbus=evtbus,
+        config=config,
+        backends=BackendsContainer(
+            evtbus=evtbus,
+            config=config,
+        ),
+    )
+    config().common.shareservice_enabled = True
 
     # init share_service when called
-    services.share_service()
+    share_service = services.share_service()
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert share_service._initialized
 
     r = requests.get(config().common.shareservice_url, params={"action": "download", "id": "nonexistentidentifier"})
 
