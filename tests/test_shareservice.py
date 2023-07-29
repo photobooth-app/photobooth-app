@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 
 import pytest
@@ -17,7 +18,7 @@ logger = logging.getLogger(name=None)
 ## check skip if no shareapi url is set
 config = providers.Singleton(AppConfig)
 r = requests.get(config().common.shareservice_url, params={"action": "info"})
-if not r.status_code == 200:
+if not (r.status_code == 200 and json.loads(r.text).get("version", False)):
     logger.warning(f"no webservice found, skipping tests {config().common.shareservice_url}")
     pytest.skip(
         "no webservice found, skipping tests",
