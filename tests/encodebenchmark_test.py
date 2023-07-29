@@ -11,6 +11,9 @@ turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
+## encode frame to jpeg comparison
+
+
 def turbojpeg_encode(frame_from_camera):
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
@@ -53,20 +56,38 @@ def library(request):
     # os.remove(request.param)
 
 
-@pytest.fixture(params=["tests/assets/input_lores.jpg", "tests/assets/input.jpg"])
-def image(request):
-    with open(request.param, "rb") as file:
+def image(file):
+    with open(file, "rb") as file:
         in_file_read = file.read()
         frame_from_camera = turbojpeg.decode(in_file_read)
 
     # yield fixture instead return to allow for cleanup:
-    yield frame_from_camera
+    return frame_from_camera
 
-    # cleanup
-    # os.remove(request.param)
+
+@pytest.fixture()
+def image_lores():
+    yield image("tests/assets/input_lores.jpg")
+
+
+@pytest.fixture()
+def image_hires():
+    yield image("tests/assets/input.jpg")
 
 
 # needs pip install pytest-benchmark
-def test_libraries_encode(library, image, benchmark):
-    benchmark(eval(library), frame_from_camera=image)
+@pytest.mark.benchmark(
+    group="encode_lores",
+)
+def test_libraries_encode_lores(library, image_lores, benchmark):
+    benchmark(eval(library), frame_from_camera=image_lores)
+    assert True
+
+
+# needs pip install pytest-benchmark
+@pytest.mark.benchmark(
+    group="encode_hires",
+)
+def test_libraries_encode_hires(library, image_hires, benchmark):
+    benchmark(eval(library), frame_from_camera=image_hires)
     assert True
