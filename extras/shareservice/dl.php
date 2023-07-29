@@ -69,10 +69,10 @@ function api_key_set()
 try {
     // db connection setup
     $db = new SQLite3($DB_FILENAME);
-    $db->busyTimeout(5000);
+    $db->busyTimeout(200);
     // WAL mode has better control over concurrency.
     // Source: https://www.sqlite.org/wal.html
-    $db->exec('PRAGMA journal_mode = wal;');
+    #$db->exec('PRAGMA journal_mode = wal;');
 
 
     // setup checks

@@ -130,18 +130,24 @@ class ShareService(BaseService):
                         ## send request
                         start_time = time.time()
 
-                        r = requests.post(
-                            self._config.common.shareservice_url,
-                            files=request_upload_file,
-                            data={
-                                "action": "upload",
-                                "apikey": self._config.common.shareservice_apikey,
-                                "id": decoded_line["file_identifier"],
-                            },
-                        )
+                        try:
+                            r = requests.post(
+                                self._config.common.shareservice_url,
+                                files=request_upload_file,
+                                data={
+                                    "action": "upload",
+                                    "apikey": self._config.common.shareservice_apikey,
+                                    "id": decoded_line["file_identifier"],
+                                },
+                                timeout=9,
+                            )
+                        except Exception as exc:
+                            self._logger.warning(f"upload failed, err: {exc}")
+                            # try again?
 
-                        self._logger.debug(f"response from dl.php script: {r.text}")
-                        self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
+                        else:
+                            self._logger.debug(f"response from dl.php script: {r.text}")
+                            self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
                     elif decoded_line.get("ping", None):
                         pass
                     else:
