@@ -27,7 +27,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-      - name: start php built-in server to test qr code download
+      - name: start php built-in server to allow testing shareservice
         run: |
           sed -i '0,/changedefault!/s//${{ secrets.COMMON_SHARESERVICE_APIKEY }}/' extras/shareservice/dl.php
           nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
@@ -35,21 +35,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pipx install hatch # on hosted pipx is installed
-      - name: Install general dependencies
+      - name: Install system apt dependencies
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
-      - name: Test with pytest
+      - name: install hatch and create environments
         run: |
-          hatch --verbose run test:test
+          pipx install hatch # on hosted pipx is installed
+          hatch env create
+          hatch env create test
+      - name: Run pytest
+        run: |
+          hatch run test:test
       - name: output php logs
         if: always()
         run: |
           cat phpd.log
-      - name: output php error logs
-        if: always()
-        run: |
           cat extras/shareservice/php-error.log
       - uses: actions/upload-artifact@v3
         with:
