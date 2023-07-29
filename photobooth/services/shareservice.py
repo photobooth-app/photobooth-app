@@ -33,7 +33,9 @@ class ShareService(BaseService):
 
         self._logger.info("checking shareservice api endpoint")
         try:
-            r = requests.get(self._config.common.shareservice_url, params={"action": "info"}, timeout=10)
+            r = requests.get(
+                self._config.common.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False
+            )
         except Exception as exc:
             self._logger.warning(f"error checking shareservice api endpoint: {exc}")
         else:
@@ -77,7 +79,9 @@ class ShareService(BaseService):
 
         while not self._worker_thread.stopped():
             payload = {"action": "upload_queue"}
-            r = requests.get(self._config.common.shareservice_url, params=payload, stream=True, timeout=8)
+            r = requests.get(
+                self._config.common.shareservice_url, params=payload, stream=True, timeout=8, allow_redirects=False
+            )
             if r.encoding is None:
                 r.encoding = "utf-8"
 
@@ -140,6 +144,7 @@ class ShareService(BaseService):
                                     "id": decoded_line["file_identifier"],
                                 },
                                 timeout=9,
+                                allow_redirects=False,
                             )
                         except Exception as exc:
                             self._logger.warning(f"upload failed, err: {exc}")

@@ -16,7 +16,7 @@ logger = logging.getLogger(name=None)
 
 ## check skip if no shareapi url is set
 config = providers.Singleton(AppConfig)
-r = requests.get(config().common.shareservice_url, params={"action": "info"})
+r = requests.get(config().common.shareservice_url, params={"action": "info"}, allow_redirects=False)
 if not (r.status_code == 200 and "version" in r.text):
     logger.warning(f"no webservice found, skipping tests {config().common.shareservice_url}")
     pytest.skip(
