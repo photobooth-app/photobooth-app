@@ -391,6 +391,20 @@ class GroupHardwareInputOutput(BaseModel):
         description="GPIO pin to take one picture.",
     )
 
+    # PrintingService Config
+    printing_enabled: bool = Field(
+        default=False,
+        description="Enable printing in general.",
+    )
+    printing_command: str = Field(
+        default="mspaint /p {filename}",
+        description="Command issued to print. Use {filename} as placeholder for the JPEG image to be printed.",
+    )
+    printing_blocked_time: int = Field(
+        default=20,
+        description="Block queue print until time is passed. Time in seconds.",
+    )
+
 
 class GroupUiSettings(BaseModel):
     """Personalize the booth's UI."""

@@ -13,6 +13,7 @@ from .informationservice import InformationService
 from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
+from .printingservice import PrintingService
 from .processingservice import ProcessingService
 from .shareservice import ShareService
 from .systemservice import SystemService
@@ -137,6 +138,13 @@ class ServicesContainer(containers.DeclarativeContainer):
 
     share_service = providers.Resource(
         init_share_resource,
+        evtbus=evtbus,
+        config=config,
+        mediacollection_service=mediacollection_service,
+    )
+
+    printing_service = providers.Resource(
+        PrintingService,
         evtbus=evtbus,
         config=config,
         mediacollection_service=mediacollection_service,
