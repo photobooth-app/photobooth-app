@@ -104,7 +104,7 @@ class MediaprocessingService(BaseService):
         ## stage 4: pilgram filter
         filter = user_filter if user_filter is not None else self._config.mediaprocessing.pic1_filter.value
 
-        if filter is not None or filter != "original":
+        if (filter is not None) and (filter != "original"):
             try:
                 image = pilgram_stage(image, filter)
             except PipelineError as exc:

@@ -20,6 +20,7 @@ from .routers.debug import debug_router
 from .routers.home import home_router
 from .routers.mediacollection import mediacollection_router
 from .routers.mediaprocessing import mediaprocessing_router
+from .routers.print import print_router
 from .routers.processing import processing_router
 from .routers.sse import sse_router
 from .routers.system import system_router
@@ -76,6 +77,7 @@ def _create_app() -> FastAPI:
     _app.include_router(debug_router)
     _app.include_router(mediacollection_router)
     _app.include_router(mediaprocessing_router)
+    _app.include_router(print_router)
     _app.include_router(sse_router)
     _app.include_router(system_router)
     _app.include_router(processing_router)

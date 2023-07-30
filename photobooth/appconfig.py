@@ -362,6 +362,10 @@ class GroupHardwareInputOutput(BaseModel):
         default="down",
         description="Keycode triggers capture of one image",
     )
+    keyboard_input_keycode_print_recent_item: str = Field(
+        default="up",
+        description="Keycode triggers printing most recent image captured",
+    )
 
     # WledService Config
     wled_enabled: bool = Field(
@@ -389,6 +393,24 @@ class GroupHardwareInputOutput(BaseModel):
     gpio_pin_take1pic: int = Field(
         default=27,
         description="GPIO pin to take one picture.",
+    )
+    gpio_pin_print_recent_item: int = Field(
+        default=22,
+        description="GPIO pin to print last captured item.",
+    )
+
+    # PrintingService Config
+    printing_enabled: bool = Field(
+        default=False,
+        description="Enable printing in general.",
+    )
+    printing_command: str = Field(
+        default="mspaint /p {filename}",
+        description="Command issued to print. Use {filename} as placeholder for the JPEG image to be printed.",
+    )
+    printing_blocked_time: int = Field(
+        default=20,
+        description="Block queue print until time is passed. Time in seconds.",
     )
 
 

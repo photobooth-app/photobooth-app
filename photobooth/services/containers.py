@@ -13,6 +13,7 @@ from .informationservice import InformationService
 from .keyboardservice import KeyboardService
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
+from .printingservice import PrintingService
 from .processingservice import ProcessingService
 from .shareservice import ShareService
 from .systemservice import SystemService
@@ -62,8 +63,14 @@ def init_wled_resource(evtbus, config):
         pass
 
 
-def init_gpio_resource(evtbus, config, processing_service):
-    resource = GpioService(evtbus=evtbus, config=config, processing_service=processing_service)
+def init_gpio_resource(evtbus, config, processing_service, printing_service, mediacollection_service):
+    resource = GpioService(
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+        printing_service=printing_service,
+        mediacollection_service=mediacollection_service,
+    )
     resource.start()
     yield resource
     resource.stop()
@@ -114,12 +121,6 @@ class ServicesContainer(containers.DeclarativeContainer):
         mediaprocessing_service=mediaprocessing_service,
     )
 
-    keyboard_service = providers.Resource(
-        KeyboardService,
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-    )
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(
@@ -128,11 +129,29 @@ class ServicesContainer(containers.DeclarativeContainer):
         config=config,
     )
 
+    printing_service = providers.Resource(
+        PrintingService,
+        evtbus=evtbus,
+        config=config,
+        mediacollection_service=mediacollection_service,
+    )
+
+    keyboard_service = providers.Resource(
+        KeyboardService,
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+        printing_service=printing_service,
+        mediacollection_service=mediacollection_service,
+    )
+
     gpio_service = providers.Resource(
         init_gpio_resource,
         evtbus=evtbus,
         config=config,
         processing_service=processing_service,
+        printing_service=printing_service,
+        mediacollection_service=mediacollection_service,
     )
 
     share_service = providers.Resource(

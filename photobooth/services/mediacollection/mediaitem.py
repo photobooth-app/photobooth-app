@@ -66,6 +66,10 @@ class MediaItem:
 
     filename: str = None
 
+    # For call to str(). Prints readable form
+    def __str__(self):
+        return f"MediaItem Id: {self.id}, filename {self.filename}"
+
     @property
     def id(self) -> str:
         return hashlib.md5(self.filename.encode("utf-8")).hexdigest()

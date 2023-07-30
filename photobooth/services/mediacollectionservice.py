@@ -102,7 +102,7 @@ class MediacollectionService(BaseService):
         """
         return len(self._db)
 
-    def db_get_images(self) -> list:
+    def db_get_images_as_dict(self) -> list:
         """Get dict of mediaitems. Most recent item is at index 0.
 
 
@@ -110,6 +110,25 @@ class MediacollectionService(BaseService):
             list: _description_
         """
         return [item.asdict() for item in self._db]
+
+    def db_get_images(self) -> list[MediaItem]:
+        """Get list of mediaitems. Most recent item is at index 0.
+
+
+        Returns:
+            list: _description_
+        """
+        return self._db
+
+    def db_get_most_recent_mediaitem(self):
+        # get most recent item
+        # most recent item is in 0 index.
+
+        if not self._db:
+            # empty database
+            raise FileNotFoundError("database is empty")
+
+        return self._db[0]
 
     def db_get_image_by_id(self, item_id):
         """_summary_
