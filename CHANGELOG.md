@@ -2,6 +2,9 @@
 
 ## :mega: Changelog
 
+- 2023-07-30
+  - added printing functionality <https://mgrl.github.io/photobooth-docs/extras/printing/>
+  - fix minor bugs
 - 2023-07-27
   - added final version of QR share
   - fix minor bugs
