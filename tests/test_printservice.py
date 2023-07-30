@@ -14,7 +14,7 @@ logger = logging.getLogger(name=None)
 
 
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
-@pytest.fixture()  # (scope="module")
+@pytest.fixture(scope="module")
 def services() -> ServicesContainer:
     # setup
     evtbus = providers.Singleton(EventEmitter)
