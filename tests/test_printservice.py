@@ -37,11 +37,26 @@ def services() -> ServicesContainer:
     yield services
 
 
+def test_print_service_disabled(services: ServicesContainer):
+    """service is disabled by default - test for that."""
+
+    # init when called
+    printing_service = services.printing_service()
+
+    # get the newest mediaitem
+    latest_mediaitem = services.mediacollection_service().db_get_images()[0]
+
+    with pytest.raises(RuntimeError):
+        printing_service.print(latest_mediaitem)
+
+
 @patch("subprocess.run")
 def test_print_image(mock_run, services: ServicesContainer):
-    """start service and try to download an image"""
+    """enable service and try to print"""
 
-    # init share_service when called
+    services.config().hardwareinputoutput.printing_enabled = True
+
+    # init when called
     printing_service = services.printing_service()
 
     # get the newest mediaitem
@@ -57,11 +72,12 @@ def test_print_image(mock_run, services: ServicesContainer):
 
 @patch("subprocess.run")
 def test_print_image_blocked(mock_run, services: ServicesContainer):
-    """start service and try to download an image"""
+    """enable service and try to print, check that it repsonds blocking correctly"""
 
+    services.config().hardwareinputoutput.printing_enabled = True
     services.config().hardwareinputoutput.printing_blocked_time = 2
 
-    # init share_service when called
+    # init when called
     printing_service = services.printing_service()
 
     # get the newest mediaitem

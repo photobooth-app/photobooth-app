@@ -30,6 +30,9 @@ class PrintingService(BaseService):
     def print(self, mediaitem: MediaItem):
         ## print mediaitem
 
+        if not self._config.hardwareinputoutput.printing_enabled:
+            raise RuntimeError("Printing is disabled! Enable in config first.")
+
         # block queue new prints until configured time is over
         if self.is_blocked():
             raise BlockingIOError(f"Print request ignored! Wait {self.remaining_time_blocked():.0f}s before try again.")
