@@ -28,6 +28,8 @@ def services() -> ServicesContainer:
         ),
     )
 
+    services.init_resources()
+
     # create one image to ensure there is at least one
     services.processing_service().shoot()
     services.processing_service().postprocess()
@@ -35,6 +37,7 @@ def services() -> ServicesContainer:
 
     # deliver
     yield services
+    services.shutdown_resources()
 
 
 def test_print_service_disabled(services: ServicesContainer):
