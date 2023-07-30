@@ -362,6 +362,10 @@ class GroupHardwareInputOutput(BaseModel):
         default="down",
         description="Keycode triggers capture of one image",
     )
+    keyboard_input_keycode_print_recent_item: str = Field(
+        default="up",
+        description="Keycode triggers printing most recent image captured",
+    )
 
     # WledService Config
     wled_enabled: bool = Field(

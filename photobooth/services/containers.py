@@ -121,12 +121,6 @@ class ServicesContainer(containers.DeclarativeContainer):
         mediaprocessing_service=mediaprocessing_service,
     )
 
-    keyboard_service = providers.Resource(
-        KeyboardService,
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-    )
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
     wled_service = providers.Resource(
@@ -139,6 +133,15 @@ class ServicesContainer(containers.DeclarativeContainer):
         PrintingService,
         evtbus=evtbus,
         config=config,
+        mediacollection_service=mediacollection_service,
+    )
+
+    keyboard_service = providers.Resource(
+        KeyboardService,
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+        printing_service=printing_service,
         mediacollection_service=mediacollection_service,
     )
 

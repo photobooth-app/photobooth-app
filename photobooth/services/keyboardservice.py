@@ -18,6 +18,9 @@ from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..vendor.packages.keyboard import keyboard
 from .baseservice import BaseService
+from .mediacollection.mediaitem import MediaItem
+from .mediacollectionservice import MediacollectionService
+from .printingservice import PrintingService
 from .processingservice import ProcessingService
 
 
@@ -29,10 +32,14 @@ class KeyboardService(BaseService):
         evtbus: EventEmitter,
         config: AppConfig,
         processing_service: ProcessingService,
+        printing_service: PrintingService,
+        mediacollection_service: MediacollectionService,
     ):
         super().__init__(evtbus=evtbus, config=config)
 
         self._processing_service = processing_service
+        self._printing_service = printing_service
+        self._mediacollection_service = mediacollection_service
 
         if self._config.hardwareinputoutput.keyboard_input_enabled:
             self._logger.info("keyboardservice enabled - listeners installed")
@@ -68,4 +75,19 @@ class KeyboardService(BaseService):
                 # other errors
                 self._logger.critical(exc)
 
+        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
+            self._logger.info(
+                f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}"
+            )
+            self._logger.info("trigger _print_recent_item")
 
+            try:
+                mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
+                self._printing_service.print(mediaitem=mediaitem)
+            except BlockingIOError:
+                self._logger.warning(
+                    f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
+                )
+            except Exception as exc:
+                # other errors
+                self._logger.critical(exc)
