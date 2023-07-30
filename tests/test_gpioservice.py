@@ -76,3 +76,17 @@ def test_button_take1pic(services: ServicesContainer):
         time.sleep(DEBOUNCE_TIME + 0.2)
 
         services.processing_service().evt_chose_1pic_get.assert_called()
+
+
+@patch("subprocess.run")
+def test_button_print(mock_run, services: ServicesContainer):
+    services.config().hardwareinputoutput.printing_enabled = True
+
+    # emulate gpio active low driven (simulates button press)
+    services.gpio_service().print_recent_item_btn.pin.drive_low()
+
+    # wait hold time
+    time.sleep(DEBOUNCE_TIME + HOLD_TIME_REBOOT + 0.2)
+
+    # check subprocess.check_call was invoked
+    mock_run.assert_called()

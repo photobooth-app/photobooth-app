@@ -390,6 +390,10 @@ class GroupHardwareInputOutput(BaseModel):
         default=27,
         description="GPIO pin to take one picture.",
     )
+    gpio_pin_print_recent_item: int = Field(
+        default=22,
+        description="GPIO pin to print last captured item.",
+    )
 
     # PrintingService Config
     printing_enabled: bool = Field(

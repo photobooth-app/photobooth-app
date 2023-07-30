@@ -63,8 +63,14 @@ def init_wled_resource(evtbus, config):
         pass
 
 
-def init_gpio_resource(evtbus, config, processing_service):
-    resource = GpioService(evtbus=evtbus, config=config, processing_service=processing_service)
+def init_gpio_resource(evtbus, config, processing_service, printing_service, mediacollection_service):
+    resource = GpioService(
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+        printing_service=printing_service,
+        mediacollection_service=mediacollection_service,
+    )
     resource.start()
     yield resource
     resource.stop()
@@ -129,22 +135,24 @@ class ServicesContainer(containers.DeclarativeContainer):
         config=config,
     )
 
-    gpio_service = providers.Resource(
-        init_gpio_resource,
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-    )
-
-    share_service = providers.Resource(
-        init_share_resource,
+    printing_service = providers.Resource(
+        PrintingService,
         evtbus=evtbus,
         config=config,
         mediacollection_service=mediacollection_service,
     )
 
-    printing_service = providers.Resource(
-        PrintingService,
+    gpio_service = providers.Resource(
+        init_gpio_resource,
+        evtbus=evtbus,
+        config=config,
+        processing_service=processing_service,
+        printing_service=printing_service,
+        mediacollection_service=mediacollection_service,
+    )
+
+    share_service = providers.Resource(
+        init_share_resource,
         evtbus=evtbus,
         config=config,
         mediacollection_service=mediacollection_service,

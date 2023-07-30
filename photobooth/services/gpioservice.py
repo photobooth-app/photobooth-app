@@ -13,6 +13,9 @@ from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
 from .baseservice import BaseService
+from .mediacollection.mediaitem import MediaItem
+from .mediacollectionservice import MediacollectionService
+from .printingservice import PrintingService
 from .processingservice import ProcessingService
 
 HOLD_TIME_SHUTDOWN = 2
@@ -28,10 +31,14 @@ class GpioService(BaseService):
         evtbus: EventEmitter,
         config: AppConfig,
         processing_service: ProcessingService,
+        printing_service: PrintingService,
+        mediacollection_service: MediacollectionService,
     ):
         super().__init__(evtbus=evtbus, config=config)
 
         self._processing_service = processing_service
+        self._printing_service = printing_service
+        self._mediacollection_service = mediacollection_service
 
         # input buttons
         self.shutdown_btn: Button = None
@@ -53,13 +60,22 @@ class GpioService(BaseService):
 
     def init_io(self):
         self.shutdown_btn = Button(
-            self._config.hardwareinputoutput.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN, bounce_time=DEBOUNCE_TIME
+            self._config.hardwareinputoutput.gpio_pin_shutdown,
+            hold_time=HOLD_TIME_SHUTDOWN,
+            bounce_time=DEBOUNCE_TIME,
         )
         self.reboot_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_reboot, hold_time=HOLD_TIME_REBOOT, bounce_time=DEBOUNCE_TIME
+            self._config.hardwareinputoutput.gpio_pin_reboot,
+            hold_time=HOLD_TIME_REBOOT,
+            bounce_time=DEBOUNCE_TIME,
         )
         self.take1pic_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_take1pic, bounce_time=DEBOUNCE_TIME
+            self._config.hardwareinputoutput.gpio_pin_take1pic,
+            bounce_time=DEBOUNCE_TIME,
+        )
+        self.print_recent_item_btn: Button = Button(
+            self._config.hardwareinputoutput.gpio_pin_print_recent_item,
+            bounce_time=DEBOUNCE_TIME,
         )
 
         self._register_listener()
@@ -90,6 +106,20 @@ class GpioService(BaseService):
             # other errors
             self._logger.critical(exc)
 
+    def _print_recent_item(self):
+        self._logger.info("trigger _print_recent_item")
+
+        try:
+            mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
+            self._printing_service.print(mediaitem=mediaitem)
+        except BlockingIOError:
+            self._logger.warning(
+                f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
+            )
+        except Exception as exc:
+            # other errors
+            self._logger.critical(exc)
+
     def _register_listener(self):
         self._register_listener_inputs()
         self._register_listener_outputs()
@@ -101,6 +131,8 @@ class GpioService(BaseService):
         self.reboot_btn.when_held = self._reboot
         # takepic
         self.take1pic_btn.when_pressed = self._take1pic
+        # takepic
+        self.print_recent_item_btn.when_pressed = self._print_recent_item
 
     def _register_listener_outputs(self):
         pass
