@@ -2,6 +2,8 @@
 
 ## :mega: Changelog
 
+- 2023-07-31
+  - fixed tests to use lower amount of memory by correctly starting/stopping ressources
 - 2023-07-30
   - added printing functionality <https://mgrl.github.io/photobooth-docs/extras/printing/>
   - fix minor bugs
