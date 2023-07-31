@@ -37,7 +37,9 @@ def services() -> ServicesContainer:
     services.gpio_service().init_io()
 
     # deliver
+    services.init_resources()
     yield services
+    services.shutdown_resources()
 
 
 @patch("subprocess.check_call")

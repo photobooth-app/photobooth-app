@@ -89,8 +89,9 @@ class SimulatedBackend(AbstractBackend):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        self._p.join(timeout=1)
-        self._p.close()
+        if self._p.is_alive():
+            # self._p.close() not needed because process "closes" when shutdown and loop ends.
+            self._p.join()
 
         self._img_buffer_shm.close()
         self._img_buffer_shm.unlink()

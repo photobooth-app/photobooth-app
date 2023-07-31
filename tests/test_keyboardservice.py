@@ -14,9 +14,10 @@ from photobooth.vendor.packages.keyboard.keyboard._keyboard_event import Keyboar
 logger = logging.getLogger(name=None)
 
 
-def test_key_callback_takepic():
-    """try to emulate key presses as best as possible without actual hardware/user input"""
-
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
+@pytest.fixture()
+def services() -> ServicesContainer:
+    # setup
     evtbus = providers.Singleton(EventEmitter)
     config = providers.Singleton(AppConfig)
     services = ServicesContainer(
@@ -27,13 +28,17 @@ def test_key_callback_takepic():
             config=config,
         ),
     )
+    services.init_resources()
+    yield services
+    services.shutdown_resources()
+
+
+def test_key_callback_takepic(services: ServicesContainer):
+    """try to emulate key presses as best as possible without actual hardware/user input"""
 
     # modify config
     services.config().hardwareinputoutput.keyboard_input_enabled = True
     services.config().hardwareinputoutput.keyboard_input_keycode_takepic = "a"
-
-    services.config().hardwareinputoutput.printing_enabled = True
-    services.config().hardwareinputoutput.keyboard_input_keycode_print_recent_item = "b"
 
     try:
         keyboard_service = services.keyboard_service()
@@ -46,24 +51,13 @@ def test_key_callback_takepic():
 
 
 @patch("subprocess.run")
-def test_key_callback_print(mock_run):
+def test_key_callback_print(mock_run, services: ServicesContainer):
     """try to emulate key presses as best as possible without actual hardware/user input"""
-
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
 
     # modify config
     services.config().hardwareinputoutput.keyboard_input_enabled = True
-    services.config().hardwareinputoutput.printing_enabled = True
     services.config().hardwareinputoutput.keyboard_input_keycode_print_recent_item = "b"
+    services.config().hardwareinputoutput.printing_enabled = True
 
     try:
         keyboard_service = services.keyboard_service()

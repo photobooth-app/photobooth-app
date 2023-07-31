@@ -16,8 +16,8 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     ## Services: Backends (for image aquisition)
     disabled_backend = providers.Object(None)
-    simulated_backend = providers.Factory(SimulatedBackend, evtbus, config)
-    webcamcv2_backend = providers.Singleton(WebcamCv2Backend, evtbus, config)
+    simulated_backend = providers.Resource(SimulatedBackend, evtbus, config)
+    webcamcv2_backend = providers.Resource(WebcamCv2Backend, evtbus, config)
     picamera2_backend = providers.Object(None)
     gphoto2_backend = providers.Object(None)
     webcamv4l_backend = providers.Object(None)
@@ -26,7 +26,7 @@ class BackendsContainer(containers.DeclarativeContainer):
     try:
         from .picamera2 import Picamera2Backend
 
-        picamera2_backend = providers.Singleton(Picamera2Backend, evtbus, config)
+        picamera2_backend = providers.Resource(Picamera2Backend, evtbus, config)
         print("added provider for picamera2 backend")
     except Exception:
         # logger is not avail at this point yet, so print:
@@ -36,7 +36,7 @@ class BackendsContainer(containers.DeclarativeContainer):
     try:
         from .gphoto2 import Gphoto2Backend
 
-        gphoto2_backend = providers.Singleton(Gphoto2Backend, evtbus, config)
+        gphoto2_backend = providers.Resource(Gphoto2Backend, evtbus, config)
         print("added provider for gphoto2 backend")
     except Exception:
         # logger is not avail at this point yet, so print:
@@ -46,7 +46,7 @@ class BackendsContainer(containers.DeclarativeContainer):
     try:
         from .webcamv4l import WebcamV4lBackend
 
-        webcamv4l_backend = providers.Singleton(WebcamV4lBackend, evtbus, config)
+        webcamv4l_backend = providers.Resource(WebcamV4lBackend, evtbus, config)
         print("added provider for webcamv4l backend")
     except Exception:
         # logger is not avail at this point yet, so print:
