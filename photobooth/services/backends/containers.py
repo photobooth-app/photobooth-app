@@ -24,7 +24,7 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     # picamera2 backend import
     try:
-        from .picamera2 import Picamera2Backend
+        from .picamera2_ import Picamera2Backend
 
         picamera2_backend = providers.Resource(Picamera2Backend, evtbus, config)
         print("added provider for picamera2 backend")

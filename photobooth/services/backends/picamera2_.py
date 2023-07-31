@@ -19,9 +19,10 @@ from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
 
 try:
     from libcamera import Transform  # type: ignore
-    from picamera2 import Picamera2  # type: ignore
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
+
+    from photobooth.services.backends.picamera2_ import Picamera2  # type: ignore
 except Exception as import_exc:
     raise OSError("picamera2/libcamera import error; check picamera2/libcamera installation") from import_exc
 
