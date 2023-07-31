@@ -93,8 +93,8 @@ class SimulatedBackend(AbstractBackend):
             # self._p.close() not needed because process "closes" when shutdown and loop ends.
             self._p.join()
 
-        self._img_buffer_shm.close()
-        self._img_buffer_shm.unlink()
+            self._img_buffer_shm.close()
+            self._img_buffer_shm.unlink()
 
         logger.debug(f"{self.__module__} stopped")
 
