@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
-version = "0.1.0rc9"
+dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
@@ -28,7 +28,6 @@ keywords = [
   "dslr",
   "picamera2",
 ]
-
 dependencies = [
   "fastapi>=0.100.0,<0.101.0",
   "opencv-python>=4.7,<4.9",
@@ -53,6 +52,9 @@ dependencies = [
   "gphoto2~=2.3.6; platform_system == 'Linux'",
   "python-statemachine>=2.0,<2.2",
 ]
+
+[tool.hatch.version]
+path = "photobooth/__version__.py"
 
 [tool.hatch.envs.test]
 dependencies = [

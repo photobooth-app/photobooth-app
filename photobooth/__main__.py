@@ -10,6 +10,7 @@ from pathlib import Path
 import uvicorn
 from dependency_injector.wiring import Provide, inject
 
+from photobooth.__version__ import __version__
 from photobooth.application import app
 
 from .appconfig import AppConfig
@@ -79,8 +80,7 @@ def main(run_server: bool = True):
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
     # use to construct paths to user data
     logger.info(f"working directory: {Path.cwd().resolve()}")
-    # __version__ = importlib.metadata.version("photobooth-app")
-    # logger.info(f"{__version__=}")
+    logger.info(f"app version started: {__version__}")
 
     application_container.wire(modules=[__name__], packages=[".routers"])
     application_container.init_resources()
