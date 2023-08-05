@@ -29,30 +29,6 @@ class MediaprocessingService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus=evtbus, config=config)
 
-    def create_1pic(self, mediaitem: MediaItem):
-        ## 1 create unprocessed images
-        tms = time.time()
-        self.create_scaled_unprocessed_repr(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
-
-        ## 2 apply pipeline or copy
-        if self._config.mediaprocessing.pic1_enable_pipeline:
-            logger.info("apply pipeline")
-
-            self.apply_pipeline_1pic(mediaitem)
-
-        else:
-            logger.info(f"copy {mediaitem.filename} unprocessed data to processed for external use")
-
-            self.copy_1pic_repr(mediaitem)
-
-        ## 3 finally ensure all is right
-        try:
-            mediaitem.fileset_valid()
-        except Exception as exc:
-            logger.warning("something went wrong creating scaled versions!")
-            raise exc
-
     def recreate_1pic(self, mediaitem: MediaItem):
         """recreate item in case original is avail, but all else is lost for whatever reason"""
         # 1 create unprocessed images
