@@ -197,6 +197,7 @@ class MediaItem:
         reference: https://stackoverflow.com/a/51734064
 
         #TODO: could be improved by reducing the number of properies (for URL and Path) by apply .as_posix here.
+        # TODO: seems to have bad performance :(
 
         Returns:
             dict: MediaItems
