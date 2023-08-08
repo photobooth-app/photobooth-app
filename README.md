@@ -9,7 +9,7 @@ Written in Python 🐍, coming along with a modern Vue frontend.
 [![pytest](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml/badge.svg)](https://github.com/mgrl/photobooth-app/actions/workflows/pytests.yml)
 [![codecov](https://codecov.io/gh/mgrl/photobooth-app/branch/main/graph/badge.svg?token=SBB5DGX17V)](https://codecov.io/gh/mgrl/photobooth-app)
 
-**[Installation](https://mgrl.github.io/photobooth-docs/installation/)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)** - **[3d printed box](https://mgrl.github.io/photobooth-docs/photobox3dprint/)**
+**[Installation](https://mgrl.github.io/photobooth-docs/setup/installation/)** - **[Documentation](https://mgrl.github.io/photobooth-docs/)** - **[PyPI package](https://pypi.org/project/photobooth-app/)** - **[3d printed box](https://mgrl.github.io/photobooth-docs/photobox3dprint/)**
 
 ## 😍 Features
 
@@ -41,7 +41,7 @@ The reference photobooth box is made from 3d printed parts, [see the 3d printed 
 
 ## 🔧 Installation
 
-[See separate installation instructions in the documentation](https://mgrl.github.io/photobooth-docs/installation/).
+[See separate installation instructions in the documentation](https://mgrl.github.io/photobooth-docs/setup/installation/).
 
 The photobooth app can be used standalone but is not feature complete yet.
 Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
