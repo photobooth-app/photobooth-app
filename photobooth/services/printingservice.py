@@ -49,6 +49,7 @@ class PrintingService(BaseService):
                 capture_output=True,
                 check=True,
                 timeout=TIMEOUT_PROCESS_RUN,
+                shell=True,  # needs to be shell so a string as command is accepted.
             )
 
             self._logger.info(f"cmd={completed_process.args}")
