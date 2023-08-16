@@ -1,8 +1,5 @@
 {
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["-v", "./"],
-  "python.linting.flake8Enabled": false,
-  "python.linting.pylintEnabled": true,
-  "python.linting.enabled": false
+  "python.testing.pytestArgs": ["-v", "./"]
 }
