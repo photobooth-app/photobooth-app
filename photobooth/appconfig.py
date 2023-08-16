@@ -359,11 +359,11 @@ class GroupHardwareInputOutput(BaseModel):
         description="Enable keyboard input globally",
     )
     keyboard_input_keycode_takepic: str = Field(
-        default="down",
+        default="c",
         description="Keycode triggers capture of one image",
     )
     keyboard_input_keycode_print_recent_item: str = Field(
-        default="up",
+        default="p",
         description="Keycode triggers printing most recent image captured",
     )
 
