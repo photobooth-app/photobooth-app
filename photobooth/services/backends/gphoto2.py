@@ -232,15 +232,29 @@ class Gphoto2Backend(AbstractBackend):
         self._camera.exit()
 
     def _worker_fun(self):
+        preview_failcounter = 0
+
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
                 if self._config.backends.LIVEPREVIEW_ENABLED and self._camera_preview_available:
                     try:
                         capture = self._camera.capture_preview()
+                        preview_failcounter = 0
                     except Exception as exc:
-                        logger.critical(f"error capturing frame despite general availability. {exc}")
-                        # abort this loop iteration and continue sleeping...
-                        continue
+                        preview_failcounter += 1
+
+                        if preview_failcounter <= 10:
+                            logger.warning(f"error capturing frame despite general availability. {exc}")
+                            # abort this loop iteration and continue sleeping...
+                            time.sleep(0.5)  # add another delay to avoid flooding logs
+
+                            continue
+                        else:
+                            logger.critical(f"aborting capturing frame, camera disconnected? retry to connect {exc}")
+                            self._camera.exit()
+                            self._camera_connected = False
+                            break
+
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 
                     with self._lores_data.condition:
