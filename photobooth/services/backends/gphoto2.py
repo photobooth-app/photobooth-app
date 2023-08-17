@@ -53,21 +53,21 @@ class Gphoto2Backend(AbstractBackend):
         self._camera_context = gp.Context()
 
         self._hires_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
-            data=None, request_ready=Event(), condition=Condition()
+            data=None,
+            request_ready=Event(),
+            condition=Condition(),
         )
-
-        self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(data=None, condition=Condition())
+        self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
+            data=None,
+            condition=Condition(),
+        )
 
         self._camera_connected = False
         self._camera_preview_available = False
-        self._count = 0
-        self._fps = 0
 
         # worker threads
-        self._generate_images_thread = StoppableThread(
-            name="_generateImagesThread", target=self._generate_images_fun, daemon=True
-        )
-        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
+        self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
+        self._connect_thread = StoppableThread(name="gphoto2_connect_thread", target=self._connect_fun, daemon=True)
 
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
@@ -89,28 +89,7 @@ class Gphoto2Backend(AbstractBackend):
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
 
-        # check for available devices
-        if not available_camera_indexes():
-            raise OSError("no camera detected. abort start")
-
-        # start camera
-        try:
-            self._camera.init()
-        except gp.GPhoto2Error as exc:
-            logger.critical("camera failed to initialize. no power? no connection?")
-            logger.exception(exc)
-        else:
-            self._camera_connected = True
-            logger.debug(f"{self.__module__} started")
-
-        if self._config.backends.LIVEPREVIEW_ENABLED:
-            self._camera_preview_available = self._check_camera_preview_available()
-
-        self._generate_images_thread.start()
-        self._stats_thread.start()
-
-        # short sleep until backend started.
-        time.sleep(0.5)
+        self._connect_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
@@ -119,13 +98,11 @@ class Gphoto2Backend(AbstractBackend):
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
 
-        self._generate_images_thread.stop()
-        self._stats_thread.stop()
+        self._connect_thread.stop()
 
-        self._generate_images_thread.join(1)
-        self._stats_thread.join(1)
-
-        self._camera.exit()
+        logger.debug(f"{self.__module__} waiting to join _connect_thread")
+        self._connect_thread.join()
+        logger.debug(f"{self.__module__} joined _connect_thread")
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -177,7 +154,7 @@ class Gphoto2Backend(AbstractBackend):
                 "Consider disable livestream on gphoto2 backend permanently."
             )
 
-        if self._generate_images_thread.stopped():
+        if self._worker_thread.stopped():
             raise RuntimeError("shutdown already in progress, abort early")
 
         with self._lores_data.condition:
@@ -212,27 +189,50 @@ class Gphoto2Backend(AbstractBackend):
     #
     # INTERNAL IMAGE GENERATOR
     #
+    def _connect_fun(self):
+        while not self._connect_thread.stopped():  # repeat until stopped
+            if self._camera_connected:
+                # if connected, just do nothing and continue with next loop some time later
+                time.sleep(1)
+                continue
 
-    def _stats_fun(self):
-        # FPS = 1 / time to process loop
-        last_calc_time = time.time()  # start time of the loop
+            # camera not yet connected or disconnected due to whatever reason.
+            # try to reconnect
 
-        # to calc frames per second every second
-        while not self._stats_thread.stopped():
-            self._fps = round(
-                float(self._count) / (time.time() - last_calc_time),
-                1,
-            )
+            # check for available devices
+            if not available_camera_indexes():
+                logger.critical("no camera detected. waiting until camera available")
+                time.sleep(5)  # wait additional time to not flood logs in seconds
+                continue
 
-            # reset
-            self._count = 0
-            last_calc_time = time.time()
+            # at this point a camera was detected, try to connect.
 
-            # thread wait
-            time.sleep(0.2)
+            # start camera
+            try:
+                self._camera.init()
+            except gp.GPhoto2Error as exc:
+                logger.critical("camera failed to initialize. no power? no connection?")
+                logger.exception(exc)
+            else:
+                self._camera_connected = True
+                logger.debug(f"{self.__module__} started")
 
-    def _generate_images_fun(self):
-        while not self._generate_images_thread.stopped():  # repeat until stopped
+            if self._config.backends.LIVEPREVIEW_ENABLED:
+                self._camera_preview_available = self._check_camera_preview_available()
+
+            self._worker_thread.start()
+
+            # short sleep until backend started.
+            time.sleep(0.5)
+
+        # supervising connection thread was asked to stop - so we ask to stop worker fun also
+        self._worker_thread.stop()
+        self._worker_thread.join()
+
+        self._camera.exit()
+
+    def _worker_fun(self):
+        while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
                 if self._config.backends.LIVEPREVIEW_ENABLED and self._camera_preview_available:
                     try:
@@ -302,7 +302,6 @@ class Gphoto2Backend(AbstractBackend):
 
                     self._hires_data.condition.notify_all()
 
-            # self._count += 1
         logger.warning("_generate_images_fun exits")
 
 
