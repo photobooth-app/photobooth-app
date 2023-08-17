@@ -31,7 +31,7 @@ async def get_log_latest():
     # return FileResponse(path="./log/qbooth.log")
 
     return Response(
-        content=Path("./log/qbooth.log").read_text(encoding="utf-8"),
+        content=Path("./log/photobooth.log").read_text(encoding="utf-8"),
         media_type="text/plain",
     )
 
