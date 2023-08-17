@@ -89,10 +89,12 @@ class ShareService(BaseService):
                 )
             except requests.exceptions.ReadTimeout as exc:
                 self._logger.warning(f"error connecting to service: {exc}")
-                break
+                time.sleep(5)
+                continue  # try again after wait time
             except Exception as exc:
                 self._logger.error(f"unknown error occured: {exc}")
-                break
+                time.sleep(5)
+                continue  # try again after wait time
 
             if r.encoding is None:
                 r.encoding = "utf-8"
@@ -101,7 +103,7 @@ class ShareService(BaseService):
                 self._logger.info("successfully connected to shareservice dl.php script")
             else:
                 self._logger.error("problem connecting to shareservice dl.php script!")
-                break
+                break  # this is implied to be permanent error, break to exit worker fun
 
             iterator = r.iter_lines(chunk_size=24, decode_unicode=True)
 
