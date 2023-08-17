@@ -66,7 +66,7 @@ class Gphoto2Backend(AbstractBackend):
         self._camera_preview_available = False
 
         # worker threads
-        self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread: StoppableThread = None
         self._connect_thread = StoppableThread(name="gphoto2_connect_thread", target=self._connect_fun, daemon=True)
 
         logger.info(f"python-gphoto2: {gp.__version__}")
@@ -209,6 +209,7 @@ class Gphoto2Backend(AbstractBackend):
 
             # start camera
             try:
+                self._camera = gp.Camera()  # better use fresh object.
                 self._camera.init()
             except gp.GPhoto2Error as exc:
                 logger.critical("camera failed to initialize. no power? no connection?")
@@ -220,6 +221,7 @@ class Gphoto2Backend(AbstractBackend):
             if self._config.backends.LIVEPREVIEW_ENABLED:
                 self._camera_preview_available = self._check_camera_preview_available()
 
+            self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
 
             # short sleep until backend started.
