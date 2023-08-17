@@ -79,9 +79,21 @@ class ShareService(BaseService):
 
         while not self._worker_thread.stopped():
             payload = {"action": "upload_queue"}
-            r = requests.get(
-                self._config.common.shareservice_url, params=payload, stream=True, timeout=8, allow_redirects=False
-            )
+            try:
+                r = requests.get(
+                    self._config.common.shareservice_url,
+                    params=payload,
+                    stream=True,
+                    timeout=8,
+                    allow_redirects=False,
+                )
+            except requests.exceptions.ReadTimeout as exc:
+                self._logger.warning(f"error connecting to service: {exc}")
+                break
+            except Exception as exc:
+                self._logger.error(f"unknown error occured: {exc}")
+                break
+
             if r.encoding is None:
                 r.encoding = "utf-8"
 
@@ -89,6 +101,7 @@ class ShareService(BaseService):
                 self._logger.info("successfully connected to shareservice dl.php script")
             else:
                 self._logger.error("problem connecting to shareservice dl.php script!")
+                break
 
             iterator = r.iter_lines(chunk_size=24, decode_unicode=True)
 
