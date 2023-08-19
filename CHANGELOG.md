@@ -2,6 +2,11 @@
 
 ## :mega: Changelog
 
+- 2023-08
+  - improved gphoto2 camera handling if disconnected
+  - improved reconnection in shareservice if online service fails
+  - minor bug fixes and improvements
+  - updated dependencies (backend and frontend)
 - 2023-07-31
   - fixed tests to use lower amount of memory by correctly starting/stopping ressources
 - 2023-07-30

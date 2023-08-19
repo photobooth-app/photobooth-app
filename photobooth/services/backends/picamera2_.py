@@ -162,6 +162,13 @@ class Picamera2Backend(AbstractBackend):
 
         # activate preview mode on init
         self._on_preview_mode()
+
+        # should fix camera running exception if picamera objects get recycled during tests
+        if self._picamera2.started:
+            self._picamera2.stop_encoder()
+            self._picamera2.stop()
+
+        # configure; camera needs to be stopped before
         self._picamera2.configure(self._current_config)
 
         # capture_file image quality
@@ -220,8 +227,8 @@ class Picamera2Backend(AbstractBackend):
         self._generate_images_thread.stop()
         self._stats_thread.stop()
 
-        self._generate_images_thread.join(timeout=5)
-        self._stats_thread.join(timeout=5)
+        self._generate_images_thread.join()
+        self._stats_thread.join()
 
         self._picamera2.stop_encoder()
         self._picamera2.stop()

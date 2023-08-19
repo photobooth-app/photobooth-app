@@ -65,6 +65,11 @@ def frame_stage(image: Image) -> Image:
     raise PipelineError("beauty_stage not implemented yet")
 
 
+def rembg_stage(image: Image) -> Image:
+    """ """
+    raise PipelineError("rembg_stage not implemented yet")  # https://github.com/danielgatis/rembg
+
+
 def dummy_blackrect_stage(image: Image) -> Image:
     """ """
 
