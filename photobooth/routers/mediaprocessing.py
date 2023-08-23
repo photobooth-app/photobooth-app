@@ -42,7 +42,7 @@ def api_get_preview_image_filtered(
         if not (filter is None or filter == "original"):
             image = pilgram_stage(image, filter)
     except PipelineError as exc:
-        logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
+        logger.error(f"apply pilgram_stage failed, reason: {exc}.")
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
             detail=f"{filter=} cannot be found. {exc}",
