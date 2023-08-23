@@ -114,6 +114,9 @@ class Picamera2Backend(AbstractBackend):
 
         self._picamera2: Picamera2 = Picamera2()
 
+        # https://github.com/raspberrypi/picamera2/issues/576
+        self._picamera2.close()
+
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
             main={
@@ -162,11 +165,6 @@ class Picamera2Backend(AbstractBackend):
 
         # activate preview mode on init
         self._on_preview_mode()
-
-        # should fix camera running exception if picamera objects get recycled during tests
-        if self._picamera2.started:
-            self._picamera2.stop_encoder()
-            self._picamera2.stop()
 
         # configure; camera needs to be stopped before
         self._picamera2.configure(self._current_config)
