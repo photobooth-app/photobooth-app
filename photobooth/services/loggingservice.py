@@ -149,6 +149,7 @@ class LoggingService(BaseService):
 
     def uvicorn(self):
         """_summary_"""
+
         for name in [
             "uvicorn.error",
             "uvicorn.access",
@@ -156,7 +157,7 @@ class LoggingService(BaseService):
         ]:
             lgr = logging.getLogger(name=name)
             lgr.setLevel(self.debug_level)
-            lgr.propagate = False
+            lgr.propagate = True
             lgr.handlers = [
                 self.rotatingfile_handler,
                 self.eventstream_handler,
