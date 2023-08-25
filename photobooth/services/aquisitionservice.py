@@ -3,10 +3,12 @@ manage up to two photobooth-app backends in this module
 """
 import dataclasses
 
+from dependency_injector import providers
 from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .backends.abstractbackend import AbstractBackend
+from .backends.containers import BackendsContainer
 from .baseservice import BaseService
 
 
@@ -22,17 +24,19 @@ class AquisitionService(BaseService):
     def __init__(
         self,
         evtbus: EventEmitter,
-        primary: AbstractBackend,
-        secondary: AbstractBackend,
         config: AppConfig,
     ):
         super().__init__(evtbus=evtbus, config=config)
 
         self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 
+        self._backends = providers.Container(BackendsContainer, evtbus=evtbus, config=config)
+
+        # print(self._backends.backends_set)
+
         # public
-        self.primary_backend: AbstractBackend = primary
-        self.secondary_backend: AbstractBackend = secondary
+        self.primary_backend: AbstractBackend = self._backends().primary_backend()
+        self.secondary_backend: AbstractBackend = self._backends().secondary_backend()
 
         self.metadata = {}
 

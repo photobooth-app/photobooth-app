@@ -137,9 +137,7 @@ class AbstractBackend(ABC):
         while True:
             for attempt in range(1, MAX_ATTEMPTS + 1):
                 try:
-                    print("test123")
                     buffer = self._wait_for_lores_image()
-                    print("test123")
                 except TimeoutError:
                     logger.error(
                         "error capture lores image for stream. " f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
@@ -148,7 +146,6 @@ class AbstractBackend(ABC):
                 except ShutdownInProcessError:
                     logger.warning("gather img failed due to resources shutting down")
                 else:
-                    print("break")
                     break
             else:
                 # we failed finally all the attempts - deal with the consequences.
@@ -159,15 +156,13 @@ class AbstractBackend(ABC):
 
                 # return to signal stop yielding frames to calling function
                 return
-            print("here")
+
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (1 / self._config.common.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    print("yield")
                     yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n")
-                    print("yield fin")
 
                 except GeneratorExit:
                     # TODO: this is not triggered unfortunately. could be useful for cleanup if no stream is

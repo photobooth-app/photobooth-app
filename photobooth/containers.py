@@ -8,7 +8,6 @@ from dependency_injector import containers, providers
 
 from .appconfig import AppConfig
 from .services import loggingservice
-from .services.backends.containers import BackendsContainer
 from .services.containers import ServicesContainer
 
 logger = logging.getLogger(f"{__name__}")
@@ -32,15 +31,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
     # not working, cause config is not avail yet.
     logging_service.init()
 
-    backends = providers.Container(
-        BackendsContainer,
-        evtbus=evtbus,
-        config=config,
-    )
     # for provider in backends.traverse():
     #    logger.info(provider)
 
-    services = providers.Container(ServicesContainer, evtbus=evtbus, config=config, backends=backends)
+    services = providers.Container(ServicesContainer, evtbus=evtbus, config=config)
 
     # shutdown before leave and reinit in __main__ again. If in init state, an error is thrown.
     logging_service.shutdown()

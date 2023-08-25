@@ -47,7 +47,7 @@ async def get_service_status(
         if isinstance(provider_instance, BaseService):
             service_instance: BaseService = provider_instance
             logger.debug(
-                print(f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}")
+                f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}"
             )
             output_service_status.append(
                 {"service": type(service_instance).__name__, "status": service_instance.get_status().name}
