@@ -10,13 +10,20 @@ from .webcamcv2 import WebcamCv2Backend
 logger = logging.getLogger(__name__)
 
 
+def init_res_simulated_backend(evtbus, config):
+    _simulated_backend = SimulatedBackend(evtbus, config)
+    _simulated_backend.init()
+    yield _simulated_backend
+    _simulated_backend.shutdown()
+
+
 class BackendsContainer(containers.DeclarativeContainer):
     evtbus = providers.Dependency(instance_of=EventEmitter)
     config = providers.Dependency(instance_of=AppConfig)
 
     ## Services: Backends (for image aquisition)
     disabled_backend = providers.Object(None)
-    simulated_backend = providers.Resource(SimulatedBackend, evtbus, config)
+    simulated_backend = providers.Resource(init_res_simulated_backend, evtbus, config)
     webcamcv2_backend = providers.Resource(WebcamCv2Backend, evtbus, config)
     picamera2_backend = providers.Object(None)
     gphoto2_backend = providers.Object(None)
@@ -67,7 +74,11 @@ class BackendsContainer(containers.DeclarativeContainer):
         providers.Callable(lambda cfg_enum: cfg_enum.backends.MAIN_BACKEND.lower(), cfg_enum=config),
         **backends_set,
     )
+    # primary_backend = simulated_backend
     secondary_backend = providers.Selector(
         providers.Callable(lambda cfg_enum: cfg_enum.backends.LIVE_BACKEND.lower(), cfg_enum=config),
         **backends_set,
     )
+
+    print(primary_backend)
+    print(secondary_backend)

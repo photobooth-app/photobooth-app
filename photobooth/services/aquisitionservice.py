@@ -36,11 +36,11 @@ class AquisitionService(BaseService):
 
         self.metadata = {}
 
-        if not self.primary_backend and not self.primary_backend:
-            self._logger.critical("configuration error, no backends available!")
-
         self._logger.info(f"init {self.primary_backend=}")
         self._logger.info(f"init {self.secondary_backend=}")
+
+        if not self.primary_backend and not self.primary_backend:
+            self._logger.critical("configuration error, no backends available!")
 
     def gen_stream(self):
         """
@@ -50,9 +50,12 @@ class AquisitionService(BaseService):
             if self.secondary_backend:
                 self._logger.info("livestream requested from secondary backend")
                 return self.secondary_backend.gen_stream()
-            else:
+            elif self.primary_backend:
                 self._logger.info("livestream requested from primary backend")
                 return self.primary_backend.gen_stream()
+            else:
+                self._logger.error("no backend available to livestream")
+                raise Exception("no backend available to livestream")
 
         raise ConnectionRefusedError("livepreview not enabled")
 
@@ -72,12 +75,12 @@ class AquisitionService(BaseService):
 
     def start(self):
         """start backends"""
-        if self.primary_backend:
+        """if self.primary_backend:
             self.primary_backend.start()
 
         if self.secondary_backend:
             self.secondary_backend.start()
-
+"""
         super().set_status_started()
 
     def stop(self):

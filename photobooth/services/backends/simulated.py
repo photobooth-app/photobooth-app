@@ -31,18 +31,34 @@ class SimulatedBackend(AbstractBackend):
     """simulated backend to test photobooth"""
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+        print("__init__ resource")
+        # super().__init__()
 
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
-        self._img_buffer_shm: shared_memory.SharedMemory
+        self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
         self._event_proc_shutdown: Event = Event()
 
-        self._p: Process
+        self._p: Process = None
+
+    # this is to start the ressource
+    def init(self):
+        print("init resource")
+
+        self.start()
+
+        # needs to return, otherwise problem with the framework.
+        # if returned, init is called twice ^^
+        # return self
+
+    # this is to stop the ressource
+    def shutdown(self):
+        self.stop()
+        print("shutdown resource")
 
     def start(self):
         """To start the image backend"""
@@ -138,10 +154,11 @@ class SimulatedBackend(AbstractBackend):
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=4):
                 raise TimeoutError("timeout receiving frames")
-
+        print("before lock")
         with self._img_buffer_lock:
+            print("before decompile")
             img = decompile_buffer(self._img_buffer_shm)
-
+        print("return img")
         return img
 
     def _wait_for_lores_frame(self):
