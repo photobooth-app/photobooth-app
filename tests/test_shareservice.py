@@ -8,7 +8,6 @@ from PIL import Image
 from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -68,14 +67,7 @@ def services() -> ServicesContainer:
     # setup
     evtbus = providers.Singleton(EventEmitter)
     config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
+    services = ServicesContainer(evtbus=evtbus, config=config)
 
     config().common.shareservice_enabled = True
 

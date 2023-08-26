@@ -11,7 +11,6 @@ from photobooth.appconfig import (
     EnumImageBackendsLive,
     EnumImageBackendsMain,
 )
-from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -26,10 +25,6 @@ def services() -> ServicesContainer:
     services = ServicesContainer(
         evtbus=evtbus,
         config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
     )
 
     config().backends.LIVEPREVIEW_ENABLED = True
