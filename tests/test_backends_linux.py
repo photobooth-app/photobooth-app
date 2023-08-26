@@ -29,6 +29,10 @@ if not platform.system() == "Linux":
 
 
 def use_vcam():
+    import gphoto2 as gp
+
+    logger.info(f"python-gphoto2: {gp.__version__}")
+
     # virtual camera delivers images from following path:
     os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "assets")
     # switch to virtual camera from normal drivers
