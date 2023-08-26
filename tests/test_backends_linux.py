@@ -42,11 +42,14 @@ def has_vcam():
 
     vusb_dir = os.environ["IOLIBS"].replace("iolibs", "vusb")
     if not os.path.isdir(vusb_dir):
+        logger.warning(f"missing {vusb_dir=}")
         return False
-    gp_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]
-    gp_version = tuple(int(x) for x in gp_version.split("."))
-    if gp_version > (2, 5, 30):
+    gp_library_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]
+    gp_library_version = tuple(int(x) for x in gp_library_version.split("."))
+    if gp_library_version > (2, 5, 30):
         return True
+
+    logger.warning("gp_library_version too old")
     return False
 
 
