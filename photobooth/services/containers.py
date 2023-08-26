@@ -34,9 +34,8 @@ def init_aquisition_resource(evtbus, config):
         raise RuntimeError(f"cannot start backend, app fails, check configuration {exc}") from exc
     else:
         yield resource
-        resource.stop()
     finally:
-        pass
+        resource.stop()
 
 
 def init_information_resource(evtbus, config):

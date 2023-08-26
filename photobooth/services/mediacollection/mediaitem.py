@@ -70,6 +70,9 @@ class MediaItem:
     def __str__(self):
         return f"MediaItem Id: {self.id}, filename {self.filename}"
 
+    def __repr__(self):
+        return f"MediaItem Id: {self.id}, filename {self.filename}"
+
     @property
     def id(self) -> str:
         return hashlib.md5(self.filename.encode("utf-8")).hexdigest()

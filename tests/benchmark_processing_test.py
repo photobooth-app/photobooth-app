@@ -5,7 +5,6 @@ from dependency_injector import providers
 from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -20,10 +19,6 @@ def services() -> ServicesContainer:
     services = ServicesContainer(
         evtbus=evtbus,
         config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
     )
 
     services.init_resources()
