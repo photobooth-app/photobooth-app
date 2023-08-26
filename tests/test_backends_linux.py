@@ -92,8 +92,8 @@ def test_get_images_webcamv4l(backends: BackendsContainer):
 
 
 def test_get_images_gphoto2(backends: BackendsContainer):
-    use_vcam()
-    logger.info(has_vcam())
+    # use_vcam()
+    # logger.info(has_vcam())
 
     from photobooth.services.backends.gphoto2 import available_camera_indexes
 
