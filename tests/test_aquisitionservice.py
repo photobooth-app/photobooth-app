@@ -14,7 +14,7 @@ from photobooth.services.containers import ServicesContainer
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def services() -> ServicesContainer:
     # setup
     application_container = ApplicationContainer()
@@ -27,7 +27,7 @@ def services() -> ServicesContainer:
 
     # deliver
     yield application_container.services()
-    application_container.services().shutdown_resources()
+    application_container.shutdown_resources()
 
 
 def test_getimages_frommultiple_backends(services: ServicesContainer):
@@ -76,7 +76,7 @@ def test_getimages_change_backend_during_runtime(services: ServicesContainer):
     services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
     # shutdown/init to restart resources
     services.shutdown_resources()
-    services.init_resources()
+    # services.init_resources(), init is automatic if needed.
 
     # not clear yet, why need to get service again to get pics.
     aquisition_service = services.aquisition_service()
