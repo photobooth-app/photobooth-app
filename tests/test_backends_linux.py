@@ -50,10 +50,10 @@ def has_vcam():
         return False
     gp_library_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]
     gp_library_version = tuple(int(x) for x in gp_library_version.split("."))
-    if gp_library_version > (2, 5, 30):
+    if gp_library_version >= (2, 5, 30):
         return True
 
-    logger.warning("gp_library_version too old")
+    logger.warning(f"{gp_library_version=} too old")
     return False
 
 
