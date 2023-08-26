@@ -2,10 +2,8 @@ import logging
 from unittest.mock import patch
 
 import pytest
-from dependency_injector import providers
-from pymitter import EventEmitter
 
-from photobooth.appconfig import AppConfig
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 from photobooth.vendor.packages.keyboard.keyboard import KEY_DOWN
 from photobooth.vendor.packages.keyboard.keyboard._keyboard_event import KeyboardEvent
@@ -13,14 +11,14 @@ from photobooth.vendor.packages.keyboard.keyboard._keyboard_event import Keyboar
 logger = logging.getLogger(name=None)
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture()
 def services() -> ServicesContainer:
     # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(evtbus=evtbus, config=config)
-    services.init_resources()
+    application_container = ApplicationContainer()
+
+    services = application_container.services()
+
+    # deliver
     yield services
     services.shutdown_resources()
 

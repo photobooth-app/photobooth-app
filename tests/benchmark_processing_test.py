@@ -1,10 +1,8 @@
 import logging
 
 import pytest
-from dependency_injector import providers
-from pymitter import EventEmitter
 
-from photobooth.appconfig import AppConfig
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -14,18 +12,13 @@ logger = logging.getLogger(name=None)
 @pytest.fixture(scope="module")
 def services() -> ServicesContainer:
     # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-    )
+    application_container = ApplicationContainer()
 
-    services.init_resources()
+    # application_container.services().init_resources()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield application_container.services()
+    application_container.services().shutdown_resources()
 
 
 def proc_shoot(services: ServicesContainer):
