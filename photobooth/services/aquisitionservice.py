@@ -79,21 +79,23 @@ class AquisitionService(BaseService):
 
     def start(self):
         """start backends"""
-        """if self.primary_backend:
-            self.primary_backend.start()
+        # backends start on their own now using DI framework
+        # if self.primary_backend:
+        #     self.primary_backend.start()
 
-        if self.secondary_backend:
-            self.secondary_backend.start()
-"""
+        # if self.secondary_backend:
+        #     self.secondary_backend.start()
+
         super().set_status_started()
 
     def stop(self):
         """stop backends"""
-        if self.primary_backend:
-            self.primary_backend.stop()
+        # backends stop on their own now using DI framework
+        # if self.primary_backend:
+        #     self.primary_backend.stop()
 
-        if self.secondary_backend:
-            self.secondary_backend.stop()
+        # if self.secondary_backend:
+        #     self.secondary_backend.stop()
 
         super().set_status_stopped()
 
