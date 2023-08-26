@@ -115,6 +115,7 @@ class Picamera2Backend(AbstractBackend):
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
             self._picamera2.close()
+            del self._picamera2
 
         self._picamera2: Picamera2 = Picamera2()
 
