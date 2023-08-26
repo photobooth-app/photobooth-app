@@ -61,12 +61,12 @@ dependencies = [
   "pytest~=7.4.0",
   "pytest-benchmark~=4.0.0",
   "pytest-cov~=4.1.0",
-  "ruff~=0.0.278",
+  "ruff~=0.0.286",
   "httpx-sse~=0.3.1",
   "httpx~=0.24.1",
-  "simplejpeg~=1.6.6",
-  "coverage[toml]~=7.2.7",
-  "black",
+  "simplejpeg~=1.7.1",
+  "coverage[toml]~=7.3.0",
+  "black~=23.7.0",
 ]
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
 system-packages = true
