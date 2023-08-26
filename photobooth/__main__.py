@@ -83,7 +83,7 @@ def main(run_server: bool = True):
     logger.info(f"app version started: {__version__}")
 
     application_container.wire(modules=[__name__], packages=[".routers"])
-    application_container.init_resources()
+    # application_container.services.init_resources()
 
     # start main application
     server = _server()

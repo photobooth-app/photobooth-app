@@ -22,10 +22,12 @@ from .wledservice import WledService
 logger = logging.getLogger(__name__)
 
 
-def init_aquisition_resource(evtbus, config):
+def init_aquisition_resource(evtbus, config, primary_backend, secondary_backend):
     resource = AquisitionService(
         evtbus=evtbus,
         config=config,
+        primary_backend=primary_backend,
+        secondary_backend=secondary_backend,
     )
     try:
         resource.start()
@@ -83,6 +85,7 @@ def init_share_resource(evtbus, config, mediacollection_service):
 class ServicesContainer(containers.DeclarativeContainer):
     evtbus = providers.Dependency(instance_of=EventEmitter)
     config = providers.Dependency(instance_of=AppConfig)
+    backends = providers.DependenciesContainer()
 
     # Services: Core
 
@@ -90,6 +93,8 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_aquisition_resource,
         evtbus=evtbus,
         config=config,
+        primary_backend=backends.primary_backend,
+        secondary_backend=backends.secondary_backend,
     )
 
     information_service = providers.Resource(init_information_resource, evtbus=evtbus, config=config)

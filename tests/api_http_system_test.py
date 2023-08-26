@@ -1,4 +1,3 @@
-
 import platform
 from unittest import mock
 from unittest.mock import patch
@@ -14,6 +13,7 @@ from photobooth.services.systemservice import SystemService
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
         yield client
+        client.app.container.shutdown_resources()
 
 
 @pytest.fixture(
@@ -59,19 +59,17 @@ def system_service_installuninstall_endpoint(request):
 def test_system_service_startstop_endpoints(client: TestClient, system_service_startstop_endpoint):
     system_service_mock = mock.Mock(spec=SystemService)
 
-    with patch.object(system_service_mock, 'util_systemd_control'):
+    with patch.object(system_service_mock, "util_systemd_control"):
         with app.container.services.system_service.override(system_service_mock):
-
             response = client.get(system_service_startstop_endpoint)
             assert response.status_code == 200
 
             system_service_mock.util_systemd_control.assert_called()
 
+
 def test_system_service_reload_endpoints(client: TestClient, system_service_reload_endpoint):
-    with patch.object(client.app.container, 'shutdown_resources'):
-        with patch.object(client.app.container, 'init_resources'):
-
-
+    with patch.object(client.app.container, "shutdown_resources"):
+        with patch.object(client.app.container, "init_resources"):
             response = client.get(system_service_reload_endpoint)
             assert response.status_code == 200
 
@@ -79,19 +77,18 @@ def test_system_service_reload_endpoints(client: TestClient, system_service_relo
             client.app.container.init_resources.assert_called()
 
 
-@patch('os.system')
+@patch("os.system")
 def test_system_server_endpoints(mock_system, client: TestClient, system_server_endpoint):
-
     response = client.get(system_server_endpoint)
     assert response.status_code == 200
 
     mock_system.assert_called()
 
-@patch('subprocess.run')
-def test_system_service_installuninstall_endpoints(mock_run,
-                                                   client: TestClient,
-                                                   system_service_installuninstall_endpoint):
 
+@patch("subprocess.run")
+def test_system_service_installuninstall_endpoints(
+    mock_run, client: TestClient, system_service_installuninstall_endpoint
+):
     response = client.get(system_service_installuninstall_endpoint)
 
     if platform.system() == "Linux":

@@ -12,6 +12,7 @@ from photobooth.application import app
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
         yield client
+        client.app.container.shutdown_resources()
 
 
 def capture(client: TestClient):
