@@ -234,4 +234,7 @@ def img_aquisition(
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
 
+    img_original.close()
+    if img:
+        img.close()
     logger.info("img_aquisition process finished")
