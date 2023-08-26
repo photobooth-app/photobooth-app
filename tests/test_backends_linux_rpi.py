@@ -64,8 +64,7 @@ def test_autofocus(autofocus_algorithm):
     # reconfigure
     backend.config().backends.picamera2_focuser_module = autofocus_algorithm
 
-    picamera2_backend = backend.picamera2_backend()
-    picamera2_backend.start()
+    _ = backend.picamera2_backend()
 
     backend.evtbus().emit("statemachine/on_thrill")
     time.sleep(1)
@@ -78,5 +77,3 @@ def test_autofocus(autofocus_algorithm):
 
     # wait so some cycles had happen
     time.sleep(1)
-
-    picamera2_backend.stop()
