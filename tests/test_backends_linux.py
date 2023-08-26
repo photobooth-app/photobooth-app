@@ -63,7 +63,6 @@ def test_get_images_gphoto2():
 
     # get lores and hires images from backend and assert
     gphoto2_backend = backend.gphoto2_backend()
-    gphoto2_backend.start()
 
     if not gphoto2_backend._camera_preview_available:
         with pytest.raises(RuntimeError):
@@ -72,8 +71,6 @@ def test_get_images_gphoto2():
 
     with Image.open(io.BytesIO(gphoto2_backend.wait_for_hq_image())) as img:
         img.verify()
-
-    gphoto2_backend.stop()
 
 
 def test_get_gphoto2_info():
