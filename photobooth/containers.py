@@ -32,15 +32,20 @@ class ApplicationContainer(containers.DeclarativeContainer):
     # not working, cause config is not avail yet.
     logging_service.init()
 
+    # for provider in backends.traverse():
+    #    logger.info(provider)
+
     backends = providers.Container(
         BackendsContainer,
         evtbus=evtbus,
         config=config,
     )
-    # for provider in backends.traverse():
-    #    logger.info(provider)
-
-    services = providers.Container(ServicesContainer, evtbus=evtbus, config=config, backends=backends)
+    services = providers.Container(
+        ServicesContainer,
+        evtbus=evtbus,
+        config=config,
+        backends=backends,
+    )
 
     # shutdown before leave and reinit in __main__ again. If in init state, an error is thrown.
     logging_service.shutdown()

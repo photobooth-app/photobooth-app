@@ -112,10 +112,12 @@ class Picamera2Backend(AbstractBackend):
             data=None, request_ready=Event(), condition=Condition()
         )
 
-        self._picamera2: Picamera2 = Picamera2()
-
         # https://github.com/raspberrypi/picamera2/issues/576
-        self._picamera2.close()
+        if self._picamera2:
+            self._picamera2.close()
+            del self._picamera2
+
+        self._picamera2: Picamera2 = Picamera2()
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(

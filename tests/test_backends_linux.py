@@ -26,12 +26,23 @@ if not platform.system() == "Linux":
         allow_module_level=True,
     )
 
+
+@pytest.fixture()
+def backends() -> BackendsContainer:
+    # setup
+    backends_container = BackendsContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
+    # deliver
+    yield backends_container
+    backends_container.shutdown_resources()
+
+
 ## tests
 
 
-def test_get_images_webcamv4l():
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
-
+def test_get_images_webcamv4l(backends: BackendsContainer):
     from photobooth.services.backends.webcamv4l import available_camera_indexes
 
     logger.info("probing for available cameras")
@@ -43,15 +54,14 @@ def test_get_images_webcamv4l():
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
-    backend.config().backends.v4l_device_index = cameraIndex
+    backends.config().backends.v4l_device_index = cameraIndex
 
     # get lores and hires images from backend and assert
-    webcamv4l_backend = backend.webcamv4l_backend()
+    webcamv4l_backend = backends.webcamv4l_backend()
     get_images(webcamv4l_backend)
 
 
-def test_get_images_gphoto2():
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
+def test_get_images_gphoto2(backends: BackendsContainer):
     from photobooth.services.backends.gphoto2 import available_camera_indexes
 
     _availableCameraIndexes = available_camera_indexes()
@@ -62,8 +72,7 @@ def test_get_images_gphoto2():
     # only one DSLR is connected at a time.
 
     # get lores and hires images from backend and assert
-    gphoto2_backend = backend.gphoto2_backend()
-    gphoto2_backend.start()
+    gphoto2_backend = backends.gphoto2_backend()
 
     if not gphoto2_backend._camera_preview_available:
         with pytest.raises(RuntimeError):
@@ -72,8 +81,6 @@ def test_get_images_gphoto2():
 
     with Image.open(io.BytesIO(gphoto2_backend.wait_for_hq_image())) as img:
         img.verify()
-
-    gphoto2_backend.stop()
 
 
 def test_get_gphoto2_info():

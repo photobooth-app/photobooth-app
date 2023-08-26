@@ -10,14 +10,6 @@ import pytest
 logger = logging.getLogger(name=None)
 
 
-# this test modifies the main variable -> tests stop logging afterwards due to shutdown ressources
-# needs to call reset afterwards.
-def test_main_package():
-    from photobooth.__main__ import main
-
-    main(False)
-
-
 def test_singleinstance():
     from photobooth.__main__ import main
 
@@ -29,3 +21,9 @@ def test_singleinstance():
         main(False)
 
     s.close()
+
+
+def test_main_instance():
+    from photobooth.__main__ import main
+
+    main(False)

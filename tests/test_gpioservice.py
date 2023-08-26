@@ -3,13 +3,10 @@ import time
 from unittest.mock import patch
 
 import pytest
-from dependency_injector import providers
 from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
-from pymitter import EventEmitter
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
@@ -23,21 +20,13 @@ logger = logging.getLogger(name=None)
 @pytest.fixture(scope="module")
 def services() -> ServicesContainer:
     # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
+    application_container = ApplicationContainer()
+
+    services = application_container.services()
     # force register listener for testing purposes
     services.gpio_service().init_io()
 
     # deliver
-    services.init_resources()
     yield services
     services.shutdown_resources()
 

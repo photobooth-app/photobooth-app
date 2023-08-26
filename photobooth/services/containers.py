@@ -22,12 +22,12 @@ from .wledservice import WledService
 logger = logging.getLogger(__name__)
 
 
-def init_aquisition_resource(evtbus, config, primary, secondary):
+def init_aquisition_resource(evtbus, config, primary_backend, secondary_backend):
     resource = AquisitionService(
         evtbus=evtbus,
         config=config,
-        primary=primary,
-        secondary=secondary,
+        primary_backend=primary_backend,
+        secondary_backend=secondary_backend,
     )
     try:
         resource.start()
@@ -36,9 +36,8 @@ def init_aquisition_resource(evtbus, config, primary, secondary):
         raise RuntimeError(f"cannot start backend, app fails, check configuration {exc}") from exc
     else:
         yield resource
-        resource.stop()
     finally:
-        pass
+        resource.stop()
 
 
 def init_information_resource(evtbus, config):
@@ -94,8 +93,8 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_aquisition_resource,
         evtbus=evtbus,
         config=config,
-        primary=backends.primary_backend,
-        secondary=backends.secondary_backend,
+        primary_backend=backends.primary_backend,
+        secondary_backend=backends.secondary_backend,
     )
 
     information_service = providers.Resource(init_information_resource, evtbus=evtbus, config=config)

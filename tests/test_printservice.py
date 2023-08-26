@@ -3,32 +3,19 @@ import time
 from unittest.mock import patch
 
 import pytest
-from dependency_injector import providers
-from pymitter import EventEmitter
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture()
 def services() -> ServicesContainer:
     # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
+    application_container = ApplicationContainer()
 
-    services.init_resources()
+    services = application_container.services()
 
     # create one image to ensure there is at least one
     services.processing_service().shoot()

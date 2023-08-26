@@ -31,18 +31,18 @@ class SimulatedBackend(AbstractBackend):
     """simulated backend to test photobooth"""
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+        super().__init__(evtbus=evtbus, config=config)
 
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
-        self._img_buffer_shm: shared_memory.SharedMemory
+        self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
         self._event_proc_shutdown: Event = Event()
 
-        self._p: Process
+        self._p: Process = None
 
     def start(self):
         """To start the image backend"""
@@ -234,4 +234,7 @@ def img_aquisition(
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
 
+    img_original.close()
+    if img:
+        img.close()
     logger.info("img_aquisition process finished")

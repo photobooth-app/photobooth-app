@@ -2,43 +2,32 @@ import io
 import logging
 
 import pytest
-from dependency_injector import providers
 from PIL import Image
-from pymitter import EventEmitter
 
 from photobooth.appconfig import (
-    AppConfig,
     EnumImageBackendsLive,
     EnumImageBackendsMain,
 )
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def services() -> ServicesContainer:
     # setup
-    evtbus = providers.Singleton(EventEmitter)
-    config = providers.Singleton(AppConfig)
-    services = ServicesContainer(
-        evtbus=evtbus,
-        config=config,
-        backends=BackendsContainer(
-            evtbus=evtbus,
-            config=config,
-        ),
-    )
+    application_container = ApplicationContainer()
 
-    config().backends.LIVEPREVIEW_ENABLED = True
-    config().backends.MAIN_BACKEND = EnumImageBackendsMain.SIMULATED
-    config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+    # application_container.services().init_resources()
 
-    services.init_resources()
-    yield services
-    services.shutdown_resources()
+    application_container.config().backends.LIVEPREVIEW_ENABLED = True
+    application_container.config().backends.MAIN_BACKEND = EnumImageBackendsMain.SIMULATED
+    application_container.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+
+    # deliver
+    yield application_container.services()
+    application_container.shutdown_resources()
 
 
 def test_getimages_frommultiple_backends(services: ServicesContainer):
@@ -87,7 +76,7 @@ def test_getimages_change_backend_during_runtime(services: ServicesContainer):
     services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
     # shutdown/init to restart resources
     services.shutdown_resources()
-    services.init_resources()
+    # services.init_resources(), init is automatic if needed.
 
     # not clear yet, why need to get service again to get pics.
     aquisition_service = services.aquisition_service()

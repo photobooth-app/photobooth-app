@@ -34,6 +34,18 @@ def check_focusavail_skip():
 ## fixtures
 
 
+@pytest.fixture()
+def backends() -> BackendsContainer:
+    # setup
+    backends_container = BackendsContainer(
+        evtbus=providers.Singleton(EventEmitter),
+        config=providers.Singleton(AppConfig),
+    )
+    # deliver
+    yield backends_container
+    backends_container.shutdown_resources()
+
+
 @pytest.fixture(
     params=[
         EnumFocuserModule.NULL,
@@ -50,33 +62,28 @@ def autofocus_algorithm(request):
 ## tests
 
 
-def test_getImages():
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
-    picamera2_backend = backend.picamera2_backend()
+def test_getImages(backends: BackendsContainer):
+    picamera2_backend = backends.picamera2_backend()
 
     get_images(picamera2_backend)
 
 
-def test_autofocus(autofocus_algorithm):
+def test_autofocus(autofocus_algorithm, backends: BackendsContainer):
     check_focusavail_skip()
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
 
     # reconfigure
-    backend.config().backends.picamera2_focuser_module = autofocus_algorithm
+    backends.config().backends.picamera2_focuser_module = autofocus_algorithm
 
-    picamera2_backend = backend.picamera2_backend()
-    picamera2_backend.start()
+    _ = backends.picamera2_backend()
 
-    backend.evtbus().emit("statemachine/on_thrill")
+    backends.evtbus().emit("statemachine/on_thrill")
     time.sleep(1)
-    backend.evtbus().emit("statemachine/on_exit_capture_still")
+    backends.evtbus().emit("statemachine/on_exit_capture_still")
     time.sleep(1)
-    backend.evtbus().emit("onCaptureMode")
+    backends.evtbus().emit("onCaptureMode")
     time.sleep(1)
-    backend.evtbus().emit("onPreviewMode")
+    backends.evtbus().emit("onPreviewMode")
     time.sleep(1)
 
     # wait so some cycles had happen
     time.sleep(1)
-
-    picamera2_backend.stop()

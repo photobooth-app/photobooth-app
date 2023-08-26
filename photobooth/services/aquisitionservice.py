@@ -22,25 +22,29 @@ class AquisitionService(BaseService):
     def __init__(
         self,
         evtbus: EventEmitter,
-        primary: AbstractBackend,
-        secondary: AbstractBackend,
         config: AppConfig,
+        primary_backend: AbstractBackend,
+        secondary_backend: AbstractBackend,
     ):
         super().__init__(evtbus=evtbus, config=config)
 
         self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 
+        # self._backends = providers.Container(BackendsContainer, evtbus=evtbus, config=config)
+
+        # print(self._backends.backends_set)
+
         # public
-        self.primary_backend: AbstractBackend = primary
-        self.secondary_backend: AbstractBackend = secondary
+        self.primary_backend: AbstractBackend = primary_backend
+        self.secondary_backend: AbstractBackend = secondary_backend
 
         self.metadata = {}
 
-        if not self.primary_backend and not self.primary_backend:
-            self._logger.critical("configuration error, no backends available!")
-
         self._logger.info(f"init {self.primary_backend=}")
         self._logger.info(f"init {self.secondary_backend=}")
+
+        if not self.primary_backend and not self.primary_backend:
+            self._logger.critical("configuration error, no backends available!")
 
     def gen_stream(self):
         """
@@ -50,9 +54,12 @@ class AquisitionService(BaseService):
             if self.secondary_backend:
                 self._logger.info("livestream requested from secondary backend")
                 return self.secondary_backend.gen_stream()
-            else:
+            elif self.primary_backend:
                 self._logger.info("livestream requested from primary backend")
                 return self.primary_backend.gen_stream()
+            else:
+                self._logger.error("no backend available to livestream")
+                raise Exception("no backend available to livestream")
 
         raise ConnectionRefusedError("livepreview not enabled")
 
@@ -72,21 +79,23 @@ class AquisitionService(BaseService):
 
     def start(self):
         """start backends"""
-        if self.primary_backend:
-            self.primary_backend.start()
+        # backends start on their own now using DI framework
+        # if self.primary_backend:
+        #     self.primary_backend.start()
 
-        if self.secondary_backend:
-            self.secondary_backend.start()
+        # if self.secondary_backend:
+        #     self.secondary_backend.start()
 
         super().set_status_started()
 
     def stop(self):
         """stop backends"""
-        if self.primary_backend:
-            self.primary_backend.stop()
+        # backends stop on their own now using DI framework
+        # if self.primary_backend:
+        #     self.primary_backend.stop()
 
-        if self.secondary_backend:
-            self.secondary_backend.stop()
+        # if self.secondary_backend:
+        #     self.secondary_backend.stop()
 
         super().set_status_stopped()
 

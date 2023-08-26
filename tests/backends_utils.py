@@ -7,7 +7,7 @@ from photobooth.services.backends.abstractbackend import AbstractBackend
 
 def get_images(backend: AbstractBackend):
     # logger.info(f"testing backend {backend.__module__}")
-    backend.start()
+    # backend.start()
 
     try:
         with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
@@ -23,4 +23,4 @@ def get_images(backend: AbstractBackend):
 
     # stop backend, ensure process is joined properly to collect coverage:
     # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-process
-    backend.stop()
+    # backend.stop()

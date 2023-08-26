@@ -13,6 +13,7 @@ logger = logging.getLogger(name=None)
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
         yield client
+        client.app.container.shutdown_resources()
 
 
 def test_sse_stream(client: TestClient):

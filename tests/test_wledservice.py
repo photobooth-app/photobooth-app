@@ -2,22 +2,28 @@ import logging
 import time
 
 import pytest
-from dependency_injector import providers
-from pymitter import EventEmitter
 
-from photobooth.appconfig import AppConfig
+from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
 
 
-def test_disabled():
+@pytest.fixture()
+def services() -> ServicesContainer:
+    # setup
+    application_container = ApplicationContainer()
+
+    services = application_container.services()
+
+    # deliver
+    yield services
+    services.shutdown_resources()
+
+
+def test_disabled(services: ServicesContainer):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    services = ServicesContainer(
-        evtbus=providers.Singleton(EventEmitter),
-        config=providers.Singleton(AppConfig),
-    )
     services.config().hardwareinputoutput.wled_enabled = False
 
     try:
@@ -30,13 +36,9 @@ def test_disabled():
         raise AssertionError("init failed") from exc
 
 
-def test_enabled_nonexistentserialport():
+def test_enabled_nonexistentserialport(services: ServicesContainer):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    services = ServicesContainer(
-        evtbus=providers.Singleton(EventEmitter),
-        config=providers.Singleton(AppConfig),
-    )
     services.config().hardwareinputoutput.wled_enabled = True
     services.config().hardwareinputoutput.wled_serial_port = "nonexistentserialport"
 
@@ -45,12 +47,7 @@ def test_enabled_nonexistentserialport():
         services.wled_service()
 
 
-def test_restart_class():
-    services = ServicesContainer(
-        evtbus=providers.Singleton(EventEmitter),
-        config=providers.Singleton(AppConfig),
-    )
-
+def test_restart_class(services: ServicesContainer):
     logger.debug("getting service, starting resource")
     services.wled_service()
 
@@ -61,12 +58,7 @@ def test_restart_class():
     services.wled_service()
 
 
-def test_change_presets():
-    services = ServicesContainer(
-        evtbus=providers.Singleton(EventEmitter),
-        config=providers.Singleton(AppConfig),
-    )
-
+def test_change_presets(services: ServicesContainer):
     logger.debug("getting service, starting resource")
     wled_service = services.wled_service()
 
