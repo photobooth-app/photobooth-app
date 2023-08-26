@@ -1,5 +1,6 @@
 import io
 import logging
+import os
 import platform
 
 import pytest
@@ -25,6 +26,28 @@ if not platform.system() == "Linux":
         "tests are linux only platform, skipping test",
         allow_module_level=True,
     )
+
+
+def use_vcam():
+    # virtual camera delivers images from following path:
+    os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "assets")
+    # switch to virtual camera from normal drivers
+    os.environ["IOLIBS"] = os.environ["IOLIBS"].replace("iolibs", "vusb")
+    logger.info(os.environ["VCAMERADIR"])
+    logger.info(os.environ["IOLIBS"])
+
+
+def has_vcam():
+    import gphoto2 as gp
+
+    vusb_dir = os.environ["IOLIBS"].replace("iolibs", "vusb")
+    if not os.path.isdir(vusb_dir):
+        return False
+    gp_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]
+    gp_version = tuple(int(x) for x in gp_version.split("."))
+    if gp_version > (2, 5, 30):
+        return True
+    return False
 
 
 @pytest.fixture()
@@ -62,6 +85,9 @@ def test_get_images_webcamv4l(backends: BackendsContainer):
 
 
 def test_get_images_gphoto2(backends: BackendsContainer):
+    use_vcam()
+    logger.info(has_vcam())
+
     from photobooth.services.backends.gphoto2 import available_camera_indexes
 
     _availableCameraIndexes = available_camera_indexes()
