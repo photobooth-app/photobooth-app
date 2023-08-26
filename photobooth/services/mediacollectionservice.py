@@ -109,7 +109,10 @@ class MediacollectionService(BaseService):
         Returns:
             list: _description_
         """
-        return [item.asdict() for item in self._db]
+        tms = time.time()
+        out = [item.asdict() for item in self._db]
+        logger.warning(f"-- process time: {round((time.time() - tms), 2)}s to compile db_get_images_as_dict output")
+        return out
 
     def db_get_images(self) -> list[MediaItem]:
         """Get list of mediaitems. Most recent item is at index 0.

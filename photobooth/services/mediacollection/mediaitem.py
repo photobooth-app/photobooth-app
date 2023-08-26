@@ -7,6 +7,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 
 from ...appconfig import AppConfig
@@ -60,7 +61,7 @@ def get_caption(filename) -> str:
     return split_filename(filename)[2]
 
 
-@dataclass
+@dataclass(frozen=True)
 class MediaItem:
     """Class for keeping track of an media item in dict database."""
 
@@ -73,96 +74,96 @@ class MediaItem:
     def __repr__(self):
         return f"MediaItem Id: {self.id}, filename {self.filename}"
 
-    @property
+    @cached_property
     def id(self) -> str:
         return hashlib.md5(self.filename.encode("utf-8")).hexdigest()
 
-    @property
+    @cached_property
     def caption(self) -> str:
         return get_caption(self.filename)
 
-    @property
+    @cached_property
     def datetime(self) -> float:
         return os.path.getmtime(self.path_original)
 
-    @property
+    @cached_property
     def media_type(self) -> MediaItemTypes:
         return get_type(self.filename)
 
-    @property
+    @cached_property
     def visible(self) -> bool:
         return get_visibility(self.filename)
 
-    @property
+    @cached_property
     def data_type(self) -> str:
         return Path(self.filename).suffix[1:]
 
-    @property
+    @cached_property
     def path_original(self) -> Path:
         """filepath of item straight from device/webcam/DSLR, totally unprocessed
         internal use in imagedb"""
         return Path(PATH_ORIGINAL, self.filename)
 
-    @property
+    @cached_property
     def path_full_unprocessed(self) -> Path:
         """filepath of media item full resolution from device but unprocessed, used to reapply pipline chosen by user"""
         return Path(PATH_FULL_UNPROCESSED, self.filename)
 
-    @property
+    @cached_property
     def path_full(self) -> Path:
         """filepath of media item full resolution from device but processed, example background/beautyfilter
         internal use in imagedb"""
         return Path(PATH_FULL, self.filename)
 
-    @property
+    @cached_property
     def path_preview_unprocessed(self) -> Path:
         """filepath of media item preview resolution scaled represents full_unprocessed
         internal use in imagedb"""
         return Path(PATH_PREVIEW_UNPROCESSED, self.filename)
 
-    @property
+    @cached_property
     def path_preview(self) -> Path:
         """filepath of media item preview resolution scaled represents full
         internal use in imagedb"""
         return Path(PATH_PREVIEW, self.filename)
 
-    @property
+    @cached_property
     def path_thumbnail_unprocessed(self) -> Path:
         """filepath of media item thumbnail resolution scaled represents full_unprocessed
         internal use in imagedb"""
         return Path(PATH_THUMBNAIL_UNPROCESSED, self.filename)
 
-    @property
+    @cached_property
     def path_thumbnail(self) -> Path:
         """filepath of media item thumbnail resolution scaled represents full
         internal use in imagedb"""
         return Path(PATH_THUMBNAIL, self.filename)
 
-    @property
+    @cached_property
     def original(self) -> str:
         """filepath of item straight from device/webcam/DSLR, totally unprocessed
         external use as urls"""
         return Path(PATH_ORIGINAL, self.filename).as_posix()
 
-    @property
+    @cached_property
     def full(self) -> str:
         """filepath of media item full resolution from device but processed, example background/beautyfilter
         external use as urls"""
         return Path(PATH_FULL, self.filename).as_posix()
 
-    @property
+    @cached_property
     def preview(self) -> str:
         """filepath of media item preview resolution scaled represents full
         external use as urls"""
         return Path(PATH_PREVIEW, self.filename).as_posix()
 
-    @property
+    @cached_property
     def thumbnail(self) -> str:
         """filepath of media item thumbnail resolution scaled represents full
         external use as urls"""
         return Path(PATH_THUMBNAIL, self.filename).as_posix()
 
-    @property
+    @cached_property
     def share_url(self) -> str:
         """share url for example to use in qr code"""
 
@@ -196,16 +197,33 @@ class MediaItem:
             raise FileNotFoundError(f"the imageset {self.filename=} is incomplete")
 
     def asdict(self) -> dict:
-        """Returns a dict including all properties, excluding __xx__ and other callable functions.
-        reference: https://stackoverflow.com/a/51734064
+        """
+        Returns a dict including properties used for frontend gallery,
+        excluding private __items__ and other callable functions. https://stackoverflow.com/a/51734064
 
-        #TODO: could be improved by reducing the number of properies (for URL and Path) by apply .as_posix here.
-        # TODO: seems to have bad performance :(
+        If iterating over whole database with lots of items, computing the properties is slow
+        (~3 seconds for 1000items on i7). The data of the item does not change after being created so caching is used.
+        Second time the database is .asdict'ed, time reduces from 3 seconds to ~50ms which is acceptable.
+
+        # example output:
+        # "caption": "20230826-080101-985506",
+        # "data_type": "jpg",
+        # "datetime": 1693029662.089048,
+        # "filename": "image_True_20230826-080101-985506.jpg",
+        # "full": "data/processed/full/image_True_20230826-080101-985506.jpg",
+        # "id": "7c8271229631bb286a4489bc012217f2",
+        # "media_type": "image",
+        # "original": "data/original/image_True_20230826-080101-985506.jpg",
+        # "preview": "data/processed/preview/image_True_20230826-080101-985506.jpg",
+        # "share_url": "https://dl.qbooth.net/dl.php?action=download&id=7c8271229631bb286a4489bc012217f2",
+        # "thumbnail": "data/processed/thumbnail/image_True_20230826-080101-985506.jpg",
+        # "visible": true
+
 
         Returns:
             dict: MediaItems
         """
-        return {
+        out = {
             prop: getattr(self, prop)
             for prop in dir(self)
             if (
@@ -214,3 +232,4 @@ class MediaItem:
                 and not isinstance(getattr(self, prop), Path)  # no path instances (not json.serializable)
             )
         }
+        return out
