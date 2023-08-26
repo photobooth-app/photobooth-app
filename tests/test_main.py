@@ -21,3 +21,9 @@ def test_singleinstance():
         main(False)
 
     s.close()
+
+
+def test_main_instance():
+    from photobooth.__main__ import main
+
+    main(False)
