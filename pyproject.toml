@@ -49,7 +49,7 @@ dependencies = [
   "pilgram2~=2.0.2",
   "v4l2py~=0.6.2; platform_system == 'Linux'",
   "gpiozero~=1.6.2",
-  "gphoto2~=2.3.6; platform_system == 'Linux'",
+  "gphoto2~=2.4.0; platform_system == 'Linux'",
   "python-statemachine>=2.0,<2.2",
 ]
 
