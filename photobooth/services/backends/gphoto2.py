@@ -4,7 +4,6 @@ Gphoto2 backend implementation
 """
 import dataclasses
 import logging
-import os
 import time
 from threading import Condition, Event
 
@@ -73,8 +72,6 @@ class Gphoto2Backend(AbstractBackend):
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
         logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
-        logger.info(f"{os.environ['VCAMERADIR']=}")
-        logger.info(f"{os.environ['IOLIBS']=}")
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
@@ -328,8 +325,6 @@ def available_camera_indexes():
     """
     find available cameras, return valid indexes.
     """
-    logger.info(f"{os.environ['VCAMERADIR']=}")
-    logger.info(f"{os.environ['IOLIBS']=}")
 
     camera_list = gp.Camera.autodetect()
     if len(camera_list) == 0:

@@ -72,6 +72,7 @@ def opencv_chromakey(pil_image: Image):
     # https://stackoverflow.com/questions/48109650/how-to-detect-two-different-colors-using-cv2-inrange-in-python-opencv
     # https://www.geeksforgeeks.org/opencv-invert-mask/
     # https://stackoverflow.com/questions/51719472/remove-green-background-screen-from-image-using-opencv-python
+    # https://docs.opencv.org/3.4/d9/d61/tutorial_py_morphological_ops.html
 
     frame = convert_from_image_to_cv2(pil_image)
     ## convert to hsv
@@ -81,6 +82,9 @@ def opencv_chromakey(pil_image: Image):
     mask = cv2.inRange(hsv, np.array(GREEN_RANGE_MIN_HSV), np.array(GREEN_RANGE_MAX_HSV))
     # cv2.imshow("Input", mask)
     # cv2.waitKey(0)
+    # remove noise/false positives within people area
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((DILATE_SIZE, DILATE_SIZE), np.uint8))
+    # dilate mask a bit to remove bit more when blurred
     mask = cv2.dilate(mask, np.ones((DILATE_SIZE, DILATE_SIZE), np.uint8), iterations=1)
     # cv2.imshow("Input", mask)
     # cv2.waitKey(0)
