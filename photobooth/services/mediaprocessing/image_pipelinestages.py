@@ -70,6 +70,11 @@ def rembg_stage(image: Image) -> Image:
     raise PipelineError("rembg_stage not implemented yet")  # https://github.com/danielgatis/rembg
 
 
+def removechromakey_stage(image: Image) -> Image:
+    """ """
+    raise PipelineError("removechromakey_stage not implemented yet")  # https://github.com/danielgatis/rembg
+
+
 def dummy_blackrect_stage(image: Image) -> Image:
     """ """
 
