@@ -39,8 +39,7 @@ The reference photobooth box is made from 3d printed parts, [see the 3d printed 
 The photobooth app uses libraries optimized for speed. Even a Raspberry Pi 3B+ is fine to use.
 Typically the photobooth app takes following times to process data:
 
-^ Task ^ RPI 3B+ ^ RPI 4B ^ Intel i7 ^
-| ---- | --- | --- | --- |
+| Task | RPI 3B+ | RPI 4B | Intel i7 |
 | CPU load with picamera2 livestream and display | ~20% | ~20% | <1% |
 | Postprocess: scale images for preview | <500ms | <350ms | <30ms |
 | Postprocess: Stage "Remove Greenscreen" | 130ms | 90ms | 20ms |
