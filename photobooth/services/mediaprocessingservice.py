@@ -61,11 +61,7 @@ class MediaprocessingService(BaseService):
     def apply_pipeline_1pic(self, mediaitem: MediaItem, user_filter: str = None):
         """always apply preconfigured pipeline."""
 
-        if not self._config.mediaprocessing.pic1_pipeline_enable:
-            logger.info("pic1 pipeline processing disabled, skipping")
-            # create "processed" variants by just copying
-            self.copy_1pic_repr(mediaitem)
-            return
+        # TODO: The whole processing should be refactored
 
         tms = time.time()
 
@@ -77,7 +73,10 @@ class MediaprocessingService(BaseService):
         image = Image.open(io.BytesIO(buffer_full))
 
         ## stage 1: remove background
-        if self._config.mediaprocessing.pic1_removechromakey_enable:
+        if (
+            self._config.mediaprocessing.pic1_pipeline_enable
+            and self._config.mediaprocessing.pic1_removechromakey_enable
+        ):
             try:
                 image = removechromakey_stage(
                     image,
@@ -90,21 +89,25 @@ class MediaprocessingService(BaseService):
         ## stage: pilgram filter
         filter = user_filter if user_filter is not None else self._config.mediaprocessing.pic1_filter.value
 
-        if (filter is not None) and (filter != "original"):
-            try:
-                image = pilgram_stage(image, filter)
-            except PipelineError as exc:
-                logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
+        if self._config.mediaprocessing.pic1_pipeline_enable or user_filter:
+            if (filter is not None) and (filter != "original"):
+                try:
+                    image = pilgram_stage(image, filter)
+                except PipelineError as exc:
+                    logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
 
         ## stage: text overlay
-        if self._config.mediaprocessing.pic1_text_overlay_enable:
+        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_text_overlay_enable:
             try:
                 image = text_stage(image, textstageconfig=self._config.mediaprocessing.pic1_text_overlay)
             except PipelineError as exc:
                 logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
 
         ## stage: new background shining through transparent parts (or extended frame)
-        if self._config.mediaprocessing.pic1_fill_background_enable:
+        if (
+            self._config.mediaprocessing.pic1_pipeline_enable
+            and self._config.mediaprocessing.pic1_fill_background_enable
+        ):
             try:
                 image = image_fill_background_stage(image, self._config.mediaprocessing.pic1_fill_background_color)
             except PipelineError as exc:
@@ -113,7 +116,10 @@ class MediaprocessingService(BaseService):
                 )
 
         ## stage: new background image behing transparent parts (or extended frame)
-        if self._config.mediaprocessing.pic1_img_background_enable:
+        if (
+            self._config.mediaprocessing.pic1_pipeline_enable
+            and self._config.mediaprocessing.pic1_img_background_enable
+        ):
             try:
                 image = image_img_background_stage(image, self._config.mediaprocessing.pic1_img_background_file)
             except PipelineError as exc:
