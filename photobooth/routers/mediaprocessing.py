@@ -75,8 +75,9 @@ def api_get_applyfilter(
 
         mediaprocessing_service.apply_pipeline_1pic(mediaitem, user_filter=filter)
     except Exception as exc:
-        logger.error(f"apply pipeline failed, reason: {exc}. stage not applied!")
+        logger.exception(exc)
+        logger.error(f"apply pipeline failed, reason: {exc}.")
         raise HTTPException(
             status_code=status.HTTP_406_NOT_ACCEPTABLE,
-            detail=f"apply pipeline failed, reason: {exc}. stage not applied!",
+            detail=f"apply pipeline failed, reason: {exc}.",
         ) from exc

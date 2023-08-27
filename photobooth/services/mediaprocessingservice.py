@@ -15,7 +15,10 @@ from ..utils.exceptions import PipelineError
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem
 from .mediaprocessing.image_pipelinestages import (
+    image_fill_background_stage,
+    image_img_background_stage,
     pilgram_stage,
+    removechromakey_stage,
     text_stage,
 )
 
@@ -57,6 +60,13 @@ class MediaprocessingService(BaseService):
 
     def apply_pipeline_1pic(self, mediaitem: MediaItem, user_filter: str = None):
         """always apply preconfigured pipeline."""
+
+        if not self._config.mediaprocessing.pic1_pipeline_enable:
+            logger.info("pic1 pipeline processing disabled, skipping")
+            # create "processed" variants by just copying
+            self.copy_1pic_repr(mediaitem)
+            return
+
         tms = time.time()
 
         ## pipeline is enabled, so start processing now:
@@ -67,17 +77,17 @@ class MediaprocessingService(BaseService):
         image = Image.open(io.BytesIO(buffer_full))
 
         ## stage 1: remove background
+        if self._config.mediaprocessing.pic1_removechromakey_enable:
+            try:
+                image = removechromakey_stage(
+                    image,
+                    self._config.mediaprocessing.pic1_removechromakey_keycolor,
+                    self._config.mediaprocessing.pic1_removechromakey_tolerance,
+                )
+            except PipelineError as exc:
+                logger.error(f"apply removechromakey_stage failed, reason: {exc}. stage not applied, but continue")
 
-        ## stage 2: beauty
-        # TODO: image = beauty_stage(image)
-
-        ## stage 3: text overlay
-        try:
-            image = text_stage(image, textstageconfig=self._config.mediaprocessing.pic1_text_overlay)
-        except PipelineError as exc:
-            logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage 4: pilgram filter
+        ## stage: pilgram filter
         filter = user_filter if user_filter is not None else self._config.mediaprocessing.pic1_filter.value
 
         if (filter is not None) and (filter != "original"):
@@ -86,11 +96,36 @@ class MediaprocessingService(BaseService):
             except PipelineError as exc:
                 logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
 
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+        ## stage: text overlay
+        if self._config.mediaprocessing.pic1_text_overlay_enable:
+            try:
+                image = text_stage(image, textstageconfig=self._config.mediaprocessing.pic1_text_overlay)
+            except PipelineError as exc:
+                logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
+
+        ## stage: new background shining through transparent parts (or extended frame)
+        if self._config.mediaprocessing.pic1_fill_background_enable:
+            try:
+                image = image_fill_background_stage(image, self._config.mediaprocessing.pic1_fill_background_color)
+            except PipelineError as exc:
+                logger.error(
+                    f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
+                )
+
+        ## stage: new background image behing transparent parts (or extended frame)
+        if self._config.mediaprocessing.pic1_img_background_enable:
+            try:
+                image = image_img_background_stage(image, self._config.mediaprocessing.pic1_img_background_file)
+            except PipelineError as exc:
+                logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline stages")
 
         ## final: save full result and create scaled versions
         tms = time.time()
         buffer_full_pipeline_applied = io.BytesIO()
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
         image.save(
             buffer_full_pipeline_applied,
             format="jpeg",

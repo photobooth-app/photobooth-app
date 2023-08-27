@@ -95,8 +95,10 @@ def opencv_chromakey(pil_image: Image):
     # enhance edges by blur# blur threshold image
     blur = cv2.GaussianBlur(mask_inverted, (0, 0), sigmaX=BLUR_SIZE, sigmaY=BLUR_SIZE, borderType=cv2.BORDER_DEFAULT)
 
+    # actually remove the background (so if transparency is ignored later in processing, the removed parts are black instead just return)
+    result = cv2.bitwise_and(frame, frame, mask=blur)
     # create result with transparent channel
-    result = cv2.cvtColor(frame.copy(), cv2.COLOR_BGR2BGRA)
+    result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
     result[:, :, 3] = blur  # add mask to image as alpha channel
 
     # cv2.imshow("Input", result)
@@ -125,6 +127,7 @@ def image():
 def test_libraries_chromakey(library, image, benchmark):
     pil_image_chromakeyed = benchmark(eval(library), pil_image=image)
     # pil_image_chromakeyed = opencv_chromakey(pil_image=image_lores)
+    pil_image_chromakeyed.convert("RGB")
     pil_image_chromakeyed.show()
 
     assert True

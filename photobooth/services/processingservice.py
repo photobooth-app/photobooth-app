@@ -251,6 +251,7 @@ class ProcessingService(StateMachine):
             self.postprocess()
             self.finalize()
         except Exception as exc:
+            logger.exception(exc)
             logger.critical(f"something went wrong :( {exc}")
             self._reset()
             raise RuntimeError(f"something went wrong :( {exc}") from exc

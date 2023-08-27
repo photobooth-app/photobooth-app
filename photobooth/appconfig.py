@@ -331,18 +331,59 @@ class GroupMediaprocessing(BaseModel):
 
     model_config = ConfigDict(title="Process media after capture")
 
-    pic1_enable_pipeline: bool = Field(
+    pic1_pipeline_enable: bool = Field(
         default=False,
         description="Enable/Disable 1pic processing pipeline completely",
     )
+
     pic1_filter: EnumPilgramFilter = Field(
         title="Pic1 Filter",
         default=EnumPilgramFilter.original,
         description="Instagram-like filter to apply per default. 'original' applies no filter.",
     )
+
+    pic1_text_overlay_enable: bool = Field(
+        default=False,
+        description="General enable apply texts below.",
+    )
     pic1_text_overlay: list[TextStageConfig] = Field(
         default=[],
-        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/fonts/",
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+    )
+
+    pic1_removechromakey_enable: bool = Field(
+        default=False,
+        description="Apply chromakey greenscreen removal from captured images",
+    )
+    pic1_removechromakey_keycolor: int = Field(
+        default=110,
+        ge=0,
+        le=360,
+        description="Color (H) in HSV colorspace to remove on 360° scale.",
+    )
+    pic1_removechromakey_tolerance: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Tolerance for color (H) on chromakey color removal.",
+    )
+
+    pic1_fill_background_enable: bool = Field(
+        default=False,
+        description="Apply solid color background to captured image (useful only if image is extended or background removed)",
+    )
+    pic1_fill_background_color: Color = Field(
+        default=Color("blue").as_named(),
+        description="Solid color used to fill background.",
+    )
+
+    pic1_img_background_enable: bool = Field(
+        default=False,
+        description="Add image from file to background (useful only if image is extended or background removed)",
+    )
+    pic1_img_background_file: str = Field(
+        default="pink-7761356_1920.png",
+        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
 
 
