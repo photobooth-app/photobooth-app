@@ -123,22 +123,22 @@ class Picamera2Backend(AbstractBackend):
         self._capture_config = self._picamera2.create_still_configuration(
             main={
                 "size": (
-                    self._config.common.CAPTURE_CAM_RESOLUTION_WIDTH,
-                    self._config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+                    self._config.backends.picamera2_CAPTURE_CAM_RESOLUTION_WIDTH,
+                    self._config.backends.picamera2_CAPTURE_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    self._config.common.LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.common.LIVEVIEW_RESOLUTION_HEIGHT,
+                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
+                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=self._config.common.CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.common.CAMERA_TRANSFORM_VFLIP,
+                hflip=self._config.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
+                vflip=self._config.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
             ),
         )
 
@@ -146,22 +146,22 @@ class Picamera2Backend(AbstractBackend):
         self._preview_config = self._picamera2.create_video_configuration(
             main={
                 "size": (
-                    self._config.common.PREVIEW_CAM_RESOLUTION_WIDTH,
-                    self._config.common.PREVIEW_CAM_RESOLUTION_HEIGHT,
+                    self._config.backends.picamera2_PREVIEW_CAM_RESOLUTION_WIDTH,
+                    self._config.backends.picamera2_PREVIEW_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    self._config.common.LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.common.LIVEVIEW_RESOLUTION_HEIGHT,
+                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
+                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=self._config.common.CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.common.CAMERA_TRANSFORM_VFLIP,
+                hflip=self._config.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
+                vflip=self._config.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
             ),
         )
 

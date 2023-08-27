@@ -40,30 +40,14 @@ class GroupCommon(BaseModel):
 
     model_config = ConfigDict(title="Common Config")
 
-    CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
-        default=1280,
-        description="still photo camera resolution width on supported backends",
+    HIRES_STILL_QUALITY: int = Field(
+        default=90,
+        ge=10,
+        le=100,
+        description="Still JPEG full resolution quality, applied to download images and images with filter",
+        json_schema_extra={"ui_component": "QSlider"},
     )
-    CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
-        default=720,
-        description="still photo camera resolution height on supported backends",
-    )
-    PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
-        default=1280,
-        description="liveview camera resolution width on supported backends",
-    )
-    PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
-        default=720,
-        description="liveview camera resolution height on supported backends",
-    )
-    LIVEVIEW_RESOLUTION_WIDTH: int = Field(
-        default=1280,
-        description="Liveview resolution width",
-    )
-    LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
-        default=720,
-        description="Liveview resolution height",
-    )
+
     LIVEPREVIEW_QUALITY: int = Field(
         default=80,
         ge=10,
@@ -85,13 +69,6 @@ class GroupCommon(BaseModel):
         description="Still JPEG preview quality, preview still shown in gallery detail",
         json_schema_extra={"ui_component": "QSlider"},
     )
-    HIRES_STILL_QUALITY: int = Field(
-        default=90,
-        ge=10,
-        le=100,
-        description="Still JPEG full resolution quality, applied to download images and images with filter",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
 
     FULL_STILL_WIDTH: int = Field(
         default=1500,
@@ -111,11 +88,7 @@ class GroupCommon(BaseModel):
         le=1000,
         description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
     )
-    DEBUG_LEVEL: EnumDebugLevel = Field(
-        title="Debug Level",
-        default=EnumDebugLevel.DEBUG,
-        description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",
-    )
+
     LIVEPREVIEW_FRAMERATE: int = Field(
         default=15,
         ge=5,
@@ -124,15 +97,6 @@ class GroupCommon(BaseModel):
         json_schema_extra={"ui_component": "QSlider"},
     )
 
-    # flip camera source horizontal/vertical
-    CAMERA_TRANSFORM_HFLIP: bool = Field(
-        default=False,
-        description="Apply horizontal flip to image source on supported backends",
-    )
-    CAMERA_TRANSFORM_VFLIP: bool = Field(
-        default=False,
-        description="Apply vertical flip to image source on supported backends",
-    )
     PROCESS_COUNTDOWN_TIMER: float = Field(
         default=3.0,
         description="Countdown in seconds, started when user start a capture process",
@@ -141,6 +105,13 @@ class GroupCommon(BaseModel):
         default=0.25,
         description="Trigger capture offset in seconds. 0 trigger exactly when countdown is 0. Triggers the capture offset by the given seconds to compensate for delay in camera.",
     )
+
+    DEBUG_LEVEL: EnumDebugLevel = Field(
+        title="Debug Level",
+        default=EnumDebugLevel.DEBUG,
+        description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",
+    )
+
     webserver_bind_ip: str = Field(
         default="0.0.0.0",
         description="IP/Hostname to bind the webserver to. 0.0.0.0 means bind to all IP adresses of host.",
@@ -229,10 +200,44 @@ class GroupBackends(BaseModel):
         default=EnumImageBackendsLive.DISABLED,
         description="Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability.",
     )
-    LIVEPREVIEW_ENABLED: bool = Field(default=True, description="Enable livestream (if possible)")
+    LIVEPREVIEW_ENABLED: bool = Field(
+        default=True,
+        description="Enable livestream (if possible)",
+    )
 
-    cv2_device_index: int = Field(default=0, description="Device index of webcam opened in cv2 backend")
-    v4l_device_index: int = Field(default=0, description="Device index of webcam opened in v4l backend")
+    cv2_CAM_RESOLUTION_WIDTH: int = Field(
+        default=10000,
+        description="still photo camera resolution width to opencv2 backend",
+    )
+    cv2_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=10000,
+        description="still photo camera resolution height to opencv2 backend",
+    )
+    cv2_device_index: int = Field(
+        default=0,
+        description="Device index of webcam opened in cv2 backend",
+    )
+    cv2_CAMERA_TRANSFORM_HFLIP: bool = Field(
+        default=False,
+        description="Apply horizontal flip to image source to opencv2 backend",
+    )
+    cv2_CAMERA_TRANSFORM_VFLIP: bool = Field(
+        default=False,
+        description="Apply vertical flip to image source to opencv2 backend",
+    )
+
+    v4l_CAM_RESOLUTION_WIDTH: int = Field(
+        default=10000,
+        description="still photo camera resolution width on supported backends",
+    )
+    v4l_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=10000,
+        description="still photo camera resolution height on supported backends",
+    )
+    v4l_device_index: int = Field(
+        default=0,
+        description="Device index of webcam opened in v4l backend",
+    )
 
     gphoto2_disable_viewfinder_before_capture: bool = Field(
         default=True,
@@ -244,25 +249,54 @@ class GroupBackends(BaseModel):
         description="Usually wait_for_event not necessary before downloading the file from camera. Adjust if necessary.",
     )
 
+    picamera2_CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
+        default=1280,
+        description="still photo camera resolution width on supported backends",
+    )
+    picamera2_CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=720,
+        description="still photo camera resolution height on supported backends",
+    )
+    picamera2_PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
+        default=1280,
+        description="liveview camera resolution width on supported backends",
+    )
+    picamera2_PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=720,
+        description="liveview camera resolution height on supported backends",
+    )
+    picamera2_LIVEVIEW_RESOLUTION_WIDTH: int = Field(
+        default=1280,
+        description="Liveview resolution width",
+    )
+    picamera2_LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
+        default=720,
+        description="Liveview resolution height",
+    )
+    picamera2_CAMERA_TRANSFORM_HFLIP: bool = Field(
+        default=False,
+        description="Apply horizontal flip to image source to picamera2 backend",
+    )
+    picamera2_CAMERA_TRANSFORM_VFLIP: bool = Field(
+        default=False,
+        description="Apply vertical flip to image source to picamera2 backend",
+    )
     picamera2_AE_EXPOSURE_MODE: int = Field(
         default=1,
         ge=0,
         le=4,
         description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
     )
-
     picamera2_focuser_module: EnumFocuserModule = Field(
         title="Picamera2 Focuser Module",
         default=EnumFocuserModule.NULL,
         description="Choose continuous or interval mode to trigger autofocus of picamera2 cam.",
     )
-
     picamera2_stream_quality: EnumPicamStreamQuality = Field(
         title="Picamera2 Stream Quality (for livepreview)",
         default=EnumPicamStreamQuality.MEDIUM,
         description="Lower quality results in less data to be transferred and may reduce load on display device.",
     )
-
     picamera2_focuser_interval: int = Field(
         default=10,
         description="Every x seconds trigger autofocus",

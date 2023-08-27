@@ -173,7 +173,7 @@ def v4l_img_aquisition(
     shm_buffer_name,
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
-    _config,
+    _config: AppConfig,
     _event_proc_shutdown: Event,
 ):
     """_summary_
@@ -191,8 +191,8 @@ def v4l_img_aquisition(
         logger.info(f"webcam devices index {_config.backends.v4l_device_index} opened")
         try:
             cam.video_capture.set_format(
-                _config.common.CAPTURE_CAM_RESOLUTION_WIDTH,
-                _config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
+                _config.backends.v4l_CAM_RESOLUTION_WIDTH,
+                _config.backends.v4l_CAM_RESOLUTION_HEIGHT,
                 "MJPG",
             )
         except (AttributeError, FileNotFoundError) as exc:

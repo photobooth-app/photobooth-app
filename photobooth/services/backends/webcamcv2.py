@@ -188,7 +188,7 @@ def cv2_img_aquisition(
     _condition_img_buffer_hires_ready: Condition,
     # need to pass config, because unittests can change config,
     # if not passed, the config are not available in the separate process!
-    _config,
+    _config: AppConfig,
     _event_proc_shutdown: Event,
 ):
     """
@@ -208,12 +208,8 @@ def cv2_img_aquisition(
     # activate preview mode on init
     _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
-    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.common.CAPTURE_CAM_RESOLUTION_WIDTH)
-    _video_set_check(
-        _video,
-        cv2.CAP_PROP_FRAME_HEIGHT,
-        _config.common.CAPTURE_CAM_RESOLUTION_HEIGHT,
-    )
+    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.backends.cv2_CAM_RESOLUTION_WIDTH)
+    _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, _config.backends.cv2_CAM_RESOLUTION_HEIGHT)
 
     if not _video.isOpened():
         raise OSError(f"cannot open camera index {_config.backends.cv2_device_index}")
@@ -238,9 +234,9 @@ def cv2_img_aquisition(
             raise OSError("error reading camera frame")
 
         # apply flip image to stream only:
-        if _config.common.CAMERA_TRANSFORM_HFLIP:
+        if _config.backends.cv2_CAMERA_TRANSFORM_HFLIP:
             array = cv2.flip(array, 1)
-        if _config.common.CAMERA_TRANSFORM_VFLIP:
+        if _config.backends.cv2_CAMERA_TRANSFORM_VFLIP:
             array = cv2.flip(array, 0)
 
         if _event_hq_capture.is_set():
