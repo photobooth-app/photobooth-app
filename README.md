@@ -34,10 +34,21 @@ The app controls camera's autofocus, handles led signaling when a photo is taken
 
 The reference photobooth box is made from 3d printed parts, [see the 3d printed reference box over here](https://mgrl.github.io/photobooth-docs/photobox3dprint/).
 
+## 🛫 Speed Optimized
+
+The photobooth app uses libraries optimized for speed. Even a Raspberry Pi 3B+ is fine to use.
+Typically the photobooth app takes following times to process data:
+
+|Task|RPI 3B+|RPI 4B|Intel i7|
+| CPU load with picamera2 livestream and display |~20%|~20%|<1%|
+| Postprocess: scale images for preview |<500ms|<350ms|<30ms|
+| Postprocess: Stage "Remove Greenscreen" |130ms|90ms|20ms|
+| Postprocess: Stage "Add Text" |n/a|n/a|n/a|
+| Postprocess: Stage "Apply Instagram-Like Filter" |n/a|<80ms|<30ms|
+
 ## 💅 Screenshots
 
-![frontpage](https://raw.githubusercontent.com/mgrl/photobooth-app/main/screenshots/frontpage.png)
-[Find more screenshots in the documentation](https://mgrl.github.io/photobooth-docs/screenshots)
+[Find screenshots in the documentation](https://mgrl.github.io/photobooth-docs/screenshots)
 
 ## 🔧 Installation
 
