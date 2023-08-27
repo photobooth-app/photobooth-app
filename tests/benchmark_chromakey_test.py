@@ -128,6 +128,5 @@ def test_libraries_chromakey(library, image, benchmark):
     pil_image_chromakeyed = benchmark(eval(library), pil_image=image)
     # pil_image_chromakeyed = opencv_chromakey(pil_image=image_lores)
     pil_image_chromakeyed.convert("RGB")
-    pil_image_chromakeyed.show()
 
     assert True
