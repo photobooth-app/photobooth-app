@@ -40,6 +40,7 @@ The photobooth app uses libraries optimized for speed. Even a Raspberry Pi 3B+ i
 Typically the photobooth app takes following times to process data:
 
 | Task | RPI 3B+ | RPI 4B | Intel i7 |
+|----------|--------|--------|--------|
 | CPU load with picamera2 livestream and display | ~20% | ~20% | <1% |
 | Postprocess: scale images for preview | <500ms | <350ms | <30ms |
 | Postprocess: Stage "Remove Greenscreen" | 130ms | 90ms | 20ms |
