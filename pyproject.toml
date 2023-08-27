@@ -29,7 +29,7 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-  "fastapi>=0.100.0,<0.102.0",
+  "fastapi>=0.100.0,<0.104.0",
   "opencv-python>=4.7,<4.9",
   "numpy>=1.25.0",
   "piexif~=1.1.3",
