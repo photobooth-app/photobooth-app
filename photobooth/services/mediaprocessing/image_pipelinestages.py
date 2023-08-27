@@ -145,7 +145,8 @@ def removechromakey_stage(pil_image: Image, keycolor: int, tolerance: int) -> Im
     # enhance edges by blur# blur threshold image
     blur = cv2.GaussianBlur(mask_inverted, (0, 0), sigmaX=blur_pixel, sigmaY=blur_pixel, borderType=cv2.BORDER_DEFAULT)
 
-    # actually remove the background (so if transparency is ignored later in processing, the removed parts are black instead just return)
+    # actually remove the background (so if transparency is ignored later in processing,
+    # the removed parts are black instead just return)
     result = cv2.bitwise_and(frame, frame, mask=blur)
     # create result with transparent channel
     result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
