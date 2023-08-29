@@ -83,7 +83,14 @@ def main(run_server: bool = True):
     logger.info(f"app version started: {__version__}")
 
     application_container.wire(modules=[__name__], packages=[".routers"])
-    # application_container.services.init_resources()
+
+    ## init resources actively since they would not be initialized otherwise because just receive events
+    # application_container.services.init_resources() # no global init as this would init all backends (even unused)
+    application_container.services().gpio_service.init()
+    application_container.services().information_service.init()
+    application_container.services().keyboard_service.init()
+    application_container.services().share_service.init()
+    application_container.services().wled_service.init()
 
     # start main application
     server = _server()
