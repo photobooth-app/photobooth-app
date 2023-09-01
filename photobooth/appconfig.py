@@ -448,8 +448,12 @@ class GroupHardwareInputOutput(BaseModel):
         description="Enable keyboard input globally",
     )
     keyboard_input_keycode_takepic: str = Field(
-        default="c",
+        default="i",
         description="Keycode triggers capture of one image",
+    )
+    keyboard_input_keycode_takecollage: str = Field(
+        default="c",
+        description="Keycode triggers capture of collage",
     )
     keyboard_input_keycode_print_recent_item: str = Field(
         default="p",
@@ -483,8 +487,12 @@ class GroupHardwareInputOutput(BaseModel):
         default=27,
         description="GPIO pin to take one picture.",
     )
-    gpio_pin_print_recent_item: int = Field(
+    gpio_pin_collage: int = Field(
         default=22,
+        description="GPIO pin to take a collage.",
+    )
+    gpio_pin_print_recent_item: int = Field(
+        default=23,
         description="GPIO pin to print last captured item.",
     )
 

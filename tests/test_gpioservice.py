@@ -69,6 +69,20 @@ def test_button_take1pic(services: ServicesContainer):
         services.processing_service().evt_chose_1pic_get.assert_called()
 
 
+def test_button_takecollage(services: ServicesContainer):
+    # modify config
+    # services.config().hardwareinputoutput.gpio_enabled = True
+
+    with patch.object(services.processing_service(), "evt_chose_collage_get"):
+        # emulate gpio active low driven (simulates button press)
+        services.gpio_service().takecollage_btn.pin.drive_low()
+
+        # wait debounce time
+        time.sleep(DEBOUNCE_TIME + 0.2)
+
+        services.processing_service().evt_chose_collage_get.assert_called()
+
+
 @patch("subprocess.run")
 def test_button_print(mock_run, services: ServicesContainer):
     services.config().hardwareinputoutput.printing_enabled = True

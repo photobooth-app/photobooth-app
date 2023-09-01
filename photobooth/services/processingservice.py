@@ -238,6 +238,7 @@ class ProcessingService(StateMachine):
             assert mediaitem.fileset_valid()
 
             # add result to db
+            # TODO: make configurable whether to hide pics that will be stitched to collage
             _ = self._mediacollection_service.db_add_item(mediaitem)
 
             mediaitems.append(mediaitem)
@@ -290,8 +291,8 @@ class ProcessingService(StateMachine):
         try:
             self.start(JobModelBase.Typ.collage, 3)
             # if autocontinue:
-            self.capture_next()
-            self.capture_next()
+            while self.capture.is_active:
+                self.capture_next()
 
         except Exception as exc:
             logger.exception(exc)
@@ -300,19 +301,8 @@ class ProcessingService(StateMachine):
             raise RuntimeError(f"something went wrong :( {exc}") from exc
 
     def evt_chose_video_get(self):
-        logger.info("evt_chose_video_get called to take collage")
-        if not self.idle.is_active:
-            raise ProcessMachineOccupiedError("bad request, only one request at a time!")
-
-        try:
-            self.start()  # TODO: add job here?
-            self.capture_next()
-
-        except Exception as exc:
-            logger.exception(exc)
-            logger.critical(f"something went wrong :( {exc}")
-            self._reset()
-            raise RuntimeError(f"something went wrong :( {exc}") from exc
+        logger.info("evt_chose_video_get called to take video")
+        raise NotImplementedError
 
     ### some custom helper
 

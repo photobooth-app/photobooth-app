@@ -75,6 +75,19 @@ class KeyboardService(BaseService):
                 # other errors
                 self._logger.critical(exc)
 
+        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takecollage:
+            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takecollage}")
+            self._logger.info("trigger evt_chose_collage_get")
+
+            try:
+                self._processing_service.evt_chose_collage_get()
+            except ProcessMachineOccupiedError as exc:
+                # raised if processingservice not idle
+                self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+            except Exception as exc:
+                # other errors
+                self._logger.critical(exc)
+
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
             self._logger.info(
                 f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}"
