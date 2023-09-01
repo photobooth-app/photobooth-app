@@ -203,6 +203,8 @@ class ProcessingService(StateMachine):
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
         if self.model.took_all_captures():
+            # last image taken, automatic continue
+            # enhancement: make configurable and let user choose to repeat capture or confirm to continue
             logger.info(f"took_all_captures ({self.model.number_captures_taken()=}) _finalize now")
             self._postprocess()
 
@@ -225,13 +227,15 @@ class ProcessingService(StateMachine):
 
             # always create unprocessed versions for later usage
             tms = time.time()
-            self._mediaprocessing_service.create_scaled_unprocessed_repr(mediaitem)
+            mediaitem.create_fileset_unprocessed()
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
 
             # apply 1pic pipeline:
             tms = time.time()
             self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+
+            assert mediaitem.fileset_valid()
 
             # add result to db
             _ = self._mediacollection_service.db_add_item(mediaitem)

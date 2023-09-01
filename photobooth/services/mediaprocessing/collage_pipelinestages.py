@@ -25,6 +25,6 @@ def merge_collage_stage(
 
     # new_image.save("images/merged_image.jpg", "JPEG")
 
-    new_image.show()
+    # new_image.show()
 
     return new_image

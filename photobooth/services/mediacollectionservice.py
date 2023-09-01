@@ -66,7 +66,7 @@ class MediacollectionService(BaseService):
 
             try:
                 mediaitem = MediaItem(filename)
-                self._mediaprocessing_service.ensure_scaled_repr_created(mediaitem)
+                mediaitem.ensure_scaled_repr_created()
                 self.db_add_item(mediaitem)
 
             except Exception as exc:

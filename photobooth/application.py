@@ -45,6 +45,7 @@ def _create_basic_folders():
 
 def _create_app() -> FastAPI:
     application_container = ApplicationContainer()
+    application_container.logging_service()  # to foce init of logger earliest possible
     logger = logging.getLogger(f"{__name__}")
 
     try:
