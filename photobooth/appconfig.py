@@ -354,7 +354,7 @@ class TextStageConfig(BaseModel):
     text: str = ""
     pos_x: int = 50
     pos_y: int = 50
-    # rotation: int = 0 # TODO: not yet implemented
+    # rotate: int = 0 # TODO: not yet implemented
     font_size: int = 20
     font: str = "Roboto-Bold.ttf"
     color: Color = Color("red").as_named()
@@ -363,9 +363,9 @@ class TextStageConfig(BaseModel):
 class CollageStageConfig(BaseModel):
     pos_x: int = 50
     pos_y: int = 50
-    width: int = 200
-    height: int = 200
-    rotation: int = 0
+    width: int = 600
+    height: int = 400
+    rotate: int = 0
     predefined_image: str = ""
 
 
@@ -416,7 +416,7 @@ class GroupMediaprocessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     pic1_fill_background_color: Color = Field(
-        default=Color("blue").as_named(),
+        default=Color("blue"),
         description="Solid color used to fill background.",
     )
 
@@ -430,7 +430,12 @@ class GroupMediaprocessing(BaseModel):
     )
 
     collage_merge_definition: list[CollageStageConfig] = Field(
-        default=[CollageStageConfig(), CollageStageConfig()],
+        default=[
+            CollageStageConfig(pos_x=50),
+            CollageStageConfig(pos_x=700),
+            CollageStageConfig(pos_x=50, pos_y=500),
+            CollageStageConfig(pos_x=700, pos_y=500, rotate=5),
+        ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 

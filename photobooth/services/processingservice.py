@@ -134,7 +134,13 @@ class ProcessingService(StateMachine):
         self.timer_countdown = (
             self._config.common.PROCESS_COUNTDOWN_TIMER + self._config.common.PROCESS_COUNTDOWN_OFFSET
         )
+
         logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
+
+        if self.timer_countdown == 0:
+            logger.info("no timer, skip countdown")
+            self.capture_next()
+
         logger.info("starting timer")
 
         while self.timer_countdown > 0:
@@ -249,7 +255,6 @@ class ProcessingService(StateMachine):
         # postprocess job as whole, create collage of single images, ...
         logger.info("start postprocessing phase 2")
 
-        #
         if self.model._typ == JobModelBase.Typ.collage:
             # apply 1pic pipeline:
             tms = time.time()
@@ -293,7 +298,7 @@ class ProcessingService(StateMachine):
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
         try:
-            self.start(JobModelBase.Typ.collage, 3)
+            self.start(JobModelBase.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
             # if autocontinue:
             while self.capture.is_active:
                 self.capture_next()

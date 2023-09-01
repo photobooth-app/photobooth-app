@@ -1,8 +1,10 @@
 import logging
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from ...appconfig import CollageStageConfig
+from ...utils.exceptions import PipelineError
+from .pipelinestages_utils import get_image, rotate
 
 logger = logging.getLogger(__name__)
 DATA_USER_PATH = "./data/user/"
@@ -14,17 +16,30 @@ def merge_collage_stage(
 ) -> Image.Image:
     """ """
 
+    target_image_size = (1500, 1000)  # TODO: need to find out how to handle this.
     total_images_in_collage = len(collage_merge_definition)
 
-    image1 = captured_images[0].resize((426, 240))
-    image1_size = image1.size
-    new_image = Image.new("RGBA", (total_images_in_collage * image1_size[0], image1_size[1]), color=None)
-    # for image_definition in collage_merge_definition:
-    for index, _image in enumerate(captured_images):
-        new_image.paste(_image, (index * image1_size[0], 0))
+    collage_images: list[Image.Image] = []
+    for _definition in collage_merge_definition:
+        if _definition.predefined_image:
+            try:
+                collage_images.append(get_image(_definition.predefined_image))
+            except FileNotFoundError as exc:
+                raise PipelineError(f"error getting predefined file {exc}") from exc
+        else:
+            collage_images.append(captured_images.pop(0))
 
-    # new_image.save("images/merged_image.jpg", "JPEG")
+    if len(collage_images) != total_images_in_collage:
+        raise PipelineError("collage images no not equal to total_images_in_collage requested!")
 
-    # new_image.show()
+    new_image = Image.new("RGBA", target_image_size, color=None)
+
+    for index, _definition in enumerate(collage_merge_definition):
+        logger.debug(_definition)
+        _image = collage_images[index]
+        _image = ImageOps.fit(_image, (_definition.width, _definition.height))  # or contain?
+        _image, offset_x, offset_y = rotate(_image, _definition.rotate)
+
+        new_image.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y))
 
     return new_image

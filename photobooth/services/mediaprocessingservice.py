@@ -36,7 +36,8 @@ class MediaprocessingService(BaseService):
     def apply_pipeline_1pic(self, mediaitem: MediaItem, user_filter: str = None) -> MediaItem:
         """always apply preconfigured pipeline."""
 
-        # TODO: The whole processing should be refactored
+        # TODO: consider resampling filter change:
+        # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
 
         tms = time.time()
 
@@ -154,14 +155,15 @@ class MediaprocessingService(BaseService):
 
         ## stage 1:
         # merge captured images and predefined to one image with transparency
-        if True:
-            captured_images: list[Image.Image] = []
+        if True:  # merge is mandatory for collages
+            _captured_images: list[Image.Image] = []
             for captured_mediaitem in captured_mediaitems:
-                captured_images.append(Image.open(captured_mediaitem.path_full))
+                _captured_images.append(Image.open(captured_mediaitem.path_full))
 
             try:
                 merged_transparent_image = merge_collage_stage(
-                    captured_images, self._config.mediaprocessing.collage_merge_definition
+                    _captured_images,
+                    self._config.mediaprocessing.collage_merge_definition,
                 )
             except PipelineError as exc:
                 logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
@@ -171,8 +173,17 @@ class MediaprocessingService(BaseService):
             f"-- process time: {round((time.time() - tms), 2)}s to save processed collage and create scaled versions"
         )
 
-        ## stage 2:
-        # fill background with solid color
+        ## stage: new background shining through transparent parts (or extended frame)
+        if True:
+            try:
+                merged_image = image_fill_background_stage(
+                    merged_transparent_image,
+                    self._config.mediaprocessing.pic1_fill_background_color,  # TODO: config var
+                )
+            except PipelineError as exc:
+                logger.error(
+                    f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
+                )
 
         ## stage 3:
         # add frame on top (images shine through the transparent parts)
@@ -186,7 +197,7 @@ class MediaprocessingService(BaseService):
         ## thats it?
         ## final: save full result and create scaled versions
         filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
-        image = merged_transparent_image
+        image = merged_image
 
         tms = time.time()
         io.BytesIO()
