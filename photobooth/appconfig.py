@@ -98,7 +98,7 @@ class GroupCommon(BaseModel):
     )
 
     PROCESS_COUNTDOWN_TIMER: float = Field(
-        default=3.0,
+        default=0.5,
         description="Countdown in seconds, started when user start a capture process",
     )
     PROCESS_COUNTDOWN_OFFSET: float = Field(
@@ -360,6 +360,15 @@ class TextStageConfig(BaseModel):
     color: Color = Color("red").as_named()
 
 
+class CollageStageConfig(BaseModel):
+    pos_x: int = 50
+    pos_y: int = 50
+    width: int = 200
+    height: int = 200
+    rotation: int = 0
+    predefined_image: str = ""
+
+
 class GroupMediaprocessing(BaseModel):
     """Configure stages how to process images after capture."""
 
@@ -418,6 +427,11 @@ class GroupMediaprocessing(BaseModel):
     pic1_img_background_file: str = Field(
         default="pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+    )
+
+    collage_merge_definition: list[CollageStageConfig] = Field(
+        default=[CollageStageConfig(), CollageStageConfig()],
+        description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
 

@@ -9,12 +9,13 @@ from pydantic_extra_types.color import Color
 
 from ...appconfig import TextStageConfig
 from ...utils.exceptions import PipelineError
+from .pipelinestages_utils import get_image
 
 logger = logging.getLogger(__name__)
 DATA_USER_PATH = "./data/user/"
 
 
-def pilgram_stage(image: Image, filter: str) -> Image:
+def pilgram_stage(image: Image.Image, filter: str) -> Image.Image:
     """ """
     logger.info(f"pilgram filter stage {filter} to apply")
     try:
@@ -39,7 +40,7 @@ def pilgram_stage(image: Image, filter: str) -> Image:
         return filtered_image
 
 
-def text_stage(image: Image, textstageconfig: list[TextStageConfig]) -> Image:
+def text_stage(image: Image.Image, textstageconfig: list[TextStageConfig]) -> Image.Image:
     """ """
     logger.info("text stage to apply")
 
@@ -81,22 +82,22 @@ def text_stage(image: Image, textstageconfig: list[TextStageConfig]) -> Image:
     return image
 
 
-def beauty_stage(image: Image) -> Image:
+def beauty_stage(image: Image.Image) -> Image.Image:
     """ """
     raise PipelineError("beauty_stage not implemented yet")
 
 
-def frame_stage(image: Image) -> Image:
+def frame_stage(image: Image.Image) -> Image.Image:
     """ """
     raise PipelineError("beauty_stage not implemented yet")
 
 
-def rembg_stage(image: Image) -> Image:
+def rembg_stage(image: Image.Image) -> Image.Image:
     """ """
     raise PipelineError("rembg_stage not implemented yet")  # https://github.com/danielgatis/rembg
 
 
-def removechromakey_stage(pil_image: Image, keycolor: int, tolerance: int) -> Image:
+def removechromakey_stage(pil_image: Image.Image, keycolor: int, tolerance: int) -> Image.Image:
     """_summary_
 
     References:
@@ -122,10 +123,10 @@ def removechromakey_stage(pil_image: Image, keycolor: int, tolerance: int) -> Im
     keycolor_range_min_hsv = ((keycolor) / 2 - tolerance, 50, 50)
     keycolor_range_max_hsv = ((keycolor) / 2 + tolerance, 255, 255)
 
-    def convert_from_cv2_to_image(img: np.ndarray) -> Image:
+    def convert_from_cv2_to_image(img: np.ndarray) -> Image.Image:
         return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
 
-    def convert_from_image_to_cv2(img: Image) -> np.ndarray:
+    def convert_from_image_to_cv2(img: Image.Image) -> np.ndarray:
         return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     frame = convert_from_image_to_cv2(pil_image)
@@ -155,7 +156,7 @@ def removechromakey_stage(pil_image: Image, keycolor: int, tolerance: int) -> Im
     return convert_from_cv2_to_image(result)
 
 
-def image_fill_background_stage(image: Image, color: Color) -> Image:
+def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image:
     """ """
 
     logger.info("image_fill_background_stage to apply")
@@ -166,7 +167,7 @@ def image_fill_background_stage(image: Image, color: Color) -> Image:
     return background_img
 
 
-def image_img_background_stage(image: Image, background_file: Path) -> Image:
+def image_img_background_stage(image: Image.Image, background_file: Path) -> Image.Image:
     """ """
     logger.info("image_img_background_stage to apply")
 
@@ -174,25 +175,7 @@ def image_img_background_stage(image: Image, background_file: Path) -> Image:
         logger.warning("no transparency in image, background stage makes no sense to apply!")
         return image
 
-    # check image is avail, otherwise send pipelineerror - so we can recover and continue
-    # default font Roboto comes with app, fallback to that one if avail
-    background_img_user_path = Path(DATA_USER_PATH, background_file)
-    background_img_assets_path = (
-        Path(__file__)
-        .parent.resolve()
-        .joinpath(
-            Path(
-                "assets",
-                "backgrounds",
-                background_file,
-            )
-        )
-    )
-    background_img_path = background_img_user_path if background_img_user_path.is_file() else background_img_assets_path
-    if not background_img_path.is_file():
-        raise PipelineError(f"image {str(background_img_user_path)} not found!")
-
-    background_img = Image.open(background_img_path)
+    background_img = get_image(background_file)
 
     # fit background image to actual image size
     # this might crop the background but fills the image fully. automatic centered.

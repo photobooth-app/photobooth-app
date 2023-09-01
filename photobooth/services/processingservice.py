@@ -6,7 +6,6 @@ import logging
 import os
 import time
 from dataclasses import asdict, dataclass
-from enum import Enum
 from pathlib import Path
 from threading import Thread
 
@@ -21,70 +20,11 @@ from .mediacollectionservice import (
     MediacollectionService,
 )
 from .mediaprocessingservice import MediaprocessingService
+from .processing.jobmodels import JobModelBase
 
 logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 3
-
-
-class JobModel:
-    """This jobmodel is controlled by the statemachine"""
-
-    class Typ(Enum):
-        image = 1
-        collage = 2
-        video = 3
-
-    # job variables
-    _typ: Typ = None
-    _total_captures_to_take: int = None
-    _captures: list[Path] = None
-
-    # other internal variables
-    countdown: float = 0
-
-    def start_job(self, typ: Typ, total_captures_to_take: int):
-        self._typ = typ
-        self._total_captures_to_take = total_captures_to_take
-        self._captures = []
-
-    def validate_job(self):
-        if self._typ is None or self._total_captures_to_take is None or self._captures is None:
-            return False
-        else:
-            return True
-
-    def reset_job(self):
-        self._typ = None
-        self._total_captures_to_take = None
-        self._captures = None
-
-    def add_capture(self, captured_item: Path):
-        self._captures.append(captured_item)
-        logger.info(f"added capture {captured_item} to jobmodel captures")
-
-    def total_captures_to_take(self) -> int:
-        assert self._total_captures_to_take is not None
-
-        return self._total_captures_to_take
-
-    def remaining_captures_to_take(self) -> int:
-        assert self._captures is not None
-        assert self._total_captures_to_take is not None
-
-        return self._total_captures_to_take - len(self._captures)
-
-    def number_captures_taken(self) -> int:
-        assert self._captures is not None
-        assert self._total_captures_to_take is not None
-
-        return len(self._captures)
-
-    def took_all_captures(self) -> bool:
-        assert self._captures is not None
-        assert self._total_captures_to_take is not None
-
-        return len(self._captures) >= self._total_captures_to_take
 
 
 class ProcessingService(StateMachine):
@@ -139,22 +79,25 @@ class ProcessingService(StateMachine):
         self.timer: Thread = None
         self.timer_countdown = 0
 
-        super().__init__(model=JobModel())
+        super().__init__(model=JobModelBase())
 
         # register to send initial data SSE
         self._evtbus.on("publishSSE/initial", self._sse_initial_processinfo)
 
     ## transition actions
 
-    def before_start(self, typ: JobModel.Typ, total_captures_to_take: int):
-        assert isinstance(typ, JobModel.Typ)
+    def before_start(self, typ: JobModelBase.Typ, total_captures_to_take: int):
+        assert isinstance(typ, JobModelBase.Typ)
         assert isinstance(total_captures_to_take, int)
 
-        logger.info(f"set up job to start: {total_captures_to_take}, {typ}")
+        logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
 
-        self.model.start_job(typ, total_captures_to_take)
+        self.model: JobModelBase  # for linting
+        self.model.start_model(typ, total_captures_to_take)
 
-    ## state events
+        logger.info(f"start job {self.model}")
+
+    ## state actions
 
     def on_enter_state(self, event, state):
         """_summary_"""
@@ -269,36 +212,47 @@ class ProcessingService(StateMachine):
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
     def on_enter_job_postprocess(self):
-        # PHASE 1:
-        ## TODO: postprocess each capture
-        # PHASE 2:
-        ## TODO: postprocess job as whole
+        ## PHASE 1:
+        # postprocess each capture individually
+        logger.info("start postprocessing phase 1")
+        mediaitems: list[MediaItem] = []
+        for index, capture in enumerate(self.model._captures):
+            logger.info(f"postprocessing no {index+1}: {capture}")
 
-        # create JPGs and add to db
-        logger.info("postprocessing phase 1")
+            ## following is the former code:
+            # create mediaitem for further processing
+            mediaitem = MediaItem(os.path.basename(capture))
 
-        logger.info("postprocessing phase 2")
+            # always create unprocessed versions for later usage
+            tms = time.time()
+            self._mediaprocessing_service.create_scaled_unprocessed_repr(mediaitem)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
 
-        ## following is the former code:
-        # create mediaitem for further processing
-        mediaitem = MediaItem(os.path.basename(self.model._captures[0]))
+            # apply 1pic pipeline:
+            tms = time.time()
+            self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
-        # always create unprocessed versions for later usage
-        tms = time.time()
-        self._mediaprocessing_service.create_scaled_unprocessed_repr(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
+            # add result to db
+            _ = self._mediacollection_service.db_add_item(mediaitem)
 
-        # apply 1pic pipeline:
-        tms = time.time()
-        self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+            mediaitems.append(mediaitem)
+            logger.info(f"capture {mediaitem=} successful")
 
-        # add result to db
-        _ = self._mediacollection_service.db_add_item(mediaitem)
+        ## PHASE 2:
+        # postprocess job as whole, create collage of single images, ...
+        logger.info("start postprocessing phase 2")
 
-        logger.info(f"capture {mediaitem=} successful")
+        #
+        if self.model._typ == JobModelBase.Typ.collage:
+            # apply 1pic pipeline:
+            tms = time.time()
+            mediaitem = self._mediaprocessing_service.apply_pipeline_collage(mediaitems)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
+        ## FINISH:
         # to inform frontend about new image to display
+        logger.info("finished job")
         self._evtbus.emit(
             "publishSSE",
             sse_event="imagedb/newarrival",
@@ -316,8 +270,7 @@ class ProcessingService(StateMachine):
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
         try:
-            self.start()  # TODO: add job here?
-            self.capture_next()
+            self.start(JobModelBase.Typ.image, 1)
 
         except Exception as exc:
             logger.exception(exc)
@@ -331,8 +284,8 @@ class ProcessingService(StateMachine):
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
         try:
-            self.start()  # TODO: add job here?
-            self.capture_next()
+            self.start(JobModelBase.Typ.collage, 3)
+            # if autocontinue:
             self.capture_next()
             self.capture_next()
 
