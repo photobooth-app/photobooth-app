@@ -161,7 +161,8 @@ class ProcessingService(StateMachine):
     def on_enter_capture(self):
         """_summary_"""
         logger.info(
-            f"current capture ({self.model.number_captures_taken()+1}/{self.model.total_captures_to_take()}, remain {self.model.remaining_captures_to_take()-1})"
+            f"current capture ({self.model.number_captures_taken()+1}/{self.model.total_captures_to_take()}, "
+            f"remaining {self.model.remaining_captures_to_take()-1})"
         )
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
@@ -254,6 +255,9 @@ class ProcessingService(StateMachine):
             tms = time.time()
             mediaitem = self._mediaprocessing_service.apply_pipeline_collage(mediaitems)
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+
+            # add collage to mediadb
+            _ = self._mediacollection_service.db_add_item(mediaitem)
 
         ## FINISH:
         # to inform frontend about new image to display
