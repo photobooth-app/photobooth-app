@@ -255,6 +255,7 @@ class ProcessingService(StateMachine):
             if self._config.common.collage_automatic_capture_continue:
                 # auto continue with next countdown
                 self.confirm_capture()
+                # TODO: update the frontend gallery on delete/insert, with or without presenting!
             else:
                 # present capture with buttons to approve.
                 logger.info("finished capture, present to user to confirm or start over")

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Union
 
 import cv2
 import numpy as np
@@ -155,7 +156,9 @@ def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image
     return background_img
 
 
-def image_img_background_stage(image: Image.Image, background_file: Path) -> Image.Image:
+def image_img_background_stage(
+    image: Image.Image, background_file: Union[Path, str], reverse: bool = False
+) -> Image.Image:
     """ """
     logger.info("image_img_background_stage to apply")
 
@@ -167,11 +170,10 @@ def image_img_background_stage(image: Image.Image, background_file: Path) -> Ima
     # default font Roboto comes with app, fallback to that one if avail
     try:
         background_path = get_user_file(background_file)
+        background_img = Image.open(background_path)
     except FileNotFoundError as exc:
         logger.exception(exc)
         raise PipelineError(f"font {str(background_file)} not found!") from exc
-
-    background_img = Image.open(get_user_file(background_path))
 
     # fit background image to actual image size
     # this might crop the background but fills the image fully. automatic centered.
@@ -182,6 +184,11 @@ def image_img_background_stage(image: Image.Image, background_file: Path) -> Ima
     )
 
     # paste the actual image to the background
-    background_img_adjusted.paste(image, mask=image)
-
-    return background_img_adjusted
+    if reverse:
+        # mount loaded file on top of image.
+        image.paste(background_img_adjusted, mask=background_img_adjusted)
+        return image
+    else:
+        # mount image on top of loaded file.
+        background_img_adjusted.paste(image, mask=image)
+        return background_img_adjusted

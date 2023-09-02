@@ -153,15 +153,19 @@ class MediaprocessingService(BaseService):
 
         tms = time.time()
 
-        ## stage 1:
-        # merge captured images and predefined to one image with transparency
+        ## first: create canvas - need to determine the size if not given
+        target_image_size = (1500, 1000)  # TODO: need to find out how to handle this.
+        canvas = Image.new("RGBA", target_image_size, color=None)
+
+        ## stage: merge captured images and predefined to one image with transparency
         if True:  # merge is mandatory for collages
             _captured_images: list[Image.Image] = []
             for captured_mediaitem in captured_mediaitems:
                 _captured_images.append(Image.open(captured_mediaitem.path_full))
 
             try:
-                merged_transparent_image = merge_collage_stage(
+                canvas = merge_collage_stage(
+                    canvas,
                     _captured_images,
                     self._config.mediaprocessing.collage_merge_definition,
                 )
@@ -169,41 +173,53 @@ class MediaprocessingService(BaseService):
                 logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
                 raise RuntimeError("abort processing due to pipelineerror") from exc
 
-        logger.info(
-            f"-- process time: {round((time.time() - tms), 2)}s to save processed collage and create scaled versions"
-        )
-
-        ## stage: new background shining through transparent parts (or extended frame)
-        if True:
+        ## stage: new solid background shining through transparent parts (or extended frame)
+        if self._config.mediaprocessing.collage_fill_background_enable:
             try:
-                merged_image = image_fill_background_stage(
-                    merged_transparent_image,
-                    self._config.mediaprocessing.pic1_fill_background_color,  # TODO: config var
+                canvas = image_fill_background_stage(
+                    canvas,
+                    self._config.mediaprocessing.collage_fill_background_color,
                 )
             except PipelineError as exc:
                 logger.error(
                     f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
                 )
 
-        ## stage 3:
-        # add frame on top (images shine through the transparent parts)
+        ## stage: new background image behind transparent parts (or extended frame)
+        if self._config.mediaprocessing.collage_img_background_enable:
+            try:
+                canvas = image_img_background_stage(canvas, self._config.mediaprocessing.collage_img_background_file)
+            except PipelineError as exc:
+                logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
 
-        ## stage 4:
-        # add frame on top
+        ## stage: new image in front of transparent parts (or extended frame)
+        if self._config.mediaprocessing.collage_img_front_enable:
+            try:
+                canvas = image_img_background_stage(
+                    canvas,
+                    self._config.mediaprocessing.collage_img_front_file,
+                    reverse=True,
+                )
+            except PipelineError as exc:
+                logger.error(f"apply image_front_stage failed, reason: {exc}. stage not applied, but continue")
 
-        ## stage 5:
-        # add text
+        ## stage: text overlay
+        if self._config.mediaprocessing.collage_text_overlay_enable:
+            try:
+                canvas = text_stage(canvas, textstageconfig=self._config.mediaprocessing.collage_text_overlay)
+            except PipelineError as exc:
+                logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
 
-        ## thats it?
         ## final: save full result and create scaled versions
         filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
-        image = merged_image
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process collage pipeline")
 
         tms = time.time()
         io.BytesIO()
-        if image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
-        image.save(
+        if canvas.mode in ("RGBA", "P"):
+            canvas = canvas.convert("RGB")
+        canvas.save(
             filepath_neworiginalfile,
             format="jpeg",
             quality=self._config.common.HIRES_STILL_QUALITY,

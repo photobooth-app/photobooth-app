@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 def merge_collage_stage(
+    canvas: Image.Image,
     captured_images: list[Image.Image],
     collage_merge_definition: list[CollageStageConfig],
 ) -> Image.Image:
     """ """
 
-    target_image_size = (1500, 1000)  # TODO: need to find out how to handle this.
     total_images_in_collage = len(collage_merge_definition)
 
     collage_images: list[Image.Image] = []
@@ -31,8 +31,6 @@ def merge_collage_stage(
     if len(collage_images) != total_images_in_collage:
         raise PipelineError("collage images no not equal to total_images_in_collage requested!")
 
-    new_image = Image.new("RGBA", target_image_size, color=None)
-
     for index, _definition in enumerate(collage_merge_definition):
         logger.debug(_definition)
         _image = collage_images[index]
@@ -43,6 +41,6 @@ def merge_collage_stage(
         )  # or contain?
         _image, offset_x, offset_y = rotate(_image, _definition.rotate)
 
-        new_image.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y))
+        canvas.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y))
 
-    return new_image
+    return canvas

@@ -369,8 +369,8 @@ class TextStageConfig(BaseModel):
     pos_x: int = 50
     pos_y: int = 50
     # rotate: int = 0 # TODO: not yet implemented
-    font_size: int = 20
-    font: str = "Roboto-Bold.ttf"
+    font_size: int = 40
+    font: str = "fonts/Roboto-Bold.ttf"
     color: Color = Color("red").as_named()
 
 
@@ -378,9 +378,10 @@ class CollageStageConfig(BaseModel):
     pos_x: int = 50
     pos_y: int = 50
     width: int = 600
-    height: int = 400
+    height: int = 600
     rotate: int = 0
     predefined_image: str = ""
+    filter: EnumPilgramFilter = EnumPilgramFilter.original  # TODO: implement.
 
 
 class GroupMediaprocessing(BaseModel):
@@ -398,16 +399,6 @@ class GroupMediaprocessing(BaseModel):
         default=EnumPilgramFilter.original,
         description="Instagram-like filter to apply per default. 'original' applies no filter.",
     )
-
-    pic1_text_overlay_enable: bool = Field(
-        default=False,
-        description="General enable apply texts below.",
-    )
-    pic1_text_overlay: list[TextStageConfig] = Field(
-        default=[],
-        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
-    )
-
     pic1_removechromakey_enable: bool = Field(
         default=False,
         description="Apply chromakey greenscreen removal from captured images",
@@ -424,7 +415,6 @@ class GroupMediaprocessing(BaseModel):
         le=50,
         description="Tolerance for color (H) on chromakey color removal.",
     )
-
     pic1_fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
@@ -433,24 +423,71 @@ class GroupMediaprocessing(BaseModel):
         default=Color("blue"),
         description="Solid color used to fill background.",
     )
-
+    pic1_text_overlay_enable: bool = Field(
+        default=False,
+        description="General enable apply texts below.",
+    )
+    pic1_text_overlay: list[TextStageConfig] = Field(
+        default=[],
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+    )
     pic1_img_background_enable: bool = Field(
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
     pic1_img_background_file: str = Field(
-        default="pink-7761356_1920.png",
+        default="backgrounds/pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
 
+    collage_canvas_width: int = Field(
+        default=1920,
+        description="Width (X) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    collage_canvas_height: int = Field(
+        default=1080,
+        description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
     collage_merge_definition: list[CollageStageConfig] = Field(
         default=[
-            CollageStageConfig(pos_x=50),
-            CollageStageConfig(pos_x=700),
-            CollageStageConfig(pos_x=50, pos_y=500),
-            CollageStageConfig(pos_x=700, pos_y=500, rotate=5),
+            CollageStageConfig(pos_x=172, pos_y=165, width=500, height=500, rotate=-2, filter=EnumPilgramFilter.moon),
+            CollageStageConfig(pos_x=842, pos_y=165, width=500, height=500, rotate=-2),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
+    )
+    collage_fill_background_enable: bool = Field(
+        default=False,
+        description="Apply solid color background to collage",
+    )
+    collage_fill_background_color: Color = Field(
+        default=Color("green"),
+        description="Solid color used to fill background.",
+    )
+    collage_img_background_enable: bool = Field(
+        default=True,
+        description="Add image from file to background.",
+    )
+    collage_img_background_file: str = Field(
+        default="backgrounds/pink-7761356_1920.png",
+        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+    )
+    collage_img_front_enable: bool = Field(
+        default=True,
+        description="Add image from file to background.",
+    )
+    collage_img_front_file: str = Field(
+        default="frames/polaroid-6125402_1920.png",
+        description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
+    )
+    collage_text_overlay_enable: bool = Field(
+        default=True,
+        description="General enable apply texts below.",
+    )
+    collage_text_overlay: list[TextStageConfig] = Field(
+        default=[
+            TextStageConfig(text="Nice Collage!"),
+        ],
+        description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
 
 
