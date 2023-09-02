@@ -1,5 +1,6 @@
 from enum import Enum
-from pathlib import Path
+
+from ..mediacollection.mediaitem import MediaItem
 
 
 class JobModel:
@@ -14,16 +15,21 @@ class JobModel:
     # job variables
     _typ: Typ = None
     _total_captures_to_take: int = None
-    _captures: list[Path] = None
+    _last_capture: MediaItem = None
+    _captures: list[MediaItem] = None
 
     # other internal variables
     countdown: float = 0
 
     def __init__(self):
         self._captures = []
+        self._last_capture = None
 
     def __repr__(self):
-        return f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, captures={self._captures}"
+        return (
+            f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
+            f"captures={self._captures}, last_capture={self._last_capture}"
+        )
 
     def validate_job(self):
         if self._typ is None or self._total_captures_to_take is None or self._captures is None:
@@ -34,9 +40,10 @@ class JobModel:
     def reset_job(self):
         self._typ = None
         self._total_captures_to_take = None
+        self._last_capture = None
         self._captures = None
 
-    def add_capture(self, captured_item: Path):
+    def add_capture(self, captured_item: MediaItem):
         self._captures.append(captured_item)
 
     def total_captures_to_take(self) -> int:
@@ -63,8 +70,10 @@ class JobModel:
         return len(self._captures) >= self._total_captures_to_take
 
     def start_model(self, typ: Typ, total_captures_to_take: int):
+        self.reset_job()
         self._typ = typ
         self._total_captures_to_take = total_captures_to_take
+        self._last_capture = None
         self._captures = []
 
         self.validate_job()

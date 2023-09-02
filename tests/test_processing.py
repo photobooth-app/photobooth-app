@@ -24,9 +24,18 @@ def services() -> ServicesContainer:
 
 def test_capture(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
+    services.config().common.collage_automatic_capture_continue = False
 
-    services.processing_service().start(JobModel.Typ.image, 1)
-    # services.processing_service().capture_next()
+    services.processing_service().start_job_1pic()
+
+    assert services.processing_service().idle.is_active
+
+
+def test_capture_autoconfirm(services: ServicesContainer):
+    """this function processes single images (in contrast to collages or videos)"""
+    services.config().common.collage_automatic_capture_continue = True
+
+    services.processing_service().start_job_1pic()
 
     assert services.processing_service().idle.is_active
 
@@ -34,25 +43,29 @@ def test_capture(services: ServicesContainer):
 def test_simple_capture_illegal_jobs(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
 
-    # TODO: should raise an error
     services.processing_service().start(JobModel.Typ.image, 1)
     with pytest.raises(statemachine.exceptions.TransitionNotAllowed):
-        services.processing_service().capture_next()
+        services.processing_service().confirm_capture()
 
     assert services.processing_service().idle.is_active
 
 
 def test_collage(services: ServicesContainer):
-    services.processing_service().start(
-        JobModel.Typ.collage, services.mediaprocessing_service().number_of_captures_to_take_for_collage()
-    )
-    while services.processing_service().capture.is_active:
-        services.processing_service().capture_next()
+    services.config().common.collage_automatic_capture_continue = False
+
+    services.processing_service().start_job_collage()
+
+    assert services.processing_service().idle.is_active is False
+
+    while not services.processing_service().job_finished():
+        services.processing_service().confirm_capture()
 
     assert services.processing_service().idle.is_active
 
 
-def test_collage_manual_continue(services: ServicesContainer):
-    """this function processes single images (in contrast to collages or videos)"""
+def test_collage_autoconfirm(services: ServicesContainer):
+    services.config().common.collage_automatic_capture_continue = True
 
-    services.mediaprocessing_service()
+    services.processing_service().start_job_collage()
+
+    assert services.processing_service().idle.is_active
