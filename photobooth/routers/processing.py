@@ -60,3 +60,37 @@ def api_chose_collage_get(
             status_code=500,
             detail=f"something went wrong, Exception: {exc}",
         ) from exc
+
+
+@processing_router.get("/cmd/confirm")
+@inject
+def api_cmd_confirm_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.confirm_capture()
+        return "OK"
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc
+
+
+@processing_router.get("/cmd/reject")
+@inject
+def api_cmd_reject_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.reject_capture()
+        return "OK"
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc

@@ -133,7 +133,7 @@ class MediacollectionService(BaseService):
 
         return self._db[0]
 
-    def db_get_image_by_id(self, item_id):
+    def db_get_image_by_id(self, item_id: str):
         """_summary_
 
         Args:
@@ -145,6 +145,9 @@ class MediacollectionService(BaseService):
         Returns:
             _type_: _description_
         """
+        if not isinstance(item_id, str):
+            raise RuntimeError("item_id is wrong type")
+
         # https://stackoverflow.com/a/7125547
         item = next((x for x in self._db if x.id == item_id), None)
 
@@ -154,8 +157,11 @@ class MediacollectionService(BaseService):
 
         return item
 
-    def delete_image_by_id(self, item_id):
+    def delete_image_by_id(self, item_id: str):
         """delete single file and it's related thumbnails"""
+        if not isinstance(item_id, str):
+            raise RuntimeError("item_id is wrong type")
+
         self._logger.info(f"request delete item id {item_id}")
 
         try:

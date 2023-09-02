@@ -272,7 +272,7 @@ class ProcessingService(StateMachine):
             delete_mediaitem = self.model._captures.pop()
             logger.info(f"rejected: {delete_mediaitem=}")
 
-            self._mediacollection_service.delete_image_by_id(delete_mediaitem)
+            self._mediacollection_service.delete_image_by_id(delete_mediaitem.id)
             self.model._last_capture = None
 
     def on_enter_job_postprocess(self):

@@ -116,7 +116,7 @@ class GroupCommon(BaseModel):
     )
 
     collage_automatic_capture_continue: bool = Field(
-        default=False,
+        default=True,
         description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
     )
 
