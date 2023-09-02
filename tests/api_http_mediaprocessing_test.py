@@ -7,7 +7,7 @@ from PIL import Image
 
 from photobooth.application import ApplicationContainer, app
 from photobooth.services.containers import ServicesContainer
-from photobooth.services.processing.jobmodels import JobModelBase
+from photobooth.services.processing.jobmodels import JobModel
 
 logger = logging.getLogger(name=None)
 
@@ -26,7 +26,7 @@ def services() -> ServicesContainer:
 
     # create one image to ensure there is at least one
 
-    app_container.services.processing_service().start(JobModelBase.Typ.image, 1)
+    app_container.services.processing_service().start(JobModel.Typ.image, 1)
     # deliver
     yield app_container.services
     app_container.services().shutdown_resources()

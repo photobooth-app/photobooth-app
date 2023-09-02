@@ -21,7 +21,7 @@ def api_chose_1pic_get(
     processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     try:
-        processing_service.evt_chose_1pic_get()
+        processing_service.start_job_1pic()
         return "OK"
     except ProcessMachineOccupiedError as exc:
         # raised if processingservice not idle
@@ -44,7 +44,8 @@ def api_chose_collage_get(
     processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     try:
-        processing_service.evt_chose_collage_get()
+        processing_service.start_job_collage()
+
         return "OK"
     except ProcessMachineOccupiedError as exc:
         # raised if processingservice not idle

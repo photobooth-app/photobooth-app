@@ -103,7 +103,7 @@ class GpioService(BaseService):
         self._logger.info("trigger _take1pic")
 
         try:
-            self._processing_service.evt_chose_1pic_get()
+            self._processing_service.start_job_1pic()
         except ProcessMachineOccupiedError as exc:
             # raised if processingservice not idle
             self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
@@ -115,7 +115,7 @@ class GpioService(BaseService):
         self._logger.info("trigger _takecollage")
 
         try:
-            self._processing_service.evt_chose_collage_get()
+            self._processing_service.start_job_collage()
         except ProcessMachineOccupiedError as exc:
             # raised if processingservice not idle
             self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")

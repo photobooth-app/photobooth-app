@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 
 
-class JobModelBase:
+class JobModel:
     """This jobmodel is controlled by the statemachine"""
 
     class Typ(Enum):

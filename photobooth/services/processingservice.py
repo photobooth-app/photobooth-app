@@ -20,7 +20,7 @@ from .mediacollectionservice import (
     MediacollectionService,
 )
 from .mediaprocessingservice import MediaprocessingService
-from .processing.jobmodels import JobModelBase
+from .processing.jobmodels import JobModel
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ class ProcessingService(StateMachine):
 
         state: str
         countdown: float = 0
+        display_cheese: bool = False  # TODO: implement in frontend
 
     ## STATES
 
@@ -79,20 +80,20 @@ class ProcessingService(StateMachine):
         self.timer: Thread = None
         self.timer_countdown = 0
 
-        super().__init__(model=JobModelBase())
+        super().__init__(model=JobModel())
 
         # register to send initial data SSE
         self._evtbus.on("publishSSE/initial", self._sse_initial_processinfo)
 
     ## transition actions
 
-    def before_start(self, typ: JobModelBase.Typ, total_captures_to_take: int):
-        assert isinstance(typ, JobModelBase.Typ)
+    def before_start(self, typ: JobModel.Typ, total_captures_to_take: int):
+        assert isinstance(typ, JobModel.Typ)
         assert isinstance(total_captures_to_take, int)
 
         logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
 
-        self.model: JobModelBase  # for linting
+        self.model: JobModel  # for linting
         self.model.start_model(typ, total_captures_to_take)
 
         logger.info(f"start job {self.model}")
@@ -128,14 +129,18 @@ class ProcessingService(StateMachine):
         """_summary_"""
         logger.info("state counting entered")
 
-        # self._evtbus.emit("statemachine/on_thrill")
+        self._evtbus.emit("statemachine/on_thrill")
         # TODO: set backend to capture mode
 
-        self.timer_countdown = (
-            self._config.common.PROCESS_COUNTDOWN_TIMER + self._config.common.PROCESS_COUNTDOWN_OFFSET
+        # determine countdown time
+        self.timer_countdown = 0.0
+        self.timer_countdown += (
+            self._config.common.countdown_capture_first
+            if (self.model.number_captures_taken() == 0)
+            else self._config.common.countdown_capture_second_following
         )
 
-        logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
+        logger.info(f"loaded '{self.timer_countdown=}'")
 
         if self.timer_countdown == 0:
             logger.info("no timer, skip countdown")
@@ -148,12 +153,15 @@ class ProcessingService(StateMachine):
                 __class__.Stateinfo(
                     state=self.current_state.id,
                     countdown=round(self.timer_countdown, 1),
+                    display_cheese=(
+                        True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False
+                    ),
                 )
             )
             time.sleep(0.1)
             self.timer_countdown -= 0.1
 
-            if self.timer_countdown <= self._config.common.PROCESS_COUNTDOWN_OFFSET and self.counting.is_active:
+            if self.timer_countdown <= self._config.common.countdown_camera_capture_offset and self.counting.is_active:
                 logger.info("going to next capture now")
                 self.capture_next()
                 break
@@ -209,6 +217,17 @@ class ProcessingService(StateMachine):
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
+        if not self.model.took_all_captures():
+            if self._config.common.collage_automatic_capture_continue:
+                self.continue_job()
+            else:
+                logger.info("finished capture, present to user to confirm or start over")
+                self._evtbus.emit(
+                    "publishSSE",
+                    sse_event="imagedb/newarrival",
+                    sse_data="",  # TODO: need to postprocess capture phase 1 earlier now! json.dumps(mediaitem.asdict()),
+                )
+
         if self.model.took_all_captures():
             # last image taken, automatic continue
             # enhancement: make configurable and let user choose to repeat capture or confirm to continue
@@ -255,7 +274,7 @@ class ProcessingService(StateMachine):
         # postprocess job as whole, create collage of single images, ...
         logger.info("start postprocessing phase 2")
 
-        if self.model._typ == JobModelBase.Typ.collage:
+        if self.model._typ == JobModel.Typ.collage:
             # apply 1pic pipeline:
             tms = time.time()
             mediaitem = self._mediaprocessing_service.apply_pipeline_collage(mediaitems)
@@ -276,42 +295,44 @@ class ProcessingService(StateMachine):
         # send machine to idle again
         self._finalize()
 
-    ### some external functions
-
-    def evt_chose_1pic_get(self):
-        logger.info("evt_chose_1pic_get called to take picture")
+    def _check_occupied(self):
         if not self.idle.is_active:
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
-        try:
-            self.start(JobModelBase.Typ.image, 1)
+    ### external functions to start processes
 
+    def start_job_1pic(self):
+        self._check_occupied()
+        try:
+            self.start(JobModel.Typ.image, 1)
         except Exception as exc:
             logger.exception(exc)
-            logger.critical(f"something went wrong :( {exc}")
             self._reset()
-            raise RuntimeError(f"something went wrong :( {exc}") from exc
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
 
-    def evt_chose_collage_get(self):
-        logger.info("evt_chose_collage_get called to take collage")
-        if not self.idle.is_active:
-            raise ProcessMachineOccupiedError("bad request, only one request at a time!")
-
+    def start_job_collage(self):
+        self._check_occupied()
         try:
-            self.start(JobModelBase.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
-            # if autocontinue:
-            while self.capture.is_active:
-                self.capture_next()
-
+            self.start(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
         except Exception as exc:
             logger.exception(exc)
-            logger.critical(f"something went wrong :( {exc}")
             self._reset()
-            raise RuntimeError(f"something went wrong :( {exc}") from exc
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
 
-    def evt_chose_video_get(self):
-        logger.info("evt_chose_video_get called to take video")
+    def start_job_video(self):
         raise NotImplementedError
+        self._check_occupied()
+        self.start(JobModel.Typ.video, 1)
+
+    def job_finished(self):
+        return self.idle.is_active
+
+    def continue_job(self):
+        self.capture_next()
+
+    def repeat_last_capture(self):
+        raise NotImplementedError
+        # TODO:self.capture_repeat()
 
     ### some custom helper
 

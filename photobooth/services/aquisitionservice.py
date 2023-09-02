@@ -30,10 +30,6 @@ class AquisitionService(BaseService):
 
         self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 
-        # self._backends = providers.Container(BackendsContainer, evtbus=evtbus, config=config)
-
-        # print(self._backends.backends_set)
-
         # public
         self.primary_backend: AbstractBackend = primary_backend
         self.secondary_backend: AbstractBackend = secondary_backend
@@ -80,22 +76,12 @@ class AquisitionService(BaseService):
     def start(self):
         """start backends"""
         # backends start on their own now using DI framework
-        # if self.primary_backend:
-        #     self.primary_backend.start()
-
-        # if self.secondary_backend:
-        #     self.secondary_backend.start()
 
         super().set_status_started()
 
     def stop(self):
         """stop backends"""
         # backends stop on their own now using DI framework
-        # if self.primary_backend:
-        #     self.primary_backend.stop()
-
-        # if self.secondary_backend:
-        #     self.secondary_backend.stop()
 
         super().set_status_stopped()
 

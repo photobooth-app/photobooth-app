@@ -4,7 +4,7 @@ import pytest
 
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
-from photobooth.services.processing.jobmodels import JobModelBase
+from photobooth.services.processing.jobmodels import JobModel
 
 logger = logging.getLogger(name=None)
 
@@ -23,7 +23,7 @@ def services() -> ServicesContainer:
 
 
 def proc_shoot(services: ServicesContainer):
-    services.processing_service().start(JobModelBase.Typ.image, 1)
+    services.processing_service().start(JobModel.Typ.image, 1)
     # services.processing_service()._reset()
 
 

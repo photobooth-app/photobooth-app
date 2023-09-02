@@ -97,13 +97,27 @@ class GroupCommon(BaseModel):
         json_schema_extra={"ui_component": "QSlider"},
     )
 
-    PROCESS_COUNTDOWN_TIMER: float = Field(
-        default=0.5,
+    countdown_capture_first: float = Field(
+        default=1,
         description="Countdown in seconds, started when user start a capture process",
     )
-    PROCESS_COUNTDOWN_OFFSET: float = Field(
+
+    countdown_capture_second_following: float = Field(
+        default=0.2,
+        description="Countdown in seconds, used for second and following captures for collages",
+    )
+    countdown_cheese_message_offset: float = Field(
+        default=0.5,
+        description="Offset display cheese message before 0 would be reached (in seconds). Bigger or equal than camera capture offset.",
+    )
+    countdown_camera_capture_offset: float = Field(
         default=0.25,
-        description="Trigger capture offset in seconds. 0 trigger exactly when countdown is 0. Triggers the capture offset by the given seconds to compensate for delay in camera.",
+        description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
+    )
+
+    collage_automatic_capture_continue: bool = Field(
+        default=True,
+        description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
     )
 
     DEBUG_LEVEL: EnumDebugLevel = Field(
