@@ -4,10 +4,9 @@ from PIL import Image, ImageOps
 
 from ...appconfig import CollageStageConfig
 from ...utils.exceptions import PipelineError
-from .pipelinestages_utils import get_image, rotate
+from .pipelinestages_utils import get_user_file, rotate
 
 logger = logging.getLogger(__name__)
-DATA_USER_PATH = "./data/user/"
 
 
 def merge_collage_stage(
@@ -23,7 +22,7 @@ def merge_collage_stage(
     for _definition in collage_merge_definition:
         if _definition.predefined_image:
             try:
-                collage_images.append(get_image(_definition.predefined_image))
+                collage_images.append(Image.open(get_user_file(_definition.predefined_image)))
             except FileNotFoundError as exc:
                 raise PipelineError(f"error getting predefined file {exc}") from exc
         else:
@@ -37,7 +36,11 @@ def merge_collage_stage(
     for index, _definition in enumerate(collage_merge_definition):
         logger.debug(_definition)
         _image = collage_images[index]
-        _image = ImageOps.fit(_image, (_definition.width, _definition.height))  # or contain?
+        _image = ImageOps.fit(
+            _image,
+            (_definition.width, _definition.height),
+            method=Image.Resampling.LANCZOS,
+        )  # or contain?
         _image, offset_x, offset_y = rotate(_image, _definition.rotate)
 
         new_image.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y))

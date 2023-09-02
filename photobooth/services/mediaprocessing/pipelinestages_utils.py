@@ -5,26 +5,15 @@ from PIL import Image
 DATA_USER_PATH = "./data/user/"
 
 
-def get_image(filepath: Path) -> Image.Image:
-    # check image is avail, otherwise send pipelineerror - so we can recover and continue
-    # default image comes with app, fallback to that one if avail
-    img_user_path = Path(DATA_USER_PATH, filepath)
-    img_assets_path = (
-        Path(__file__)
-        .parent.resolve()
-        .joinpath(
-            Path(
-                "assets",
-                filepath,
-            )
-        )
-    )
-    img_path = img_user_path if img_user_path.is_file() else img_assets_path
-    if not img_path.is_file():
-        raise FileNotFoundError(f"image {str(img_user_path)} not found!")
+def get_user_file(filepath: Path) -> Path:
+    # check font is avail, otherwise send pipelineerror - so we can recover and continue
+    # default font Roboto comes with app, fallback to that one if avail
+    file_user_path = Path(DATA_USER_PATH, filepath)
+    file_assets_path = Path(__file__).parent.resolve().joinpath(Path("assets", filepath))
+    out_filepath = file_user_path if file_user_path.is_file() else file_assets_path
 
-    img = Image.open(img_path)
-    return img
+    if not out_filepath.is_file():
+        raise FileNotFoundError(f"filepath {str(filepath)} not found!")
 
 
 def rotate(image: Image.Image, angle: int = 0) -> (Image.Image, int, int):
@@ -34,6 +23,7 @@ def rotate(image: Image.Image, angle: int = 0) -> (Image.Image, int, int):
     _rotated_image = image.convert("RGBA").rotate(
         angle=angle,
         expand=True,
+        resample=Image.Resampling.LANCZOS,
     )  # pos values = counter clockwise
 
     # https://github.com/python-pillow/Pillow/issues/4556

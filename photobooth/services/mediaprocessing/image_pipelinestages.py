@@ -9,10 +9,9 @@ from pydantic_extra_types.color import Color
 
 from ...appconfig import TextStageConfig
 from ...utils.exceptions import PipelineError
-from .pipelinestages_utils import get_image
+from .pipelinestages_utils import get_user_file
 
 logger = logging.getLogger(__name__)
-DATA_USER_PATH = "./data/user/"
 
 
 def pilgram_stage(image: Image.Image, filter: str) -> Image.Image:
@@ -24,7 +23,7 @@ def pilgram_stage(image: Image.Image, filter: str) -> Image.Image:
         raise PipelineError(f"pilgram filter {filter} does not exist") from exc
     else:
         # apply filter
-        filtered_image: Image = algofun(image.copy())
+        filtered_image: Image.Image = algofun(image.copy())
 
         if image.mode in ("RGBA", "P"):
             logger.debug("need to convert to rgba and readd transparency mask to filtered image")
@@ -49,22 +48,11 @@ def text_stage(image: Image.Image, textstageconfig: list[TextStageConfig]) -> Im
 
         # check font is avail, otherwise send pipelineerror - so we can recover and continue
         # default font Roboto comes with app, fallback to that one if avail
-        font_user_path = Path(DATA_USER_PATH, textconfig.font)
-        font_assets_path = (
-            Path(__file__)
-            .parent.resolve()
-            .joinpath(
-                Path(
-                    "assets",
-                    "fonts",
-                    textconfig.font,
-                )
-            )
-        )
-        font_path = font_user_path if font_user_path.is_file() else font_assets_path
-
-        if not font_path.is_file():
-            raise PipelineError(f"font {str(font_user_path)} not found!")
+        try:
+            font_path = get_user_file(textconfig.font)
+        except FileNotFoundError as exc:
+            logger.exception(exc)
+            raise PipelineError(f"font {str(textconfig.font)} not found!") from exc
 
         img_font = ImageFont.truetype(
             font=str(font_path),
@@ -175,11 +163,23 @@ def image_img_background_stage(image: Image.Image, background_file: Path) -> Ima
         logger.warning("no transparency in image, background stage makes no sense to apply!")
         return image
 
-    background_img = get_image(background_file)
+    # check font is avail, otherwise send pipelineerror - so we can recover and continue
+    # default font Roboto comes with app, fallback to that one if avail
+    try:
+        background_path = get_user_file(background_file)
+    except FileNotFoundError as exc:
+        logger.exception(exc)
+        raise PipelineError(f"font {str(background_file)} not found!") from exc
+
+    background_img = Image.open(get_user_file(background_path))
 
     # fit background image to actual image size
     # this might crop the background but fills the image fully. automatic centered.
-    background_img_adjusted = ImageOps.fit(background_img, image.size)
+    background_img_adjusted = ImageOps.fit(
+        background_img,
+        image.size,
+        method=Image.Resampling.LANCZOS,
+    )
 
     # paste the actual image to the background
     background_img_adjusted.paste(image, mask=image)
