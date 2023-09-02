@@ -23,7 +23,7 @@ def rotate(image: Image.Image, angle: int = 0) -> (Image.Image, int, int):
     _rotated_image = image.convert("RGBA").rotate(
         angle=angle,
         expand=True,
-        resample=Image.Resampling.LANCZOS,
+        resample=Image.Resampling.BICUBIC,
     )  # pos values = counter clockwise
 
     # https://github.com/python-pillow/Pillow/issues/4556
