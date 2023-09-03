@@ -101,7 +101,8 @@ def test_get_images_webcamv4l(backends: BackendsContainer):
 def test_get_images_gphoto2(backends: BackendsContainer):
     # ensure virtual camera is available (starting from gphoto2 2.5.0 always true)
     # assert has_vcam() # on selfhosted-runner currently a problem. TODO: setup new RPI runner
-    logger.info(f"{has_vcam()=}")
+    if not has_vcam():
+        pytest.skip("system installation does not support virtual camera!")
 
     # use vcam
     use_vcam()
