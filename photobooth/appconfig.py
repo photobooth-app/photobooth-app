@@ -371,7 +371,7 @@ class TextStageConfig(BaseModel):
     # rotate: int = 0 # TODO: not yet implemented
     font_size: int = 40
     font: str = "fonts/Roboto-Bold.ttf"
-    color: Color = Color("red").as_named()
+    color: Color = Color("red")
 
 
 class CollageStageConfig(BaseModel):
