@@ -64,7 +64,7 @@ def text_stage(image: Image.Image, textstageconfig: list[TextStageConfig]) -> Im
         img_draw.text(
             (textconfig.pos_x, textconfig.pos_y),
             textconfig.text,
-            fill=textconfig.color.as_rgb_tuple(),
+            fill=Color(textconfig.color).as_rgb_tuple(),
             font=img_font,
         )
 
@@ -149,8 +149,8 @@ def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image
     """ """
 
     logger.info("image_fill_background_stage to apply")
-
-    background_img = Image.new(mode=image.mode, size=image.size, color=color.as_rgb_tuple())
+    # force color to be of type color again, might be bug in pydantic.
+    background_img = Image.new(mode=image.mode, size=image.size, color=Color(color).as_rgb_tuple())
     background_img.paste(image, mask=image)
 
     return background_img

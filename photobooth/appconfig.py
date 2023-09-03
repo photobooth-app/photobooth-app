@@ -371,10 +371,10 @@ class TextStageConfig(BaseModel):
     # rotate: int = 0 # TODO: not yet implemented
     font_size: int = 40
     font: str = "fonts/Roboto-Bold.ttf"
-    color: Color = "red"
+    color: Color = Color("red").as_named()
 
 
-class CollageStageConfig(BaseModel):
+class CollageMergeDef(BaseModel):
     pos_x: int = 50
     pos_y: int = 50
     width: int = 600
@@ -389,101 +389,139 @@ class GroupMediaprocessing(BaseModel):
 
     model_config = ConfigDict(title="Process media after capture")
 
-    pic1_pipeline_enable: bool = Field(
-        default=False,
-        description="Enable/Disable 1pic processing pipeline completely",
-    )
-
-    pic1_filter: EnumPilgramFilter = Field(
-        title="Pic1 Filter",
-        default=EnumPilgramFilter.original,
-        description="Instagram-like filter to apply per default. 'original' applies no filter.",
-    )
-    pic1_removechromakey_enable: bool = Field(
-        default=False,
-        description="Apply chromakey greenscreen removal from captured images",
-    )
-    pic1_removechromakey_keycolor: int = Field(
+    removechromakey_keycolor: int = Field(
         default=110,
         ge=0,
         le=360,
         description="Color (H) in HSV colorspace to remove on 360° scale.",
     )
-    pic1_removechromakey_tolerance: int = Field(
+    removechromakey_tolerance: int = Field(
         default=10,
         ge=1,
         le=50,
         description="Tolerance for color (H) on chromakey color removal.",
     )
-    pic1_fill_background_enable: bool = Field(
+
+
+class GroupMediaprocessingPipelineImage(BaseModel):
+    """Configure stages how to process images after capture."""
+
+    model_config = ConfigDict(title="Postprocess single captures")
+
+    pipeline_enable: bool = Field(
+        default=False,
+        description="Enable/Disable processing pipeline completely",
+    )
+
+    filter: EnumPilgramFilter = Field(
+        title="Pic1 Filter",
+        default=EnumPilgramFilter.original,
+        description="Instagram-like filter to apply per default. 'original' applies no filter.",
+    )
+    removechromakey_enable: bool = Field(
+        default=False,
+        description="Apply chromakey greenscreen removal from captured images",
+    )
+    fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
-    pic1_fill_background_color: Color = Field(
-        default="blue",
+    fill_background_color: Color = Field(
+        default=Color("blue").as_named(),
         description="Solid color used to fill background.",
     )
-    pic1_text_overlay_enable: bool = Field(
-        default=False,
-        description="General enable apply texts below.",
-    )
-    pic1_text_overlay: list[TextStageConfig] = Field(
-        default=[],
-        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
-    )
-    pic1_img_background_enable: bool = Field(
+    img_background_enable: bool = Field(
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
-    pic1_img_background_file: str = Field(
+    img_background_file: str = Field(
+        default="backgrounds/pink-7761356_1920.png",
+        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+    )
+    text_overlay_enable: bool = Field(
+        default=False,
+        description="General enable apply texts below.",
+    )
+    text_overlay: list[TextStageConfig] = Field(
+        default=[],
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+    )
+
+
+class GroupMediaprocessingPipelineCollage(BaseModel):
+    """Configure stages how to process collage after capture."""
+
+    model_config = ConfigDict(title="Process collage after capture")
+
+    ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
+
+    capture_removechromakey_enable: bool = Field(
+        default=False,
+        description="Apply chromakey greenscreen removal from captured images",
+    )
+    capture_fill_background_enable: bool = Field(
+        default=False,
+        description="Apply solid color background to captured image (useful only if image is extended or background removed)",
+    )
+    capture_fill_background_color: Color = Field(
+        default=Color("blue").as_named(),
+        description="Solid color used to fill background.",
+    )
+    capture_img_background_enable: bool = Field(
+        default=False,
+        description="Add image from file to background (useful only if image is extended or background removed)",
+    )
+    capture_img_background_file: str = Field(
         default="backgrounds/pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
 
-    collage_canvas_width: int = Field(
+    ## phase 2 per collage settings.
+
+    canvas_width: int = Field(
         default=1920,
         description="Width (X) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
-    collage_canvas_height: int = Field(
+    canvas_height: int = Field(
         default=1080,
         description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
-    collage_merge_definition: list[CollageStageConfig] = Field(
+    canvas_merge_definition: list[CollageMergeDef] = Field(
         default=[
-            CollageStageConfig(pos_x=172, pos_y=165, width=500, height=500, rotate=-2, filter=EnumPilgramFilter.moon),
-            CollageStageConfig(pos_x=842, pos_y=165, width=500, height=500, rotate=-2),
+            CollageMergeDef(pos_x=172, pos_y=165, width=500, height=500, rotate=-2, filter=EnumPilgramFilter.moon),
+            CollageMergeDef(pos_x=842, pos_y=165, width=500, height=500, rotate=-2),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
-    collage_fill_background_enable: bool = Field(
+    canvas_fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to collage",
     )
-    collage_fill_background_color: Color = Field(
-        default="green",
+    canvas_fill_background_color: Color = Field(
+        default=Color("green").as_named(),
         description="Solid color used to fill background.",
     )
-    collage_img_background_enable: bool = Field(
+    canvas_img_background_enable: bool = Field(
         default=True,
         description="Add image from file to background.",
     )
-    collage_img_background_file: str = Field(
+    canvas_img_background_file: str = Field(
         default="backgrounds/pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
-    collage_img_front_enable: bool = Field(
+    canvas_img_front_enable: bool = Field(
         default=True,
         description="Add image from file to background.",
     )
-    collage_img_front_file: str = Field(
+    canvas_img_front_file: str = Field(
         default="frames/polaroid-6125402_1920.png",
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
     )
-    collage_text_overlay_enable: bool = Field(
+    canvas_text_overlay_enable: bool = Field(
         default=True,
         description="General enable apply texts below.",
     )
-    collage_text_overlay: list[TextStageConfig] = Field(
+    canvas_text_overlay: list[TextStageConfig] = Field(
         default=[
             TextStageConfig(text="Nice Collage!"),
         ],
@@ -686,9 +724,9 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
-    mediaprocessing_pipeline_picture: GroupMediaprocessing = GroupMediaprocessing()
-    mediaprocessing_pipeline_collage: GroupMediaprocessing = GroupMediaprocessing()
-    mediaprocessing_pipeline_printing: GroupMediaprocessing = GroupMediaprocessing()
+    mediaprocessing_pipeline_picture: GroupMediaprocessingPipelineImage = GroupMediaprocessingPipelineImage()
+    mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()
+    mediaprocessing_pipeline_printing: GroupMediaprocessingPipelineImage = GroupMediaprocessingPipelineImage()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
