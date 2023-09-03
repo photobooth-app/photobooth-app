@@ -102,9 +102,7 @@ class SimulatedBackend(AbstractBackend):
         """for other threads to receive a hq JPEG image"""
         self._evtbus.emit("frameserver/onCapture")
 
-        hq_images = glob.glob(
-            f'{Path(__file__).parent.joinpath("assets", "backend_simulated", "hq_img").resolve()}/*.jpg'
-        )
+        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_simulated", "hq_img").resolve()}/*.jpg')
         current_hq_image_index = random.randint(0, len(hq_images) - 1)
 
         # get img off the producing queue

@@ -156,9 +156,7 @@ def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image
     return background_img
 
 
-def image_img_background_stage(
-    image: Image.Image, background_file: Union[Path, str], reverse: bool = False
-) -> Image.Image:
+def image_img_background_stage(image: Image.Image, background_file: Union[Path, str], reverse: bool = False) -> Image.Image:
     """ """
     logger.info("image_img_background_stage to apply")
 

@@ -52,9 +52,7 @@ class WledService(BaseService):
             )
 
         except serial.SerialException as exc:
-            self._logger.critical(
-                f"failed to open WLED module, ESP flashed and correct serial port set in config? {exc}"
-            )
+            self._logger.critical(f"failed to open WLED module, ESP flashed and correct serial port set in config? {exc}")
 
             raise RuntimeError("WLED module connection failed!") from exc
 

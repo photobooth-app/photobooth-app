@@ -89,18 +89,14 @@ class KeyboardService(BaseService):
                 self._logger.critical(exc)
 
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
-            self._logger.info(
-                f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}"
-            )
+            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")
             self._logger.info("trigger _print_recent_item")
 
             try:
                 mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
                 self._printing_service.print(mediaitem=mediaitem)
             except BlockingIOError:
-                self._logger.warning(
-                    f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
-                )
+                self._logger.warning(f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible.")
             except Exception as exc:
                 # other errors
                 self._logger.critical(exc)

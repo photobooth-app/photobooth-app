@@ -130,9 +130,7 @@ class GpioService(BaseService):
             mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
             self._printing_service.print(mediaitem=mediaitem)
         except BlockingIOError:
-            self._logger.warning(
-                f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
-            )
+            self._logger.warning(f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible.")
         except Exception as exc:
             # other errors
             self._logger.critical(exc)

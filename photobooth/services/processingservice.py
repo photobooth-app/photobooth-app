@@ -54,9 +54,7 @@ class ProcessingService(StateMachine):
     start = idle.to(counting)
     _counted = counting.to(capture)
     _captured = capture.to(present_capture)
-    confirm = present_capture.to(counting, unless="took_all_captures") | present_capture.to(
-        job_postprocess, cond="took_all_captures"
-    )
+    confirm = present_capture.to(counting, unless="took_all_captures") | present_capture.to(job_postprocess, cond="took_all_captures")
     reject = present_capture.to(counting)
     _finalize = job_postprocess.to(idle)
     _reset = idle.from_(idle, counting, capture, present_capture, job_postprocess)
@@ -148,9 +146,7 @@ class ProcessingService(StateMachine):
                 __class__.Stateinfo(
                     state=self.current_state.id,
                     countdown=round(self.timer_countdown, 1),
-                    display_cheese=(
-                        True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False
-                    ),
+                    display_cheese=(True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False),
                 )
             )
             time.sleep(0.1)

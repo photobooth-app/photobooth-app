@@ -49,10 +49,7 @@ class MediaprocessingService(BaseService):
         image = Image.open(io.BytesIO(buffer_full))
 
         ## stage 1: remove background
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_removechromakey_enable
-        ):
+        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_removechromakey_enable:
             try:
                 image = removechromakey_stage(
                     image,
@@ -80,22 +77,14 @@ class MediaprocessingService(BaseService):
                 logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
 
         ## stage: new background shining through transparent parts (or extended frame)
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_fill_background_enable
-        ):
+        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_fill_background_enable:
             try:
                 image = image_fill_background_stage(image, self._config.mediaprocessing.pic1_fill_background_color)
             except PipelineError as exc:
-                logger.error(
-                    f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
-                )
+                logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
 
         ## stage: new background image behing transparent parts (or extended frame)
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_img_background_enable
-        ):
+        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_img_background_enable:
             try:
                 image = image_img_background_stage(image, self._config.mediaprocessing.pic1_img_background_file)
             except PipelineError as exc:
@@ -117,9 +106,7 @@ class MediaprocessingService(BaseService):
 
         mediaitem.create_fileset_processed(buffer_full_pipeline_applied.getbuffer())
 
-        logger.info(
-            f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions"
-        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions")
 
         return mediaitem
 
@@ -181,9 +168,7 @@ class MediaprocessingService(BaseService):
                     self._config.mediaprocessing.collage_fill_background_color,
                 )
             except PipelineError as exc:
-                logger.error(
-                    f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
-                )
+                logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
 
         ## stage: new background image behind transparent parts (or extended frame)
         if self._config.mediaprocessing.collage_img_background_enable:
@@ -233,9 +218,7 @@ class MediaprocessingService(BaseService):
         mediaitem.create_fileset_unprocessed()
         mediaitem.copy_fileset_processed()
 
-        logger.info(
-            f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions"
-        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions")
 
         return mediaitem
 

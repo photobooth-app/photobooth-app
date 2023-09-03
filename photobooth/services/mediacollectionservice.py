@@ -73,9 +73,7 @@ class MediacollectionService(BaseService):
                 self._logger.error(f"file {filename} processing failed. file ignored. {exc}")
 
         self._logger.info(f"initialized image DB, added {self.number_of_images} valid images")
-        self._logger.info(
-            f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection"
-        )
+        self._logger.info(f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection")
 
         # finally sort the db one time only. resorting never necessary
         # because new items are inserted at the right place and no sort algorithms are supported currently

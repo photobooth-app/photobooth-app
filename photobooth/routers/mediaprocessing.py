@@ -23,9 +23,7 @@ mediaprocessing_router = APIRouter(
 def api_get_preview_image_filtered(
     mediaitem_id,
     filter=None,
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
 ):
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
@@ -63,12 +61,8 @@ def api_get_preview_image_filtered(
 def api_get_applyfilter(
     mediaitem_id,
     filter: str = None,
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
-    mediaprocessing_service: MediaprocessingService = Depends(
-        Provide[ApplicationContainer.services.mediaprocessing_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
+    mediaprocessing_service: MediaprocessingService = Depends(Provide[ApplicationContainer.services.mediaprocessing_service]),
 ):
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)

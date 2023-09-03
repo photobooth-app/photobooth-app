@@ -187,9 +187,7 @@ class MediaItem:
             raise ValueError(f"the original_file {self.filename} is not a valid filename - ignored")
 
         if not ((self.path_original).is_file()):
-            raise FileNotFoundError(
-                f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file"
-            )
+            raise FileNotFoundError(f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file")
 
     def fileset_valid(self) -> bool:
         return (

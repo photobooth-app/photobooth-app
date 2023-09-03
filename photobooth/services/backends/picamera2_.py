@@ -100,17 +100,13 @@ class Picamera2Backend(AbstractBackend):
                 self._autofocus_module = None
 
         else:
-            logger.info(
-                "picamera2_focuser_module is disabled. " "Select a focuser module in config to enable autofocus."
-            )
+            logger.info("picamera2_focuser_module is disabled. " "Select a focuser module in config to enable autofocus.")
 
     def start(self):
         """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
-        self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(
-            data=None, request_ready=Event(), condition=Condition()
-        )
+        self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(data=None, request_ready=Event(), condition=Condition())
 
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
@@ -188,9 +184,7 @@ class Picamera2Backend(AbstractBackend):
         )
         self._picamera2.start()
 
-        self._generate_images_thread = StoppableThread(
-            name="_generateImagesThread", target=self._generate_images_fun, daemon=True
-        )
+        self._generate_images_thread = StoppableThread(name="_generateImagesThread", target=self._generate_images_fun, daemon=True)
         self._generate_images_thread.start()
 
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
@@ -234,9 +228,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.stop()
         self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
-        logger.debug(
-            f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}"
-        )
+        logger.debug(f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}")
 
     def wait_for_hq_image(self):
         """
@@ -331,10 +323,7 @@ class Picamera2Backend(AbstractBackend):
             # catch runtimeerror and no reraise, can fail and being logged but continue.
             logger.error(f"set_ae_exposure failed! Mode {newmode} not available {exc}")
 
-        logger.info(
-            f"current picamera2.controls.get_libcamera_controls():"
-            f"{self._picamera2.controls.get_libcamera_controls()}"
-        )
+        logger.info(f"current picamera2.controls.get_libcamera_controls():" f"{self._picamera2.controls.get_libcamera_controls()}")
 
     def _switch_mode(self):
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
