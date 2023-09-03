@@ -66,16 +66,14 @@ class MediacollectionService(BaseService):
 
             try:
                 mediaitem = MediaItem(filename)
-                self._mediaprocessing_service.ensure_scaled_repr_created(mediaitem)
+                mediaitem.ensure_scaled_repr_created()
                 self.db_add_item(mediaitem)
 
             except Exception as exc:
                 self._logger.error(f"file {filename} processing failed. file ignored. {exc}")
 
         self._logger.info(f"initialized image DB, added {self.number_of_images} valid images")
-        self._logger.info(
-            f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection"
-        )
+        self._logger.info(f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection")
 
         # finally sort the db one time only. resorting never necessary
         # because new items are inserted at the right place and no sort algorithms are supported currently
@@ -133,7 +131,7 @@ class MediacollectionService(BaseService):
 
         return self._db[0]
 
-    def db_get_image_by_id(self, item_id):
+    def db_get_image_by_id(self, item_id: str):
         """_summary_
 
         Args:
@@ -145,6 +143,9 @@ class MediacollectionService(BaseService):
         Returns:
             _type_: _description_
         """
+        if not isinstance(item_id, str):
+            raise RuntimeError("item_id is wrong type")
+
         # https://stackoverflow.com/a/7125547
         item = next((x for x in self._db if x.id == item_id), None)
 
@@ -154,8 +155,11 @@ class MediacollectionService(BaseService):
 
         return item
 
-    def delete_image_by_id(self, item_id):
+    def delete_image_by_id(self, item_id: str):
         """delete single file and it's related thumbnails"""
+        if not isinstance(item_id, str):
+            raise RuntimeError("item_id is wrong type")
+
         self._logger.info(f"request delete item id {item_id}")
 
         try:

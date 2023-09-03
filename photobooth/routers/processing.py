@@ -21,7 +21,7 @@ def api_chose_1pic_get(
     processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     try:
-        processing_service.evt_chose_1pic_get()
+        processing_service.start_job_1pic()
         return "OK"
     except ProcessMachineOccupiedError as exc:
         # raised if processingservice not idle
@@ -29,6 +29,64 @@ def api_chose_1pic_get(
             status_code=400,
             detail=f"only one capture at a time allowed: {exc}",
         ) from exc
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc
+
+
+@processing_router.get("/chose/collage")
+@inject
+def api_chose_collage_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.start_job_collage()
+
+        return "OK"
+    except ProcessMachineOccupiedError as exc:
+        # raised if processingservice not idle
+        raise HTTPException(
+            status_code=400,
+            detail=f"only one capture at a time allowed: {exc}",
+        ) from exc
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc
+
+
+@processing_router.get("/cmd/confirm")
+@inject
+def api_cmd_confirm_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.confirm_capture()
+        return "OK"
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc
+
+
+@processing_router.get("/cmd/reject")
+@inject
+def api_cmd_reject_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.reject_capture()
+        return "OK"
     except Exception as exc:
         # other errors
         logger.critical(exc)

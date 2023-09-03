@@ -2,17 +2,24 @@
 Handle all media collection related functions
 """
 import hashlib
+import io
 import logging
 import os
+import shutil
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
 
+from PIL import Image
+from turbojpeg import TurboJPEG
+
 from ...appconfig import AppConfig
 
 logger = logging.getLogger(__name__)
+turbojpeg = TurboJPEG()
 
 DATA_PATH = "./data/"
 # as from image source
@@ -180,12 +187,10 @@ class MediaItem:
             raise ValueError(f"the original_file {self.filename} is not a valid filename - ignored")
 
         if not ((self.path_original).is_file()):
-            raise FileNotFoundError(
-                f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file"
-            )
+            raise FileNotFoundError(f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file")
 
-    def fileset_valid(self):
-        if not (
+    def fileset_valid(self) -> bool:
+        return (
             (self.path_original).is_file()
             and (self.path_full).is_file()
             and (self.path_preview).is_file()
@@ -193,8 +198,134 @@ class MediaItem:
             and (self.path_full_unprocessed).is_file()
             and (self.path_preview_unprocessed).is_file()
             and (self.path_thumbnail_unprocessed).is_file()
-        ):
-            raise FileNotFoundError(f"the imageset {self.filename=} is incomplete")
+        )
+
+    def ensure_scaled_repr_created(self):
+        if not self.fileset_valid():
+            # MediaItem raises FileNotFoundError if original/full/preview/thumb is missing.
+            logger.info(f"file {self.filename} misses its scaled versions, try to create now")
+
+            # try create missing preview/thumbnail and retry. otherwise fail completely
+            try:
+                tms = time.time()
+
+                self.create_fileset_unprocessed()
+                self.copy_fileset_processed()
+
+                logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy files")
+            except Exception as exc:
+                logger.error(f"file {self.filename} processing failed. {exc}")
+                raise exc
+
+    def create_fileset_unprocessed(self):
+        buffer_in = self._read_original()
+
+        ## full version
+        with open(self.path_full_unprocessed, "wb") as file:
+            file.write(self._get_full_repr(buffer_in))
+
+        ## preview version
+        with open(self.path_preview_unprocessed, "wb") as file:
+            file.write(self._get_preview_repr(buffer_in))
+
+        ## thumbnail version
+        with open(self.path_thumbnail_unprocessed, "wb") as file:
+            file.write(self._get_thumbnail_repr(buffer_in))
+
+    def create_fileset_processed(self, buffer_in: bytes):
+        ## full version
+        with open(self.path_full, "wb") as file:
+            file.write(self._get_full_repr(buffer_in))
+
+        ## preview version
+        with open(self.path_preview, "wb") as file:
+            file.write(self._get_preview_repr(buffer_in))
+
+        ## thumbnail version
+        with open(self.path_thumbnail, "wb") as file:
+            file.write(self._get_thumbnail_repr(buffer_in))
+
+    def copy_fileset_processed(self):
+        shutil.copy2(self.path_full_unprocessed, self.path_full)
+        shutil.copy2(self.path_preview_unprocessed, self.path_preview)
+        shutil.copy2(self.path_thumbnail_unprocessed, self.path_thumbnail)
+
+    def _read_original(self) -> bytes:
+        with open(self.path_original, "rb") as file:
+            buffer_in = file.read()
+
+        return buffer_in
+
+    def _get_full_repr(self, buffer_in: bytes) -> bytes:
+        return self.resize_jpeg(
+            buffer_in,
+            AppConfig().common.HIRES_STILL_QUALITY,
+            AppConfig().common.FULL_STILL_WIDTH,
+        )
+
+    def _get_preview_repr(self, buffer_in: bytes) -> bytes:
+        return self.resize_jpeg(
+            buffer_in,
+            AppConfig().common.PREVIEW_STILL_QUALITY,
+            AppConfig().common.PREVIEW_STILL_WIDTH,
+        )
+
+    def _get_thumbnail_repr(self, buffer_in: bytes) -> bytes:
+        return self.resize_jpeg(
+            buffer_in,
+            AppConfig().common.THUMBNAIL_STILL_QUALITY,
+            AppConfig().common.THUMBNAIL_STILL_WIDTH,
+        )
+
+    @staticmethod
+    def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_width: int):
+        """scale a jpeg buffer to another buffer using turbojpeg"""
+        # get original size
+        with Image.open(io.BytesIO(buffer_in)) as img:
+            width, _ = img.size
+
+        scaling_factor = scaled_min_width / width
+
+        # TurboJPEG only allows for decent factors.
+        # To keep it simple, config allows freely to adjust the size from 10...100% and
+        # find the real factor here:
+        # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
+        # limitation due to turbojpeg lib usage.
+        # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
+        # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
+        # example: (1,4) will result in 1/4=0.25=25% down scale in relation to
+        # the full resolution picture
+        allowed_list = [
+            (13, 8),
+            (7, 4),
+            (3, 8),
+            (1, 2),
+            (2, 1),
+            (15, 8),
+            (3, 4),
+            (5, 8),
+            (5, 4),
+            (1, 1),
+            (1, 8),
+            (1, 4),
+            (9, 8),
+            (3, 2),
+            (7, 8),
+            (11, 8),
+        ]
+        factor_list = [item[0] / item[1] for item in allowed_list]
+        (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
+
+        logger.debug(f"scaling img by factor {factor}, " f"width input={width} -> target={scaled_min_width}")
+        if factor > 1:
+            logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
+
+        buffer_out = turbojpeg.scale_with_quality(
+            buffer_in,
+            scaling_factor=allowed_list[index],
+            quality=quality,
+        )
+        return buffer_out
 
     def asdict(self) -> dict:
         """

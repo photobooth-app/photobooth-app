@@ -44,6 +44,7 @@ class GpioService(BaseService):
         self.shutdown_btn: Button = None
         self.reboot_btn: Button = None
         self.take1pic_btn: Button = None
+        self.takecollage_btn: Button = None
 
         # output signals
         # none yet
@@ -73,6 +74,10 @@ class GpioService(BaseService):
             self._config.hardwareinputoutput.gpio_pin_take1pic,
             bounce_time=DEBOUNCE_TIME,
         )
+        self.takecollage_btn: Button = Button(
+            self._config.hardwareinputoutput.gpio_pin_collage,
+            bounce_time=DEBOUNCE_TIME,
+        )
         self.print_recent_item_btn: Button = Button(
             self._config.hardwareinputoutput.gpio_pin_print_recent_item,
             bounce_time=DEBOUNCE_TIME,
@@ -98,7 +103,19 @@ class GpioService(BaseService):
         self._logger.info("trigger _take1pic")
 
         try:
-            self._processing_service.evt_chose_1pic_get()
+            self._processing_service.start_job_1pic()
+        except ProcessMachineOccupiedError as exc:
+            # raised if processingservice not idle
+            self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+        except Exception as exc:
+            # other errors
+            self._logger.critical(exc)
+
+    def _takecollage(self):
+        self._logger.info("trigger _takecollage")
+
+        try:
+            self._processing_service.start_job_collage()
         except ProcessMachineOccupiedError as exc:
             # raised if processingservice not idle
             self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
@@ -113,9 +130,7 @@ class GpioService(BaseService):
             mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
             self._printing_service.print(mediaitem=mediaitem)
         except BlockingIOError:
-            self._logger.warning(
-                f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
-            )
+            self._logger.warning(f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible.")
         except Exception as exc:
             # other errors
             self._logger.critical(exc)
@@ -129,9 +144,11 @@ class GpioService(BaseService):
         self.shutdown_btn.when_held = self._shutdown
         # reboot
         self.reboot_btn.when_held = self._reboot
-        # takepic
+        # takepic single
         self.take1pic_btn.when_pressed = self._take1pic
-        # takepic
+        # takepic single
+        self.takecollage_btn.when_pressed = self._takecollage
+        # print
         self.print_recent_item_btn.when_pressed = self._print_recent_item
 
     def _register_listener_outputs(self):

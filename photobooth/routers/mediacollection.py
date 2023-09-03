@@ -16,9 +16,7 @@ mediacollection_router = APIRouter(
 @mediacollection_router.get("/getitems")
 @inject
 def api_getitems(
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
 ):
     try:
         return mediacollection_service.db_get_images_as_dict()
@@ -31,9 +29,7 @@ def api_getitems(
 @inject
 def api_gallery_delete(
     image_id: str,
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
 ):
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
@@ -46,9 +42,7 @@ def api_gallery_delete(
 @mediacollection_router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 def api_gallery_delete_all(
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
 ):
     """Warning: deletes all files permanently without any further confirmation
 

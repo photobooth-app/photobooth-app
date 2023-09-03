@@ -138,9 +138,7 @@ class Gphoto2Backend(AbstractBackend):
         try:
             self._camera.capture_preview()
         except Exception as exc:
-            logger.info(
-                f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}"
-            )
+            logger.info(f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}")
         else:
             preview_available = True
 

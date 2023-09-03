@@ -4,6 +4,7 @@ import pytest
 
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
+from photobooth.services.processing.jobmodels import JobModel
 
 logger = logging.getLogger(name=None)
 
@@ -22,13 +23,13 @@ def services() -> ServicesContainer:
 
 
 def proc_shoot(services: ServicesContainer):
-    services.processing_service().shoot()
-    services.processing_service()._reset()
+    services.processing_service().start(JobModel.Typ.image, 1)
+    # services.processing_service()._reset()
 
 
 def proc_postprocess(services: ServicesContainer):
-    services.processing_service().postprocess()
-    services.processing_service()._reset()
+    services.processing_service()._postprocess()
+    # services.processing_service()._reset()
 
 
 # needs pip install pytest-benchmark

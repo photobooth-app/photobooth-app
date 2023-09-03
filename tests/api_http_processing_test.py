@@ -15,16 +15,9 @@ def test_chose_1pic(client: TestClient):
     response = client.get("/processing/chose/1pic")
     assert response.status_code == 200
 
-    processing_service = client.app.container.services.processing_service()
 
-    processing_service.thrill()
-
-    response = client.get("/processing/chose/1pic")
-    assert response.status_code == 400
-
-    processing_service._reset()
-
-    response = client.get("/processing/chose/1pic")
+def test_chose_collage(client: TestClient):
+    response = client.get("/processing/chose/collage")
     assert response.status_code == 200
 
 

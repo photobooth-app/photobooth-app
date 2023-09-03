@@ -64,10 +64,23 @@ class KeyboardService(BaseService):
 
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takepic:
             self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takepic}")
-            self._logger.info("trigger evt_chose_1pic_get")
+            self._logger.info("trigger start_job_1pic")
 
             try:
-                self._processing_service.evt_chose_1pic_get()
+                self._processing_service.start_job_1pic()
+            except ProcessMachineOccupiedError as exc:
+                # raised if processingservice not idle
+                self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+            except Exception as exc:
+                # other errors
+                self._logger.critical(exc)
+
+        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takecollage:
+            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takecollage}")
+            self._logger.info("trigger start_job_collage")
+
+            try:
+                self._processing_service.start_job_collage()
             except ProcessMachineOccupiedError as exc:
                 # raised if processingservice not idle
                 self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
@@ -76,18 +89,14 @@ class KeyboardService(BaseService):
                 self._logger.critical(exc)
 
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
-            self._logger.info(
-                f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}"
-            )
+            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")
             self._logger.info("trigger _print_recent_item")
 
             try:
                 mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
                 self._printing_service.print(mediaitem=mediaitem)
             except BlockingIOError:
-                self._logger.warning(
-                    f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible."
-                )
+                self._logger.warning(f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible.")
             except Exception as exc:
                 # other errors
                 self._logger.critical(exc)

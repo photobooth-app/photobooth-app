@@ -3,17 +3,19 @@ Handle all media collection related functions
 """
 import io
 import logging
-import shutil
+import os
 import time
 
 from PIL import Image
+from pydantic_extra_types.color import Color
 from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
-from ..appconfig import AppConfig
+from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage, TextsConfig
 from ..utils.exceptions import PipelineError
 from .baseservice import BaseService
-from .mediacollection.mediaitem import MediaItem
+from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
+from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
     image_fill_background_stage,
     image_img_background_stage,
@@ -21,9 +23,14 @@ from .mediaprocessing.image_pipelinestages import (
     removechromakey_stage,
     text_stage,
 )
+from .mediaprocessing.pipelinestages_utils import get_user_file
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
+
+
+# TODO: consider resampling filter change:
+# https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
 
 
 class MediaprocessingService(BaseService):
@@ -32,130 +39,201 @@ class MediaprocessingService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus=evtbus, config=config)
 
-    def recreate_1pic(self, mediaitem: MediaItem):
-        """recreate item in case original is avail, but all else is lost for whatever reason"""
-        # 1 create unprocessed images
-        tms = time.time()
-        self.create_scaled_unprocessed_repr(mediaitem)
-
-        # 2  copy
-        self.copy_1pic_repr(mediaitem)
-
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
-
-        # 3 finally ensure all is right
+    def _apply_stage_removechromakey(self, input_image: Image.Image) -> Image.Image:
         try:
-            mediaitem.fileset_valid()
-        except Exception as exc:
-            logger.warning("something went wrong creating scaled versions!")
-            raise exc
+            return removechromakey_stage(
+                input_image,
+                self._config.mediaprocessing.removechromakey_keycolor,
+                self._config.mediaprocessing.removechromakey_tolerance,
+            )
+        except PipelineError as exc:
+            logger.error(f"apply removechromakey_stage failed, reason: {exc}. stage not applied, but continue")
 
-    def copy_1pic_repr(self, mediaitem: MediaItem):
-        tms = time.time()
-        shutil.copy2(mediaitem.path_full_unprocessed, mediaitem.path_full)
-        shutil.copy2(mediaitem.path_preview_unprocessed, mediaitem.path_preview)
-        shutil.copy2(mediaitem.path_thumbnail_unprocessed, mediaitem.path_thumbnail)
+        # always return input_image as backup if pipeline failed
+        return input_image
 
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy files")
+    def _apply_stage_pilgram(self, input_image: Image.Image, filter: str) -> Image.Image:
+        if (filter is not None) and (filter != "original"):
+            try:
+                return pilgram_stage(input_image, filter)
+            except PipelineError as exc:
+                logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
 
-    def apply_pipeline_1pic(self, mediaitem: MediaItem, user_filter: str = None):
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_fill_background(self, input_image: Image.Image, color: Color) -> Image.Image:
+        try:
+            return image_fill_background_stage(input_image, color)
+        except PipelineError as exc:
+            logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_img_background(self, input_image: Image.Image, file: str, reverse: bool = False) -> Image.Image:
+        try:
+            return image_img_background_stage(input_image, file, reverse)
+        except PipelineError as exc:
+            logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_texts(self, input_image: Image.Image, texts: TextsConfig) -> Image.Image:
+        try:
+            return text_stage(input_image, textstageconfig=texts)
+        except PipelineError as exc:
+            logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def process_singleimage(self, mediaitem: MediaItem, config: GroupMediaprocessingPipelineSingleImage = None) -> MediaItem:
         """always apply preconfigured pipeline."""
 
-        # TODO: The whole processing should be refactored
+        if not config:
+            # default is the singleimage config here
+            _config = GroupMediaprocessingPipelineSingleImage(**self._config.mediaprocessing_pipeline_singleimage.model_dump())
+        else:
+            # used to provide different set of config for images that are captured for a collage
+            if not isinstance(config, GroupMediaprocessingPipelineSingleImage):
+                raise RuntimeError("illegal type for config provided")
+
+            _config = config
+
+        if not (_config.pipeline_enable or self._config.mediaprocessing.removechromakey_enable):
+            logger.debug("skipping processing pipeline in apply_pipeline_1pic because disabled")
+            mediaitem.copy_fileset_processed()
+
+            return mediaitem
 
         tms = time.time()
 
-        ## pipeline is enabled, so start processing now:
-        with open(mediaitem.path_full_unprocessed, "rb") as file:
-            buffer_full = file.read()
-
-        ## start: load original file
-        image = Image.open(io.BytesIO(buffer_full))
+        ## prepare: pipeline is enabled, so start processing now by loading the image
+        image = Image.open(mediaitem.path_full_unprocessed)
 
         ## stage 1: remove background
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_removechromakey_enable
-        ):
-            try:
-                image = removechromakey_stage(
-                    image,
-                    self._config.mediaprocessing.pic1_removechromakey_keycolor,
-                    self._config.mediaprocessing.pic1_removechromakey_tolerance,
-                )
-            except PipelineError as exc:
-                logger.error(f"apply removechromakey_stage failed, reason: {exc}. stage not applied, but continue")
+        if self._config.mediaprocessing.removechromakey_enable:
+            image = self._apply_stage_removechromakey(image)
 
         ## stage: pilgram filter
-        filter = user_filter if user_filter is not None else self._config.mediaprocessing.pic1_filter.value
-
-        if self._config.mediaprocessing.pic1_pipeline_enable or user_filter:
-            if (filter is not None) and (filter != "original"):
-                try:
-                    image = pilgram_stage(image, filter)
-                except PipelineError as exc:
-                    logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage: text overlay
-        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_text_overlay_enable:
-            try:
-                image = text_stage(image, textstageconfig=self._config.mediaprocessing.pic1_text_overlay)
-            except PipelineError as exc:
-                logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
+        if _config.filter and _config.filter.value and _config.filter.value != "original":
+            image = self._apply_stage_pilgram(image, _config.filter.value)
 
         ## stage: new background shining through transparent parts (or extended frame)
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_fill_background_enable
-        ):
-            try:
-                image = image_fill_background_stage(image, self._config.mediaprocessing.pic1_fill_background_color)
-            except PipelineError as exc:
-                logger.error(
-                    f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue"
-                )
+        if _config.fill_background_enable:
+            image = self._apply_stage_fill_background(image, _config.fill_background_color)
 
         ## stage: new background image behing transparent parts (or extended frame)
-        if (
-            self._config.mediaprocessing.pic1_pipeline_enable
-            and self._config.mediaprocessing.pic1_img_background_enable
-        ):
-            try:
-                image = image_img_background_stage(image, self._config.mediaprocessing.pic1_img_background_file)
-            except PipelineError as exc:
-                logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
+        if _config.img_background_enable:
+            image = self._apply_stage_img_background(image, _config.img_background_file)
+
+        ## stage: text overlay
+        if _config.texts_enable:
+            image = self._apply_stage_texts(image, _config.texts)
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline stages")
 
         ## final: save full result and create scaled versions
         tms = time.time()
+        image = image.convert("RGB") if image.mode in ("RGBA", "P") else image
         buffer_full_pipeline_applied = io.BytesIO()
-        if image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
-        image.save(
-            buffer_full_pipeline_applied,
-            format="jpeg",
-            quality=self._config.common.HIRES_STILL_QUALITY,
-            optimize=True,
-        )
+        image.save(buffer_full_pipeline_applied, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
 
-        # save filtered full
-        with open(mediaitem.path_full, "wb") as file:
-            file.write(buffer_full_pipeline_applied.getbuffer())
-        # save scaled preview (derived from filtered full)
-        with open(mediaitem.path_preview, "wb") as file:
-            file.write(self._get_preview_repr(buffer_full_pipeline_applied.getbuffer()))
-        # save scaled thumbnail (derived from filtered full)
-        with open(mediaitem.path_thumbnail, "wb") as file:
-            file.write(self._get_thumbnail_repr(buffer_full_pipeline_applied.getbuffer()))
+        mediaitem.create_fileset_processed(buffer_full_pipeline_applied.getbuffer())
 
-        logger.info(
-            f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions"
-        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions")
 
-    def apply_pipeline_collage(self):
-        """always apply preconfigured pipeline."""
-        raise NotImplementedError
+        return mediaitem
+
+    def process_collage(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
+        """apply preconfigured pipeline."""
+
+        _config = self._config.mediaprocessing_pipeline_collage
+
+        tms = time.time()
+
+        ## prepare: create canvas - need to determine the size if not given
+        canvas_size = (_config.canvas_width, _config.canvas_height)
+        canvas = Image.new("RGBA", canvas_size, color=None)
+
+        ## stage: merge captured images and predefined to one image with transparency
+        if True:  # merge is mandatory for collages
+            _captured_images: list[Image.Image] = []
+            for captured_mediaitem in captured_mediaitems:
+                _captured_images.append(Image.open(captured_mediaitem.path_full))
+
+            try:
+                canvas = merge_collage_stage(canvas, _captured_images, _config.canvas_merge_definition)
+            except PipelineError as exc:
+                logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
+                raise RuntimeError("abort processing due to pipelineerror") from exc
+
+        ## stage: new background shining through transparent parts (or extended frame)
+        if _config.canvas_fill_background_enable:
+            canvas = self._apply_stage_fill_background(canvas, _config.canvas_fill_background_color)
+
+        ## stage: new background image behing transparent parts (or extended frame)
+        if _config.canvas_img_background_enable:
+            canvas = self._apply_stage_img_background(canvas, _config.canvas_img_background_file)
+
+        ## stage: new image in front of transparent parts (or extended frame)
+        if _config.canvas_img_front_enable:
+            canvas = self._apply_stage_img_background(canvas, _config.canvas_img_front_file, reverse=True)
+
+        ## stage: text overlay
+        if _config.canvas_texts_enable:
+            canvas = self._apply_stage_texts(canvas, _config.canvas_texts)
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process collage pipeline")
+
+        ## final: save full result and create scaled versions
+        tms = time.time()
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
+
+        # convert to RGB and store jpeg as new original
+        canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
+        canvas.save(filepath_neworiginalfile, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
+
+        # instanciate mediaitem with new original file
+        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+
+        # create scaled versions (unprocessed and processed are same here for now
+        mediaitem.create_fileset_unprocessed()
+        mediaitem.copy_fileset_processed()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
+
+        return mediaitem
+
+    def number_of_captures_to_take_for_collage(self) -> int:
+        """analyze the configuration and return the needed number of captures to take by camera.
+        If there are fixed images given these do not count to the number to capture.
+
+        Returns:
+            int: number of captures
+        """
+        if not self._config.mediaprocessing_pipeline_collage.canvas_merge_definition:
+            raise PipelineError("collage definition not set up!")
+
+        collage_merge_definition = self._config.mediaprocessing_pipeline_collage.canvas_merge_definition
+        # item.predefined_image None or "" are considered as to capture aka not predefined
+        predefined_images = [item.predefined_image for item in collage_merge_definition if item.predefined_image]
+        for predefined_image in predefined_images:
+            try:
+                # preflight check here without use.
+                _ = get_user_file(predefined_image)
+            except FileNotFoundError as exc:
+                logger.exception(exc)
+                raise PipelineError(f"predefined image {predefined_image} not found!") from exc
+
+        total_images_in_collage = len(collage_merge_definition)
+        fixed_images = len(predefined_images)
+
+        captures_to_take = total_images_in_collage - fixed_images
+
+        return captures_to_take
 
     def apply_pipeline_video(self):
         """
@@ -163,120 +241,3 @@ class MediaprocessingService(BaseService):
         focus on images in these pipelines now
         """
         raise NotImplementedError
-
-    def ensure_scaled_repr_created(self, mediaitem: MediaItem):
-        try:
-            mediaitem.fileset_valid()
-        except FileNotFoundError:
-            # MediaItem raises FileNotFoundError if original/full/preview/thumb is missing.
-            self._logger.debug(f"file {mediaitem.filename} misses its scaled versions, try to create now")
-
-            # try create missing preview/thumbnail and retry. otherwise fail completely
-            try:
-                self.recreate_1pic(mediaitem)
-            except (FileNotFoundError, PermissionError, OSError) as exc:
-                self._logger.error(f"file {mediaitem.filename} processing failed. {exc}")
-                raise exc
-
-    def create_scaled_unprocessed_repr(self, mediaitem: MediaItem):
-        """_summary_
-
-        Args:
-            buffer_full (_type_): _description_
-            filepath (_type_): _description_
-        """
-        buffer_in = self._read_original(mediaitem)
-
-        ## full version
-        with open(mediaitem.path_full_unprocessed, "wb") as file:
-            file.write(self._get_full_repr(buffer_in))
-            logger.debug(f"{mediaitem.path_full_unprocessed=} written to disk")
-
-        ## preview version
-        with open(mediaitem.path_preview_unprocessed, "wb") as file:
-            file.write(self._get_preview_repr(buffer_in))
-            logger.debug(f"{mediaitem.path_preview_unprocessed=} written to disk")
-
-        ## thumbnail version
-        with open(mediaitem.path_thumbnail_unprocessed, "wb") as file:
-            file.write(self._get_thumbnail_repr(buffer_in))
-            logger.debug(f"{mediaitem.path_thumbnail_unprocessed=} written to disk")
-
-        logger.info(f"created and saved scaled media items for {mediaitem.filename=}")
-
-    def _read_original(self, mediaitem: MediaItem) -> bytes:
-        with open(mediaitem.path_original, "rb") as file:
-            buffer_in = file.read()
-
-        return buffer_in
-
-    def _get_full_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            self._config.common.HIRES_STILL_QUALITY,
-            self._config.common.FULL_STILL_WIDTH,
-        )
-
-    def _get_preview_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            self._config.common.PREVIEW_STILL_QUALITY,
-            self._config.common.PREVIEW_STILL_WIDTH,
-        )
-
-    def _get_thumbnail_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            self._config.common.THUMBNAIL_STILL_QUALITY,
-            self._config.common.THUMBNAIL_STILL_WIDTH,
-        )
-
-    @staticmethod
-    def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_width: int):
-        """scale a jpeg buffer to another buffer using turbojpeg"""
-        # get original size
-        with Image.open(io.BytesIO(buffer_in)) as img:
-            width, _ = img.size
-
-        scaling_factor = scaled_min_width / width
-
-        # TurboJPEG only allows for decent factors.
-        # To keep it simple, config allows freely to adjust the size from 10...100% and
-        # find the real factor here:
-        # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-        # limitation due to turbojpeg lib usage.
-        # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-        # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-        # example: (1,4) will result in 1/4=0.25=25% down scale in relation to
-        # the full resolution picture
-        allowed_list = [
-            (13, 8),
-            (7, 4),
-            (3, 8),
-            (1, 2),
-            (2, 1),
-            (15, 8),
-            (3, 4),
-            (5, 8),
-            (5, 4),
-            (1, 1),
-            (1, 8),
-            (1, 4),
-            (9, 8),
-            (3, 2),
-            (7, 8),
-            (11, 8),
-        ]
-        factor_list = [item[0] / item[1] for item in allowed_list]
-        (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
-
-        logger.debug(f"scaling img by factor {factor}, " f"width input={width} -> target={scaled_min_width}")
-        if factor > 1:
-            logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
-
-        buffer_out = turbojpeg.scale_with_quality(
-            buffer_in,
-            scaling_factor=allowed_list[index],
-            quality=quality,
-        )
-        return buffer_out

@@ -139,9 +139,7 @@ class AbstractBackend(ABC):
                 try:
                     buffer = self._wait_for_lores_image()
                 except TimeoutError:
-                    logger.error(
-                        "error capture lores image for stream. " f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying"
-                    )
+                    logger.error("error capture lores image for stream. " f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
                     # can we do additional error handling here?
                 except ShutdownInProcessError:
                     logger.warning("gather img failed due to resources shutting down")
@@ -149,10 +147,7 @@ class AbstractBackend(ABC):
                     break
             else:
                 # we failed finally all the attempts - deal with the consequences.
-                logger.critical(
-                    "critical error getting stream. "
-                    f"failed to get lores image after {MAX_ATTEMPTS} attempts. giving up!"
-                )
+                logger.critical("critical error getting stream. " f"failed to get lores image after {MAX_ATTEMPTS} attempts. giving up!")
 
                 # return to signal stop yielding frames to calling function
                 return

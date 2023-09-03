@@ -5,6 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from PIL import Image
 
+from ..appconfig import EnumPilgramFilter
 from ..containers import ApplicationContainer
 from ..services.mediacollectionservice import MediacollectionService
 from ..services.mediaprocessing.image_pipelinestages import pilgram_stage
@@ -23,9 +24,7 @@ mediaprocessing_router = APIRouter(
 def api_get_preview_image_filtered(
     mediaitem_id,
     filter=None,
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
 ):
     try:
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
@@ -53,7 +52,7 @@ def api_get_preview_image_filtered(
         buffer_preview_pipeline_applied,
         format="jpeg",
         quality=80,
-        optimize=True,
+        optimize=False,
     )
     return Response(content=buffer_preview_pipeline_applied.getvalue(), media_type="image/jpeg")
 
@@ -63,17 +62,21 @@ def api_get_preview_image_filtered(
 def api_get_applyfilter(
     mediaitem_id,
     filter: str = None,
-    mediacollection_service: MediacollectionService = Depends(
-        Provide[ApplicationContainer.services.mediacollection_service]
-    ),
-    mediaprocessing_service: MediaprocessingService = Depends(
-        Provide[ApplicationContainer.services.mediaprocessing_service]
-    ),
+    mediacollection_service: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
+    mediaprocessing_service: MediaprocessingService = Depends(Provide[ApplicationContainer.services.mediaprocessing_service]),
 ):
     try:
+        if not mediaprocessing_service._config.mediaprocessing_pipeline_singleimage.pipeline_enable:
+            raise RuntimeError("singleimage pipeline needs to be enabled!")
+
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
-        mediaprocessing_service.apply_pipeline_1pic(mediaitem, user_filter=filter)
+        # create updated config that is the image is processed according to
+        config = mediaprocessing_service._config.mediaprocessing_pipeline_singleimage.model_copy()
+
+        config.filter = EnumPilgramFilter(filter)
+
+        mediaprocessing_service.process_singleimage(mediaitem, config)
     except Exception as exc:
         logger.exception(exc)
         logger.error(f"apply pipeline failed, reason: {exc}.")

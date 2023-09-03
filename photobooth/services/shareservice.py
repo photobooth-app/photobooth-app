@@ -33,9 +33,7 @@ class ShareService(BaseService):
 
         self._logger.info("checking shareservice api endpoint")
         try:
-            r = requests.get(
-                self._config.common.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False
-            )
+            r = requests.get(self._config.common.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
         except Exception as exc:
             self._logger.warning(f"error checking shareservice api endpoint: {exc}")
         else:
@@ -128,9 +126,7 @@ class ShareService(BaseService):
                         # set the file to be uploaded
                         request_upload_file = {}
                         try:
-                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(
-                                decoded_line["file_identifier"]
-                            )
+                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(decoded_line["file_identifier"])
                             self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except FileNotFoundError as exc:
                             self._logger.error(f"mediaitem not found, wrong id? {exc}")

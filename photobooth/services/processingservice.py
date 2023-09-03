@@ -11,7 +11,7 @@ from threading import Thread
 from pymitter import EventEmitter
 from statemachine import State, StateMachine
 
-from ..appconfig import AppConfig
+from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
@@ -19,6 +19,7 @@ from .mediacollectionservice import (
     MediacollectionService,
 )
 from .mediaprocessingservice import MediaprocessingService
+from .processing.jobmodels import JobModel
 
 logger = logging.getLogger(__name__)
 
@@ -38,24 +39,25 @@ class ProcessingService(StateMachine):
 
         state: str
         countdown: float = 0
+        display_cheese: bool = False  # TODO: implement in frontend
 
     ## STATES
 
     idle = State(initial=True)
-    thrilled = State()
     counting = State()
-    capture_still = State()
-    postprocess_still = State()
+    capture = State()
+    present_capture = State()
+    job_postprocess = State()
 
     ## TRANSITIONS
 
-    thrill = idle.to(thrilled)
-    countdown = thrilled.to(counting)
-    shoot = idle.to(capture_still) | thrilled.to(capture_still) | counting.to(capture_still)
-    postprocess = capture_still.to(postprocess_still)
-    finalize = postprocess_still.to(idle)
-
-    _reset = idle.to(idle) | thrilled.to(idle) | counting.to(idle) | capture_still.to(idle) | postprocess_still.to(idle)
+    start = idle.to(counting)
+    _counted = counting.to(capture)
+    _captured = capture.to(present_capture)
+    confirm = present_capture.to(counting, unless="took_all_captures") | present_capture.to(job_postprocess, cond="took_all_captures")
+    reject = present_capture.to(counting)
+    _finalize = job_postprocess.to(idle)
+    _reset = idle.from_(idle, counting, capture, present_capture, job_postprocess)
 
     def __init__(
         self,
@@ -73,34 +75,31 @@ class ProcessingService(StateMachine):
 
         self.timer: Thread = None
         self.timer_countdown = 0
-        # filepath of the captured image that is processed in this run:
-        self._filepath_originalimage_processing: str = None
 
-        super().__init__()
+        super().__init__(model=JobModel())
 
         # register to send initial data SSE
         self._evtbus.on("publishSSE/initial", self._sse_initial_processinfo)
 
-    # general on_ events
-    def before_transition(self, event, state):
-        """_summary_"""
-        pass
-        # logger.info(f"Before '{event}', on the '{state.id}' state.")
+    ## transition actions
 
-    def on_transition(self, event, state):
-        """_summary_"""
-        pass
-        # logger.info(f"On '{event}', on the '{state.id}' state.")
+    def before_start(self, typ: JobModel.Typ, total_captures_to_take: int):
+        assert isinstance(typ, JobModel.Typ)
+        assert isinstance(total_captures_to_take, int)
 
-    def on_exit_state(self, event, state):
-        """_summary_"""
-        pass
-        # logger.info(f"Exiting '{state.id}' state from '{event}' event.")
+        logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
+
+        self.model: JobModel  # for linting
+        self.model.start_model(typ, total_captures_to_take)
+
+        logger.info(f"start job {self.model}")
+
+    ## state actions
 
     def on_enter_state(self, event, state):
         """_summary_"""
         # logger.info(f"Entering '{state.id}' state from '{event}' event.")
-        logger.info(f"on_enter_state '{self.current_state.id=}' ")
+        logger.info(f"on_enter_state {self.current_state.id=} ")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._sse_processinfo(
@@ -110,89 +109,66 @@ class ProcessingService(StateMachine):
             )
         )
 
-    def after_transition(self, event, state):
-        """_summary_"""
-        pass
-        # logger.info(f"After '{event}', on the '{state.id}' state.")
+    def on_exit_idle(self):
+        # when idle left, check that all is properly set up!
 
-    ## specific on_ transition actions:
-
-    def on_thrill(self):
-        """_summary_"""
-        logger.info("on_thrill")
-        self._evtbus.emit("statemachine/on_thrill")
-
-    def on_shoot(self):
-        """_summary_"""
-
-    def on_enter_postprocess_still(self):
-        # create JPGs and add to db
-        logger.info("on_enter_postprocess_still")
-
-        # TODO: collage: separate postprocessing step 2 mount collage and create a new original.
-
-        # create mediaitem for further processing
-        mediaitem = MediaItem(os.path.basename(self._filepath_originalimage_processing))
-
-        # always create unprocessed versions for later usage
-        tms = time.time()
-        self._mediaprocessing_service.create_scaled_unprocessed_repr(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
-
-        # apply 1pic pipeline:
-        tms = time.time()
-        self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
-
-        # add result to db
-        _ = self._mediacollection_service.db_add_item(mediaitem)
-
-        logger.info(f"capture {mediaitem=} successful")
-
-        # to inform frontend about new image to display
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="imagedb/newarrival",
-            sse_data=json.dumps(mediaitem.asdict()),
-        )
-
-    ## specific on_state actions:
+        if not self.model.validate_job():
+            raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):
         """_summary_"""
-        logger.info("on_enter_idle")
-        # always remove old reference
-        self._filepath_originalimage_processing = None
+        logger.info("state idle entered.")
+        # reset old job data
+        self.model.reset_job()
 
     def on_enter_counting(self):
         """_summary_"""
-        logger.info("on_enter_counting")
-        self.timer_countdown = (
-            self._config.common.PROCESS_COUNTDOWN_TIMER + self._config.common.PROCESS_COUNTDOWN_OFFSET
+        # to prepare autofocus on backends and wled
+        self._evtbus.emit("statemachine/on_thrill")
+
+        # determine countdown time, first and following could have different times
+        self.timer_countdown = 0.0
+        self.timer_countdown += (
+            self._config.common.countdown_capture_first
+            if (self.model.number_captures_taken() == 0)
+            else self._config.common.countdown_capture_second_following
         )
-        logger.info(f"loaded timer_countdown='{self.timer_countdown}'")
-        logger.info("starting timer")
+
+        # if countdown is 0, skip following and transition to next state directy
+        if self.timer_countdown == 0:
+            logger.info("no timer, skip countdown")
+            self._counted()
+
+        logger.info(f"starting timer {self.timer_countdown=}")
 
         while self.timer_countdown > 0:
             self._sse_processinfo(
                 __class__.Stateinfo(
                     state=self.current_state.id,
                     countdown=round(self.timer_countdown, 1),
+                    display_cheese=(True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False),
                 )
             )
             time.sleep(0.1)
             self.timer_countdown -= 0.1
 
-            if self.timer_countdown <= self._config.common.PROCESS_COUNTDOWN_OFFSET and self.counting.is_active:
-                return
+            if self.timer_countdown <= self._config.common.countdown_camera_capture_offset and self.counting.is_active:
+                logger.info("going to next capture now")
+                self._counted()
+                break
 
     def on_exit_counting(self):
-        logger.info("on_exit_counting")
+        logger.info("state counting exit")
+
+        # TODO: replace by statemachineinfo class
         self.timer_countdown = 0
 
-    def on_enter_capture_still(self):
+    def on_enter_capture(self):
         """_summary_"""
-        logger.info("on_enter_capture_still")
+        logger.info(
+            f"current capture ({self.model.number_captures_taken()+1}/{self.model.total_captures_to_take()}, "
+            f"remaining {self.model.remaining_captures_to_take()-1})"
+        )
         self._evtbus.emit("statemachine/on_enter_capture_still")
 
         filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
@@ -219,7 +195,9 @@ class ProcessingService(StateMachine):
                     file.write(image_bytes)
 
                 # populate image item for further processing:
-                self._filepath_originalimage_processing = filepath_neworiginalfile
+                mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+                self.model._last_capture = mediaitem
+
             except TimeoutError:
                 logger.error(f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
                 # can we do additional error handling here?
@@ -232,29 +210,157 @@ class ProcessingService(StateMachine):
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
-    def on_exit_capture_still(self):
+        # capture finished, go to next state which is present. present also postprocesses capture.
+        self._captured()
+
+    def on_exit_capture(self):
         """_summary_"""
         logger.info("on_exit_capture_still")
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
-    ### some external functions
+    def on_enter_present_capture(self):
+        ## PHASE 1:
+        # postprocess each capture individually
+        logger.info("start postprocessing phase 1")
 
-    def evt_chose_1pic_get(self):
-        logger.info("evt_chose_1pic_get called to take picture")
+        # load last mediaitem for further processing
+        mediaitem = self.model._last_capture
+        logger.info(f"postprocessing last capture: {mediaitem=}")
+
+        # always create unprocessed versions for later usage
+        tms = time.time()
+        mediaitem.create_fileset_unprocessed()
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
+
+        # apply 1pic pipeline:
+        tms = time.time()
+        if self.model._typ == JobModel.Typ.image:
+            self._mediaprocessing_service.process_singleimage(mediaitem, self._config.mediaprocessing_pipeline_singleimage)
+        elif self.model._typ == JobModel.Typ.collage:
+            # the captures in the context of a collage job can be processed differently:
+            cfg_collage = self._config.mediaprocessing_pipeline_collage
+            config_singleimage_captures_for_collage = GroupMediaprocessingPipelineSingleImage(
+                pipeline_enable=True,  # for convenience this is always true now
+                fill_background_enable=cfg_collage.capture_fill_background_enable,
+                fill_background_color=cfg_collage.capture_fill_background_color,
+                img_background_enable=cfg_collage.capture_img_background_enable,
+                img_background_file=cfg_collage.capture_img_background_file,
+                filter=cfg_collage.canvas_merge_definition[
+                    self.model.number_captures_taken()
+                ].filter.value,  # TODO: offset if predefined images! this is wrong!
+            )
+
+            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
+
+        assert mediaitem.fileset_valid()
+
+        # add result to db
+        # TODO: make configurable whether to hide pics that will be stitched to collage
+        self.model.add_capture(self.model._last_capture)
+        _ = self._mediacollection_service.db_add_item(mediaitem)
+
+        logger.info(f"capture {mediaitem=} successful")
+
+        # if job is collage, each single capture could be confirmed or not:
+        if self.model._typ == JobModel.Typ.collage:
+            if self._config.common.collage_automatic_capture_continue:
+                # auto continue with next countdown
+                self.confirm_capture()
+                # TODO: update the frontend gallery on delete/insert, with or without presenting!
+            else:
+                # present capture with buttons to approve.
+                logger.info("finished capture, present to user to confirm or start over")
+                self._evtbus.emit(
+                    "publishSSE",
+                    sse_event="imagedb/newarrival",
+                    sse_data=json.dumps(mediaitem.asdict()),
+                )
+        else:
+            # if not collage, there is single approval so -> confirm and continue
+            self.confirm_capture()
+
+    def on_exit_present_capture(self, event):
+        if event == self.reject.name:
+            delete_mediaitem = self.model._captures.pop()
+            logger.info(f"rejected: {delete_mediaitem=}")
+
+            self._mediacollection_service.delete_image_by_id(delete_mediaitem.id)
+            self.model._last_capture = None
+
+    def on_enter_job_postprocess(self):
+        ## PHASE 2:
+        # postprocess job as whole, create collage of single images, ...
+        logger.info("start postprocessing phase 2")
+
+        if self.model._typ == JobModel.Typ.collage:
+            # apply 1pic pipeline:
+            tms = time.time()
+            mediaitem = self._mediaprocessing_service.process_collage(self.model._captures)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+
+            # add collage to mediadb
+            _ = self._mediacollection_service.db_add_item(mediaitem)
+        else:
+            mediaitem = self.model._last_capture
+
+        ## FINISH:
+        # to inform frontend about new image to display
+        logger.info("finished job")
+        self._evtbus.emit(
+            "publishSSE",
+            sse_event="imagedb/newarrival",
+            sse_data=json.dumps(mediaitem.asdict()),
+        )
+
+        # send machine to idle again
+        self._finalize()
+
+    def on_before_reset(self):
+        print("TODO: remove all images that were captured by now")
+        print("TODO: keep frontend in sync")
+
+    def _check_occupied(self):
         if not self.idle.is_active:
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
+    ### external functions to start processes
+
+    def start_job_1pic(self):
+        self._check_occupied()
         try:
-            self.thrill()
-            self.countdown()
-            self.shoot()
-            self.postprocess()
-            self.finalize()
+            self.start(JobModel.Typ.image, 1)
         except Exception as exc:
             logger.exception(exc)
-            logger.critical(f"something went wrong :( {exc}")
             self._reset()
-            raise RuntimeError(f"something went wrong :( {exc}") from exc
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
+
+    def start_job_collage(self):
+        self._check_occupied()
+        try:
+            self.start(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
+        except Exception as exc:
+            logger.exception(exc)
+            self._reset()
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
+
+    def start_job_video(self):
+        raise NotImplementedError
+        self._check_occupied()
+        self.start(JobModel.Typ.video, 1)
+
+    def job_finished(self):
+        return self.idle.is_active
+
+    def confirm_capture(self):
+        self.confirm()
+
+    def reject_capture(self):
+        self.reject()
+
+    def abort_capture(self):
+        self._reset()
 
     ### some custom helper
 
@@ -262,7 +368,7 @@ class ProcessingService(StateMachine):
         """_summary_"""
         self._sse_processinfo(__class__.Stateinfo(state=self.current_state.id))
 
-    def _sse_processinfo(self, sse_data: Stateinfo):
+    def _sse_processinfo(self, sse_data: str):
         """_summary_"""
         self._evtbus.emit(
             "publishSSE",

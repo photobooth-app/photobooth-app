@@ -24,16 +24,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
         config=config,
     )
 
-    # TODO: split config (config and service)
     config_service = providers.Singleton(AppConfig)
-
-    # init loggingservice explicitly at first to ensure it is already instanciated and
-    # configured when other services are initialized
-    # not working, cause config is not avail yet.
-    logging_service.init()
-
-    # for provider in backends.traverse():
-    #    logger.info(provider)
 
     backends = providers.Container(
         BackendsContainer,
@@ -46,6 +37,3 @@ class ApplicationContainer(containers.DeclarativeContainer):
         config=config,
         backends=backends,
     )
-
-    # shutdown before leave and reinit in __main__ again. If in init state, an error is thrown.
-    logging_service.shutdown()

@@ -6,6 +6,7 @@ import pytest
 
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
+from photobooth.services.processing.jobmodels import JobModel
 
 logger = logging.getLogger(name=None)
 
@@ -18,9 +19,7 @@ def services() -> ServicesContainer:
     services = application_container.services()
 
     # create one image to ensure there is at least one
-    services.processing_service().shoot()
-    services.processing_service().postprocess()
-    services.processing_service().finalize()
+    services.processing_service().start(JobModel.Typ.image, 1)
 
     # deliver
     yield services
