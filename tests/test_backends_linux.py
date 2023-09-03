@@ -28,22 +28,24 @@ if not platform.system() == "Linux":
     )
 
 
-def use_vcam():
-    import gphoto2 as gp
+import gphoto2 as gp
 
+
+def use_vcam():
     logger.info(f"python-gphoto2: {gp.__version__}")
 
     # virtual camera delivers images from following path:
     os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "assets")
     # switch to virtual camera from normal drivers
+    # IOLIBS is set on import of gphoto2:
+    # https://github.com/jim-easterbrook/python-gphoto2/blob/510149d454c9fa1bd03a43f098eea3c52d2e0675/src/swig-gp2_5_31/__init__.py#L15C32-L15C32
     os.environ["IOLIBS"] = os.environ["IOLIBS"].replace("iolibs", "vusb")
+
     logger.info(os.environ["VCAMERADIR"])
     logger.info(os.environ["IOLIBS"])
 
 
 def has_vcam():
-    import gphoto2 as gp
-
     vusb_dir = os.environ["IOLIBS"].replace("iolibs", "vusb")
     if not os.path.isdir(vusb_dir):
         logger.warning(f"missing {vusb_dir=}")
@@ -53,7 +55,7 @@ def has_vcam():
     if gp_library_version > (2, 5, 30):
         return True
 
-    logger.warning(f"{gp_library_version=} too old")
+    logger.warning(f"{gp_library_version=} too old. usually libgphoto is delivered with pip package, so this should not happen!")
     return False
 
 
@@ -92,8 +94,11 @@ def test_get_images_webcamv4l(backends: BackendsContainer):
 
 
 def test_get_images_gphoto2(backends: BackendsContainer):
+    # ensure virtual camera is available (sind 2.5.0 always true)
+    assert has_vcam()
+
+    # use vcam
     use_vcam()
-    logger.info(has_vcam())
 
     from photobooth.services.backends.gphoto2 import available_camera_indexes
 
@@ -117,8 +122,6 @@ def test_get_images_gphoto2(backends: BackendsContainer):
 
 
 def test_get_gphoto2_info():
-    import gphoto2 as gp
-
     logger.info(f"python-gphoto2: {gp.__version__}")
     logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
     logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")

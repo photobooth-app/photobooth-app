@@ -76,11 +76,6 @@ jobs:
       - run: pipx install hatch
       - run: hatch env prune # clean env
       #- run: hatch config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
-      # do not install gphoto2 deps on self-hosted, because there is a virtual ptp device installed manually built from sources.
-      # if installing the local source is overridden and virtual ptp device is not found.
-      #- name: Install gphoto2 dependencies
-      #  run: |
-      #    sudo apt-get -y install libexif12 libgphoto2-6 libgphoto2-port12 libltdl7 libgphoto2-dev libexif-dev
       - name: Test with pytest
         run: |
           hatch --verbose run test:test
