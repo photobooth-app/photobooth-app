@@ -109,7 +109,7 @@ class WebcamCv2Backend(AbstractBackend):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        self._cv2_process.join(timeout=5)
+        self._cv2_process.join()
         self._cv2_process.close()
 
         self._img_buffer_lores.sharedmemory.close()
@@ -195,6 +195,11 @@ def cv2_img_aquisition(
     process function to gather webcam images
     """
     # init
+    ## Create a logger. INFO: this logger is in separate process and just logs to console.
+    # Could be replaced in future by a more sophisticated solution
+    logger = logging.getLogger()
+    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
+    logging.basicConfig(level=logging.DEBUG, format=fmt)
 
     shm_lores = shared_memory.SharedMemory(shm_buffer_lores_name)
     shm_hires = shared_memory.SharedMemory(shm_buffer_hires_name)
@@ -267,6 +272,8 @@ def cv2_img_aquisition(
 
     # release camera on process shutdown
     _video.release()
+
+    logger.info("cv2_img_aquisition finished, exit")
 
 
 def _video_set_check(_video, prop, value):

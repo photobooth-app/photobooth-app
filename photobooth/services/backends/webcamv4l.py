@@ -185,6 +185,12 @@ def v4l_img_aquisition(
         _type_: _description_
     """
     # init
+    ## Create a logger. INFO: this logger is in separate process and just logs to console.
+    # Could be replaced in future by a more sophisticated solution
+    logger = logging.getLogger()
+    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
+    logging.basicConfig(level=logging.DEBUG, format=fmt)
+
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
     with Device.from_id(_config.backends.v4l_device_index) as device:
@@ -211,6 +217,8 @@ def v4l_img_aquisition(
             # abort streaming on shutdown so process can join and close
             if _event_proc_shutdown.is_set():
                 break
+
+    logger.info("v4l_img_aquisition finished, exit")
 
 
 def available_camera_indexes():
@@ -244,13 +252,15 @@ def is_valid_camera_index(index):
         _type_: _description_
     """
     try:
-        cap = Device.from_id(index)
-        cap.video_capture.set_format(640, 480, "MJPG")
-        for _ in cap:
-            # got frame, close cam and return true; otherwise false.
-            break
-        cap.close()
-    except (AttributeError, FileNotFoundError, OSError):
-        return False
+        with Device.from_id(index) as device:
+            capture = VideoCapture(device)
+            capture.set_format(640, 480, "MJPG")
 
-    return True
+            for _ in device:
+                # got frame, close cam and return true; otherwise false.
+                break
+
+            return True
+
+    except Exception:
+        return False
