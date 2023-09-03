@@ -17,7 +17,7 @@ from .abstractbackend import (
 )
 
 try:
-    from v4l2py import Device
+    from v4l2py import Device, VideoCapture
 except Exception as import_exc:
     raise OSError("v4l2py import error; check v4l2py installation") from import_exc
 
@@ -187,23 +187,22 @@ def v4l_img_aquisition(
     # init
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    with Device.from_id(_config.backends.v4l_device_index) as cam:
+    with Device.from_id(_config.backends.v4l_device_index) as device:
         logger.info(f"webcam devices index {_config.backends.v4l_device_index} opened")
+        logger.info(f"webcam info: {device.info.card}")
+
         try:
-            cam.video_capture.set_format(
-                _config.backends.v4l_CAM_RESOLUTION_WIDTH,
-                _config.backends.v4l_CAM_RESOLUTION_HEIGHT,
-                "MJPG",
-            )
+            capture = VideoCapture(device)
+            capture.set_format(_config.backends.v4l_CAM_RESOLUTION_WIDTH, _config.backends.v4l_CAM_RESOLUTION_HEIGHT, "MJPG")
         except (AttributeError, FileNotFoundError) as exc:
             logger.error(f"cannot open camera {_config.backends.v4l_device_index} properly.")
             logger.exception(exc)
             raise exc
 
-        for jpeg_buffer in cam:  # forever
+        for frame in device:  # forever
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lock:
-                compile_buffer(shm, jpeg_buffer)
+                compile_buffer(shm, bytes(frame))
 
             with _condition_img_buffer_ready:
                 # wait to be notified
