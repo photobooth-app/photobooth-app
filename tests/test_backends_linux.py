@@ -28,10 +28,9 @@ if not platform.system() == "Linux":
     )
 
 
-import gphoto2 as gp
-
-
 def use_vcam():
+    import gphoto2 as gp
+
     logger.info(f"python-gphoto2: {gp.__version__}")
 
     # virtual camera delivers images from following path:
@@ -46,6 +45,8 @@ def use_vcam():
 
 
 def has_vcam():
+    import gphoto2 as gp
+
     vusb_dir = os.environ["IOLIBS"].replace("iolibs", "vusb")
     if not os.path.isdir(vusb_dir):
         logger.warning(f"missing {vusb_dir=}")
@@ -122,6 +123,8 @@ def test_get_images_gphoto2(backends: BackendsContainer):
 
 
 def test_get_gphoto2_info():
+    import gphoto2 as gp
+
     logger.info(f"python-gphoto2: {gp.__version__}")
     logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
     logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
