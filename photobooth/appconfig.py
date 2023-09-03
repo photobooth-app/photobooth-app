@@ -371,7 +371,7 @@ class TextStageConfig(BaseModel):
     # rotate: int = 0 # TODO: not yet implemented
     font_size: int = 40
     font: str = "fonts/Roboto-Bold.ttf"
-    color: Color = Color("red")
+    color: Color = "red"
 
 
 class CollageStageConfig(BaseModel):
@@ -420,7 +420,7 @@ class GroupMediaprocessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     pic1_fill_background_color: Color = Field(
-        default=Color("blue"),
+        default="blue",
         description="Solid color used to fill background.",
     )
     pic1_text_overlay_enable: bool = Field(
@@ -460,7 +460,7 @@ class GroupMediaprocessing(BaseModel):
         description="Apply solid color background to collage",
     )
     collage_fill_background_color: Color = Field(
-        default=Color("green"),
+        default="green",
         description="Solid color used to fill background.",
     )
     collage_img_background_enable: bool = Field(
@@ -686,6 +686,9 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
+    mediaprocessing_pipeline_picture: GroupMediaprocessing = GroupMediaprocessing()
+    mediaprocessing_pipeline_collage: GroupMediaprocessing = GroupMediaprocessing()
+    mediaprocessing_pipeline_printing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
