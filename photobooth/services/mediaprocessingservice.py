@@ -7,10 +7,11 @@ import os
 import time
 
 from PIL import Image
+from pydantic_extra_types.color import Color
 from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
-from ..appconfig import AppConfig
+from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage, TextsConfig
 from ..utils.exceptions import PipelineError
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
@@ -22,9 +23,14 @@ from .mediaprocessing.image_pipelinestages import (
     removechromakey_stage,
     text_stage,
 )
+from .mediaprocessing.pipelinestages_utils import get_user_file
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
+
+
+# TODO: consider resampling filter change:
+# https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
 
 
 class MediaprocessingService(BaseService):
@@ -33,80 +39,171 @@ class MediaprocessingService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus=evtbus, config=config)
 
-    def apply_pipeline_1pic(self, mediaitem: MediaItem, user_filter: str = None) -> MediaItem:
+    def _apply_stage_removechromakey(self, input_image: Image.Image) -> Image.Image:
+        try:
+            return removechromakey_stage(
+                input_image,
+                self._config.mediaprocessing.removechromakey_keycolor,
+                self._config.mediaprocessing.removechromakey_tolerance,
+            )
+        except PipelineError as exc:
+            logger.error(f"apply removechromakey_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_pilgram(self, input_image: Image.Image, filter: str) -> Image.Image:
+        if (filter is not None) and (filter != "original"):
+            try:
+                return pilgram_stage(input_image, filter)
+            except PipelineError as exc:
+                logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_fill_background(self, input_image: Image.Image, color: Color) -> Image.Image:
+        try:
+            return image_fill_background_stage(input_image, color)
+        except PipelineError as exc:
+            logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_img_background(self, input_image: Image.Image, file: str, reverse: bool = False) -> Image.Image:
+        try:
+            return image_img_background_stage(input_image, file, reverse)
+        except PipelineError as exc:
+            logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def _apply_stage_texts(self, input_image: Image.Image, texts: TextsConfig) -> Image.Image:
+        try:
+            return text_stage(input_image, textstageconfig=texts)
+        except PipelineError as exc:
+            logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
+    def process_singleimage(self, mediaitem: MediaItem, config: GroupMediaprocessingPipelineSingleImage = None) -> MediaItem:
         """always apply preconfigured pipeline."""
 
-        # TODO: consider resampling filter change:
-        # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
+        if not config:
+            # default is the singleimage config here
+            _config = GroupMediaprocessingPipelineSingleImage(**self._config.mediaprocessing_pipeline_singleimage.model_dump())
+        else:
+            # used to provide different set of config for images that are captured for a collage
+            if not isinstance(config, GroupMediaprocessingPipelineSingleImage):
+                raise RuntimeError("illegal type for config provided")
+
+            _config = config
+
+        if not (_config.pipeline_enable or self._config.mediaprocessing.removechromakey_enable):
+            logger.debug("skipping processing pipeline in apply_pipeline_1pic because disabled")
+            mediaitem.copy_fileset_processed()
+
+            return mediaitem
 
         tms = time.time()
 
-        ## pipeline is enabled, so start processing now:
-        with open(mediaitem.path_full_unprocessed, "rb") as file:
-            buffer_full = file.read()
-
-        ## start: load original file
-        image = Image.open(io.BytesIO(buffer_full))
+        ## prepare: pipeline is enabled, so start processing now by loading the image
+        image = Image.open(mediaitem.path_full_unprocessed)
 
         ## stage 1: remove background
-        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_removechromakey_enable:
-            try:
-                image = removechromakey_stage(
-                    image,
-                    self._config.mediaprocessing.pic1_removechromakey_keycolor,
-                    self._config.mediaprocessing.pic1_removechromakey_tolerance,
-                )
-            except PipelineError as exc:
-                logger.error(f"apply removechromakey_stage failed, reason: {exc}. stage not applied, but continue")
+        if self._config.mediaprocessing.removechromakey_enable:
+            image = self._apply_stage_removechromakey(image)
 
         ## stage: pilgram filter
-        filter = user_filter if user_filter is not None else self._config.mediaprocessing.pic1_filter.value
-
-        if self._config.mediaprocessing.pic1_pipeline_enable or user_filter:
-            if (filter is not None) and (filter != "original"):
-                try:
-                    image = pilgram_stage(image, filter)
-                except PipelineError as exc:
-                    logger.error(f"apply pilgram_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage: text overlay
-        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_text_overlay_enable:
-            try:
-                image = text_stage(image, textstageconfig=self._config.mediaprocessing.pic1_text_overlay)
-            except PipelineError as exc:
-                logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
+        if _config.filter and _config.filter.value and _config.filter.value != "original":
+            image = self._apply_stage_pilgram(image, _config.filter.value)
 
         ## stage: new background shining through transparent parts (or extended frame)
-        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_fill_background_enable:
-            try:
-                image = image_fill_background_stage(image, self._config.mediaprocessing.pic1_fill_background_color)
-            except PipelineError as exc:
-                logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
+        if _config.fill_background_enable:
+            image = self._apply_stage_fill_background(image, _config.fill_background_color)
 
         ## stage: new background image behing transparent parts (or extended frame)
-        if self._config.mediaprocessing.pic1_pipeline_enable and self._config.mediaprocessing.pic1_img_background_enable:
-            try:
-                image = image_img_background_stage(image, self._config.mediaprocessing.pic1_img_background_file)
-            except PipelineError as exc:
-                logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
+        if _config.img_background_enable:
+            image = self._apply_stage_img_background(image, _config.img_background_file)
+
+        ## stage: text overlay
+        if _config.texts_enable:
+            image = self._apply_stage_texts(image, _config.texts)
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline stages")
 
         ## final: save full result and create scaled versions
         tms = time.time()
+        image = image.convert("RGB") if image.mode in ("RGBA", "P") else image
         buffer_full_pipeline_applied = io.BytesIO()
-        if image.mode in ("RGBA", "P"):
-            image = image.convert("RGB")
-        image.save(
-            buffer_full_pipeline_applied,
-            format="jpeg",
-            quality=self._config.common.HIRES_STILL_QUALITY,
-            optimize=True,
-        )
+        image.save(buffer_full_pipeline_applied, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
 
         mediaitem.create_fileset_processed(buffer_full_pipeline_applied.getbuffer())
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions")
+
+        return mediaitem
+
+    def process_collage(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
+        """apply preconfigured pipeline."""
+
+        _config = self._config.mediaprocessing_pipeline_collage
+
+        tms = time.time()
+
+        ## prepare: create canvas - need to determine the size if not given
+        canvas_size = (_config.canvas_width, _config.canvas_height)
+        canvas = Image.new("RGBA", canvas_size, color=None)
+
+        ## stage: merge captured images and predefined to one image with transparency
+        if True:  # merge is mandatory for collages
+            _captured_images: list[Image.Image] = []
+            for captured_mediaitem in captured_mediaitems:
+                _captured_images.append(Image.open(captured_mediaitem.path_full))
+
+            try:
+                canvas = merge_collage_stage(canvas, _captured_images, _config.canvas_merge_definition)
+            except PipelineError as exc:
+                logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
+                raise RuntimeError("abort processing due to pipelineerror") from exc
+
+        ## stage: new background shining through transparent parts (or extended frame)
+        if _config.canvas_fill_background_enable:
+            canvas = self._apply_stage_fill_background(canvas, _config.canvas_fill_background_color)
+
+        ## stage: new background image behing transparent parts (or extended frame)
+        if _config.canvas_img_background_enable:
+            canvas = self._apply_stage_img_background(canvas, _config.canvas_img_background_file)
+
+        ## stage: new image in front of transparent parts (or extended frame)
+        if _config.canvas_img_front_enable:
+            canvas = self._apply_stage_img_background(canvas, _config.canvas_img_front_file, reverse=True)
+
+        ## stage: text overlay
+        if _config.canvas_texts_enable:
+            canvas = self._apply_stage_texts(canvas, _config.canvas_texts)
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process collage pipeline")
+
+        ## final: save full result and create scaled versions
+        tms = time.time()
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
+
+        # convert to RGB and store jpeg as new original
+        canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
+        canvas.save(filepath_neworiginalfile, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
+
+        # instanciate mediaitem with new original file
+        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+
+        # create scaled versions (unprocessed and processed are same here for now
+        mediaitem.create_fileset_unprocessed()
+        mediaitem.copy_fileset_processed()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
 
         return mediaitem
 
@@ -117,16 +214,19 @@ class MediaprocessingService(BaseService):
         Returns:
             int: number of captures
         """
-        if not self._config.mediaprocessing.collage_merge_definition:
+        if not self._config.mediaprocessing_pipeline_collage.canvas_merge_definition:
             raise PipelineError("collage definition not set up!")
 
-        collage_merge_definition = self._config.mediaprocessing.collage_merge_definition
+        collage_merge_definition = self._config.mediaprocessing_pipeline_collage.canvas_merge_definition
         # item.predefined_image None or "" are considered as to capture aka not predefined
         predefined_images = [item.predefined_image for item in collage_merge_definition if item.predefined_image]
         for predefined_image in predefined_images:
-            if not predefined_image:
-                # TODO: make it check isfile?
-                raise PipelineError(f"predefined image {predefined_image} not found!")
+            try:
+                # preflight check here without use.
+                _ = get_user_file(predefined_image)
+            except FileNotFoundError as exc:
+                logger.exception(exc)
+                raise PipelineError(f"predefined image {predefined_image} not found!") from exc
 
         total_images_in_collage = len(collage_merge_definition)
         fixed_images = len(predefined_images)
@@ -134,93 +234,6 @@ class MediaprocessingService(BaseService):
         captures_to_take = total_images_in_collage - fixed_images
 
         return captures_to_take
-
-    def apply_pipeline_collage(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
-        """apply preconfigured pipeline."""
-
-        tms = time.time()
-
-        ## first: create canvas - need to determine the size if not given
-        target_image_size = (1500, 1000)  # TODO: need to find out how to handle this.
-        canvas = Image.new("RGBA", target_image_size, color=None)
-
-        ## stage: merge captured images and predefined to one image with transparency
-        if True:  # merge is mandatory for collages
-            _captured_images: list[Image.Image] = []
-            for captured_mediaitem in captured_mediaitems:
-                _captured_images.append(Image.open(captured_mediaitem.path_full))
-
-            try:
-                canvas = merge_collage_stage(
-                    canvas,
-                    _captured_images,
-                    self._config.mediaprocessing.collage_merge_definition,
-                )
-            except PipelineError as exc:
-                logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
-                raise RuntimeError("abort processing due to pipelineerror") from exc
-
-        ## stage: new solid background shining through transparent parts (or extended frame)
-        if self._config.mediaprocessing.collage_fill_background_enable:
-            try:
-                canvas = image_fill_background_stage(
-                    canvas,
-                    self._config.mediaprocessing.collage_fill_background_color,
-                )
-            except PipelineError as exc:
-                logger.error(f"apply image_fill_background_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage: new background image behind transparent parts (or extended frame)
-        if self._config.mediaprocessing.collage_img_background_enable:
-            try:
-                canvas = image_img_background_stage(canvas, self._config.mediaprocessing.collage_img_background_file)
-            except PipelineError as exc:
-                logger.error(f"apply image_img_background_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage: new image in front of transparent parts (or extended frame)
-        if self._config.mediaprocessing.collage_img_front_enable:
-            try:
-                canvas = image_img_background_stage(
-                    canvas,
-                    self._config.mediaprocessing.collage_img_front_file,
-                    reverse=True,
-                )
-            except PipelineError as exc:
-                logger.error(f"apply image_front_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## stage: text overlay
-        if self._config.mediaprocessing.collage_text_overlay_enable:
-            try:
-                canvas = text_stage(canvas, textstageconfig=self._config.mediaprocessing.collage_text_overlay)
-            except PipelineError as exc:
-                logger.error(f"apply text_stage failed, reason: {exc}. stage not applied, but continue")
-
-        ## final: save full result and create scaled versions
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
-
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process collage pipeline")
-
-        tms = time.time()
-        io.BytesIO()
-        if canvas.mode in ("RGBA", "P"):
-            canvas = canvas.convert("RGB")
-        canvas.save(
-            filepath_neworiginalfile,
-            format="jpeg",
-            quality=self._config.common.HIRES_STILL_QUALITY,
-            optimize=True,
-        )
-
-        # instanciate mediaitem with new original file
-        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-
-        # create scaled versions (unprocessed and processed are same here for now
-        mediaitem.create_fileset_unprocessed()
-        mediaitem.copy_fileset_processed()
-
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save processed image and create scaled versions")
-
-        return mediaitem
 
     def apply_pipeline_video(self):
         """

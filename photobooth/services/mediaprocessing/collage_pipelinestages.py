@@ -2,7 +2,7 @@ import logging
 
 from PIL import Image, ImageOps
 
-from ...appconfig import CollageMergeDef
+from ...appconfig import CollageMergeDefinition
 from ...utils.exceptions import PipelineError
 from .pipelinestages_utils import get_user_file, rotate
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def merge_collage_stage(
     canvas: Image.Image,
     captured_images: list[Image.Image],
-    collage_merge_definition: list[CollageMergeDef],
+    collage_merge_definition: list[CollageMergeDefinition],
 ) -> Image.Image:
     """ """
 

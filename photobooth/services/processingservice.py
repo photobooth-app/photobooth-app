@@ -11,7 +11,7 @@ from threading import Thread
 from pymitter import EventEmitter
 from statemachine import State, StateMachine
 
-from ..appconfig import AppConfig
+from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
@@ -234,8 +234,25 @@ class ProcessingService(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        self._mediaprocessing_service.apply_pipeline_1pic(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+        if self.model._typ == JobModel.Typ.image:
+            self._mediaprocessing_service.process_singleimage(mediaitem, self._config.mediaprocessing_pipeline_singleimage)
+        elif self.model._typ == JobModel.Typ.collage:
+            # the captures in the context of a collage job can be processed differently:
+            cfg_collage = self._config.mediaprocessing_pipeline_collage
+            config_singleimage_captures_for_collage = GroupMediaprocessingPipelineSingleImage(
+                pipeline_enable=True,  # for convenience this is always true now
+                fill_background_enable=cfg_collage.capture_fill_background_enable,
+                fill_background_color=cfg_collage.capture_fill_background_color,
+                img_background_enable=cfg_collage.capture_img_background_enable,
+                img_background_file=cfg_collage.capture_img_background_file,
+                filter=cfg_collage.canvas_merge_definition[
+                    self.model.number_captures_taken()
+                ].filter.value,  # TODO: offset if predefined images! this is wrong!
+            )
+
+            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         assert mediaitem.fileset_valid()
 
@@ -280,7 +297,7 @@ class ProcessingService(StateMachine):
         if self.model._typ == JobModel.Typ.collage:
             # apply 1pic pipeline:
             tms = time.time()
-            mediaitem = self._mediaprocessing_service.apply_pipeline_collage(self.model._captures)
+            mediaitem = self._mediaprocessing_service.process_collage(self.model._captures)
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
             # add collage to mediadb
@@ -302,6 +319,7 @@ class ProcessingService(StateMachine):
 
     def on_before_reset(self):
         print("TODO: remove all images that were captured by now")
+        print("TODO: keep frontend in sync")
 
     def _check_occupied(self):
         if not self.idle.is_active:

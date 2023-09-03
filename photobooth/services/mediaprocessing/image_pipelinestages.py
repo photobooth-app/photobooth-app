@@ -8,7 +8,7 @@ import pilgram2
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
-from ...appconfig import TextStageConfig
+from ...appconfig import TextsConfig
 from ...utils.exceptions import PipelineError
 from .pipelinestages_utils import get_user_file
 
@@ -40,7 +40,7 @@ def pilgram_stage(image: Image.Image, filter: str) -> Image.Image:
         return filtered_image
 
 
-def text_stage(image: Image.Image, textstageconfig: list[TextStageConfig]) -> Image.Image:
+def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.Image:
     """ """
     logger.info("text stage to apply")
 
@@ -147,7 +147,6 @@ def removechromakey_stage(pil_image: Image.Image, keycolor: int, tolerance: int)
 
 def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image:
     """ """
-
     logger.info("image_fill_background_stage to apply")
     # force color to be of type color again, might be bug in pydantic.
     background_img = Image.new(mode=image.mode, size=image.size, color=Color(color).as_rgb_tuple())

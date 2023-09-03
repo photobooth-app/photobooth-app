@@ -77,9 +77,9 @@ class GroupCommon(BaseModel):
         description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
     )
     PREVIEW_STILL_WIDTH: int = Field(
-        default=900,
+        default=1200,
         ge=200,
-        le=2000,
+        le=2500,
         description="Width of resized preview image, height is automatically calculated to keep aspect ratio",
     )
     THUMBNAIL_STILL_WIDTH: int = Field(
@@ -98,12 +98,12 @@ class GroupCommon(BaseModel):
     )
 
     countdown_capture_first: float = Field(
-        default=1,
+        default=2.0,
         description="Countdown in seconds, started when user start a capture process",
     )
 
     countdown_capture_second_following: float = Field(
-        default=0.2,
+        default=1.0,
         description="Countdown in seconds, used for second and following captures for collages",
     )
     countdown_cheese_message_offset: float = Field(
@@ -364,7 +364,7 @@ class EnumPilgramFilter(str, Enum):
     xpro2 = "xpro2"
 
 
-class TextStageConfig(BaseModel):
+class TextsConfig(BaseModel):
     text: str = ""
     pos_x: int = 50
     pos_y: int = 50
@@ -374,7 +374,7 @@ class TextStageConfig(BaseModel):
     color: Color = Color("red").as_named()
 
 
-class CollageMergeDef(BaseModel):
+class CollageMergeDefinition(BaseModel):
     pos_x: int = 50
     pos_y: int = 50
     width: int = 600
@@ -389,6 +389,10 @@ class GroupMediaprocessing(BaseModel):
 
     model_config = ConfigDict(title="Process media after capture")
 
+    removechromakey_enable: bool = Field(
+        default=False,
+        description="Apply chromakey greenscreen removal from captured images",
+    )
     removechromakey_keycolor: int = Field(
         default=110,
         ge=0,
@@ -403,13 +407,13 @@ class GroupMediaprocessing(BaseModel):
     )
 
 
-class GroupMediaprocessingPipelineImage(BaseModel):
+class GroupMediaprocessingPipelineSingleImage(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
 
     pipeline_enable: bool = Field(
-        default=False,
+        default=True,
         description="Enable/Disable processing pipeline completely",
     )
 
@@ -417,10 +421,6 @@ class GroupMediaprocessingPipelineImage(BaseModel):
         title="Pic1 Filter",
         default=EnumPilgramFilter.original,
         description="Instagram-like filter to apply per default. 'original' applies no filter.",
-    )
-    removechromakey_enable: bool = Field(
-        default=False,
-        description="Apply chromakey greenscreen removal from captured images",
     )
     fill_background_enable: bool = Field(
         default=False,
@@ -438,11 +438,11 @@ class GroupMediaprocessingPipelineImage(BaseModel):
         default="backgrounds/pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
-    text_overlay_enable: bool = Field(
+    texts_enable: bool = Field(
         default=False,
         description="General enable apply texts below.",
     )
-    text_overlay: list[TextStageConfig] = Field(
+    texts: list[TextsConfig] = Field(
         default=[],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
@@ -455,10 +455,6 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
 
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
-    capture_removechromakey_enable: bool = Field(
-        default=False,
-        description="Apply chromakey greenscreen removal from captured images",
-    )
     capture_fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
@@ -486,10 +482,10 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         default=1080,
         description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
-    canvas_merge_definition: list[CollageMergeDef] = Field(
+    canvas_merge_definition: list[CollageMergeDefinition] = Field(
         default=[
-            CollageMergeDef(pos_x=172, pos_y=165, width=500, height=500, rotate=-2, filter=EnumPilgramFilter.moon),
-            CollageMergeDef(pos_x=842, pos_y=165, width=500, height=500, rotate=-2),
+            CollageMergeDefinition(pos_x=215, pos_y=122, width=660, height=660, rotate=-2, filter=EnumPilgramFilter.moon),
+            CollageMergeDefinition(pos_x=1072, pos_y=122, width=660, height=660, rotate=-3),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
@@ -502,7 +498,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Solid color used to fill background.",
     )
     canvas_img_background_enable: bool = Field(
-        default=True,
+        default=False,
         description="Add image from file to background.",
     )
     canvas_img_background_file: str = Field(
@@ -517,16 +513,22 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         default="frames/polaroid-6125402_1920.png",
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
     )
-    canvas_text_overlay_enable: bool = Field(
+    canvas_texts_enable: bool = Field(
         default=True,
         description="General enable apply texts below.",
     )
-    canvas_text_overlay: list[TextStageConfig] = Field(
+    canvas_texts: list[TextsConfig] = Field(
         default=[
-            TextStageConfig(text="Nice Collage!"),
+            TextsConfig(text="Nice Collage Text!", pos_x=280, pos_y=780, color=Color("black")),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
+
+
+class GroupMediaprocessingPipelinePrint(BaseModel):
+    """Configure stages how to process mediaitem before printing on paper."""
+
+    model_config = ConfigDict(title="Process mediaitem before printing on paper")
 
 
 class GroupHardwareInputOutput(BaseModel):
@@ -724,9 +726,9 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
-    mediaprocessing_pipeline_picture: GroupMediaprocessingPipelineImage = GroupMediaprocessingPipelineImage()
+    mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
     mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()
-    mediaprocessing_pipeline_printing: GroupMediaprocessingPipelineImage = GroupMediaprocessingPipelineImage()
+    mediaprocessing_pipeline_printing: GroupMediaprocessingPipelinePrint = GroupMediaprocessingPipelinePrint()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
