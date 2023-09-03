@@ -47,6 +47,10 @@ def use_vcam():
 def has_vcam():
     import gphoto2 as gp
 
+    if "IOLIBS" not in os.environ:
+        logger.warning("missing IOLIBS in os.environ! installation is off.")
+        return False
+
     vusb_dir = os.environ["IOLIBS"].replace("iolibs", "vusb")
     if not os.path.isdir(vusb_dir):
         logger.warning(f"missing {vusb_dir=}")
