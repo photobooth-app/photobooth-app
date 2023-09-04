@@ -12,6 +12,8 @@ processing_router = APIRouter(
     prefix="/processing",
     tags=["processing"],
 )
+
+
 @inject
 def _capture(job):
     try:
@@ -48,6 +50,7 @@ def api_chose_collage_get(
     processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     return _capture(processing_service.start_job_collage)
+
 
 @processing_router.get("/cmd/confirm")
 @inject

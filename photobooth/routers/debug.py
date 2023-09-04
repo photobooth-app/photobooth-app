@@ -30,6 +30,7 @@ async def get_log_latest():
         media_type="text/plain",
     )
 
+
 # TODO: not used for now, maybe later...
 # @debug_router.get("/service/status")
 # @inject

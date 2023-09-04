@@ -24,11 +24,7 @@ def video_stream(aquisition_service: AquisitionService = Depends(Provide[Applica
     headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
 
     try:
-        return StreamingResponse(
-            content=aquisition_service.gen_stream(),
-            headers=headers,
-            media_type="multipart/x-mixed-replace; boundary=frame",
-        )
+        return StreamingResponse(content=aquisition_service.gen_stream(), headers=headers, media_type="multipart/x-mixed-replace; boundary=frame")
     except ConnectionRefusedError as exc:
         logger.warning(exc)
         raise HTTPException(405, "preview not enabled") from exc
