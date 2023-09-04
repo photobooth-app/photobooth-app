@@ -74,7 +74,9 @@ def main(run_server: bool = True):
         logger.critical("startup aborted. another instance is running. exiting.")
         raise SystemExit("only one instance allowed") from exc
 
-    application_container = ApplicationContainer()
+
+    #application_container = ApplicationContainer()
+    application_container: ApplicationContainer=app.container
 
     # use to construct paths in app referring to assets
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
@@ -94,6 +96,7 @@ def main(run_server: bool = True):
 
     # start main application
     server = _server()
+
 
     # serve, loops endless
     # this one is not executed in tests because it's not stoppable from within
