@@ -16,10 +16,7 @@ def test_read_main(client: TestClient):
     assert response.status_code == 200
 
     # ensure no cache on main page so frontent updates work fine
-    assert (
-        "cache-control" in response.headers
-        and "no-store, no-cache, must-revalidate" == response.headers["cache-control"]
-    )
+    assert "cache-control" in response.headers and "no-store, no-cache, must-revalidate" == response.headers["cache-control"]
 
 
 def test_read_log(client: TestClient):

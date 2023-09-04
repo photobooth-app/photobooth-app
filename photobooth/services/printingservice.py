@@ -31,7 +31,7 @@ class PrintingService(BaseService):
         ## print mediaitem
 
         if not self._config.hardwareinputoutput.printing_enabled:
-            raise RuntimeError("Printing is disabled! Enable in config first.")
+            raise ConnectionRefusedError("Printing is disabled! Enable in config first.")
 
         # block queue new prints until configured time is over
         if self.is_blocked():

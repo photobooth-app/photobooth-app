@@ -17,9 +17,7 @@ aquisition_router = APIRouter(
 
 @aquisition_router.get("/stream.mjpg")
 @inject
-def video_stream(
-    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
-):
+def video_stream(aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service])):
     """
     endpoint to stream live video to clients
     """
@@ -50,9 +48,7 @@ def video_stream(
     response_class=Response,
 )
 @inject
-def api_still_get(
-    aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service]),
-):
+def api_still_get(aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service])):
     """Aquire image and serve to download
 
     Raises:
@@ -63,7 +59,7 @@ def api_still_get(
     """
     try:
         still_image: bytes = bytes(aquisition_service.wait_for_hq_image())
-        logger.info(f"aquired still_image {len(still_image)}bytes to be send to client")
+        logger.info(f"aquired still_image, {len(still_image)}bytes to be sent to client")
         return Response(still_image, media_type="image/jpeg")
     except Exception as exc:
         logger.exception(exc)
@@ -76,9 +72,7 @@ def api_still_get(
 @aquisition_router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
 @inject
 def api_cmd_aquisition_capturemode_get(
-    mode: str = "preview",
-    wled_control: bool = True,
-    evtbus: EventEmitter = Depends(Provide[ApplicationContainer.evtbus]),
+    mode: str = "preview", wled_control: bool = True, evtbus: EventEmitter = Depends(Provide[ApplicationContainer.evtbus])
 ):
     """_summary_
 

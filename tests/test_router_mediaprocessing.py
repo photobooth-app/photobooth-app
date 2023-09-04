@@ -19,7 +19,6 @@ def client() -> TestClient:
         client.app.container.shutdown_resources()
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture()
 def services() -> ServicesContainer:
     app_container: ApplicationContainer = app.container

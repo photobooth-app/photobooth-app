@@ -86,9 +86,7 @@ def test_system_server_endpoints(mock_system, client: TestClient, system_server_
 
 
 @patch("subprocess.run")
-def test_system_service_installuninstall_endpoints(
-    mock_run, client: TestClient, system_service_installuninstall_endpoint
-):
+def test_system_service_installuninstall_endpoints(mock_run, client: TestClient, system_service_installuninstall_endpoint):
     response = client.get(system_service_installuninstall_endpoint)
 
     if platform.system() == "Linux":

@@ -2,13 +2,8 @@ import logging
 import logging.config
 from pathlib import Path
 
-from dependency_injector import providers
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastapi.responses import Response
-
-from ..containers import ApplicationContainer
-from ..services.baseservice import BaseService
 
 logger = logging.getLogger(__name__)
 debug_router = APIRouter(
@@ -35,18 +30,18 @@ async def get_log_latest():
         media_type="text/plain",
     )
 
+# TODO: not used for now, maybe later...
+# @debug_router.get("/service/status")
+# @inject
+# async def get_service_status(
+#     appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
+# ):
+#     output_service_status = []
+#     for provider in appcontainer.traverse(types=[providers.Resource, providers.Singleton, providers.Factory]):
+#         provider_instance = provider()
+#         if isinstance(provider_instance, BaseService):
+#             service_instance: BaseService = provider_instance
+#             logger.debug(f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}")
+#             output_service_status.append({"service": type(service_instance).__name__, "status": service_instance.get_status().name})
 
-@debug_router.get("/service/status")
-@inject
-async def get_service_status(
-    appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
-):
-    output_service_status = []
-    for provider in appcontainer.traverse(types=[providers.Resource, providers.Singleton, providers.Factory]):
-        provider_instance = provider()
-        if isinstance(provider_instance, BaseService):
-            service_instance: BaseService = provider_instance
-            logger.debug(f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}")
-            output_service_status.append({"service": type(service_instance).__name__, "status": service_instance.get_status().name})
-
-    return output_service_status
+#     return output_service_status
