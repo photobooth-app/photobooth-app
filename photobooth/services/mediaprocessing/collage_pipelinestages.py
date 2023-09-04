@@ -17,6 +17,11 @@ def merge_collage_stage(
     """ """
 
     total_images_in_collage = len(collage_merge_definition)
+    no_captured_images = len(captured_images)
+    no_predefined_images = len([item.predefined_image for item in collage_merge_definition if item.predefined_image])
+
+    assert canvas.mode == "RGBA"  # ensure were always operating on img with alpha channel
+    assert total_images_in_collage == (no_captured_images + no_predefined_images)  # ensure numbers are right
 
     collage_images: list[Image.Image] = []
     for _definition in collage_merge_definition:

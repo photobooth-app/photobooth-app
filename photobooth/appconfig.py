@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import jsonref
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt, PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_extra_types.color import Color
 from pydantic_settings import (
@@ -366,19 +366,19 @@ class EnumPilgramFilter(str, Enum):
 
 class TextsConfig(BaseModel):
     text: str = ""
-    pos_x: int = 50
-    pos_y: int = 50
+    pos_x: NonNegativeInt = 50
+    pos_y: NonNegativeInt = 50
     # rotate: int = 0 # TODO: not yet implemented
-    font_size: int = 40
+    font_size: PositiveInt = 40
     font: str = "fonts/Roboto-Bold.ttf"
     color: Color = Color("red").as_named()
 
 
 class CollageMergeDefinition(BaseModel):
-    pos_x: int = 50
-    pos_y: int = 50
-    width: int = 600
-    height: int = 600
+    pos_x: NonNegativeInt = 50
+    pos_y: NonNegativeInt = 50
+    width: NonNegativeInt = 600
+    height: NonNegativeInt = 600
     rotate: int = 0
     predefined_image: str = ""
     filter: EnumPilgramFilter = EnumPilgramFilter.original  # TODO: implement.

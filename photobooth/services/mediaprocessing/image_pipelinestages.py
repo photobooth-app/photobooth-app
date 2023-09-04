@@ -47,6 +47,10 @@ def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.
     for textconfig in textstageconfig:
         logger.debug(f"apply text: {textconfig=}")
 
+        if not textconfig.text:
+            # skip this one because empty.
+            continue
+
         # check font is avail, otherwise send pipelineerror - so we can recover and continue
         # default font Roboto comes with app, fallback to that one if avail
         try:
@@ -72,11 +76,6 @@ def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.
 
 
 def beauty_stage(image: Image.Image) -> Image.Image:
-    """ """
-    raise PipelineError("beauty_stage not implemented yet")
-
-
-def frame_stage(image: Image.Image) -> Image.Image:
     """ """
     raise PipelineError("beauty_stage not implemented yet")
 
@@ -182,9 +181,11 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
 
     # paste the actual image to the background
     if reverse:
+        # copy() to output a new image so return output is consistent between reverse True/False
+        output = image.copy()
         # mount loaded file on top of image.
-        image.paste(background_img_adjusted, mask=background_img_adjusted)
-        return image
+        output.paste(background_img_adjusted, mask=background_img_adjusted)
+        return output
     else:
         # mount image on top of loaded file.
         background_img_adjusted.paste(image, mask=image)
