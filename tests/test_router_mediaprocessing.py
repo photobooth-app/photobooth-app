@@ -24,8 +24,8 @@ def services() -> ServicesContainer:
     app_container: ApplicationContainer = app.container
 
     # create one image to ensure there is at least one
-
-    app_container.services.processing_service().start(JobModel.Typ.image, 1)
+    app_container.services().processing_service().start_job_1pic()
+    
     # deliver
     yield app_container.services
     app_container.services().shutdown_resources()

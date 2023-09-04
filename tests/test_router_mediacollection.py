@@ -21,7 +21,7 @@ def services() -> ServicesContainer:
     app_container: ApplicationContainer = app.container
 
     # create one image to ensure there is at least one
-    app_container.services.processing_service().start_job_1pic()
+    app_container.services().processing_service().start_job_1pic()
 
     # deliver
     yield app_container.services
@@ -33,7 +33,8 @@ def test_get_items(client: TestClient):
 
 
 def test_get_items_exception(client: TestClient):
-    error_mock = mock.MagicMock().side_effect = Exception()
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
 
     with patch.object(MediacollectionService, "db_get_images_as_dict", error_mock):
         response = client.get("/mediacollection/getitems")

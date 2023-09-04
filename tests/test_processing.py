@@ -43,7 +43,7 @@ def test_capture_autoconfirm(services: ServicesContainer):
 def test_simple_capture_illegal_jobs(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
 
-    services.processing_service().start(JobModel.Typ.image, 1)
+    services.processing_service().start_job_1pic()
     with pytest.raises(statemachine.exceptions.TransitionNotAllowed):
         services.processing_service().confirm_capture()
 

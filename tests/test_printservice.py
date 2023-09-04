@@ -19,7 +19,7 @@ def services() -> ServicesContainer:
     services = application_container.services()
 
     # create one image to ensure there is at least one
-    services.processing_service().start(JobModel.Typ.image, 1)
+    services.processing_service().start_job_1pic()
 
     # deliver
     yield services
@@ -35,7 +35,7 @@ def test_print_service_disabled(services: ServicesContainer):
     # get the newest mediaitem
     latest_mediaitem = services.mediacollection_service().db_get_images()[0]
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ConnectionRefusedError):
         printing_service.print(latest_mediaitem)
 
 

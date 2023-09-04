@@ -22,7 +22,7 @@ def services() -> ServicesContainer:
     app_container: ApplicationContainer = app.container
 
     # create one image to ensure there is at least one
-    app_container.services.processing_service().start_job_1pic()
+    app_container.services().processing_service().start_job_1pic()
 
     # deliver
     yield app_container.services

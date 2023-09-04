@@ -23,7 +23,7 @@ def services() -> ServicesContainer:
 
 
 def proc_shoot(services: ServicesContainer):
-    services.processing_service().start(JobModel.Typ.image, 1)
+    services.processing_service().start_job_1pic()
     # services.processing_service()._reset()
 
 
