@@ -15,25 +15,18 @@ logger = logging.getLogger(name=None)
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+
+        # create one image to ensure there is at least one
+        services=client.app.container.services()
+        services.processing_service().start_job_1pic()
+
         yield client
         client.app.container.shutdown_resources()
 
 
-@pytest.fixture()
-def services() -> ServicesContainer:
-    app_container: ApplicationContainer = app.container
-
-    # create one image to ensure there is at least one
-    app_container.services().processing_service().start_job_1pic()
-    
-    # deliver
-    yield app_container.services
-    app_container.services().shutdown_resources()
-
-
-def test_preview_filter_original(client: TestClient, services: ServicesContainer):
+def test_preview_filter_original(client: TestClient):
     # get the newest mediaitem
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
 
@@ -46,9 +39,9 @@ def test_preview_filter_original(client: TestClient, services: ServicesContainer
         raise AssertionError(f"preview filter did not return valid image bytes, {exc}") from exc
 
 
-def test_preview_filter_1977(client: TestClient, services: ServicesContainer):
+def test_preview_filter_1977(client: TestClient):
     # get the newest mediaitem
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/_1977")
 
@@ -61,18 +54,18 @@ def test_preview_filter_1977(client: TestClient, services: ServicesContainer):
         raise AssertionError(f"preview filter did not return valid image bytes, {exc}") from exc
 
 
-def test_preview_filter_nonexistentfilter(client: TestClient, services: ServicesContainer):
+def test_preview_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/theresnofilterlikethis")
 
     assert response.status_code == 406
 
 
-def test_apply_filter(client: TestClient, services: ServicesContainer):
+def test_apply_filter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     image_before = Image.open(mediaitem.path_full)
 
@@ -84,9 +77,9 @@ def test_apply_filter(client: TestClient, services: ServicesContainer):
         raise AssertionError("img data before and after same. filter was not applied!")
 
 
-def test_apply_filter_original(client: TestClient, services: ServicesContainer):
+def test_apply_filter_original(client: TestClient):
     # get the newest mediaitem
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
     assert response.status_code == 200

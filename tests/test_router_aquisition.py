@@ -77,11 +77,8 @@ def test_stream(client: TestClient):
     pass
 
 def test_stream_exception_disabled(client: TestClient):
-    # get config
-    config:AppConfig=client.app.container.config()
-
     # disable livestream
-    config.backends.LIVEPREVIEW_ENABLED=False
+    client.app.container.config().backends.LIVEPREVIEW_ENABLED=False
 
     # shall result in error 405
     response = client.get("/aquisition/stream.mjpg")

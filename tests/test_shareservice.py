@@ -87,7 +87,7 @@ def test_shareservice_download_image(services: ServicesContainer):
     assert services.share_service()._initialized
 
     # get the newest image id
-    mediaitem_id = services.mediacollection_service().db_get_images()[0].id
+    mediaitem_id = services.mediacollection_service().db_get_most_recent_mediaitem().id
 
     logger.info(f"check to download {mediaitem_id=}")
     r = requests.get(config().common.shareservice_url, params={"action": "download", "id": mediaitem_id})

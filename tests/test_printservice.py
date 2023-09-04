@@ -33,7 +33,7 @@ def test_print_service_disabled(services: ServicesContainer):
     printing_service = services.printing_service()
 
     # get the newest mediaitem
-    latest_mediaitem = services.mediacollection_service().db_get_images()[0]
+    latest_mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
 
     with pytest.raises(ConnectionRefusedError):
         printing_service.print(latest_mediaitem)
@@ -49,7 +49,7 @@ def test_print_image(mock_run, services: ServicesContainer):
     printing_service = services.printing_service()
 
     # get the newest mediaitem
-    latest_mediaitem = services.mediacollection_service().db_get_images()[0]
+    latest_mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
 
     logger.info(f"test to print {str(latest_mediaitem)}")
 
@@ -70,7 +70,7 @@ def test_print_image_blocked(mock_run, services: ServicesContainer):
     printing_service = services.printing_service()
 
     # get the newest mediaitem
-    latest_mediaitem = services.mediacollection_service().db_get_images()[0]
+    latest_mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
 
     # two prints issued that should not block because 3s>2s
     printing_service.print(latest_mediaitem)

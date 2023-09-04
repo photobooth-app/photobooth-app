@@ -14,19 +14,12 @@ from photobooth.services.containers import ServicesContainer
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
 
+        # create one image to ensure there is at least one
+        services=client.app.container.services()
+        services.processing_service().start_job_1pic()
+
         yield client
         client.app.container.shutdown_resources()
-
-@pytest.fixture()
-def services() -> ServicesContainer:
-    app_container: ApplicationContainer = app.container
-
-    # create one image to ensure there is at least one
-    app_container.services().processing_service().start_job_1pic()
-
-    # deliver
-    yield app_container.services
-    app_container.services().shutdown_resources()
 
 
 def test_printing_disabled(client: TestClient):
@@ -53,7 +46,7 @@ def test_print_latest(mock_run:mock.Mock, client: TestClient):
 
 
 @patch("subprocess.run")
-def test_print_specific_id(mock_run:mock.Mock, client: TestClient, services: ServicesContainer):
+def test_print_specific_id(mock_run:mock.Mock, client: TestClient):
     # get config
     config:AppConfig=client.app.container.config()
 
@@ -61,7 +54,7 @@ def test_print_specific_id(mock_run:mock.Mock, client: TestClient, services: Ser
     config.hardwareinputoutput.printing_enabled=True
 
     # get an image to print
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     response = client.get(f"/print/item/{mediaitem.id}")
 

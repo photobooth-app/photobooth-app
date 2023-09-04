@@ -29,7 +29,7 @@ def test_ensure_scaled_repr_created(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
 
     # get the newest image id
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
 
     # should just run without any exceptions.
     try:
@@ -42,7 +42,7 @@ def test_ensure_scaled_repr_created_processed(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
 
     # get the newest image id
-    mediaitem = services.mediacollection_service().db_get_images()[0]
+    mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
 
     os.remove(mediaitem.path_full)
     os.remove(mediaitem.path_preview)
