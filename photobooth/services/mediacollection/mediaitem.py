@@ -176,7 +176,7 @@ class MediaItem:
 
         # exception here for now to use appconfig like this not via container - maybe find better solution in future.
         # config changes are not reflected like this, always needs restart
-        return f"{AppConfig().common.shareservice_url}?action=download&id={self.id}"
+        return f"{AppConfig().sharing.shareservice_url}?action=download&id={self.id}"
 
     def __post_init__(self):
         if not self.filename:
@@ -259,22 +259,22 @@ class MediaItem:
     def _get_full_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().common.HIRES_STILL_QUALITY,
-            AppConfig().common.FULL_STILL_WIDTH,
+            AppConfig().mediaprocessing.HIRES_STILL_QUALITY,
+            AppConfig().mediaprocessing.FULL_STILL_WIDTH,
         )
 
     def _get_preview_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().common.PREVIEW_STILL_QUALITY,
-            AppConfig().common.PREVIEW_STILL_WIDTH,
+            AppConfig().mediaprocessing.PREVIEW_STILL_QUALITY,
+            AppConfig().mediaprocessing.PREVIEW_STILL_WIDTH,
         )
 
     def _get_thumbnail_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().common.THUMBNAIL_STILL_QUALITY,
-            AppConfig().common.THUMBNAIL_STILL_WIDTH,
+            AppConfig().mediaprocessing.THUMBNAIL_STILL_QUALITY,
+            AppConfig().mediaprocessing.THUMBNAIL_STILL_WIDTH,
         )
 
     @staticmethod

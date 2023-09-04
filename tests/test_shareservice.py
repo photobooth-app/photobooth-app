@@ -15,9 +15,9 @@ logger = logging.getLogger(name=None)
 
 ## check skip if no shareapi url is set
 config = providers.Singleton(AppConfig)
-r = requests.get(config().common.shareservice_url, params={"action": "info"}, allow_redirects=False)
+r = requests.get(config().sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
 if not (r.status_code == 200 and "version" in r.text):
-    logger.warning(f"no webservice found, skipping tests {config().common.shareservice_url}")
+    logger.warning(f"no webservice found, skipping tests {config().sharing.shareservice_url}")
     pytest.skip(
         "no webservice found, skipping tests",
         allow_module_level=True,
@@ -29,27 +29,27 @@ def test_shareservice_urls_valid():
     config = providers.Singleton(AppConfig)
 
     # /
-    r = requests.get(config().common.shareservice_url)
+    r = requests.get(config().sharing.shareservice_url)
     assert r.status_code == 406
 
     # info action
-    r = requests.get(config().common.shareservice_url, params={"action": "info"})
+    r = requests.get(config().sharing.shareservice_url, params={"action": "info"})
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
     # list action
-    r = requests.get(config().common.shareservice_url, params={"action": "list"})
+    r = requests.get(config().sharing.shareservice_url, params={"action": "list"})
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
     # invalid action
-    r = requests.get(config().common.shareservice_url, params={"action": "nonexistentaction"})
+    r = requests.get(config().sharing.shareservice_url, params={"action": "nonexistentaction"})
     logger.info(f"{r.text=}")
     assert r.status_code == 406
 
     # invalid apikey
     r = requests.post(
-        config().common.shareservice_url,
+        config().sharing.shareservice_url,
         files=None,
         data={
             "action": "upload",
@@ -66,7 +66,7 @@ def services() -> ServicesContainer:
     # setup
     application_container = ApplicationContainer()
 
-    application_container.config().common.shareservice_enabled = True
+    application_container.config().sharing.shareservice_enabled = True
 
     services = application_container.services()
 
@@ -89,7 +89,7 @@ def test_shareservice_download_image(services: ServicesContainer):
     mediaitem_id = services.mediacollection_service().db_get_most_recent_mediaitem().id
 
     logger.info(f"check to download {mediaitem_id=}")
-    r = requests.get(config().common.shareservice_url, params={"action": "download", "id": mediaitem_id})
+    r = requests.get(config().sharing.shareservice_url, params={"action": "download", "id": mediaitem_id})
 
     # valid status code
     assert r.status_code == 200
@@ -107,7 +107,7 @@ def test_shareservice_download_nonexistant_image(services: ServicesContainer):
     # check that share_service was initialized properly, otherwise fail
     assert services.share_service()._initialized
 
-    r = requests.get(config().common.shareservice_url, params={"action": "download", "id": "nonexistentidentifier"})
+    r = requests.get(config().sharing.shareservice_url, params={"action": "download", "id": "nonexistentidentifier"})
 
     # valid status code is 500 because image not existing.
     assert r.status_code == 500

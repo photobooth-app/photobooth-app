@@ -40,63 +40,6 @@ class GroupCommon(BaseModel):
 
     model_config = ConfigDict(title="Common Config")
 
-    HIRES_STILL_QUALITY: int = Field(
-        default=90,
-        ge=10,
-        le=100,
-        description="Still JPEG full resolution quality, applied to download images and images with filter",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-
-    LIVEPREVIEW_QUALITY: int = Field(
-        default=80,
-        ge=10,
-        le=100,
-        description="Livepreview stream JPEG image quality on supported backends",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-    THUMBNAIL_STILL_QUALITY: int = Field(
-        default=60,
-        ge=10,
-        le=100,
-        description="Still JPEG thumbnail quality, thumbs used in gallery list",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-    PREVIEW_STILL_QUALITY: int = Field(
-        default=75,
-        ge=10,
-        le=100,
-        description="Still JPEG preview quality, preview still shown in gallery detail",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-
-    FULL_STILL_WIDTH: int = Field(
-        default=1500,
-        ge=800,
-        le=5000,
-        description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
-    )
-    PREVIEW_STILL_WIDTH: int = Field(
-        default=1200,
-        ge=200,
-        le=2500,
-        description="Width of resized preview image, height is automatically calculated to keep aspect ratio",
-    )
-    THUMBNAIL_STILL_WIDTH: int = Field(
-        default=400,
-        ge=100,
-        le=1000,
-        description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
-    )
-
-    LIVEPREVIEW_FRAMERATE: int = Field(
-        default=15,
-        ge=5,
-        le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-
     countdown_capture_first: float = Field(
         default=2.0,
         description="Countdown in seconds, started when user start a capture process",
@@ -134,6 +77,12 @@ class GroupCommon(BaseModel):
         default=8000,
         description="Port to serve the photobooth website. Ensure the port is available.",
     )
+
+
+class GroupSharing(BaseModel):
+    """Settings about shareing media"""
+
+    model_config = ConfigDict(title="🫶 Share Config")
 
     shareservice_enabled: bool = Field(
         default=False,
@@ -218,6 +167,14 @@ class GroupBackends(BaseModel):
         default=True,
         description="Enable livestream (if possible)",
     )
+    LIVEPREVIEW_FRAMERATE: int = Field(
+        default=15,
+        ge=5,
+        le=30,
+        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+        json_schema_extra={"ui_component": "QSlider"},
+    )
+
 
     cv2_CAM_RESOLUTION_WIDTH: int = Field(
         default=10000,
@@ -388,6 +345,56 @@ class GroupMediaprocessing(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Process media after capture")
+
+
+    HIRES_STILL_QUALITY: int = Field(
+        default=90,
+        ge=10,
+        le=100,
+        description="Still JPEG full resolution quality, applied to download images and images with filter",
+        json_schema_extra={"ui_component": "QSlider"},
+    )
+    LIVEPREVIEW_QUALITY: int = Field(
+        default=80,
+        ge=10,
+        le=100,
+        description="Livepreview stream JPEG image quality on supported backends",
+        json_schema_extra={"ui_component": "QSlider"},
+    )
+    THUMBNAIL_STILL_QUALITY: int = Field(
+        default=60,
+        ge=10,
+        le=100,
+        description="Still JPEG thumbnail quality, thumbs used in gallery list",
+        json_schema_extra={"ui_component": "QSlider"},
+    )
+    PREVIEW_STILL_QUALITY: int = Field(
+        default=75,
+        ge=10,
+        le=100,
+        description="Still JPEG preview quality, preview still shown in gallery detail",
+        json_schema_extra={"ui_component": "QSlider"},
+    )
+
+    FULL_STILL_WIDTH: int = Field(
+        default=1500,
+        ge=800,
+        le=5000,
+        description="Width of resized full image with filters applied. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
+    )
+    PREVIEW_STILL_WIDTH: int = Field(
+        default=1200,
+        ge=200,
+        le=2500,
+        description="Width of resized preview image, height is automatically calculated to keep aspect ratio",
+    )
+    THUMBNAIL_STILL_WIDTH: int = Field(
+        default=400,
+        ge=100,
+        le=1000,
+        description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
+    )
+
 
     removechromakey_enable: bool = Field(
         default=False,
@@ -725,6 +732,7 @@ class AppConfig(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    sharing: GroupSharing = GroupSharing()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
     mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()

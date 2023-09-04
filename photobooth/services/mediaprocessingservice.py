@@ -139,7 +139,7 @@ class MediaprocessingService(BaseService):
         tms = time.time()
         image = image.convert("RGB") if image.mode in ("RGBA", "P") else image
         buffer_full_pipeline_applied = io.BytesIO()
-        image.save(buffer_full_pipeline_applied, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
+        image.save(buffer_full_pipeline_applied, format="jpeg", quality=self._config.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
         mediaitem.create_fileset_processed(buffer_full_pipeline_applied.getbuffer())
 
@@ -194,7 +194,7 @@ class MediaprocessingService(BaseService):
 
         # convert to RGB and store jpeg as new original
         canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-        canvas.save(filepath_neworiginalfile, format="jpeg", quality=self._config.common.HIRES_STILL_QUALITY, optimize=True)
+        canvas.save(filepath_neworiginalfile, format="jpeg", quality=self._config.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
         # instanciate mediaitem with new original file
         mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))

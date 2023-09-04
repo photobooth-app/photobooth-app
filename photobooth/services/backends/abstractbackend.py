@@ -153,7 +153,7 @@ class AbstractBackend(ABC):
                 return
 
             now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / self._config.common.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:

@@ -33,7 +33,7 @@ class ShareService(BaseService):
 
         self._logger.info("checking shareservice api endpoint")
         try:
-            r = requests.get(self._config.common.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
+            r = requests.get(self._config.sharing.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
         except Exception as exc:
             self._logger.warning(f"error checking shareservice api endpoint: {exc}")
         else:
@@ -51,7 +51,7 @@ class ShareService(BaseService):
 
     def start(self):
         """_summary_"""
-        if not self._config.common.shareservice_enabled:
+        if not self._config.sharing.shareservice_enabled:
             self._logger.info("shareservice disabled, start aborted.")
             return
         self._initialize()
@@ -79,7 +79,7 @@ class ShareService(BaseService):
             payload = {"action": "upload_queue"}
             try:
                 r = requests.get(
-                    self._config.common.shareservice_url,
+                    self._config.sharing.shareservice_url,
                     params=payload,
                     stream=True,
                     timeout=8,
@@ -133,7 +133,7 @@ class ShareService(BaseService):
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
-                            if self._config.common.shareservice_share_original:
+                            if self._config.sharing.shareservice_share_original:
                                 filepath_to_upload = mediaitem_to_upload.path_original
                             else:
                                 filepath_to_upload = mediaitem_to_upload.path_full
@@ -147,11 +147,11 @@ class ShareService(BaseService):
 
                         try:
                             r = requests.post(
-                                self._config.common.shareservice_url,
+                                self._config.sharing.shareservice_url,
                                 files=request_upload_file,
                                 data={
                                     "action": "upload",
-                                    "apikey": self._config.common.shareservice_apikey,
+                                    "apikey": self._config.sharing.shareservice_apikey,
                                     "id": decoded_line["file_identifier"],
                                 },
                                 timeout=9,

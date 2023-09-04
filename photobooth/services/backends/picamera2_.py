@@ -168,7 +168,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.configure(self._current_config)
 
         # capture_file image quality
-        self._picamera2.options["quality"] = self._config.common.HIRES_STILL_QUALITY
+        self._picamera2.options["quality"] = self._config.mediaprocessing.HIRES_STILL_QUALITY
 
         logger.info(f"camera_config: {self._picamera2.camera_config}")
         logger.info(f"camera_controls: {self._picamera2.camera_controls}")

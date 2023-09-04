@@ -251,7 +251,7 @@ def cv2_img_aquisition(
             # HD frame needs like 2sec, not suitable for realtime processing
 
             # convert frame to jpeg buffer
-            jpeg_buffer = turbojpeg.encode(array, quality=_config.common.HIRES_STILL_QUALITY)
+            jpeg_buffer = turbojpeg.encode(array, quality=_config.mediaprocessing.HIRES_STILL_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_hires_lock:
                 compile_buffer(shm_hires, jpeg_buffer)
@@ -261,7 +261,7 @@ def cv2_img_aquisition(
                 _condition_img_buffer_hires_ready.notify_all()
         else:
             # preview livestream
-            jpeg_buffer = turbojpeg.encode(array, quality=_config.common.LIVEPREVIEW_QUALITY)
+            jpeg_buffer = turbojpeg.encode(array, quality=_config.mediaprocessing.LIVEPREVIEW_QUALITY)
             # put jpeg on queue until full. If full this function blocks until queue empty
             with _img_buffer_lores_lock:
                 compile_buffer(shm_lores, jpeg_buffer)

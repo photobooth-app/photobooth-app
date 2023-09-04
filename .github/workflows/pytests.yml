@@ -13,8 +13,8 @@ permissions:
 jobs:
   tests:
     env:
-      common__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
-      common__shareservice_url: "http://localhost:8082/dl.php"
+      sharing__shareservice_apikey: ${{ secrets.COMMON_SHARESERVICE_APIKEY }}
+      sharing__shareservice_url: "http://localhost:8082/dl.php"
       PHP_CLI_SERVER_WORKERS: 6
     runs-on: ubuntu-latest
     continue-on-error: false
