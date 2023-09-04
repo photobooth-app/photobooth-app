@@ -216,4 +216,5 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 def test_nonexistant_pipelines(pil_image: Image.Image):
     with pytest.raises(PipelineError):
         _ = image_stages.beauty_stage(pil_image)
+    with pytest.raises(PipelineError):
         _ = image_stages.rembg_stage(pil_image)
