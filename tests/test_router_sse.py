@@ -14,7 +14,7 @@ def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
 
         # explicit start the informationservice as there is no autostart
-        client.app.container.services.information_service.init()
+        client.app.container.services().information_service.init()
 
         yield client
         client.app.container.shutdown_resources()
