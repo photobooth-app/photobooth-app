@@ -90,7 +90,7 @@ class WebcamCv2Backend(AbstractBackend):
         self._cv2_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 16
+        remaining_retries = 20
         while True:
             with self._img_buffer_lores.condition:
                 if self._img_buffer_lores.condition.wait(timeout=0.5):
