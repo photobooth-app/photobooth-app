@@ -33,9 +33,6 @@ def merge_collage_stage(
         else:
             collage_images.append(captured_images.pop(0))
 
-    if len(collage_images) != total_images_in_collage:
-        raise PipelineError("collage images no not equal to total_images_in_collage requested!")
-
     for index, _definition in enumerate(collage_merge_definition):
         logger.debug(_definition)
         _image = collage_images[index]
