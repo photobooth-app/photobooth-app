@@ -6,8 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.appconfig import AppConfig
-from photobooth.application import ApplicationContainer, app
-from photobooth.services.containers import ServicesContainer
+from photobooth.application import app
 
 
 @pytest.fixture

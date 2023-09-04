@@ -5,9 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from photobooth.application import ApplicationContainer, app
-from photobooth.services.containers import ServicesContainer
-from photobooth.services.processing.jobmodels import JobModel
+from photobooth.application import app
 
 logger = logging.getLogger(name=None)
 

@@ -7,7 +7,6 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from photobooth.appconfig import AppConfig
 from photobooth.application import app
 from photobooth.services.aquisitionservice import AquisitionService
 

@@ -4,8 +4,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.application import ApplicationContainer, app
-from photobooth.services.containers import ServicesContainer
+from photobooth.application import app
 from photobooth.services.mediacollectionservice import MediacollectionService
 
 

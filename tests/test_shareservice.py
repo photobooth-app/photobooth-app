@@ -9,7 +9,6 @@ from PIL import Image
 from photobooth.appconfig import AppConfig
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
-from photobooth.services.processing.jobmodels import JobModel
 
 logger = logging.getLogger(name=None)
 
