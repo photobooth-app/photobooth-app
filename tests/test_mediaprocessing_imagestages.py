@@ -4,7 +4,7 @@ Testing Simulated Backend
 import logging
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageChops
 from pydantic_extra_types.color import Color
 
 import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
@@ -13,10 +13,46 @@ from photobooth.utils.exceptions import PipelineError
 
 logger = logging.getLogger(name=None)
 
-
 @pytest.fixture()
 def pil_image() -> Image.Image:
     yield Image.open("tests/assets/input.jpg")
+
+
+def _is_same(img1:Image.Image,img2:Image.Image):
+    # ensure rgb for both before compare, kind of ignore transparency.
+    img1=img1.convert("RGB")
+    img2=img2.convert("RGB")
+
+    diff=ImageChops.difference(img2, img1)
+    logger.info(diff.getbbox())
+
+    # getbbox returns None if all same, otherwise anything that is evalued to false
+    return not bool(diff.getbbox())
+
+## two test methods to check whether pixels are different or same:
+# method1: simple but seems to use high cpu and memory. makes RPI3 die
+# method2: more efficient, RPI3 can handle.
+# Using method2 to compare in tests.
+
+def test_validate_test_method_same():
+    img1=Image.new("RGB",(5,5), color=None)
+    img2=Image.new("RGB",(5,5), color=None)
+    assert img1 is not img2  # imgs are not same
+
+    #method 1
+    assert list(img2.getdata()) == list(img1.getdata())
+    #method 2
+    assert _is_same(img1, img2)
+
+def test_validate_test_method_different():
+    img1=Image.new("RGB",(5,5), color=None)
+    img2=Image.new("RGB",(5,5), color="green")
+    assert img1 is not img2  # imgs are not same
+
+    #method 1
+    assert list(img2.getdata()) != list(img1.getdata())
+    #method 2
+    assert not _is_same(img1, img2)
 
 
 def test_pilgram_stage(pil_image: Image.Image):
@@ -26,7 +62,7 @@ def test_pilgram_stage(pil_image: Image.Image):
     assert stage_output.mode == pil_image.mode
     assert pil_image.size == stage_output.size
     assert pil_image is not stage_output  # original is not modified
-    assert list(pil_image.getdata()) != list(stage_output.getdata())
+    assert not _is_same(pil_image, stage_output)
 
 
 def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
@@ -39,7 +75,7 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
     assert stage_output.mode == pil_image.mode
     assert pil_image.size == stage_output.size
     assert pil_image is not stage_output  # original is not modified
-    assert list(pil_image.getdata()) != list(stage_output.getdata())
+    assert not _is_same(pil_image, stage_output)
 
 
 def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
@@ -69,7 +105,7 @@ def test_text_stage_empty_emptyarray_skips(pil_image: Image.Image):
     stage_output = image_stages.text_stage(pil_image.copy(), textconfig)
 
     assert pil_image is not stage_output  # original copied here, so not equal
-    assert list(pil_image.getdata()) == list(stage_output.getdata())  # but pixel are same because empty textconfig
+    assert _is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
 
 
 def test_text_stage_empty_emptytext_skips(pil_image: Image.Image):
@@ -78,7 +114,7 @@ def test_text_stage_empty_emptytext_skips(pil_image: Image.Image):
     stage_output = image_stages.text_stage(pil_image.copy(), textconfig)
 
     assert pil_image is not stage_output  # original copied here, so not equal
-    assert list(pil_image.getdata()) == list(stage_output.getdata())  # but pixel are same because empty textconfig
+    assert _is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
 
 
 def test_removechromakey_stage(pil_image: Image.Image):
@@ -91,7 +127,7 @@ def test_removechromakey_stage(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # after process always RGBA
     assert pil_image is not stage_output  # original copied here, so not equal
-    assert list(pil_image.getdata()) != list(stage_output.getdata())  # but pixel are same because empty textconfig
+    assert _is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
 
 
 def test_fill_background_stage(pil_image: Image.Image):
@@ -105,7 +141,7 @@ def test_fill_background_stage(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
-    assert list(pil_image.getdata()) != list(stage_output.getdata())  # pixel are diff because background shines through
+    assert not _is_same(pil_image, stage_output)  # pixel are diff because background shines through
 
 
 def test_fill_background_stage_notransparency(pil_image: Image.Image):
@@ -116,7 +152,7 @@ def test_fill_background_stage_notransparency(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
-    assert list(pil_image.getdata()) == list(stage_output.getdata())  # pixel are still same, because the image had no transparency.
+    assert  _is_same(pil_image, stage_output)  # pixel are still same, because the image had no transparency.
 
 
 def test_fill_background_stage_accept_str(pil_image: Image.Image):
@@ -130,7 +166,7 @@ def test_fill_background_stage_accept_str(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
-    assert list(pil_image.getdata()) != list(stage_output.getdata())  # pixel are diff because background shines through
+    assert not _is_same(pil_image, stage_output)  # pixel are diff because background shines through
 
 
 def test_img_background_stage(pil_image: Image.Image):
@@ -144,7 +180,7 @@ def test_img_background_stage(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
-    assert list(pil_image.getdata()) != list(stage_output.getdata())  # pixel are diff because background shines through
+    assert not _is_same(pil_image, stage_output)  # pixel are diff because background shines through
 
 
 def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
@@ -155,7 +191,7 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
 
     assert stage_output.mode == "RGB"  # ensure it keeps RGBA
     assert pil_image is stage_output  # original is not changed
-    assert list(pil_image.getdata()) == list(stage_output.getdata())  # pixel are diff because background shines through
+    assert  _is_same(pil_image, stage_output)  # pixel are diff because background shines through
 
 
 def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
@@ -173,7 +209,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
-    assert list(pil_image.getdata()) != list(stage_output.getdata())  # pixel are diff because background shines through
+    assert not _is_same(pil_image, stage_output)  # pixel are diff because background shines through
     # stage_output.show()
 
 
