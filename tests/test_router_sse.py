@@ -29,9 +29,9 @@ def test_sse_stream(client: TestClient):
         for sse in event_source.iter_sse():
             if sse.event == "ProcessStateinfo":
                 processstateinfo_counter += 1
-            if sse.event == "logrecord":
+            if sse.event == "LogRecord":
                 logrecord_counter += 1
-            if sse.event == "informationrecord":
+            if sse.event == "InformationRecord":
                 informationrecord_counter += 1
             if sse.event == "ping":
                 ping_counter += 1

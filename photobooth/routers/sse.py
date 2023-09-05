@@ -39,7 +39,7 @@ async def subscribe(
     sse_service.setup_client(client=client)
 
     # all modules can register this event to send initial messages on connection
-    await evtbus.emit_async("sse_dispatch_new/initial")
+    await evtbus.emit_async("sse_dispatch_event/initial")
 
     return EventSourceResponse(
         sse_service.event_iterator(client=client),

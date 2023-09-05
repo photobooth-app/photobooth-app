@@ -72,7 +72,13 @@ class ProcessingService(StateMachine):
         super().__init__(model=JobModel())
 
         # register to send initial data SSE
-        self._evtbus.on("sse_dispatch_new/initial", self._sse_initial_processinfo)
+        self._evtbus.on(
+            "sse_dispatch_event/initial",
+            lambda: self._evtbus.emit(
+                "sse_dispatch_event",
+                SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False),
+            ),
+        )
 
     ## transition actions
 
@@ -96,7 +102,7 @@ class ProcessingService(StateMachine):
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._evtbus.emit(
-            "sse_dispatch_new", SseEventProcessStateinfo(countdown=self.timer_countdown, state=self.current_state.id, display_cheese=False)
+            "sse_dispatch_event", SseEventProcessStateinfo(countdown=self.timer_countdown, state=self.current_state.id, display_cheese=False)
         )
 
     def on_exit_idle(self):
@@ -133,7 +139,7 @@ class ProcessingService(StateMachine):
 
         while self.timer_countdown > 0:
             self._evtbus.emit(
-                "sse_dispatch_new",
+                "sse_dispatch_event",
                 SseEventProcessStateinfo(
                     countdown=round(self.timer_countdown, 1),
                     state=self.current_state.id,
@@ -176,14 +182,14 @@ class ProcessingService(StateMachine):
                 image_bytes = self._aquisition_service.wait_for_hq_image()
 
                 # send 0 countdown to UI
-                self._evtbus.emit("sse_dispatch_new", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))
+                self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))
 
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
 
                 # populate image item for further processing:
                 mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-                self.model._last_capture = mediaitem
+                self.model._last_captured_mediaitem = mediaitem
 
             except TimeoutError:
                 logger.error(f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
@@ -202,16 +208,14 @@ class ProcessingService(StateMachine):
 
     def on_exit_capture(self):
         """_summary_"""
-        logger.info("on_exit_capture_still")
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
-    def on_enter_present_capture(self):
         ## PHASE 1:
         # postprocess each capture individually
         logger.info("start postprocessing phase 1")
 
         # load last mediaitem for further processing
-        mediaitem = self.model._last_capture
+        mediaitem = self.model._last_captured_mediaitem
         logger.info(f"postprocessing last capture: {mediaitem=}")
 
         # always create unprocessed versions for later usage
@@ -245,25 +249,32 @@ class ProcessingService(StateMachine):
 
         # add result to db
         # TODO: make configurable whether to hide pics that will be stitched to collage
-        self.model.add_capture(self.model._last_capture)
+        self.model.add_capture(self.model._last_captured_mediaitem)
         _ = self._mediacollection_service.db_add_item(mediaitem)
 
         logger.info(f"capture {mediaitem=} successful")
+
+    def on_enter_present_capture(self):
+        # get the last captured mediaitem for further processing
+        last_captured_mediaitem = self.model._last_captured_mediaitem
 
         # if job is collage, each single capture could be confirmed or not:
         if self.model._typ == JobModel.Typ.collage:
             if self._config.common.collage_automatic_capture_continue:
                 # auto continue with next countdown
+                self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=last_captured_mediaitem, present=False))
                 self.confirm_capture()
-                # TODO: update the frontend gallery on delete/insert, with or without presenting!
             else:
                 # present capture with buttons to approve.
                 logger.info("finished capture, present to user to confirm or start over")
+                self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=last_captured_mediaitem, present=True, to_confirm_or_reject=True))
 
-                self._evtbus.emit("sse_dispatch_new", SseEventDbInsert(mediaitem=mediaitem))
-        else:
-            # if not collage, there is single approval so -> confirm and continue
+        elif self.model._typ == JobModel.Typ.image:
+            # if not collage, we do not support approval screen - just continue.
             self.confirm_capture()
+
+        else:
+            raise RuntimeError(f"illegal job type {self.model._typ}")
 
     def on_exit_present_capture(self, event):
         if event == self.reject.name:
@@ -271,7 +282,7 @@ class ProcessingService(StateMachine):
             logger.info(f"rejected: {delete_mediaitem=}")
 
             self._mediacollection_service.delete_image_by_id(delete_mediaitem.id)
-            self.model._last_capture = None
+            self.model._last_captured_mediaitem = None
 
     def on_enter_job_postprocess(self):
         ## PHASE 2:
@@ -286,13 +297,16 @@ class ProcessingService(StateMachine):
 
             # add collage to mediadb
             _ = self._mediacollection_service.db_add_item(mediaitem)
+
         else:
-            mediaitem = self.model._last_capture
+            mediaitem = self.model._last_captured_mediaitem
 
         ## FINISH:
         # to inform frontend about new image to display
         logger.info("finished job")
-        self._evtbus.emit("sse_dispatch_new", SseEventDbInsert(mediaitem=mediaitem))
+
+        # finally display end result to the user.
+        self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=mediaitem, present=True))
 
         # send machine to idle again
         self._finalize()
@@ -341,9 +355,3 @@ class ProcessingService(StateMachine):
 
     def abort_capture(self):
         self._reset()
-
-    ### some custom helper
-
-    def _sse_initial_processinfo(self):
-        """_summary_"""
-        self._evtbus.emit("sse_dispatch_new", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))

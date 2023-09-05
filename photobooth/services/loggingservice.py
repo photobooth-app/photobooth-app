@@ -30,13 +30,13 @@ class EventstreamLogHandler(logging.Handler):
         self._initlogrecords_emitted = False
         self._initlogrecords = []
 
-        self._evtbus.on("sse_dispatch_new/initial", self._emit_initlogs)
+        self._evtbus.on("sse_dispatch_event/initial", self._emit_initlogs)
 
         logging.Handler.__init__(self)
 
     def _emit_initlogs(self):
         for logrecord in self._initlogrecords:
-            self._evtbus.emit("sse_dispatch_new", logrecord)
+            self._evtbus.emit("sse_dispatch_event", logrecord)
         # stop adding new records
         self._initlogrecords_emitted = True
 
@@ -58,7 +58,7 @@ class EventstreamLogHandler(logging.Handler):
             # only log first 50 messgaes to not pollute the sse queue
             self._initlogrecords.append(sse_logrecord)
 
-        self._evtbus.emit("sse_dispatch_new", sse_logrecord)
+        self._evtbus.emit("sse_dispatch_event", sse_logrecord)
 
 
 class LoggingService(BaseService):

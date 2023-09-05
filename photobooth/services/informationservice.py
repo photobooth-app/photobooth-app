@@ -28,7 +28,7 @@ class InformationService(BaseService):
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
 
         # registered events
-        self._evtbus.on("sse_dispatch_new/initial", self._on_stats_interval_timer)
+        self._evtbus.on("sse_dispatch_event/initial", self._on_stats_interval_timer)
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -71,7 +71,7 @@ class InformationService(BaseService):
 
         # gather information to be sent off on timer tick:
         self._evtbus.emit(
-            "sse_dispatch_new",
+            "sse_dispatch_event",
             SseEventInformationRecord(
                 cpu1_5_15=self._gather_cpu1_5_15(),
                 active_threads=self._gather_active_threads(),

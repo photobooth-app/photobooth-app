@@ -39,6 +39,8 @@ class SseEventFrontendNotification(SseEventBase):
     type: str = None  # could be enum green, yellow, red...
     message: str = ""
 
+    event: str = "FrontendNotification"
+
     @property
     def data(self) -> str:
         return json.dumps(
@@ -88,11 +90,18 @@ class SseEventDbInsert(SseEventBase):
 
     event: str = "DbInsert"
     mediaitem: MediaItem = None
-    # present:bool=False # maybe not needed.
+    present: bool = False
+    to_confirm_or_reject: bool = False
 
     @property
     def data(self) -> str:
-        return json.dumps(self.mediaitem.asdict())
+        return json.dumps(
+            dict(
+                mediaitem=self.mediaitem.asdict(),
+                present=self.present,
+                to_confirm_or_reject=self.to_confirm_or_reject,
+            )
+        )
 
 
 @dataclass
@@ -118,7 +127,7 @@ class SseEventLogRecord(SseEventBase):
     funcName: str = None
     lineno: str = None
 
-    event: str = "logrecord"
+    event: str = "LogRecord"
 
     @property
     def data(self) -> str:
@@ -138,7 +147,7 @@ class SseEventLogRecord(SseEventBase):
 class SseEventInformationRecord(SseEventBase):
     """basic class for sse events"""
 
-    event: str = "informationrecord"
+    event: str = "InformationRecord"
 
     cpu1_5_15: list[float] = None
     active_threads: int = None
@@ -175,7 +184,7 @@ class SseService(BaseService):
         self._clients: [Client] = []
 
         # listener services use to send messages to connected clients.
-        self._evtbus.on("sse_dispatch_new", self.dispatch_event)
+        self._evtbus.on("sse_dispatch_event", self.dispatch_event)
 
     def setup_client(self, client):
         self._clients.append(client)

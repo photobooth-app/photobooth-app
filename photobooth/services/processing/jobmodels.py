@@ -15,7 +15,7 @@ class JobModel:
     # job variables
     _typ: Typ = None
     _total_captures_to_take: int = None
-    _last_capture: MediaItem = None
+    _last_captured_mediaitem: MediaItem = None
     _captures: list[MediaItem] = None
 
     # other internal variables
@@ -23,12 +23,12 @@ class JobModel:
 
     def __init__(self):
         self._captures = []
-        self._last_capture = None
+        self._last_captured_mediaitem = None
 
     def __repr__(self):
         return (
             f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
-            f"captures={self._captures}, last_capture={self._last_capture}"
+            f"captures={self._captures}, last_capture={self._last_captured_mediaitem}"
         )
 
     def validate_job(self):
@@ -40,7 +40,7 @@ class JobModel:
     def reset_job(self):
         self._typ = None
         self._total_captures_to_take = None
-        self._last_capture = None
+        self._last_captured_mediaitem = None
         self._captures = None
 
     def add_capture(self, captured_item: MediaItem):
@@ -73,7 +73,7 @@ class JobModel:
         self.reset_job()
         self._typ = typ
         self._total_captures_to_take = total_captures_to_take
-        self._last_capture = None
+        self._last_captured_mediaitem = None
         self._captures = []
 
         self.validate_job()
