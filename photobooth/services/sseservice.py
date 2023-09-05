@@ -12,7 +12,7 @@ from asyncio import Queue, QueueFull
 from dataclasses import dataclass
 from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import Request
 from pymitter import EventEmitter
 from sse_starlette import ServerSentEvent
 

@@ -2,7 +2,6 @@
 _summary_
 """
 
-import json
 import platform
 import socket
 import threading

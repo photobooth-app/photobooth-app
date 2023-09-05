@@ -106,7 +106,7 @@ concurrency = ["thread", "multiprocessing"]
 
 [tool.black]
 line-length = 150
-extend-exclude = ["vendor"]
+extend-exclude = "vendor"
 
 [tool.ruff]
 line-length = 150

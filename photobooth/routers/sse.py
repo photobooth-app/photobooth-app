@@ -7,7 +7,7 @@ from pymitter import EventEmitter
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from ..containers import ApplicationContainer
-from ..services.sseservice import Client, SseService, SseEventBase
+from ..services.sseservice import Client, SseService
 
 logger = logging.getLogger(__name__)
 sse_router = APIRouter(

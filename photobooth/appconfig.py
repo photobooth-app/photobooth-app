@@ -175,7 +175,6 @@ class GroupBackends(BaseModel):
         json_schema_extra={"ui_component": "QSlider"},
     )
 
-
     cv2_CAM_RESOLUTION_WIDTH: int = Field(
         default=10000,
         description="still photo camera resolution width to opencv2 backend",
@@ -346,7 +345,6 @@ class GroupMediaprocessing(BaseModel):
 
     model_config = ConfigDict(title="Process media after capture")
 
-
     HIRES_STILL_QUALITY: int = Field(
         default=90,
         ge=10,
@@ -394,7 +392,6 @@ class GroupMediaprocessing(BaseModel):
         le=1000,
         description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
     )
-
 
     removechromakey_enable: bool = Field(
         default=False,

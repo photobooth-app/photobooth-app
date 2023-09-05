@@ -125,7 +125,6 @@ class ServicesContainer(containers.DeclarativeContainer):
 
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
 
-
     wled_service = providers.Resource(
         init_wled_resource,
         evtbus=evtbus,

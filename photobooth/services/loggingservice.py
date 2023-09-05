@@ -3,7 +3,6 @@ Control logging for the app
 """
 
 import datetime
-import json
 import logging
 import os
 import sys

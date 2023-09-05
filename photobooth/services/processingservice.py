@@ -1,11 +1,9 @@
 """
 _summary_
 """
-import json
 import logging
 import os
 import time
-from dataclasses import asdict, dataclass
 from threading import Thread
 
 from pymitter import EventEmitter
@@ -14,13 +12,13 @@ from statemachine import State, StateMachine
 from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
-from .sseservice import SseEventDbInsert, SseEventProcessStateinfo
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
     MediacollectionService,
 )
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModel
+from .sseservice import SseEventDbInsert, SseEventProcessStateinfo
 
 logger = logging.getLogger(__name__)
 

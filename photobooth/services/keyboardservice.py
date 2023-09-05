@@ -10,7 +10,6 @@ hid: untested, needs additional libraries on win/linux to be installed
 evdev: linux only
 sshkeyboard: ?
 """
-import json
 
 from pymitter import EventEmitter
 

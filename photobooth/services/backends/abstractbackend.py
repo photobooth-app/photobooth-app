@@ -2,7 +2,6 @@
 abstract for the photobooth-app backends
 """
 import dataclasses
-import json
 import logging
 import time
 from abc import ABC, abstractmethod

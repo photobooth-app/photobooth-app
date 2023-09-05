@@ -39,7 +39,8 @@ def test_sse_stream(client: TestClient):
             logger.debug(f"{sse.event=}, {sse.data=}, {sse.id=}, {sse.retry=}")
 
     logger.info(
-        f"seen {processstateinfo_counter} processstateinfos, {logrecord_counter} logrecords, {informationrecord_counter} informations and {ping_counter} pings"
+        f"seen {processstateinfo_counter} processstateinfos, {logrecord_counter} logrecords, "
+        f"{informationrecord_counter} informations and {ping_counter} pings"
     )
 
     # assert processstateinfo_counter > 0 # TODO: check later.
