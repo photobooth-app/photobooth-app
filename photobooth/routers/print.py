@@ -41,7 +41,6 @@ def _print(mediaitem, ps: PrintingService = Depends(Provide[ApplicationContainer
 @inject
 def api_print_latest(
     ms: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
-    # ps: PrintingService = Depends(Provide[ApplicationContainer.services.printing_service]),
 ):
     latest_mediaitem = ms.db_get_most_recent_mediaitem()
     _print(mediaitem=latest_mediaitem)
@@ -52,7 +51,6 @@ def api_print_latest(
 def api_print_item_id(
     id: str,
     ms: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
-    # ps: PrintingService = Depends(Provide[ApplicationContainer.services.printing_service]),
 ):
     requested_mediaitem: MediaItem = ms.db_get_image_by_id(id)
     _print(mediaitem=requested_mediaitem)
