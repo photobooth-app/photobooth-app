@@ -13,6 +13,7 @@ logger = logging.getLogger(name=None)
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
         # explicit start the informationservice as there is no autostart
+        client.app.container.services().processing_service()
         client.app.container.services().information_service.init()
 
         yield client
@@ -43,7 +44,7 @@ def test_sse_stream(client: TestClient):
         f"{informationrecord_counter} informations and {ping_counter} pings"
     )
 
-    # assert processstateinfo_counter > 0 # TODO: check later.
+    assert processstateinfo_counter > 0
     assert logrecord_counter > 0
     assert informationrecord_counter > 0
     assert ping_counter > 0
