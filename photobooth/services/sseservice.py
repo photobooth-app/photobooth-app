@@ -192,8 +192,8 @@ class SseService(BaseService):
         self._clients.append(client)
         logger.info(f"SSE subscription added for client {client.request.client}")
         logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
-        print(f"client.queue {[client.queue for client in self._clients]}")
-        print(f"qsize {[client.queue.qsize() for client in self._clients]}")
+        # print(f"client.queue {[client.queue for client in self._clients]}")
+        # print(f"qsize {[client.queue.qsize() for client in self._clients]}")
 
     def remove_client(self, client):
         logger.debug(f"SSE subscription remove for {client.request.client} requested")
@@ -223,9 +223,8 @@ class SseService(BaseService):
                 )
 
             except QueueFull:
-                # actually never run, because queue size is infinite currently
-                print(f"qsize {[client.queue.qsize() for client in self._clients]}")
-                print(f"skipped {sse_event_data.data}")
+                # fail in silence if queue is full - though is critical for init sse messages.
+                # on the other side, queue better not infinite if disconnect is not working proper and queue remains getting larger
                 pass
 
     async def event_iterator(self, client: Client, timeout=0.0):
@@ -237,6 +236,11 @@ class SseService(BaseService):
         try:
             starting_time = time.time()
             while not timeout or (time.time() - starting_time < timeout):
+                if await client.request.is_disconnected():
+                    self.remove_client(client)
+                    logger.info(f"client request disconnect, client {client.request.client}")
+                    return
+
                 try:
                     yield await asyncio.wait_for(client.queue.get(), timeout=0.5)
                 except asyncio.exceptions.TimeoutError:
