@@ -13,6 +13,7 @@ from pymitter import EventEmitter
 from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
+from .sseservice import SseEventInformationRecord
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
@@ -27,7 +28,7 @@ class InformationService(BaseService):
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
 
         # registered events
-        self._evtbus.on("publishSSE/initial", self._on_stats_interval_timer)
+        self._evtbus.on("sse_dispatch_new/initial", self._on_stats_interval_timer)
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -69,25 +70,14 @@ class InformationService(BaseService):
         """_summary_"""
 
         # gather information to be sent off on timer tick:
-        cpu1_5_15 = self._gather_cpu1_5_15()
-        active_threads = self._gather_active_threads()
-        memory = self._gather_memory()
-        cma = self._gather_cma()
-        disk = self._gather_disk()
-        # aqusitionservice_stats = self._gather_aquisitionservice_stats()
-
         self._evtbus.emit(
-            "publishSSE",
-            sse_event="information",
-            sse_data=json.dumps(
-                {
-                    "cpu1_5_15": cpu1_5_15,
-                    "active_threads": active_threads,
-                    "memory": memory,
-                    "cma": cma,
-                    "disk": disk,
-                    "aquisitionservice_stats": None,  # FIXME: move to separate class
-                }
+            "sse_dispatch_new",
+            SseEventInformationRecord(
+                cpu1_5_15=self._gather_cpu1_5_15(),
+                active_threads=self._gather_active_threads(),
+                memory=self._gather_memory(),
+                cma=self._gather_cma(),
+                disk=self._gather_disk(),
             ),
         )
 

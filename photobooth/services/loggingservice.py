@@ -15,6 +15,7 @@ from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .sseservice import SseEventLogRecord
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -29,35 +30,35 @@ class EventstreamLogHandler(logging.Handler):
         self._initlogrecords_emitted = False
         self._initlogrecords = []
 
-        self._evtbus.on("publishSSE/initial", self._emit_initlogs)
+        self._evtbus.on("sse_dispatch_new/initial", self._emit_initlogs)
 
         logging.Handler.__init__(self)
 
     def _emit_initlogs(self):
         for logrecord in self._initlogrecords:
-            self._evtbus.emit("publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord))
+            self._evtbus.emit("sse_dispatch_new", logrecord)
         # stop adding new records
         self._initlogrecords_emitted = True
 
         # self._initlogrecords = []
 
     def emit(self, record: LogRecord):
-        logrecord = {
-            "time": datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "name": record.name,
-            "funcName": record.funcName,
-            "lineno": record.lineno,
-        }
+        sse_logrecord = SseEventLogRecord(
+            time=datetime.datetime.fromtimestamp(record.created).strftime("%d.%b.%y %H:%M:%S"),
+            level=record.levelname,
+            message=record.getMessage(),
+            name=record.name,
+            funcName=record.funcName,
+            lineno=record.lineno,
+        )
 
         if not self._initlogrecords_emitted and len(self._initlogrecords) < 50:
             # after logrecords were first time emitted to client via eventstream,
             # not add any new records to array.
             # only log first 50 messgaes to not pollute the sse queue
-            self._initlogrecords.append(logrecord)
+            self._initlogrecords.append(sse_logrecord)
 
-        self._evtbus.emit("publishSSE", sse_event="logrecord", sse_data=json.dumps(logrecord))
+        self._evtbus.emit("sse_dispatch_new", sse_logrecord)
 
 
 class LoggingService(BaseService):
@@ -159,7 +160,7 @@ class LoggingService(BaseService):
             lgr.setLevel(self.debug_level)
             lgr.propagate = False
             lgr.handlers = [
-                logging.root.handlers[0],   # this is the streamhandler if not in pytest.
+                logging.root.handlers[0],  # this is the streamhandler if not in pytest.
                 self.rotatingfile_handler,
                 self.eventstream_handler,
             ]

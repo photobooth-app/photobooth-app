@@ -16,6 +16,7 @@ from .mediaprocessingservice import MediaprocessingService
 from .printingservice import PrintingService
 from .processingservice import ProcessingService
 from .shareservice import ShareService
+from .sseservice import SseService
 from .systemservice import SystemService
 from .wledservice import WledService
 
@@ -97,6 +98,8 @@ class ServicesContainer(containers.DeclarativeContainer):
         secondary_backend=backends.secondary_backend,
     )
 
+    sse_service = providers.Singleton(SseService, evtbus=evtbus, config=config)
+
     information_service = providers.Resource(init_information_resource, evtbus=evtbus, config=config)
 
     mediaprocessing_service = providers.Singleton(
@@ -121,6 +124,7 @@ class ServicesContainer(containers.DeclarativeContainer):
     )
 
     system_service = providers.Factory(SystemService, evtbus=evtbus, config=config)
+
 
     wled_service = providers.Resource(
         init_wled_resource,

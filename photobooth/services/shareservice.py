@@ -25,9 +25,6 @@ class ShareService(BaseService):
         self._initialized: bool = False
         self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
 
-        # registered events
-        # self._evtbus.on("publishSSE/initial", self._on_stats_interval_timer)
-
     def _initialize(self):
         self._initialized = False
 

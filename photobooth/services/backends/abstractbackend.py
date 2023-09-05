@@ -165,16 +165,6 @@ class AbstractBackend(ABC):
                     logger.debug(f"request exit! {self=}")
                     break
 
-    def _publish_sse_initial(self):
-        self._publish_sse_metadata()
-
-    def _publish_sse_metadata(self):
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="frameserver/metadata",
-            sse_data=json.dumps(self.metadata),
-        )
-
 
 #
 # INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.

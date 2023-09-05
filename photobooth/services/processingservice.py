@@ -14,6 +14,7 @@ from statemachine import State, StateMachine
 from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
+from .sseservice import SseEventDbInsert, SseEventProcessStateinfo
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
     MediacollectionService,
@@ -32,14 +33,6 @@ class ProcessingService(StateMachine):
         machine.thrill()
         machine.shoot()
     """
-
-    @dataclass
-    class Stateinfo:
-        """_summary_"""
-
-        state: str
-        countdown: float = 0
-        display_cheese: bool = False  # TODO: implement in frontend
 
     ## STATES
 
@@ -79,7 +72,7 @@ class ProcessingService(StateMachine):
         super().__init__(model=JobModel())
 
         # register to send initial data SSE
-        self._evtbus.on("publishSSE/initial", self._sse_initial_processinfo)
+        self._evtbus.on("sse_dispatch_new/initial", self._sse_initial_processinfo)
 
     ## transition actions
 
@@ -102,11 +95,8 @@ class ProcessingService(StateMachine):
         logger.info(f"on_enter_state {self.current_state.id=} ")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
-        self._sse_processinfo(
-            __class__.Stateinfo(
-                state=self.current_state.id,
-                countdown=self.timer_countdown,
-            )
+        self._evtbus.emit(
+            "sse_dispatch_new", SseEventProcessStateinfo(countdown=self.timer_countdown, state=self.current_state.id, display_cheese=False)
         )
 
     def on_exit_idle(self):
@@ -142,13 +132,15 @@ class ProcessingService(StateMachine):
         logger.info(f"starting timer {self.timer_countdown=}")
 
         while self.timer_countdown > 0:
-            self._sse_processinfo(
-                __class__.Stateinfo(
-                    state=self.current_state.id,
+            self._evtbus.emit(
+                "sse_dispatch_new",
+                SseEventProcessStateinfo(
                     countdown=round(self.timer_countdown, 1),
+                    state=self.current_state.id,
                     display_cheese=(True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False),
-                )
+                ),
             )
+
             time.sleep(0.1)
             self.timer_countdown -= 0.1
 
@@ -184,12 +176,7 @@ class ProcessingService(StateMachine):
                 image_bytes = self._aquisition_service.wait_for_hq_image()
 
                 # send 0 countdown to UI
-                self._sse_processinfo(
-                    __class__.Stateinfo(
-                        state=self.current_state.id,
-                        countdown=0,
-                    )
-                )
+                self._evtbus.emit("sse_dispatch_new", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))
 
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
@@ -272,11 +259,8 @@ class ProcessingService(StateMachine):
             else:
                 # present capture with buttons to approve.
                 logger.info("finished capture, present to user to confirm or start over")
-                self._evtbus.emit(
-                    "publishSSE",
-                    sse_event="imagedb/newarrival",
-                    sse_data=json.dumps(mediaitem.asdict()),
-                )
+
+                self._evtbus.emit("sse_dispatch_new", SseEventDbInsert(mediaitem=mediaitem))
         else:
             # if not collage, there is single approval so -> confirm and continue
             self.confirm_capture()
@@ -308,11 +292,7 @@ class ProcessingService(StateMachine):
         ## FINISH:
         # to inform frontend about new image to display
         logger.info("finished job")
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="imagedb/newarrival",
-            sse_data=json.dumps(mediaitem.asdict()),
-        )
+        self._evtbus.emit("sse_dispatch_new", SseEventDbInsert(mediaitem=mediaitem))
 
         # send machine to idle again
         self._finalize()
@@ -366,12 +346,4 @@ class ProcessingService(StateMachine):
 
     def _sse_initial_processinfo(self):
         """_summary_"""
-        self._sse_processinfo(__class__.Stateinfo(state=self.current_state.id))
-
-    def _sse_processinfo(self, sse_data: str):
-        """_summary_"""
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="statemachine/processinfo",
-            sse_data=json.dumps(asdict(sse_data)),
-        )
+        self._evtbus.emit("sse_dispatch_new", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))

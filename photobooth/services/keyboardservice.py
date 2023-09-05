@@ -55,13 +55,6 @@ class KeyboardService(BaseService):
         """
         self._logger.debug(f"key '{key.name}' triggered.")
 
-        # log to http sse helps finding the right key watching live logs
-        self._evtbus.emit(
-            "publishSSE",
-            sse_event="information",
-            sse_data=json.dumps({"lastkeycode": key.name}),
-        )
-
         if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takepic:
             self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takepic}")
             self._logger.info("trigger start_job_1pic")
