@@ -74,7 +74,7 @@ class ProcessingService(StateMachine):
             "sse_dispatch_event/initial",
             lambda: self._evtbus.emit(
                 "sse_dispatch_event",
-                SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False),
+                SseEventProcessStateinfo(countdown=0, state=self.current_state.id),
             ),
         )
 
@@ -100,7 +100,12 @@ class ProcessingService(StateMachine):
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._evtbus.emit(
-            "sse_dispatch_event", SseEventProcessStateinfo(countdown=self.timer_countdown, state=self.current_state.id, display_cheese=False)
+            "sse_dispatch_event",
+            SseEventProcessStateinfo(
+                countdown=self.timer_countdown,
+                duration=0,
+                state=self.current_state.id,
+            ),
         )
 
     def on_exit_idle(self):
@@ -121,12 +126,12 @@ class ProcessingService(StateMachine):
         self._evtbus.emit("statemachine/on_thrill")
 
         # determine countdown time, first and following could have different times
-        self.timer_countdown = 0.0
-        self.timer_countdown += (
+        duration = (
             self._config.common.countdown_capture_first
             if (self.model.number_captures_taken() == 0)
             else self._config.common.countdown_capture_second_following
         )
+        self.timer_countdown = duration
 
         # if countdown is 0, skip following and transition to next state directy
         if self.timer_countdown == 0:
@@ -140,8 +145,8 @@ class ProcessingService(StateMachine):
                 "sse_dispatch_event",
                 SseEventProcessStateinfo(
                     countdown=round(self.timer_countdown, 1),
+                    duration=duration,
                     state=self.current_state.id,
-                    display_cheese=(True if (self.timer_countdown <= self._config.common.countdown_cheese_message_offset) else False),
                 ),
             )
 
@@ -156,8 +161,8 @@ class ProcessingService(StateMachine):
     def on_exit_counting(self):
         logger.info("state counting exit")
 
-        # TODO: replace by statemachineinfo class
-        self.timer_countdown = 0
+        # set to zero but do not send an update to client yet - it shall show the cheese message until captured.
+        self.timer_countdown = 0.0
 
     def on_enter_capture(self):
         """_summary_"""
@@ -180,7 +185,15 @@ class ProcessingService(StateMachine):
                 image_bytes = self._aquisition_service.wait_for_hq_image()
 
                 # send 0 countdown to UI
-                self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(countdown=0, state=self.current_state.id, display_cheese=False))
+                self._evtbus.emit(
+                    "sse_dispatch_event",
+                    SseEventProcessStateinfo(
+                        countdown=0,
+                        duration=0,
+                        state=self.current_state.id,
+                        processing=True,
+                    ),
+                )
 
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)

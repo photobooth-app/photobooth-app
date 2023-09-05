@@ -55,9 +55,10 @@ class SseEventFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
-    countdown: float
-    display_cheese: bool  # TODO: implement in frontend
     state: str
+    countdown: float = 0
+    duration: float = 0
+    processing: bool = False
 
     event: str = "ProcessStateinfo"
 
@@ -67,7 +68,8 @@ class SseEventProcessStateinfo(SseEventBase):
             dict(
                 state=self.state,
                 countdown=self.countdown,
-                display_cheese=self.display_cheese,
+                duration=self.duration,
+                processing=self.processing,
             )
         )
 
@@ -212,8 +214,8 @@ class SseService(BaseService):
         logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
 
     def dispatch_event(self, sse_event_data: SseEventBase):
-        try:
-            for client in self._clients:
+        for client in self._clients:
+            try:
                 client.queue.put_nowait(
                     ServerSentEvent(
                         id=uuid.uuid4(),
@@ -223,9 +225,9 @@ class SseService(BaseService):
                     )
                 )
 
-        except QueueFull:
-            # actually never run, because queue size is infinite currently
-            pass
+            except QueueFull:
+                # actually never run, because queue size is infinite currently
+                pass
 
     async def event_iterator(self, client: Client, timeout=0.0):
         if "PYTEST_CURRENT_TEST" in os.environ:
