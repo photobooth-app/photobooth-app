@@ -203,7 +203,7 @@ class SseService(BaseService):
         for index, _client in enumerate(self._clients):
             if _client.request is client.request:
                 removed_client = self._clients.pop(index)
-                logger.debug(f"SSE subscription removed for {removed_client}")
+                logger.debug(f"SSE subscription removed for {removed_client.request.client}")
                 break
 
         if not removed_client:
@@ -226,20 +226,6 @@ class SseService(BaseService):
         except QueueFull:
             # actually never run, because queue size is infinite currently
             pass
-        # except Exception as exc:
-        #    logger.error(f"error while queue item: {exc}")
-
-    # def add_queue_deprecated_via_evtbus(self, sse_event, sse_data):
-    #     logger.warning("using old method!")
-    #     try:
-    #         for client in self._clients:
-    #             client.queue.put_nowait(ServerSentEvent(id=uuid.uuid4(), event=sse_event, data=sse_data, retry=10000))
-
-    #     except QueueFull:
-    #         # actually never run, because queue size is infinite currently
-    #         pass
-    #     except Exception as exc:
-    #         logger.error(f"error while queue item: {exc}")
 
     async def event_iterator(self, client: Client, timeout=0.0):
         if "PYTEST_CURRENT_TEST" in os.environ:
@@ -257,14 +243,14 @@ class SseService(BaseService):
 
                 try:
                     # event = await self._queue.get()
-                    event = await asyncio.wait_for(client.queue.get(), timeout=0.5)
+                    yield await asyncio.wait_for(client.queue.get(), timeout=0.5)
                 except asyncio.exceptions.TimeoutError:
                     # continue on timeouterror ignore silently. used to abort while loop for testing
                     continue
 
-                # send data to client
-                yield event
-
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
             self.remove_client(client)
             logger.info(f"Disconnected from client {client.request.client}")
+
+            # https://stackoverflow.com/a/53724990
+            raise exc
