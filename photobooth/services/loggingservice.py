@@ -157,8 +157,9 @@ class LoggingService(BaseService):
         ]:
             lgr = logging.getLogger(name=name)
             lgr.setLevel(self.debug_level)
-            lgr.propagate = True
+            lgr.propagate = False
             lgr.handlers = [
+                logging.root.handlers[0],   # this is the streamhandler if not in pytest.
                 self.rotatingfile_handler,
                 self.eventstream_handler,
             ]
