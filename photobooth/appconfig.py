@@ -49,10 +49,6 @@ class GroupCommon(BaseModel):
         default=1.0,
         description="Countdown in seconds, used for second and following captures for collages",
     )
-    countdown_cheese_message_offset: float = Field(
-        default=0.5,
-        description="Offset display cheese message before 0 would be reached (in seconds). Bigger or equal than camera capture offset.",
-    )
     countdown_camera_capture_offset: float = Field(
         default=0.25,
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
