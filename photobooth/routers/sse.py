@@ -1,4 +1,5 @@
 import logging
+from asyncio import Queue
 from datetime import datetime
 
 from dependency_injector.wiring import Provide, inject
@@ -34,8 +35,8 @@ async def subscribe(
     # async since queue reuses the async thread
     # that would not be avail if outer function of queue is sync.
     # https://docs.python.org/3.11/library/asyncio-queue.html
-
-    client = Client(request)
+    queue = Queue(100)
+    client = Client(request, queue)
     sse_service.setup_client(client=client)
 
     # all modules can register this event to send initial messages on connection

@@ -175,7 +175,7 @@ class Client:
     """Class each individual client connected"""
 
     request: Request = None
-    queue: Queue = Queue(100)
+    queue: Queue = None
 
 
 class SseService(BaseService):
@@ -192,11 +192,8 @@ class SseService(BaseService):
         self._clients.append(client)
         logger.info(f"SSE subscription added for client {client.request.client}")
         logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
-
-        # TODO: get first information here?
-        # or keep evtemitter?
-        # or call function in other classes
-        # or send event via dependency injection framework? (is this possible?)
+        print(f"client.queue {[client.queue for client in self._clients]}")
+        print(f"qsize {[client.queue.qsize() for client in self._clients]}")
 
     def remove_client(self, client):
         logger.debug(f"SSE subscription remove for {client.request.client} requested")
@@ -227,6 +224,8 @@ class SseService(BaseService):
 
             except QueueFull:
                 # actually never run, because queue size is infinite currently
+                print(f"qsize {[client.queue.qsize() for client in self._clients]}")
+                print(f"skipped {sse_event_data.data}")
                 pass
 
     async def event_iterator(self, client: Client, timeout=0.0):
@@ -238,13 +237,7 @@ class SseService(BaseService):
         try:
             starting_time = time.time()
             while not timeout or (time.time() - starting_time < timeout):
-                if await client.request.is_disconnected():
-                    self.remove_client(client)
-                    logger.info(f"client request disconnect, client {client.request.client}")
-                    break
-
                 try:
-                    # event = await self._queue.get()
                     yield await asyncio.wait_for(client.queue.get(), timeout=0.5)
                 except asyncio.exceptions.TimeoutError:
                     # continue on timeouterror ignore silently. used to abort while loop for testing
