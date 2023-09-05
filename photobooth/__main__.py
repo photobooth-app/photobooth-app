@@ -87,6 +87,7 @@ def main(run_server: bool = True):
 
     ## init resources actively since they would not be initialized otherwise because just receive events
     # application_container.services.init_resources() # no global init as this would init all backends (even unused)
+    application_container.services().processing_service()
     application_container.services().gpio_service.init()
     application_container.services().information_service.init()
     application_container.services().keyboard_service.init()
