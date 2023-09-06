@@ -352,8 +352,6 @@ class ProcessingService(StateMachine):
 
     def start_job_video(self):
         raise NotImplementedError
-        self._check_occupied()
-        self.start(JobModel.Typ.video, 1)
 
     def job_finished(self):
         return self.idle.is_active
@@ -364,5 +362,5 @@ class ProcessingService(StateMachine):
     def reject_capture(self):
         self.reject()
 
-    def abort_capture(self):
+    def abort_process(self):
         self._reset()

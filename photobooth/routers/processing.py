@@ -35,7 +35,6 @@ def _capture(job):
         ) from exc
 
 
-@processing_router.get("/cmd/capture")
 @processing_router.get("/chose/1pic")
 @inject
 def api_chose_1pic_get(
@@ -76,6 +75,23 @@ def api_cmd_reject_get(
 ):
     try:
         processing_service.reject_capture()
+        return "OK"
+    except Exception as exc:
+        # other errors
+        logger.critical(exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"something went wrong, Exception: {exc}",
+        ) from exc
+
+
+@processing_router.get("/cmd/abort")
+@inject
+def api_cmd_abort_get(
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+):
+    try:
+        processing_service.abort_process()
         return "OK"
     except Exception as exc:
         # other errors
