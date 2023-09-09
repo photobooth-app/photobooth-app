@@ -19,6 +19,7 @@ from sse_starlette import ServerSentEvent
 from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem
+from .processing.jobmodels import JobModel
 
 logger = logging.getLogger(__name__)
 
@@ -55,23 +56,14 @@ class SseEventFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
-    state: str
-    countdown: float = 0
-    duration: float = 0
-    processing: bool = False
+    jobmodel: JobModel = None
 
     event: str = "ProcessStateinfo"
 
     @property
     def data(self) -> str:
-        return json.dumps(
-            dict(
-                state=self.state,
-                countdown=self.countdown,
-                duration=self.duration,
-                processing=self.processing,
-            )
-        )
+        # logger.debug(self.jobmodel.export()
+        return json.dumps(self.jobmodel.export())
 
 
 @dataclass

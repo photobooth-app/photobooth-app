@@ -42,15 +42,21 @@ class GroupCommon(BaseModel):
 
     countdown_capture_first: float = Field(
         default=2.0,
+        ge=0,
+        le=20,
         description="Countdown in seconds, started when user start a capture process",
     )
 
     countdown_capture_second_following: float = Field(
         default=1.0,
+        ge=0,
+        le=20,
         description="Countdown in seconds, used for second and following captures for collages",
     )
     countdown_camera_capture_offset: float = Field(
         default=0.25,
+        ge=0,
+        le=20,
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
     )
 

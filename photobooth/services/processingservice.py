@@ -4,7 +4,6 @@ _summary_
 import logging
 import os
 import time
-from threading import Thread
 
 from pymitter import EventEmitter
 from statemachine import State, StateMachine
@@ -64,19 +63,13 @@ class ProcessingService(StateMachine):
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 
-        self.timer: Thread = None
-        self.timer_countdown = 0
-
         super().__init__(model=JobModel())
 
+        # for proper linting
+        self.model: JobModel
+
         # register to send initial data SSE
-        self._evtbus.on(
-            "sse_dispatch_event/initial",
-            lambda: self._evtbus.emit(
-                "sse_dispatch_event",
-                SseEventProcessStateinfo(countdown=0, state=self.current_state.id),
-            ),
-        )
+        self._evtbus.on("sse_dispatch_event/initial", lambda: self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model)))
 
     ## transition actions
 
@@ -86,7 +79,6 @@ class ProcessingService(StateMachine):
 
         logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
 
-        self.model: JobModel  # for linting
         self.model.start_model(typ, total_captures_to_take)
 
         logger.info(f"start job {self.model}")
@@ -99,19 +91,12 @@ class ProcessingService(StateMachine):
         logger.info(f"on_enter_state {self.current_state.id=} ")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
-        self._evtbus.emit(
-            "sse_dispatch_event",
-            SseEventProcessStateinfo(
-                countdown=self.timer_countdown,
-                duration=0,
-                state=self.current_state.id,
-            ),
-        )
+        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
 
     def on_exit_idle(self):
         # when idle left, check that all is properly set up!
 
-        if not self.model.validate_job():
+        if not self.model._validate_job():
             raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):
@@ -131,38 +116,31 @@ class ProcessingService(StateMachine):
             if (self.model.number_captures_taken() == 0)
             else self._config.common.countdown_capture_second_following
         )
-        self.timer_countdown = duration
 
         # if countdown is 0, skip following and transition to next state directy
-        if self.timer_countdown == 0:
+        if duration == 0:
             logger.info("no timer, skip countdown")
+
+            # leave this state by here
             self._counted()
 
-        logger.info(f"starting timer {self.timer_countdown=}")
+        # starting countdown
+        if (duration - self._config.common.countdown_camera_capture_offset) <= 0:
+            logger.warning("duration equal/shorter than camera offset makes no sense. this results in 0s countdown!")
 
-        while self.timer_countdown > 0:
-            self._evtbus.emit(
-                "sse_dispatch_event",
-                SseEventProcessStateinfo(
-                    countdown=round(self.timer_countdown, 1),
-                    duration=duration,
-                    state=self.current_state.id,
-                ),
-            )
+        logger.info(f"start countdown, duration_user={duration=}, offset_camera={self._config.common.countdown_camera_capture_offset}")
+        self.model.start_countdown(
+            duration_user=duration,
+            offset_camera=self._config.common.countdown_camera_capture_offset,
+        )
+        # inform UI to count
+        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
 
-            time.sleep(0.1)
-            self.timer_countdown -= 0.1
+        # wait for countdown finished before continue machine
+        self.model.wait_countdown_finished()  # blocking call
 
-            if self.timer_countdown <= self._config.common.countdown_camera_capture_offset and self.counting.is_active:
-                logger.info("going to next capture now")
-                self._counted()
-                break
-
-    def on_exit_counting(self):
-        logger.info("state counting exit")
-
-        # set to zero but do not send an update to client yet - it shall show the cheese message until captured.
-        self.timer_countdown = 0.0
+        # and now go on
+        self._counted()
 
     def on_enter_capture(self):
         """_summary_"""
@@ -183,17 +161,6 @@ class ProcessingService(StateMachine):
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
                 image_bytes = self._aquisition_service.wait_for_hq_image()
-
-                # send 0 countdown to UI
-                self._evtbus.emit(
-                    "sse_dispatch_event",
-                    SseEventProcessStateinfo(
-                        countdown=0,
-                        duration=0,
-                        state=self.current_state.id,
-                        processing=True,
-                    ),
-                )
 
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
