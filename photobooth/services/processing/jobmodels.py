@@ -28,7 +28,7 @@ class CountdownTimer:
         self._duration = 0
         self._countdown = 0
 
-    def wait_countdown_finished(self):
+    def wait_countdown_finished(self, timeout: float = (TIMER_MAX_DURATION + 1)):
         # TODO: timeout needs to be higher than max possible value to avoid any deadlocks
 
         # return early if already finished when called.
@@ -37,7 +37,7 @@ class CountdownTimer:
             return
 
         with self._finished_condition:
-            if not self._finished_condition.wait(timeout=(self.TIMER_MAX_DURATION + 1)):
+            if not self._finished_condition.wait(timeout=timeout):
                 raise TimeoutError("error timing out")
 
     def _countdown_finished(self):

@@ -124,6 +124,9 @@ class ProcessingService(StateMachine):
             # leave this state by here
             self._counted()
 
+            return
+            # do not continue here again after counted has processed
+
         # starting countdown
         if (duration - self._config.common.countdown_camera_capture_offset) <= 0:
             logger.warning("duration equal/shorter than camera offset makes no sense. this results in 0s countdown!")

@@ -5,6 +5,8 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import Response
 
+from ..services.loggingservice import LOG_DIR
+
 logger = logging.getLogger(__name__)
 debug_router = APIRouter(
     prefix="/debug",
@@ -21,12 +23,13 @@ async def get_log_latest():
         _type_: _description_
     """
 
-    # might be a bug in fastapi: if file changes after file length determined
-    # for header content-length, the browser rejects loading the file.
-    # return FileResponse(path="./log/qbooth.log")
+    log_dir = Path(LOG_DIR)
+    list_of_paths = log_dir.glob("*.log")
+    latest_path = max(list_of_paths, key=lambda p: p.stat().st_mtime)
+    logger.info(f"getting latest logfile: {latest_path}")
 
     return Response(
-        content=Path("./log/photobooth.log").read_text(encoding="utf-8"),
+        content=latest_path.read_text(encoding="utf-8"),
         media_type="text/plain",
     )
 
