@@ -176,7 +176,12 @@ class MediaItem:
 
         # exception here for now to use appconfig like this not via container - maybe find better solution in future.
         # config changes are not reflected like this, always needs restart
-        return f"{AppConfig().sharing.shareservice_url}?action=download&id={self.id}"
+        if AppConfig().sharing.shareservice_enabled:
+            # if shareservice enabled, generate URL automatically as needed:
+            return f"{AppConfig().sharing.shareservice_url}?action=download&id={self.id}"
+        else:
+            # if not, user can sync images on his own and provide a download URL:
+            return AppConfig().sharing.share_custom_qr_url.format(filename=self.filename)
 
     def __post_init__(self):
         if not self.filename:

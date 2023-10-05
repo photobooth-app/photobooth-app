@@ -103,6 +103,11 @@ class GroupSharing(BaseModel):
         description="Upload original image as received from camera. If unchecked, the full processed version is uploaded with filter and texts applied.",
     )
 
+    share_custom_qr_url: str = Field(
+        default="http://localhost:8000/data/processed/full/{filename}",
+        description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {filename} is replaced by actual filename in QR code.",
+    )
+
 
 class EnumImageBackendsMain(str, Enum):
     """enum to choose image backend MAIN from"""
@@ -622,14 +627,7 @@ class GroupUiSettings(BaseModel):
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
     )
-    GALLERY_ENABLED: bool = Field(
-        default=True,
-        description="Enable gallery for user.",
-    )
-    GALLERY_EMPTY_MSG: str = Field(
-        default="So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
-        description="Message displayed if gallery is empty.",
-    )
+
     TAKEPIC_MSG: str = Field(
         default="CHEEESE!",
         description="Message shown during capture. Use icons also.",
@@ -646,9 +644,21 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show link to admin center, usually only during setup.",
     )
+    GALLERY_ENABLED: bool = Field(
+        default=True,
+        description="Enable gallery for user.",
+    )
+    GALLERY_EMPTY_MSG: str = Field(
+        default="So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
+        description="Message displayed if gallery is empty.",
+    )
+    gallery_show_qrcode: bool = Field(
+        default=True,
+        description="Show QR code in gallery. If shareservice is enabled the URL is automatically generated, if not go to share config and provide URL.",
+    )
     gallery_show_filter: bool = Field(
         default=True,
-        description="",
+        description="Show instagramlike filter (pilgram2).",
     )
     gallery_filter_userselectable: list[EnumPilgramFilter] = Field(
         title="Pic1 Filter Userselectable",
@@ -657,15 +667,15 @@ class GroupUiSettings(BaseModel):
     )
     gallery_show_download: bool = Field(
         default=True,
-        description="",
+        description="Show download button in gallery.",
     )
     gallery_show_delete: bool = Field(
         default=True,
-        description="",
+        description="Show delete button for items in gallery.",
     )
     gallery_show_print: bool = Field(
         default=True,
-        description="",
+        description="Show print button for items in gallery.",
     )
 
 
