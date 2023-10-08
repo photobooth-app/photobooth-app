@@ -3,10 +3,12 @@ name = "photobooth-app"
 requires-python = ">=3.9,<3.12"
 dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
-authors = [{ name = "Michael G", email = "me@mgrl.de" }]
+authors = [
+    { name = "Michael G", email = "me@mgrl.de" },
+]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
@@ -29,66 +31,68 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-  "fastapi>=0.100.0,<0.104.0",
-  "opencv-python>=4.7,<4.9",
-  "numpy>=1.25.0",
-  "pillow>=9.5,<10.1",
-  "psutil~=5.9.5",
-  "pydantic>=2.0.3",
-  "pydantic-extra-types>=2.0.0",
-  "pydantic-settings>=2.0.2",
-  "pymitter~=0.4.0",
-  "pyturbojpeg~=1.7.1",
-  "requests~=2.31.0",
-  "sse-starlette~=1.6.1",
-  "uvicorn>=0.22,<0.24",
-  "python-dotenv~=1.0.0",
-  "pyserial~=3.5",
-  "jsonref~=1.1.0",
-  "dependency-injector~=4.41.0",
-  "pilgram2~=2.0.2",
-  "v4l2py>=2.1.0,<2.4.0; platform_system == 'Linux'",
-  "gpiozero>=1.6.2,<2.1.0",
-  "gphoto2~=2.5.0; platform_system == 'Linux'",
-  "python-statemachine>=2.0,<2.2",
+    "fastapi>=0.100.0,<0.104.0",
+    "opencv-python>=4.7,<4.9",
+    "numpy>=1.25.0",
+    "pillow>=9.5,<10.1",
+    "psutil~=5.9.5",
+    "pydantic>=2.0.3",
+    "pydantic-extra-types>=2.0.0",
+    "pydantic-settings>=2.0.2",
+    "pymitter~=0.4.0",
+    "pyturbojpeg~=1.7.1",
+    "requests~=2.31.0",
+    "sse-starlette~=1.6.1",
+    "uvicorn>=0.22,<0.24",
+    "python-dotenv~=1.0.0",
+    "pyserial~=3.5",
+    "jsonref~=1.1.0",
+    "dependency-injector~=4.41.0",
+    "pilgram2~=2.0.2",
+    "v4l2py>=2.1.0,<2.4.0; platform_system == 'Linux'",
+    "gpiozero>=1.6.2,<2.1.0",
+    "gphoto2~=2.5.0; platform_system == 'Linux'",
+    "python-statemachine>=2.0,<2.2",
 ]
 
-[tool.hatch.version]
-path = "photobooth/__version__.py"
-
-[tool.hatch.envs.test]
-dependencies = [
-  "pytest~=7.4.0",
-  "pytest-benchmark~=4.0.0",
-  "pytest-cov~=4.1.0",
-  "ruff~=0.0.286",
-  "httpx-sse~=0.3.1",
-  "httpx~=0.24.1",
-  "simplejpeg~=1.7.1",
-  "coverage[toml]~=7.3.0",
-  "black~=23.7.0",
-]
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
-system-packages = true
+# system-packages = true
 
-[tool.hatch.envs.test.scripts]
-test = "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
-
+[project.scripts]
+photobooth = "photobooth.__main__:main"
 
 [project.urls]
 homepage = "https://github.com/mgrl/photobooth-app"
 repository = "https://github.com/mgrl/photobooth-app"
 documentation = "https://mgrl.github.io/photobooth-docs"
 
-[project.scripts]
-photobooth = "photobooth.__main__:main"
+[tool.pdm]
+version = { source = "file", path = "photobooth/__version__.py" }
 
-[tool.hatch.build]
-include = ["/photobooth"]
+[tool.pdm.dev-dependencies]
+test = [
+  "pytest~=7.4.0",
+  "pytest-benchmark~=4.0.0",
+  "pytest-cov~=4.1.0",
+  "coverage[toml]~=7.3.0",
+  "simplejpeg~=1.7.1",
+  "httpx-sse~=0.3.1",
+  "httpx~=0.24.1",
+]
+lint= [
+  "ruff~=0.0.286",
+  "black~=23.7.0",
+]
+
+[tool.pdm.build]
+includes = ["/photobooth"]
+
+[tool.pdm.scripts]
+test = "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [tool.pytest.ini_options]
 log_cli = true

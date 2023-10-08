@@ -3,15 +3,21 @@
 /config
 /data
 /log
-
-__pycache__
 log/*.log*
+
+# python files
+__pycache__
+
+# env to preconfigure photobooth
 .env
 .env.*
 
+# pytest
 .coverage*
 coverage.xml
 junit/*
 
+# build backends
 poetry.toml
 dist/*
+.pdm-python
