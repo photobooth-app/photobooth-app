@@ -73,11 +73,12 @@ jobs:
           sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev libcap-dev
       - run: pip install --user --upgrade pipx
       - run: pipx install pdm
-      - run: pdm venv purge # clean env
-      - run: pdm install # install project
+      - run: pdm venv remove -y in-project # clean env
+      - run: pdm venv create 3.9 --system-site-packages # incl system site to allow for picamera2 to import
+      - run: pdm install # install in-project env
       - name: Test with pytest
         run: |
-          pdm run --site-packages test
+          pdm run test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
