@@ -39,14 +39,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
-      - name: install hatch and create environments
+      - name: install pdm
         run: |
-          pipx install hatch # on hosted pipx is installed
-          hatch env create
-          hatch env create test
+          pipx install pdm # on hosted pipx is installed
+          pdm install
       - name: Run pytest
         run: |
-          hatch run test:test
+          pdm run test
       - name: output php logs
         if: always()
         run: |
@@ -73,12 +72,12 @@ jobs:
           sudo apt-get update
           sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev libcap-dev
       - run: pip install --user --upgrade pipx
-      - run: pipx install hatch
-      - run: hatch env prune # clean env
-      #- run: hatch config virtualenvs.options.system-site-packages true # currently needed for picamera2/libcamera until https://github.com/raspberrypi/picamera2/issues/503 fixed
+      - run: pipx install pdm
+      - run: pdm venv purge # clean env
+      - run: pdm install # install project
       - name: Test with pytest
         run: |
-          hatch --verbose run test:test
+          pdm run --site-packages test
       - uses: actions/upload-artifact@v3
         with:
           name: coverage-hardware
