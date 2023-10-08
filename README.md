@@ -59,11 +59,6 @@ The photobooth app can be used standalone but is not feature complete yet.
 Anyway, it integrates well with the fully blown [photobooth project](https://photoboothproject.github.io/),
 see [description how to achieve integration](https://mgrl.github.io/photobooth-docs/reference/photoboothprojectintegration/).
 
-## 📣 Changelog
-
-see separate file:
-<https://github.com/mgrl/photobooth-app/blob/main/CHANGELOG.md>
-
 ### ©️ License
 
 The software is licensed under the MIT license.
