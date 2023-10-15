@@ -78,8 +78,8 @@ class SystemService(BaseService):
                 for line in fin:
                     line_out = line
 
-                    line_out.replace("##working_dir##", os.path.normpath(path_photobooth_working_dir))
-                    line_out.replace("##sys_executable##", sys.executable)
+                    line_out = line_out.replace("##working_dir##", os.path.normpath(path_photobooth_working_dir))
+                    line_out = line_out.replace("##sys_executable##", sys.executable)
 
                     fout.write(line_out)
 
