@@ -150,6 +150,7 @@ class MediaprocessingService(BaseService):
     def process_collage(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
         """apply preconfigured pipeline."""
 
+        # get the local config
         _config = self._config.mediaprocessing_pipeline_collage
 
         tms = time.time()
@@ -160,12 +161,26 @@ class MediaprocessingService(BaseService):
 
         ## stage: merge captured images and predefined to one image with transparency
         if True:  # merge is mandatory for collages
-            _captured_images: list[Image.Image] = []
-            for captured_mediaitem in captured_mediaitems:
-                _captured_images.append(Image.open(captured_mediaitem.path_full))
+            # get all images to process
+            collage_images: list[Image.Image] = []
+
+            for _definition in _config.canvas_merge_definition:
+                if _definition.predefined_image:
+                    try:
+                        predefined_image = Image.open(get_user_file(_definition.predefined_image))
+
+                        # apply filter to predefined imgs here. captured images get processed during capture already.
+                        if _definition.filter and _definition.filter.value and _definition.filter.value != "original":
+                            predefined_image = self._apply_stage_pilgram(predefined_image, _definition.filter.value)
+
+                        collage_images.append(predefined_image)
+                    except FileNotFoundError as exc:
+                        raise PipelineError(f"error getting predefined file {exc}") from exc
+                else:
+                    collage_images.append(Image.open(captured_mediaitems.pop(0).path_full))
 
             try:
-                canvas = merge_collage_stage(canvas, _captured_images, _config.canvas_merge_definition)
+                canvas = merge_collage_stage(canvas, collage_images, _config.canvas_merge_definition)
             except PipelineError as exc:
                 logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
                 raise RuntimeError("abort processing due to pipelineerror") from exc
