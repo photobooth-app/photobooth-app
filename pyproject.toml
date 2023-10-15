@@ -85,7 +85,7 @@ lint= [
 ]
 
 [tool.pdm.build]
-includes = ["/photobooth"]
+includes = ["./photobooth"]
 
 [tool.pdm.scripts]
 test = "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
