@@ -23,19 +23,12 @@ jobs:
     permissions:
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      # setup
       - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
 
-      # install hatch to build
-      - run: pip install --user --upgrade pipx
-      - run: pipx install hatch
+      - uses: pdm-project/setup-pdm@v3
 
-      # build
-      - run: hatch build
+      - name: Build packages
+        run: pdm build
 
       # publish test pypi
       - name: Publish distribution 📦 to Test PyPI
