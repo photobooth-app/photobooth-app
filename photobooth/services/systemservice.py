@@ -5,6 +5,7 @@ import logging
 import os
 import platform
 import subprocess
+import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -75,14 +76,16 @@ class SystemService(BaseService):
             PHOTOBOOTH_APP_SERVICE_FILE.parent.mkdir(exist_ok=True, parents=True)
             with open(PHOTOBOOTH_APP_SERVICE_FILE, "w", encoding="utf-8") as fout:
                 for line in fin:
-                    fout.write(
-                        line.replace(
-                            "##working_dir##",
-                            os.path.normpath(path_photobooth_working_dir),
-                        )
-                    )
+                    line_out = line
+
+                    line_out.replace("##working_dir##", os.path.normpath(path_photobooth_working_dir))
+                    line_out.replace("##sys_executable##", sys.executable)
+
+                    fout.write(line_out)
+
             logger.info(f"created service file '{PHOTOBOOTH_APP_SERVICE_FILE}'")
             logger.info(f"using working directory '{path_photobooth_working_dir}'")
+            logger.info(f"using sys_executable '{sys.executable}'")
         try:
             subprocess.run("systemctl --user enable photobooth-app.service", shell=True)
             logger.info("service enabled")
