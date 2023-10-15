@@ -211,15 +211,17 @@ class ProcessingService(StateMachine):
         elif self.model._typ == JobModel.Typ.collage:
             # the captures in the context of a collage job can be processed differently:
             cfg_collage = self._config.mediaprocessing_pipeline_collage
+
+            # list only captured_images from merge_definition (excludes predefined)
+            captured_images = [item for item in cfg_collage.canvas_merge_definition if not item.predefined_image]
+
             config_singleimage_captures_for_collage = GroupMediaprocessingPipelineSingleImage(
                 pipeline_enable=True,  # for convenience this is always true now
                 fill_background_enable=cfg_collage.capture_fill_background_enable,
                 fill_background_color=cfg_collage.capture_fill_background_color,
                 img_background_enable=cfg_collage.capture_img_background_enable,
                 img_background_file=cfg_collage.capture_img_background_file,
-                filter=cfg_collage.canvas_merge_definition[
-                    self.model.number_captures_taken()
-                ].filter.value,  # TODO: offset if predefined images! this is wrong!
+                filter=captured_images[self.model.number_captures_taken()].filter.value,
             )
 
             self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)

@@ -495,8 +495,16 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
     canvas_merge_definition: list[CollageMergeDefinition] = Field(
         default=[
-            CollageMergeDefinition(pos_x=215, pos_y=122, width=660, height=660, rotate=-2, filter=EnumPilgramFilter.moon),
-            CollageMergeDefinition(pos_x=1072, pos_y=122, width=660, height=660, rotate=-3),
+            CollageMergeDefinition(pos_x=215, pos_y=122, width=660, height=660, rotate=-2, filter=EnumPilgramFilter.earlybird),
+            CollageMergeDefinition(
+                pos_x=1072,
+                pos_y=122,
+                width=660,
+                height=660,
+                rotate=-3,
+                filter=EnumPilgramFilter.mayfair,
+                predefined_image="predefined_images/pexels-marcelo-miranda-7708722.jpg",
+            ),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
