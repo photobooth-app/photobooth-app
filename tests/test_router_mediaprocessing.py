@@ -7,15 +7,16 @@ from PIL import Image
 
 from photobooth.application import app
 
+from .image_utils import is_same
+
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-
         # create one image to ensure there is at least one
-        services=client.app.container.services()
+        services = client.app.container.services()
         services.processing_service().start_job_1pic()
 
         yield client
@@ -71,7 +72,7 @@ def test_apply_filter(client: TestClient):
 
     assert response.status_code == 200
 
-    if list(image_before.getdata()) == list(Image.open(mediaitem.path_full).getdata()):
+    if is_same(image_before, Image.open(mediaitem.path_full)):
         raise AssertionError("img data before and after same. filter was not applied!")
 
 
@@ -86,14 +87,14 @@ def test_apply_filter_original(client: TestClient):
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/_1977")
     assert response.status_code == 200
-    if list(image_original.getdata()) == list(Image.open(mediaitem.path_preview).getdata()):
+    if is_same(image_original, Image.open(mediaitem.path_preview)):
         raise AssertionError("img data before and after same. filter was not applied!")
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
 
     assert response.status_code == 200
 
-    assert list(image_original.getdata()) == list(Image.open(mediaitem.path_preview).getdata())
+    assert is_same(image_original, Image.open(mediaitem.path_preview))
 
     # need to close image, otherwise pytest hangs!
     image_original.close()

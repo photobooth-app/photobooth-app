@@ -456,7 +456,7 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
     texts: list[TextsConfig] = Field(
         default=[
             TextsConfig(
-                text="Some Text! {date} {time}",
+                text="Some Text!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
                 pos_x=300,
                 pos_y=800,
                 rotate=-3,
@@ -646,7 +646,7 @@ class GroupUiSettings(BaseModel):
     model_config = ConfigDict(title="Personalize the User Interface")
 
     FRONTPAGE_TEXT: str = Field(
-        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
     )
 
@@ -671,7 +671,7 @@ class GroupUiSettings(BaseModel):
         description="Enable gallery for user.",
     )
     GALLERY_EMPTY_MSG: str = Field(
-        default="So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Empty, Zero, Nada! 🤷‍♂️<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Message displayed if gallery is empty.",
     )
     gallery_show_qrcode: bool = Field(
