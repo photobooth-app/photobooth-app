@@ -650,13 +650,9 @@ class GroupUiSettings(BaseModel):
         description="Text/HTML displayed on frontpage.",
     )
 
-    TAKEPIC_MSG: str = Field(
-        default="CHEEESE!",
-        description="Message shown during capture. Use icons also.",
-    )
     TAKEPIC_MSG_TIME: float = Field(
         default=0.5,
-        description="Offset in seconds, the message above shall be shown.",
+        description="Offset in seconds, the smile-icon shall be shown.",
     )
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
         default=30,
