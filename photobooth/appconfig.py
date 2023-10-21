@@ -450,11 +450,19 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
     texts_enable: bool = Field(
-        default=False,
+        default=True,
         description="General enable apply texts below.",
     )
     texts: list[TextsConfig] = Field(
-        default=[],
+        default=[
+            TextsConfig(
+                text="Some Text! {date} {time}",
+                pos_x=300,
+                pos_y=800,
+                rotate=-3,
+                color=Color("yellow"),
+            ),
+        ],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
 

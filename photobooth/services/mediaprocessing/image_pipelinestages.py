@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -68,7 +69,10 @@ def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.
             image=image,
             angle=textconfig.rotate,
             xy=(textconfig.pos_x, textconfig.pos_y),
-            text=textconfig.text,
+            text=textconfig.text.format(
+                date=datetime.now().strftime("%x"),
+                time=datetime.now().strftime("%X"),
+            ),
             fill=Color(textconfig.color).as_rgb_tuple(),
             font=img_font,
         )
