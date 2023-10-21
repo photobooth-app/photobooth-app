@@ -4,15 +4,18 @@ _summary_
 
 import platform
 import socket
+import sys
 import threading
+from pathlib import Path
 
 import psutil
 from pymitter import EventEmitter
 
+from ..__version__ import __version__
 from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
-from .sseservice import SseEventInformationRecord
+from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
@@ -28,6 +31,7 @@ class InformationService(BaseService):
 
         # registered events
         self._evtbus.on("sse_dispatch_event/initial", self._on_stats_interval_timer)
+        self._evtbus.on("sse_dispatch_event/initial", self._on_stats_one_off)
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -65,18 +69,37 @@ class InformationService(BaseService):
         """_summary_"""
         self._stats_interval_timer.stop()
 
+    def _on_stats_one_off(self):
+        """_summary_"""
+
+        # gather one time on connect information to be sent off:
+        self._evtbus.emit(
+            "sse_dispatch_event",
+            SseEventOnetimeInformationRecord(
+                version=__version__,
+                platform_system=platform.system(),
+                platform_release=platform.release(),
+                platform_machine=platform.machine(),
+                platform_python_version=platform.python_version(),
+                platform_node=platform.node(),
+                platform_cpu_count=psutil.cpu_count(),
+                data_directory=Path.cwd().resolve(),
+                python_executable=sys.executable,
+                disk=self._gather_disk(),
+            ),
+        )
+
     def _on_stats_interval_timer(self):
         """_summary_"""
 
         # gather information to be sent off on timer tick:
         self._evtbus.emit(
             "sse_dispatch_event",
-            SseEventInformationRecord(
+            SseEventIntervalInformationRecord(
                 cpu1_5_15=self._gather_cpu1_5_15(),
                 active_threads=self._gather_active_threads(),
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
-                disk=self._gather_disk(),
             ),
         )
 

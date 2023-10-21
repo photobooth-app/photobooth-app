@@ -10,6 +10,7 @@ import time
 import uuid
 from asyncio import Queue, QueueFull
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from fastapi import Request
@@ -138,7 +139,42 @@ class SseEventLogRecord(SseEventBase):
 
 
 @dataclass
-class SseEventInformationRecord(SseEventBase):
+class SseEventOnetimeInformationRecord(SseEventBase):
+    """basic class for sse events"""
+
+    event: str = "InformationRecord"
+
+    version: str = None
+    platform_system: str = None
+    platform_release: str = None
+    platform_machine: str = None
+    platform_python_version: str = None
+    platform_node: str = None
+    platform_cpu_count: int = None
+    data_directory: Path = None
+    python_executable: str = None
+    disk: dict[str, Any] = None
+
+    @property
+    def data(self) -> str:
+        return json.dumps(
+            dict(
+                version=self.version,
+                platform_system=self.platform_system,
+                platform_release=self.platform_release,
+                platform_machine=self.platform_machine,
+                platform_python_version=self.platform_python_version,
+                platform_node=self.platform_node,
+                platform_cpu_count=self.platform_cpu_count,
+                data_directory=str(self.data_directory),
+                python_executable=self.python_executable,
+                disk=self.disk,
+            )
+        )
+
+
+@dataclass
+class SseEventIntervalInformationRecord(SseEventBase):
     """basic class for sse events"""
 
     event: str = "InformationRecord"
@@ -147,7 +183,6 @@ class SseEventInformationRecord(SseEventBase):
     active_threads: int = None
     memory: dict[str, Any] = None
     cma: dict[str, Any] = None
-    disk: dict[str, Any] = None
 
     @property
     def data(self) -> str:
@@ -157,7 +192,6 @@ class SseEventInformationRecord(SseEventBase):
                 active_threads=self.active_threads,
                 memory=self.memory,
                 cma=self.cma,
-                disk=self.disk,
             )
         )
 
