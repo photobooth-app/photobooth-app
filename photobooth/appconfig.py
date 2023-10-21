@@ -331,7 +331,7 @@ class TextsConfig(BaseModel):
     text: str = ""
     pos_x: NonNegativeInt = 50
     pos_y: NonNegativeInt = 50
-    # rotate: int = 0 # TODO: not yet implemented
+    rotate: int = 0
     font_size: PositiveInt = 40
     font: str = "fonts/Roboto-Bold.ttf"
     color: Color = Color("red").as_named()
@@ -344,7 +344,7 @@ class CollageMergeDefinition(BaseModel):
     height: NonNegativeInt = 600
     rotate: int = 0
     predefined_image: str = ""
-    filter: EnumPilgramFilter = EnumPilgramFilter.original  # TODO: implement.
+    filter: EnumPilgramFilter = EnumPilgramFilter.original
 
 
 class GroupMediaprocessing(BaseModel):
@@ -538,7 +538,13 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
     canvas_texts: list[TextsConfig] = Field(
         default=[
-            TextsConfig(text="Nice Collage Text!", pos_x=280, pos_y=780, color=Color("black")),
+            TextsConfig(
+                text="Nice Collage Text!",
+                pos_x=300,
+                pos_y=800,
+                rotate=-3,
+                color=Color("black"),
+            ),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )

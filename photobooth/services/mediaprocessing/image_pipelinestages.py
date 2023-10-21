@@ -5,12 +5,12 @@ from typing import Union
 import cv2
 import numpy as np
 import pilgram2
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
 from ...appconfig import TextsConfig
 from ...utils.exceptions import PipelineError
-from .pipelinestages_utils import get_user_file
+from .pipelinestages_utils import draw_rotated_text, get_user_file
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +64,11 @@ def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.
             size=textconfig.font_size,
         )
 
-        img_draw = ImageDraw.Draw(image)
-        img_draw.text(
-            (textconfig.pos_x, textconfig.pos_y),
-            textconfig.text,
+        draw_rotated_text(
+            image=image,
+            angle=textconfig.rotate,
+            xy=(textconfig.pos_x, textconfig.pos_y),
+            text=textconfig.text,
             fill=Color(textconfig.color).as_rgb_tuple(),
             font=img_font,
         )
