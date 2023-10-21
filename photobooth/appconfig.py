@@ -331,7 +331,7 @@ class TextsConfig(BaseModel):
     text: str = ""
     pos_x: NonNegativeInt = 50
     pos_y: NonNegativeInt = 50
-    # rotate: int = 0 # TODO: not yet implemented
+    rotate: int = 0
     font_size: PositiveInt = 40
     font: str = "fonts/Roboto-Bold.ttf"
     color: Color = Color("red").as_named()
@@ -344,7 +344,7 @@ class CollageMergeDefinition(BaseModel):
     height: NonNegativeInt = 600
     rotate: int = 0
     predefined_image: str = ""
-    filter: EnumPilgramFilter = EnumPilgramFilter.original  # TODO: implement.
+    filter: EnumPilgramFilter = EnumPilgramFilter.original
 
 
 class GroupMediaprocessing(BaseModel):
@@ -450,11 +450,19 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
     texts_enable: bool = Field(
-        default=False,
+        default=True,
         description="General enable apply texts below.",
     )
     texts: list[TextsConfig] = Field(
-        default=[],
+        default=[
+            TextsConfig(
+                text="Some Text!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
+                pos_x=300,
+                pos_y=800,
+                rotate=-3,
+                color=Color("yellow"),
+            ),
+        ],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
 
@@ -538,7 +546,13 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
     canvas_texts: list[TextsConfig] = Field(
         default=[
-            TextsConfig(text="Nice Collage Text!", pos_x=280, pos_y=780, color=Color("black")),
+            TextsConfig(
+                text="Nice Collage Text!",
+                pos_x=300,
+                pos_y=800,
+                rotate=-3,
+                color=Color("black"),
+            ),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
@@ -632,17 +646,13 @@ class GroupUiSettings(BaseModel):
     model_config = ConfigDict(title="Personalize the User Interface")
 
     FRONTPAGE_TEXT: str = Field(
-        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures <br>📷💕</div>',
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
     )
 
-    TAKEPIC_MSG: str = Field(
-        default="CHEEESE!",
-        description="Message shown during capture. Use icons also.",
-    )
     TAKEPIC_MSG_TIME: float = Field(
         default=0.5,
-        description="Offset in seconds, the message above shall be shown.",
+        description="Offset in seconds, the smile-icon shall be shown.",
     )
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
         default=30,
@@ -657,7 +667,7 @@ class GroupUiSettings(BaseModel):
         description="Enable gallery for user.",
     )
     GALLERY_EMPTY_MSG: str = Field(
-        default="So boring here...🤷‍♂️<br>Let's take some pictures 📷💕",
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Empty, Zero, Nada! 🤷‍♂️<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Message displayed if gallery is empty.",
     )
     gallery_show_qrcode: bool = Field(
