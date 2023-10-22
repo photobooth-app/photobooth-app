@@ -57,3 +57,27 @@ async def get_file(file_path: str = "/"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "file does not exist!")
 
     return FileResponse(file_path)
+
+
+@admin_files_router.post("/file/upload")
+async def post_file_upload(file_path: str = None):
+    """ """
+    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "function not yet implemented")
+
+
+@admin_files_router.get("/delete{file_path:path}")
+async def get_delete(file_path: str = None):
+    """ """
+    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "function not yet implemented")
+
+
+@admin_files_router.post("/folder/new")
+async def post_folder_new(file_path: str = None):
+    """ """
+    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "function not yet implemented")
+
+
+@admin_files_router.get("/zip")
+async def get_zip(selected_paths: list[str] = None):
+    """ """
+    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "function not yet implemented")
