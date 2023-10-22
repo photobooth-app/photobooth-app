@@ -2,6 +2,7 @@
 # ignore userdata folders
 /config
 /data
+/media
 /log
 log/*.log*
 

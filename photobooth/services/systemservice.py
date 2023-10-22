@@ -70,7 +70,7 @@ class SystemService(BaseService):
             raise RuntimeError("photobooth not installed as pip package, service install only supported for pip installs") from exc
 
         # install service file and enable
-        path_photobooth_service_file = Path(__file__).parent.joinpath("assets", "systemservice", "photobooth-app.service").resolve()
+        path_photobooth_service_file = Path(__file__).parent.parent.joinpath("assets", "systemservice", "photobooth-app.service").resolve()
         path_photobooth_working_dir = Path.cwd().resolve()
         with open(path_photobooth_service_file, encoding="utf-8") as fin:
             PHOTOBOOTH_APP_SERVICE_FILE.parent.mkdir(exist_ok=True, parents=True)

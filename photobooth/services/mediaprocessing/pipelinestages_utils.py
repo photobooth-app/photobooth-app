@@ -1,22 +1,4 @@
-from pathlib import Path
-from typing import Union
-
 from PIL import Image, ImageDraw
-
-DATA_USER_PATH = "./data/user/"
-
-
-def get_user_file(filepath: Union[Path, str]) -> Path:
-    # check font is avail, otherwise send pipelineerror - so we can recover and continue
-    # default font Roboto comes with app, fallback to that one if avail
-    file_user_path = Path(DATA_USER_PATH, filepath)
-    file_assets_path = Path(__file__).parent.resolve().joinpath(Path("assets", filepath))
-    out_filepath = file_user_path if file_user_path.is_file() else file_assets_path
-
-    if not out_filepath.is_file():
-        raise FileNotFoundError(f"filepath {str(filepath)} not found!")
-
-    return out_filepath
 
 
 def rotate(image: Image.Image, angle: int = 0, expand: bool = True) -> (Image.Image, int, int):

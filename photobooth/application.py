@@ -14,6 +14,8 @@ from fastapi.staticfiles import StaticFiles
 
 # from .routers import home, config, mediacollection
 from .containers import ApplicationContainer
+from .routers.admin.config import admin_config_router
+from .routers.admin.files import admin_files_router
 from .routers.aquisition import aquisition_router
 from .routers.config import config_router
 from .routers.debug import debug_router
@@ -38,7 +40,8 @@ Following api is provided by the app.
 
 
 def _create_basic_folders():
-    os.makedirs("data", exist_ok=True)
+    os.makedirs("media", exist_ok=True)
+    os.makedirs("userdata", exist_ok=True)
     os.makedirs("log", exist_ok=True)
     os.makedirs("config", exist_ok=True)
 
@@ -72,6 +75,8 @@ def _create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
+    _app.include_router(admin_config_router)
+    _app.include_router(admin_files_router)
     _app.include_router(config_router)
     _app.include_router(home_router)
     _app.include_router(aquisition_router)
@@ -83,7 +88,7 @@ def _create_app() -> FastAPI:
     _app.include_router(system_router)
     _app.include_router(processing_router)
     # serve data directory holding images, thumbnails, ...
-    _app.mount("/data", StaticFiles(directory="data"), name="data")
+    _app.mount("/media", StaticFiles(directory="media"), name="media")
     # if not match anything above, default to deliver static files from web directory
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
@@ -100,7 +105,7 @@ def _create_app() -> FastAPI:
 
     # store container here and wire routers, to inject providers
     _app.container = application_container
-    _app.container.wire(modules=[__name__], packages=[".routers"])
+    _app.container.wire(modules=[__name__], packages=[".routers", ".routers.admin"])
 
     return _app
 
