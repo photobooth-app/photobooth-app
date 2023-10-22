@@ -14,6 +14,8 @@ from fastapi.staticfiles import StaticFiles
 
 # from .routers import home, config, mediacollection
 from .containers import ApplicationContainer
+from .routers.admin.config import admin_config_router
+from .routers.admin.files import admin_files_router
 from .routers.aquisition import aquisition_router
 from .routers.config import config_router
 from .routers.debug import debug_router
@@ -73,6 +75,8 @@ def _create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
+    _app.include_router(admin_config_router)
+    _app.include_router(admin_files_router)
     _app.include_router(config_router)
     _app.include_router(home_router)
     _app.include_router(aquisition_router)
@@ -101,7 +105,7 @@ def _create_app() -> FastAPI:
 
     # store container here and wire routers, to inject providers
     _app.container = application_container
-    _app.container.wire(modules=[__name__], packages=[".routers"])
+    _app.container.wire(modules=[__name__], packages=[".routers", ".routers.admin"])
 
     return _app
 
