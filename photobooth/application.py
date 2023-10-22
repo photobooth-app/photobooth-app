@@ -38,7 +38,8 @@ Following api is provided by the app.
 
 
 def _create_basic_folders():
-    os.makedirs("data", exist_ok=True)
+    os.makedirs("media", exist_ok=True)
+    os.makedirs("userdata", exist_ok=True)
     os.makedirs("log", exist_ok=True)
     os.makedirs("config", exist_ok=True)
 
@@ -83,7 +84,7 @@ def _create_app() -> FastAPI:
     _app.include_router(system_router)
     _app.include_router(processing_router)
     # serve data directory holding images, thumbnails, ...
-    _app.mount("/data", StaticFiles(directory="data"), name="data")
+    _app.mount("/media", StaticFiles(directory="media"), name="media")
     # if not match anything above, default to deliver static files from web directory
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 

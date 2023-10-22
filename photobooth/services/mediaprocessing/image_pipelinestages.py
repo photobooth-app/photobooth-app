@@ -11,7 +11,8 @@ from pydantic_extra_types.color import Color
 
 from ...appconfig import TextsConfig
 from ...utils.exceptions import PipelineError
-from .pipelinestages_utils import draw_rotated_text, get_user_file
+from ...utils.helper import get_user_file
+from .pipelinestages_utils import draw_rotated_text
 
 logger = logging.getLogger(__name__)
 

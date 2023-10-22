@@ -21,7 +21,7 @@ from ...appconfig import AppConfig
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
 
-DATA_PATH = "./data/"
+DATA_PATH = "./media/"
 # as from image source
 PATH_ORIGINAL = "".join([DATA_PATH, "original/"])
 # represents unaltered data from image source in S/M/L
