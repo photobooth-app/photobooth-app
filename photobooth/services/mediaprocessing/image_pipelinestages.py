@@ -172,7 +172,7 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
     # default font Roboto comes with app, fallback to that one if avail
     try:
         background_path = get_user_file(background_file)
-        background_img = Image.open(background_path)
+        background_img = Image.open(background_path).convert("RGBA")
     except FileNotFoundError as exc:
         logger.exception(exc)
         raise PipelineError(f"font {str(background_file)} not found!") from exc
