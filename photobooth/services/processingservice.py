@@ -97,6 +97,7 @@ class ProcessingService(StateMachine):
         # when idle left, check that all is properly set up!
 
         if not self.model._validate_job():
+            logger.error(self.model)
             raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):

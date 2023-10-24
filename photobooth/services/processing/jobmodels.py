@@ -114,7 +114,7 @@ class JobModel:  # TODO: derive from model class?
         )
 
     def _validate_job(self):
-        if self._typ is None or self._total_captures_to_take is None or self._captures is None:
+        if self._typ is None or self._total_captures_to_take is None or self._total_captures_to_take <= 0 or self._captures is None:
             return False
         else:
             return True
