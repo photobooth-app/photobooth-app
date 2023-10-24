@@ -6,8 +6,6 @@ import platform
 from pathlib import Path
 from typing import Union
 
-DATA_USER_PATH = "./userdata/"
-
 
 def filenames_sanitize(filenames: list[str], check_exists: bool = True) -> list[Path]:
     # convert filenames (usually strings) to path objects and resolve to normalize.
@@ -31,7 +29,7 @@ def filenames_sanitize(filenames: list[str], check_exists: bool = True) -> list[
 def get_user_file(filepath: Union[Path, str]) -> Path:
     # check font is avail, otherwise send pipelineerror - so we can recover and continue
     # default font Roboto comes with app, fallback to that one if avail
-    file_user_path = Path(DATA_USER_PATH, filepath)
+    file_user_path = Path(filepath)
     file_assets_path = Path(__file__).parent.parent.resolve().joinpath(Path("assets", filepath))
     out_filepath = file_user_path if file_user_path.is_file() else file_assets_path
 

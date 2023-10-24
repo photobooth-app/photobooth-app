@@ -129,6 +129,11 @@ class MediaprocessingService(BaseService):
         if _config.img_background_enable:
             image = self._apply_stage_img_background(image, _config.img_background_file)
 
+        ## stage: new image in front of transparent parts (or extended frame)
+        if _config.img_front_enable:
+            image = image.convert("RGBA")
+            image = self._apply_stage_img_background(image, _config.img_front_file, reverse=True)
+
         ## stage: text overlay
         if _config.texts_enable:
             image = self._apply_stage_texts(image, _config.texts)
