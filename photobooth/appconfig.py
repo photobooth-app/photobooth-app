@@ -449,6 +449,14 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
         default="backgrounds/pink-7761356_1920.png",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
+    img_front_enable: bool = Field(
+        default=True,
+        description="Overlay image on captured image.",
+    )
+    img_front_file: str = Field(
+        default="frames/polaroid-6125402_1pic.png",
+        description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
+    )
     texts_enable: bool = Field(
         default=True,
         description="General enable apply texts below.",
@@ -458,9 +466,9 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
             TextsConfig(
                 text="Some Text!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
                 pos_x=300,
-                pos_y=800,
+                pos_y=900,
                 rotate=-3,
-                color=Color("yellow"),
+                color=Color("black"),
             ),
         ],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
@@ -534,7 +542,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
     canvas_img_front_enable: bool = Field(
         default=True,
-        description="Add image from file to background.",
+        description="Overlay image on canvas image.",
     )
     canvas_img_front_file: str = Field(
         default="frames/polaroid-6125402_1920.png",
@@ -645,6 +653,23 @@ class GroupUiSettings(BaseModel):
 
     model_config = ConfigDict(title="Personalize the User Interface")
 
+    show_takepic_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to capture single picture on frontpage.",
+    )
+    show_collage_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to capture collage on frontpage.",
+    )
+    show_gallery_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to gallery on frontpage.",
+    )
+    show_admin_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to admin center, usually only during setup.",
+    )
+
     FRONTPAGE_TEXT: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
@@ -658,14 +683,7 @@ class GroupUiSettings(BaseModel):
         default=30,
         description="Timeout in seconds a new item popup closes automatically.",
     )
-    SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
-        default=True,
-        description="Show link to admin center, usually only during setup.",
-    )
-    GALLERY_ENABLED: bool = Field(
-        default=True,
-        description="Enable gallery for user.",
-    )
+
     GALLERY_EMPTY_MSG: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Empty, Zero, Nada! 🤷‍♂️<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Message displayed if gallery is empty.",

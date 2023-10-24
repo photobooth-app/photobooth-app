@@ -13,6 +13,7 @@ from turbojpeg import TurboJPEG
 
 from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage, TextsConfig
 from ..utils.exceptions import PipelineError
+from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
@@ -23,7 +24,6 @@ from .mediaprocessing.image_pipelinestages import (
     removechromakey_stage,
     text_stage,
 )
-from .mediaprocessing.pipelinestages_utils import get_user_file
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
@@ -128,6 +128,11 @@ class MediaprocessingService(BaseService):
         ## stage: new background image behing transparent parts (or extended frame)
         if _config.img_background_enable:
             image = self._apply_stage_img_background(image, _config.img_background_file)
+
+        ## stage: new image in front of transparent parts (or extended frame)
+        if _config.img_front_enable:
+            image = image.convert("RGBA")
+            image = self._apply_stage_img_background(image, _config.img_front_file, reverse=True)
 
         ## stage: text overlay
         if _config.texts_enable:

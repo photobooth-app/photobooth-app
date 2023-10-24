@@ -1,0 +1,23 @@
+[Unit]
+Description=photobooth-app
+#After=multi-user.target #only for system units
+After=default.target
+
+[Service]
+Type=simple
+Restart=always
+#Adjust following line if necessary: WordkingDirectory=PATH_TO_YOUR_start.py_FILE
+WorkingDirectory=##working_dir##
+#ExecStart=/usr/bin/python -O -m photobooth
+ExecStart=##sys_executable## -O -m photobooth
+
+[Install]
+#WantedBy=multi-user.target #only for system units
+WantedBy=default.target
+
+## enable service and autostart on system startup:
+#1 cp photobooth-app.service ~/.local/share/systemd/user
+#1b systemctl --user daemon-reload 
+#2 systemctl --user enable photobooth-app.service
+#3 systemctl --user start photobooth-app.service
+#4 systemctl --user status photobooth-app.service

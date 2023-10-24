@@ -2,8 +2,10 @@
 # ignore userdata folders
 /config
 /data
+/media
 /log
 log/*.log*
+/userdata
 
 # python files
 __pycache__
@@ -21,3 +23,4 @@ junit/*
 poetry.toml
 dist/*
 .pdm-python
+

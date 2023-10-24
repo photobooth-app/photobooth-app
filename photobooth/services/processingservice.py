@@ -97,6 +97,7 @@ class ProcessingService(StateMachine):
         # when idle left, check that all is properly set up!
 
         if not self.model._validate_job():
+            logger.error(self.model)
             raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):
@@ -222,6 +223,7 @@ class ProcessingService(StateMachine):
                 img_background_enable=cfg_collage.capture_img_background_enable,
                 img_background_file=cfg_collage.capture_img_background_file,
                 texts_enable=False,
+                img_front_enable=False,
                 filter=captured_images[self.model.number_captures_taken()].filter.value,
             )
 
