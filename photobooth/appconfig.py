@@ -446,16 +446,16 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
     img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.png",
+        default="backgrounds/pink-7761356_1920.jpg",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
-    img_front_enable: bool = Field(
+    img_frame_enable: bool = Field(
         default=True,
-        description="Overlay image on captured image.",
+        description="Mount captured image to frame.",
     )
-    img_front_file: str = Field(
+    img_frame_file: str = Field(
         default="frames/polaroid-6125402_1pic.png",
-        description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
+        description="Image file to which the captured image is mounted to. Frame determines the output image size! Photos are visible through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
     )
     texts_enable: bool = Field(
         default=True,
@@ -495,7 +495,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
     capture_img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.png",
+        default="backgrounds/pink-7761356_1920.jpg",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
 
@@ -537,8 +537,8 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Add image from file to background.",
     )
     canvas_img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.png",
-        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+        default="backgrounds/pink-7761356_1920.jpg",
+        description="Image file to use as background filling transparent area. File needs to be located in userdata/*",
     )
     canvas_img_front_enable: bool = Field(
         default=True,

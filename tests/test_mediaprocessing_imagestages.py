@@ -170,7 +170,7 @@ def test_img_background_stage(pil_image: Image.Image):
     # emulate that some parts of the image are transparent - otherwise background cannot shine through and image data equals.
     pil_image.putalpha(100)
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.png")
+    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.jpg")
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -181,7 +181,7 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
     pil_image = pil_image
     assert pil_image.mode == "RGB"  # before process it's RGB
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.png")
+    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.jpg")
 
     assert stage_output.mode == "RGB"  # ensure it keeps RGBA
     assert pil_image is stage_output  # original is not changed
@@ -204,6 +204,25 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
     assert not is_same(pil_image, stage_output)  # pixel are diff because background shines through
+
+
+def test_img_frame_stage(pil_image: Image.Image):
+    stage_output = image_stages.image_frame_stage(pil_image, "./frames/polaroid-6125402_1pic.png")
+    # stage_output.show()
+
+    assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
+    assert pil_image is not stage_output  # original is not changed
+    assert not is_same(pil_image, stage_output)  # pixel are diff because capture is mounted
+
+
+def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
+    with pytest.raises(PipelineError):
+        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic.png")
+
+
+def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
+    with pytest.raises(PipelineError):
+        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic.jpg")
 
 
 def test_nonexistant_pipelines(pil_image: Image.Image):
