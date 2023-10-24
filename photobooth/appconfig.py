@@ -645,6 +645,23 @@ class GroupUiSettings(BaseModel):
 
     model_config = ConfigDict(title="Personalize the User Interface")
 
+    show_takepic_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to capture single picture on frontpage.",
+    )
+    show_collage_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to capture collage on frontpage.",
+    )
+    show_gallery_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to gallery on frontpage.",
+    )
+    show_admin_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to admin center, usually only during setup.",
+    )
+
     FRONTPAGE_TEXT: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
@@ -658,14 +675,7 @@ class GroupUiSettings(BaseModel):
         default=30,
         description="Timeout in seconds a new item popup closes automatically.",
     )
-    SHOW_ADMIN_LINK_ON_FRONTPAGE: bool = Field(
-        default=True,
-        description="Show link to admin center, usually only during setup.",
-    )
-    GALLERY_ENABLED: bool = Field(
-        default=True,
-        description="Enable gallery for user.",
-    )
+
     GALLERY_EMPTY_MSG: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Empty, Zero, Nada! 🤷‍♂️<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Message displayed if gallery is empty.",
