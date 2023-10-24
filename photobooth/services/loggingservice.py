@@ -152,6 +152,7 @@ class LoggingService(BaseService):
             "sse_starlette.sse",
             "PIL.PngImagePlugin",
             "PIL.TiffImagePlugin",
+            "multipart",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
