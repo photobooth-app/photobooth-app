@@ -223,7 +223,7 @@ class ProcessingService(StateMachine):
                 img_background_enable=cfg_collage.capture_img_background_enable,
                 img_background_file=cfg_collage.capture_img_background_file,
                 texts_enable=False,
-                img_front_enable=False,
+                img_frame_enable=False,
                 filter=captured_images[self.model.number_captures_taken()].filter.value,
             )
 

@@ -67,6 +67,7 @@ def test_apply_filter(client: TestClient):
     mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
     image_before = Image.open(mediaitem.path_full)
+    image_before.load()  # force load (open is lazy!)
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/_1977")
 
@@ -83,7 +84,8 @@ def test_apply_filter_original(client: TestClient):
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
     assert response.status_code == 200
 
-    image_original = Image.open(mediaitem.path_preview).copy()
+    image_original = Image.open(mediaitem.path_preview)
+    image_original.load()  # force load (open is lazy!)
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/_1977")
     assert response.status_code == 200
@@ -95,6 +97,3 @@ def test_apply_filter_original(client: TestClient):
     assert response.status_code == 200
 
     assert is_same(image_original, Image.open(mediaitem.path_preview))
-
-    # need to close image, otherwise pytest hangs!
-    image_original.close()

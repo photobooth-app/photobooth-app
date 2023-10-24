@@ -19,6 +19,7 @@ from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filena
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
     image_fill_background_stage,
+    image_frame_stage,
     image_img_background_stage,
     pilgram_stage,
     removechromakey_stage,
@@ -80,6 +81,15 @@ class MediaprocessingService(BaseService):
         # always return input_image as backup if pipeline failed
         return input_image
 
+    def _apply_stage_img_frame(self, input_image: Image.Image, file: str) -> Image.Image:
+        try:
+            return image_frame_stage(input_image, file)
+        except PipelineError as exc:
+            logger.error(f"apply image_frame_stage failed, reason: {exc}. stage not applied, but continue")
+
+        # always return input_image as backup if pipeline failed
+        return input_image
+
     def _apply_stage_texts(self, input_image: Image.Image, texts: TextsConfig) -> Image.Image:
         try:
             return text_stage(input_image, textstageconfig=texts)
@@ -130,9 +140,8 @@ class MediaprocessingService(BaseService):
             image = self._apply_stage_img_background(image, _config.img_background_file)
 
         ## stage: new image in front of transparent parts (or extended frame)
-        if _config.img_front_enable:
-            image = image.convert("RGBA")
-            image = self._apply_stage_img_background(image, _config.img_front_file, reverse=True)
+        if _config.img_frame_enable:
+            image = self._apply_stage_img_frame(image, _config.img_frame_file)
 
         ## stage: text overlay
         if _config.texts_enable:
