@@ -102,9 +102,13 @@ async def get_file(file: str = "/"):
 
 @admin_files_router.post("/file/upload")
 def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_files: list[UploadFile]):
-    # TODO: implement in client. for now fixed.
-    upload_target_folder = "./userdata"
+    logger.info(f"file upload started, upload to folder '{upload_target_folder}'")
 
+    # check for files uploaded
+    if not uploaded_files:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "no files uploaded")
+
+    # check target directory
     try:
         upload_target_folder_path = filenames_sanitize([upload_target_folder], check_exists=True)[0]
         if not upload_target_folder_path.is_dir():
@@ -119,6 +123,8 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
             with open(file_location, "wb+") as file_object:
                 shutil.copyfileobj(uploaded_file.file, file_object)
 
+            logger.info(f"file {uploaded_file.filename} stored successfully in {upload_target_folder_path}")
+
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"upload failed: {exc}") from exc
@@ -126,20 +132,25 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
     return {"uploaded_files": [file.filename for file in uploaded_files]}
 
 
-@admin_files_router.post("/folder/new", status_code=status.HTTP_204_NO_CONTENT)
+@admin_files_router.post("/folder/new", status_code=status.HTTP_201_CREATED)
 async def post_folder_new(new_folder_name: Annotated[str, Body()]):
     """need to provide full path starting from CWD."""
 
     logger.info(f"post_folder_new requested, {new_folder_name=}")
 
+    if not new_folder_name:
+        logger.warning(f"no new folder name provided {new_folder_name=}")
+
     try:
         new_path = filenames_sanitize([new_folder_name], check_exists=False)[0]
+        new_path.mkdir(exist_ok=False, parents=True)
+        logger.debug(f"folder {new_path=} created")
 
-        logger.debug(f"try to create {new_path=}")
-
-        new_path.mkdir(exist_ok=True, parents=True)
+    except FileExistsError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"folder {new_path} already exists!") from exc
 
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(500, f"folder creation failed: {exc}") from exc
 
 
@@ -149,6 +160,14 @@ async def post_delete(selected_paths: list[PathListItem] = None):
     filenames_to_process = [selected_path.filepath for selected_path in selected_paths]
     logger.info(f"request delete, {filenames_to_process=}")
 
+    def rmdir(directory: Path):
+        for item in directory.iterdir():
+            if item.is_dir():
+                rmdir(item)
+            else:
+                item.unlink()
+        directory.rmdir()
+
     try:
         paths = filenames_sanitize(filenames_to_process)
         for path in paths:
@@ -157,10 +176,13 @@ async def post_delete(selected_paths: list[PathListItem] = None):
                 logger.warning("delete cwd skipped, need to explicit select all items to clear data dir")
                 continue
 
-            logger.info(f"delete {path} recursively")
-
             # recursively delete all files.
-            shutil.rmtree(path)
+            if path.is_dir():
+                logger.info(f"delete {path} recursively")
+                rmdir(path)
+            else:
+                logger.info(f"delete {path}")
+                path.unlink()
 
     except Exception as exc:
         logger.exception(exc)
