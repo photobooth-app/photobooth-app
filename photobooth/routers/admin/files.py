@@ -144,23 +144,35 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
 
 
 @admin_files_router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
-async def post_delete(selected_paths: list[str] = None):
+async def post_delete(selected_paths: list[PathListItem] = None):
     """ """
-    logger.info(f"post_delete requested, id={selected_paths}")
+    filenames_to_process = [selected_path.filepath for selected_path in selected_paths]
+    logger.info(f"request delete, {filenames_to_process=}")
 
     try:
-        paths = filenames_sanitize(selected_paths)
+        paths = filenames_sanitize(filenames_to_process)
         for path in paths:
-            logger.error(f"would delete {path}")
-            # os.remove(path)
+            # filter main data dir.
+            if path == Path.cwd():
+                logger.warning("delete cwd skipped, need to explicit select all items to clear data dir")
+                continue
+
+            logger.info(f"delete {path} recursively")
+
+            # recursively delete all files.
+            shutil.rmtree(path)
 
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
 @admin_files_router.post("/zip")
-def post_zip(selected_paths: list[str] = None):
+def post_zip(selected_paths: list[PathListItem] = None):
+    filenames_to_process = [selected_path.filepath for selected_path in selected_paths]
+    logger.info(f"requested zip, {filenames_to_process=}")
+
     try:
-        return zipfiles(filenames_sanitize(selected_paths))
+        return zipfiles(filenames_sanitize(filenames_to_process))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"selected file not found {exc}") from exc
