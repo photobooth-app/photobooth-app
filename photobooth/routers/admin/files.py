@@ -64,7 +64,7 @@ def zipfiles(paths: list[Path]):
     )
 
 
-@admin_files_router.get("/list{dir:path}")
+@admin_files_router.get("/list/{dir:path}")
 async def get_list(dir: str = "/"):
     """ """
 
@@ -86,8 +86,8 @@ async def get_list(dir: str = "/"):
     return output
 
 
-@admin_files_router.get("/file{file:path}")
-async def get_file(file: str = "/"):
+@admin_files_router.get("/file/{file:path}")
+async def get_file(file: str = ""):
     """ """
     try:
         path = filenames_sanitize(file, check_exists=False)

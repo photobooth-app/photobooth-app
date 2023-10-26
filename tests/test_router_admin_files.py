@@ -17,7 +17,6 @@ def client() -> TestClient:
 
 @pytest.fixture(
     params=[
-        "/admin/files/list",
         "/admin/files/list/",
         "/admin/files/list/userdata",
     ]

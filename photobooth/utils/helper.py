@@ -8,7 +8,7 @@ from typing import Union
 
 
 def filenames_sanitize(path_str: str, check_exists: bool = True) -> Path:
-    """turn list of strings in paths and sanitize. Used for userinput to check the path is below CWD.
+    """turn strings in paths and sanitize. Used for userinput to check the path is below CWD.
 
     Args:
         filenames (list[str]): _description_
@@ -22,30 +22,15 @@ def filenames_sanitize(path_str: str, check_exists: bool = True) -> Path:
         list[Path]: _description_
     """
 
-    path_str_norm = os.path.normpath(path_str)
-
-    # convert filenames (usually strings) to relative version. we always need relative to CWD!
-    # also remove leading / because we handle everything relative
-    path_str_relative = path_str_norm.lstrip("/").lstrip("\\")
-
-    # try:
-    #     path_resolved = Path(Path.cwd(), path_str_relative).resolve()
-    # except Exception as exc:
-    #     raise ValueError(f"illegal file requested: {exc}") from exc
-
-    # normalize path, join with CWD and convert to path.
-    path_norm = Path(Path.cwd(), path_str_relative)
-    if not path_norm.is_relative_to(Path.cwd()):
-        raise ValueError(f"illegal file requested: {path_norm}")
-
-    # convert to path
-    # path = Path(path_str_norm)
+    fullpath = Path(os.path.normpath(os.path.join(Path.cwd(), path_str)))
+    if not fullpath.is_relative_to(Path.cwd()):
+        raise ValueError(f"illegal file requested: {fullpath}")
 
     # path exists:
-    if check_exists and not path_norm.exists():
-        raise FileNotFoundError(f"path does not exist: {path_norm}")
+    if check_exists and not fullpath.exists():
+        raise FileNotFoundError(f"path does not exist: {fullpath}")
 
-    return path_norm
+    return fullpath
 
 
 def get_user_file(filepath: Union[Path, str]) -> Path:
