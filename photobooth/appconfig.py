@@ -228,27 +228,35 @@ class GroupBackends(BaseModel):
 
     picamera2_CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="still photo camera resolution width on supported backends",
+        description="camera resolution width to capture high resolution photo",
     )
     picamera2_CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="still photo camera resolution height on supported backends",
+        description="camera resolution height to capture high resolution photo",
     )
     picamera2_PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="liveview camera resolution width on supported backends",
+        ge=500,
+        le=3500,  # hardware encoder in pi only supports max 4000 width/height
+        description="camera resolution width to capture live video",
     )
     picamera2_PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="liveview camera resolution height on supported backends",
+        ge=500,
+        le=2500,  # hardware encoder in pi only supports max 4000 width/height
+        description="camera resolution height to capture live video",
     )
     picamera2_LIVEVIEW_RESOLUTION_WIDTH: int = Field(
         default=1280,
-        description="Liveview resolution width",
+        ge=500,
+        le=3500,  # hardware encoder in pi only supports max 4000 width/height
+        description="actual resolution width for liveview stream",
     )
     picamera2_LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
         default=720,
-        description="Liveview resolution height",
+        ge=500,
+        le=2500,  # hardware encoder in pi only supports max 4000 width/height
+        description="actual resolution height for liveview stream",
     )
     picamera2_CAMERA_TRANSFORM_HFLIP: bool = Field(
         default=False,
