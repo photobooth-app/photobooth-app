@@ -21,16 +21,17 @@ def filenames_sanitize(path_str: str, check_exists: bool = True) -> Path:
     Returns:
         list[Path]: _description_
     """
+    basepath = str(Path.cwd())
+    fullpath = os.path.normpath(os.path.join(basepath, path_str))
 
-    fullpath = Path(os.path.normpath(os.path.join(Path.cwd(), path_str)))
-    if not fullpath.is_relative_to(Path.cwd()):
+    if not fullpath.startswith(basepath):
         raise ValueError(f"illegal file requested: {fullpath}")
 
     # path exists:
-    if check_exists and not fullpath.exists():
+    if check_exists and not os.path.exists(fullpath):
         raise FileNotFoundError(f"path does not exist: {fullpath}")
 
-    return fullpath
+    return Path(fullpath)
 
 
 def get_user_file(filepath: Union[Path, str]) -> Path:
