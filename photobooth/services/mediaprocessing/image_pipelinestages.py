@@ -172,7 +172,7 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
     # default font Roboto comes with app, fallback to that one if avail
     try:
         background_path = get_user_file(background_file)
-        background_img = Image.open(background_path)
+        background_img = Image.open(background_path).convert("RGBA")
     except FileNotFoundError as exc:
         logger.exception(exc)
         raise PipelineError(f"font {str(background_file)} not found!") from exc
@@ -196,3 +196,59 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
         # mount image on top of loaded file.
         background_img_adjusted.paste(image, mask=image)
         return background_img_adjusted
+
+
+def image_frame_stage(image: Image.Image, frame_file: Union[Path, str]) -> Image.Image:
+    """optimized function for use on single images.
+    resulting size is derived from the frame, since frame is considered as the "master"
+    detects transparent area in frame and fits captured image best as possible
+    using fit-cover strategy. means captured image can loose some parts if
+    aspect ratio of transparent area and captured image are not equal"""
+
+    logger.info("image_frame_stage to apply")
+
+    # check frame is avail, otherwise send pipelineerror
+    try:
+        frame_path = get_user_file(frame_file)
+        image_frame = Image.open(frame_path)
+    except FileNotFoundError as exc:
+        logger.exception(exc)
+        raise PipelineError(f"frame {str(frame_path)} not found!") from exc
+
+    logger.info(f"loaded {frame_path=}")
+
+    if image_frame.mode not in ("RGBA", "P"):
+        raise PipelineError("image has no alphachannel, cannot apply stage")
+
+    # detect boundary box of transparent area, for this get alphachannel, invert and getbbox:
+    transparent_xy = ImageOps.invert(image_frame.getchannel("A")).getbbox()  # Mode 'L'
+    if transparent_xy is None:
+        raise PipelineError("image has alphachannel but actually has not transparent area, cannot apply stage")
+
+    transparent_size = (transparent_xy[2] - transparent_xy[0], transparent_xy[3] - transparent_xy[1])
+
+    logger.info(f"detected transparent area {transparent_xy=}, {transparent_size=}")
+
+    # create a fitted version of input image (captured) that will cover-fit the transparent area
+    image_fitted = ImageOps.fit(
+        image,
+        transparent_size,
+        method=Image.Resampling.LANCZOS,
+    )
+
+    # some debug output - may help user to improve aspect ratio of capture and transparent area to avoid loose too much information
+    ratio_original = float(image.size[1]) / image.size[0]
+    ratio_fitted = float(image_fitted.size[1]) / image_fitted.size[0]
+    logger.info(f"captured image fitted to {image_fitted.size=}, original capture was {image.size=}")
+    logger.debug(f"{ratio_original=}, {ratio_fitted=}")
+
+    # create new image
+    result_image = Image.new("RGBA", image_frame.size)  # with alpha channel of same size as frame image
+    result_image.paste(image_fitted, box=transparent_xy)  # first paste fitted image to result
+    result_image.paste(image_frame, mask=image_frame)  # second paste frame with transparency mask on top
+
+    # image_frame.show()
+    # image_fitted.show()
+    # result_image.show()
+
+    return result_image

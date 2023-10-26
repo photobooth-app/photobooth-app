@@ -1,9 +1,11 @@
 import os
+from dataclasses import asdict
 
 import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
+from photobooth.routers.admin.files import PathListItem
 
 
 @pytest.fixture
@@ -50,7 +52,8 @@ def test_admin_file_notexists_endpoints(client: TestClient):
 
 
 def test_admin_files_zip_post(client: TestClient):
-    selected_files = ["./log"]
+    # make up a list - only filepath needs to be valid for this function.
+    selected_files = [asdict(PathListItem(name="log", filepath="./log", is_dir=True, size=0))]
 
     response = client.post("/admin/files/zip", json=selected_files)
     assert response.status_code == 200

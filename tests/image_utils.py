@@ -10,6 +10,9 @@ def is_same(img1: Image.Image, img2: Image.Image):
     img1 = img1.convert("RGB")
     img2 = img2.convert("RGB")
 
+    # img1.show()
+    # img2.show()
+
     diff = ImageChops.difference(img2, img1)
     logger.info(diff.getbbox())
 
