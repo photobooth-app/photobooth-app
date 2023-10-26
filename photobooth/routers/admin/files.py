@@ -68,7 +68,7 @@ def zipfiles(paths: list[Path]):
 async def get_list(dir: str = "/"):
     """ """
 
-    dir_path = filenames_sanitize([dir], check_exists=False)[0].relative_to(Path.cwd())
+    dir_path = filenames_sanitize(dir, check_exists=False).relative_to(Path.cwd())
 
     if not dir_path.is_dir():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "folder does not exist!")
@@ -90,7 +90,7 @@ async def get_list(dir: str = "/"):
 async def get_file(file: str = "/"):
     """ """
     try:
-        path = filenames_sanitize([file], check_exists=False)[0]
+        path = filenames_sanitize(file, check_exists=False)
     except Exception as exc:
         raise HTTPException(500, f"failed to get file: {exc}") from exc
 
@@ -110,7 +110,7 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
 
     # check target directory
     try:
-        upload_target_folder_path = filenames_sanitize([upload_target_folder], check_exists=True)[0]
+        upload_target_folder_path = filenames_sanitize(upload_target_folder, check_exists=True)
         if not upload_target_folder_path.is_dir():
             raise ValueError(f"{upload_target_folder_path=} is no directory")
 
@@ -142,7 +142,7 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
         logger.warning(f"no new folder name provided {new_folder_name=}")
 
     try:
-        new_path = filenames_sanitize([new_folder_name], check_exists=False)[0]
+        new_path = filenames_sanitize(new_folder_name, check_exists=False)
         new_path.mkdir(exist_ok=False, parents=True)
         logger.debug(f"folder {new_path=} created")
 
@@ -169,8 +169,9 @@ async def post_delete(selected_paths: list[PathListItem] = None):
         directory.rmdir()
 
     try:
-        paths = filenames_sanitize(filenames_to_process)
-        for path in paths:
+        for filename_to_process in filenames_to_process:
+            path = filenames_sanitize(filename_to_process)
+
             # filter main data dir.
             if path == Path.cwd():
                 logger.warning("delete cwd skipped, need to explicit select all items to clear data dir")
@@ -191,10 +192,10 @@ async def post_delete(selected_paths: list[PathListItem] = None):
 
 @admin_files_router.post("/zip")
 def post_zip(selected_paths: list[PathListItem] = None):
-    filenames_to_process = [selected_path.filepath for selected_path in selected_paths]
-    logger.info(f"requested zip, {filenames_to_process=}")
-
     try:
-        return zipfiles(filenames_sanitize(filenames_to_process))
+        filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]
+        logger.info(f"requested zip, {filenames_to_process=}")
+
+        return zipfiles(filenames_to_process)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"selected file not found {exc}") from exc
