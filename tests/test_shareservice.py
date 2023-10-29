@@ -15,6 +15,7 @@ logger = logging.getLogger(name=None)
 
 ## check skip if no shareapi url is set
 config = providers.Singleton(AppConfig)
+
 r = requests.get(config().sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
 if not (r.status_code == 200 and "version" in r.text):
     logger.warning(f"no webservice found, skipping tests {config().sharing.shareservice_url}")
@@ -89,7 +90,10 @@ def test_shareservice_download_image(services: ServicesContainer):
     mediaitem_id = services.mediacollection_service().db_get_most_recent_mediaitem().id
 
     logger.info(f"check to download {mediaitem_id=}")
-    r = requests.get(config().sharing.shareservice_url, params={"action": "download", "id": mediaitem_id})
+    r = requests.get(
+        config().sharing.shareservice_url,
+        params={"action": "download", "id": mediaitem_id},
+    )
 
     # valid status code
     assert r.status_code == 200
@@ -107,7 +111,10 @@ def test_shareservice_download_nonexistant_image(services: ServicesContainer):
     # check that share_service was initialized properly, otherwise fail
     assert services.share_service()._initialized
 
-    r = requests.get(config().sharing.shareservice_url, params={"action": "download", "id": "nonexistentidentifier"})
+    r = requests.get(
+        config().sharing.shareservice_url,
+        params={"action": "download", "id": "nonexistentidentifier"},
+    )
 
     # valid status code is 500 because image not existing.
     assert r.status_code == 500

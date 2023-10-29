@@ -7,12 +7,15 @@ import serial
 from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
+from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
 
 # these presets are set on WLED module to control lights:
 PRESET_ID_STANDBY = 1
 PRESET_ID_COUNTDOWN = 2
 PRESET_ID_SHOOT = 3
+
+RECONNECT_INTERVAL_TIMER = 10
 
 
 class WledService(BaseService):
@@ -25,6 +28,7 @@ class WledService(BaseService):
         self._serial_port = config.hardwareinputoutput.wled_serial_port
 
         self._serial: serial.Serial = None
+        self._reconnect_interval_timer: RepeatedTimer = RepeatedTimer(RECONNECT_INTERVAL_TIMER, self.connect)
 
     def start(self):
         """_summary_
@@ -32,13 +36,41 @@ class WledService(BaseService):
         Returns:
             _type_: _description_
         """
-        if self._enabled is True:
-            self._logger.info(f"WledService enabled, trying to setup and connect, {self._serial_port=}")
-
-        else:
+        if not self._enabled:
             self._logger.info("WledService disabled")
             return
 
+        self.connect()
+        self.register_listener()
+
+        self._reconnect_interval_timer.start()
+
+        self._logger.info(f"WledService enabled and initialized, using port {self._serial_port}")
+
+    def stop(self):
+        """close serial port connection"""
+        self._reconnect_interval_timer.stop()
+
+        if self._serial:
+            self._logger.info("close port to WLED module")
+            self._serial.close()
+
+    def is_connected(self) -> bool:
+        return self._serial and self._serial.is_open
+
+    def connect(self):
+        if not self.is_connected():
+            try:
+                self.device_init()
+
+                # add very little time to give wled module and serial connection everything is settled
+                time.sleep(0.2)
+
+                self.preset_standby()
+            except Exception as exc:
+                self._logger.warning(f"failed to init WLED! check device, connection and config. {exc}")
+
+    def device_init(self) -> bool:
         try:
             self._serial = serial.Serial(
                 port=self._serial_port,
@@ -77,7 +109,7 @@ class WledService(BaseService):
 
             self._logger.info(f"WLED version response: {wled_response}")
         except UnicodeDecodeError as exc:
-            self._logger.critical(f"message from WLED module not understood {exc}")
+            self._logger.critical(f"message from WLED module not understood {exc} {wled_response}")
         except TimeoutError as exc:
             self._logger.critical(f"WLED device did not respond during setup. Check device and connections! {exc}")
 
@@ -85,12 +117,17 @@ class WledService(BaseService):
 
         if not wled_detected:
             # abort init due to problems
+            if self._serial:
+                self._logger.info("close port to WLED module")
+                self._serial.close()
             # program continues this way, but no light integration available,
             # use error log to find out how to solve
             self._logger.critical("WLED module failed. Please check wiring, device, connection and config.")
             raise RuntimeError("WLED module failed. Please check wiring, device, connection and config.")
 
-        # we have come this far: wled is properly connected, register listener
+        return wled_detected
+
+    def register_listener(self):
         self._logger.info("register events for WLED")
         self._evtbus.on("statemachine/on_thrill", self.preset_thrill)
         self._evtbus.on("frameserver/onCapture", self.preset_shoot)
@@ -99,19 +136,6 @@ class WledService(BaseService):
         self._evtbus.on("wled/preset_standby", self.preset_standby)
         self._evtbus.on("wled/preset_thrill", self.preset_thrill)
         self._evtbus.on("wled/preset_shoot", self.preset_shoot)
-
-        self.preset_standby()
-
-        # add very little time to give wled module and serial connection everything is settled
-        time.sleep(0.2)
-
-    def stop(self):
-        """close serial port connection"""
-        if self._serial:
-            self._logger.info("close port to WLED module")
-            self._serial.close()
-
-        time.sleep(0.2)
 
     def preset_standby(self):
         """_summary_"""
@@ -131,15 +155,16 @@ class WledService(BaseService):
     def _write_request(self, request):
         # _serial is None if not initialized -> return
         # if not open() -> return also, fail in silence
-        if not self._serial or not self._serial.is_open:
+        if not self.is_connected():
             self._logger.warning("WLED module not connected, ignoring request")
             return
 
         try:
             self._serial.write(request)
         except serial.SerialException as exc:
-            self._logger.fatal(f"error accessing WLED device, connection loss? device unpowered? {exc}")
-            raise RuntimeError(f"error accessing WLED device, connection loss? device unpowered? {exc}") from exc
+            # close connection because then the device is unconnected and can be reconnected later.
+            self._serial.close()
+            self._logger.warning(f"error accessing WLED device, connection loss? device unpowered? {exc}")
 
     @staticmethod
     def _request_preset(preset_id: int = -1):

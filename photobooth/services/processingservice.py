@@ -47,7 +47,7 @@ class ProcessingService(StateMachine):
     confirm = present_capture.to(counting, unless="took_all_captures") | present_capture.to(job_postprocess, cond="took_all_captures")
     reject = present_capture.to(counting)
     _finalize = job_postprocess.to(idle)
-    _reset = idle.from_(idle, counting, capture, present_capture, job_postprocess)
+    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, present_capture, job_postprocess)
 
     def __init__(
         self,
@@ -171,19 +171,29 @@ class ProcessingService(StateMachine):
 
                 # populate image item for further processing:
                 mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-                self.model._last_captured_mediaitem = mediaitem
+                self.model.set_last_capture(mediaitem)
+
+                logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
             except TimeoutError:
                 logger.error(f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
                 # can we do additional error handling here?
+                continue
+
+            except Exception as exc:
+                logger.exception(exc)
+                logger.error(f"error capture image. {exc}")
+                # can we do additional error handling here?
+
+                # reraise so http error can be sent
+                raise exc
+                # no retry for this type of error
             else:
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
             logger.critical(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
             raise RuntimeError(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
-
-        logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
         # capture finished, go to next state which is present. present also postprocesses capture.
         self._captured()
@@ -192,12 +202,17 @@ class ProcessingService(StateMachine):
         """_summary_"""
         self._evtbus.emit("statemachine/on_exit_capture_still")
 
+        if not self.model.last_capture_successful():
+            logger.critical("on_exit_capture no valid image taken! abort processing")
+            self._reset()
+            return
+
         ## PHASE 1:
         # postprocess each capture individually
         logger.info("start postprocessing phase 1")
 
         # load last mediaitem for further processing
-        mediaitem = self.model._last_captured_mediaitem
+        mediaitem = self.model.get_last_capture()
         logger.info(f"postprocessing last capture: {mediaitem=}")
 
         # always create unprocessed versions for later usage
@@ -235,14 +250,14 @@ class ProcessingService(StateMachine):
 
         # add result to db
         # TODO: make configurable whether to hide pics that will be stitched to collage
-        self.model.add_capture(self.model._last_captured_mediaitem)
+        self.model.add_capture(self.model.get_last_capture())
         _ = self._mediacollection_service.db_add_item(mediaitem)
 
         logger.info(f"capture {mediaitem=} successful")
 
     def on_enter_present_capture(self):
         # get the last captured mediaitem for further processing
-        last_captured_mediaitem = self.model._last_captured_mediaitem
+        last_captured_mediaitem = self.model.get_last_capture()
 
         # if job is collage, each single capture could be confirmed or not:
         if self.model._typ == JobModel.Typ.collage:
@@ -268,7 +283,7 @@ class ProcessingService(StateMachine):
             logger.info(f"rejected: {delete_mediaitem=}")
 
             self._mediacollection_service.delete_image_by_id(delete_mediaitem.id)
-            self.model._last_captured_mediaitem = None
+            self.model.set_last_capture(None)
 
     def on_enter_job_postprocess(self):
         ## PHASE 2:
@@ -285,7 +300,7 @@ class ProcessingService(StateMachine):
             _ = self._mediacollection_service.db_add_item(mediaitem)
 
         else:
-            mediaitem = self.model._last_captured_mediaitem
+            mediaitem = self.model.get_last_capture()
 
         ## FINISH:
         # to inform frontend about new image to display

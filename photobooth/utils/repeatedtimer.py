@@ -31,5 +31,6 @@ class RepeatedTimer:
 
     def stop(self):
         """_summary_"""
-        self._timer.cancel()
+        if self._timer:  # if timer was never started, no cancel on nonetype
+            self._timer.cancel()
         self.is_running = False

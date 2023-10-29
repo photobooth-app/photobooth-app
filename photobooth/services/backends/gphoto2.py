@@ -97,12 +97,12 @@ class Gphoto2Backend(AbstractBackend):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
+        if self._connect_thread and self._connect_thread.is_alive():
+            self._connect_thread.stop()
 
-        self._connect_thread.stop()
-
-        logger.debug(f"{self.__module__} waiting to join _connect_thread")
-        self._connect_thread.join()
-        logger.debug(f"{self.__module__} joined _connect_thread")
+            logger.debug(f"{self.__module__} waiting to join _connect_thread")
+            self._connect_thread.join()
+            logger.debug(f"{self.__module__} joined _connect_thread")
 
         logger.debug(f"{self.__module__} stopped")
 

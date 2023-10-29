@@ -72,17 +72,19 @@ def test_invalid_modechange(client: TestClient):
 
 
 def test_stream(client: TestClient):
-    """ test not avail yet """
+    """test not avail yet"""
     pass
+
 
 def test_stream_exception_disabled(client: TestClient):
     # disable livestream
-    client.app.container.config().backends.LIVEPREVIEW_ENABLED=False
+    client.app.container.config().backends.LIVEPREVIEW_ENABLED = False
 
     # shall result in error 405
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 405
     assert "detail" in response.json()
+
 
 def test_stream_exception_error(client: TestClient):
     error_mock = mock.MagicMock()

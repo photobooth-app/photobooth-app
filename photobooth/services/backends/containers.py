@@ -4,6 +4,7 @@ from dependency_injector import containers, providers
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
+from .abstractbackend import AbstractBackend
 from .simulated import SimulatedBackend
 from .webcamcv2 import WebcamCv2Backend
 
@@ -20,10 +21,21 @@ def init_res_simulated_backend(evtbus, config):
 
 
 def init_res_obj_backend(_obj_, evtbus, config):
-    _backend = _obj_(evtbus, config)
-    _backend.start()
-    yield _backend
-    _backend.stop()
+    try:
+        _backend: AbstractBackend = _obj_(evtbus, config)
+        _backend.start()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not start backend")
+        yield None
+    else:
+        yield _backend
+
+    try:
+        _backend.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop backend")
 
 
 class BackendsContainer(containers.DeclarativeContainer):

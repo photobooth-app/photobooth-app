@@ -42,10 +42,19 @@ async def get_log_latest():
 # ):
 #     output_service_status = []
 #     for provider in appcontainer.traverse(types=[providers.Resource, providers.Singleton, providers.Factory]):
+#         logger.debug(f"checking {provider}")
+
+#         if type(provider) is providers.Resource and not provider.initialized:
+#             logger.debug("ignored, resource not initialized.")
+#             continue
+
 #         provider_instance = provider()
+
 #         if isinstance(provider_instance, BaseService):
 #             service_instance: BaseService = provider_instance
 #             logger.debug(f"{type(service_instance).__name__} is a service-type, status: {service_instance.get_status()}")
 #             output_service_status.append({"service": type(service_instance).__name__, "status": service_instance.get_status().name})
+#         else:
+#             logger.debug(f"{provider_instance} ignored")
 
 #     return output_service_status

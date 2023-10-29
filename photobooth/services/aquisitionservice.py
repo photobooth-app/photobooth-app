@@ -55,7 +55,7 @@ class AquisitionService(BaseService):
                 return self.primary_backend.gen_stream()
             else:
                 self._logger.error("no backend available to livestream")
-                raise Exception("no backend available to livestream")
+                raise RuntimeError("no backend available to livestream")
 
         raise ConnectionRefusedError("livepreview not enabled")
 
@@ -71,7 +71,11 @@ class AquisitionService(BaseService):
         """
         function blocks until high quality image is available
         """
-        return self.primary_backend.wait_for_hq_image()
+        if self.primary_backend:
+            return self.primary_backend.wait_for_hq_image()
+        else:
+            self._logger.error("no backend available to capture hq image")
+            raise RuntimeError("no backend available to capture hq image")
 
     def start(self):
         """start backends"""
@@ -93,7 +97,7 @@ class AquisitionService(BaseService):
         Returns:
             _type_: _description_
         """
-        stats_primary = dataclasses.asdict(self.primary_backend.stats())
+        stats_primary = dataclasses.asdict(self.primary_backend.stats()) if self.primary_backend else None
         stats_secondary = dataclasses.asdict(self.secondary_backend.stats()) if self.secondary_backend else None
 
         aquisition_stats = {"primary": stats_primary, "secondary": stats_secondary}
