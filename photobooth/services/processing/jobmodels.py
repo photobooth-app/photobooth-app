@@ -123,6 +123,15 @@ class JobModel:  # TODO: derive from model class?
     def add_capture(self, captured_item: MediaItem):
         self._captures.append(captured_item)
 
+    def last_capture_successful(self) -> bool:
+        return self._last_captured_mediaitem is not None
+
+    def set_last_capture(self, last_mediaitem: MediaItem):
+        self._last_captured_mediaitem = last_mediaitem
+
+    def get_last_capture(self) -> MediaItem:
+        return self._last_captured_mediaitem
+
     def total_captures_to_take(self) -> int:
         assert self._total_captures_to_take is not None
 
