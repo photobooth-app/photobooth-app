@@ -11,13 +11,13 @@ from photobooth.services.mediacollectionservice import MediacollectionService
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-
         # create one image to ensure there is at least one
-        services=client.app.container.services()
+        services = client.app.container.services()
         services.processing_service().start_job_1pic()
 
         yield client
         client.app.container.shutdown_resources()
+
 
 def test_get_items(client: TestClient):
     response = client.get("/mediacollection/getitems")
@@ -35,37 +35,36 @@ def test_get_items_exception(client: TestClient):
 
 
 @patch("os.remove")
-def test_delete_item(mock_remove,client: TestClient):
-
+def test_delete_item(mock_remove, client: TestClient):
     mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
 
-    response = client.get("/mediacollection/delete",params={"image_id":mediaitem.id})
+    response = client.get("/mediacollection/delete", params={"image_id": mediaitem.id})
 
     assert response.status_code == 204
 
     # check os.remove was invoked
     mock_remove.assert_called()
+
 
 def test_delete_item_exception_nonexistant(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
     with patch.object(MediacollectionService, "delete_image_by_id", error_mock):
-        response = client.get("/mediacollection/delete",params={"image_id":"illegalid"})
+        response = client.get("/mediacollection/delete", params={"image_id": "illegalid"})
         assert response.status_code == 500
         assert "detail" in response.json()
 
 
 @patch("os.remove")
-def test_delete_items(mock_remove,client: TestClient):
-
-
+def test_delete_items(mock_remove, client: TestClient):
     response = client.get("/mediacollection/delete_all")
 
     assert response.status_code == 204
 
     # check os.remove was invoked
     mock_remove.assert_called()
+
 
 def test_delete_items_exception(client: TestClient):
     error_mock = mock.MagicMock()
