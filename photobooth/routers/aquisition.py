@@ -27,10 +27,10 @@ def video_stream(aquisition_service: AquisitionService = Depends(Provide[Applica
         return StreamingResponse(content=aquisition_service.gen_stream(), headers=headers, media_type="multipart/x-mixed-replace; boundary=frame")
     except ConnectionRefusedError as exc:
         logger.warning(exc)
-        raise HTTPException(405, "preview not enabled") from exc
+        raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled") from exc
     except Exception as exc:
         logger.exception(exc)
-        raise HTTPException(500, f"preview failed: {exc}") from exc
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"preview failed: {exc}") from exc
 
 
 @aquisition_router.get(
@@ -60,7 +60,7 @@ def api_still_get(aquisition_service: AquisitionService = Depends(Provide[Applic
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"something went wrong, Exception: {exc}",
         ) from exc
 
@@ -84,4 +84,4 @@ def api_cmd_aquisition_capturemode_get(
         if wled_control:
             evtbus.emit("wled/preset_standby")
     else:
-        raise HTTPException(status_code=500, detail="illegal mode")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="illegal mode")
