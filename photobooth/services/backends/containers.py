@@ -21,8 +21,8 @@ def init_res_simulated_backend(evtbus, config):
 
 
 def init_res_obj_backend(_obj_, evtbus, config):
-    _backend: AbstractBackend = _obj_(evtbus, config)
     try:
+        _backend: AbstractBackend = _obj_(evtbus, config)
         _backend.start()
     except Exception as exc:
         logger.exception(exc)

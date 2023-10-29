@@ -109,13 +109,16 @@ class WebcamCv2Backend(AbstractBackend):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        self._cv2_process.join()
-        self._cv2_process.close()
+        if self._cv2_process and self._cv2_process.is_alive():
+            self._cv2_process.join()
+            self._cv2_process.close()
 
-        self._img_buffer_lores.sharedmemory.close()
-        self._img_buffer_lores.sharedmemory.unlink()
-        self._img_buffer_hires.sharedmemory.close()
-        self._img_buffer_hires.sharedmemory.unlink()
+        if self._img_buffer_lores:
+            self._img_buffer_lores.sharedmemory.close()
+            self._img_buffer_lores.sharedmemory.unlink()
+        if self._img_buffer_hires:
+            self._img_buffer_hires.sharedmemory.close()
+            self._img_buffer_hires.sharedmemory.unlink()
 
         logger.debug(f"{self.__module__} stopped")
 

@@ -24,17 +24,18 @@ logger = logging.getLogger(__name__)
 
 
 def init_aquisition_resource(evtbus, config, primary_backend, secondary_backend):
-    resource = AquisitionService(
-        evtbus=evtbus,
-        config=config,
-        primary_backend=primary_backend,
-        secondary_backend=secondary_backend,
-    )
     try:
+        resource = AquisitionService(
+            evtbus=evtbus,
+            config=config,
+            primary_backend=primary_backend,
+            secondary_backend=secondary_backend,
+        )
         resource.start()
     except Exception as exc:
-        logger.critical(f"failed to start acquisition {exc}")
-        raise RuntimeError(f"cannot start backend, app fails, check configuration {exc}") from exc
+        logger.exception(exc)
+        logger.critical(f"failed to start res {exc}")
+        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
     else:
         yield resource
     finally:
@@ -42,45 +43,65 @@ def init_aquisition_resource(evtbus, config, primary_backend, secondary_backend)
 
 
 def init_information_resource(evtbus, config):
-    resource = InformationService(evtbus=evtbus, config=config)
-    resource.start()
-    yield resource
-    resource.stop()
+    try:
+        resource = InformationService(evtbus=evtbus, config=config)
+        resource.start()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical(f"failed to start res {exc}")
+        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+    else:
+        yield resource
+    finally:
+        resource.stop()
 
 
 def init_wled_resource(evtbus, config):
-    resource = WledService(evtbus=evtbus, config=config)
     try:
+        resource = WledService(evtbus=evtbus, config=config)
         resource.start()
-    except RuntimeError as wledservice_exc:
-        # catch exception to make app continue without wled service in case there is a connection problem
-        logging.warning(f"WLED module init failed {wledservice_exc}")
-        raise wledservice_exc
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical(f"failed to start res {exc}")
+        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
     else:
         yield resource
-        resource.stop()
     finally:
-        pass
+        resource.stop()
 
 
 def init_gpio_resource(evtbus, config, processing_service, printing_service, mediacollection_service):
-    resource = GpioService(
-        evtbus=evtbus,
-        config=config,
-        processing_service=processing_service,
-        printing_service=printing_service,
-        mediacollection_service=mediacollection_service,
-    )
-    resource.start()
-    yield resource
-    resource.stop()
+    try:
+        resource = GpioService(
+            evtbus=evtbus,
+            config=config,
+            processing_service=processing_service,
+            printing_service=printing_service,
+            mediacollection_service=mediacollection_service,
+        )
+        resource.start()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical(f"failed to start res {exc}")
+        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+    else:
+        yield resource
+    finally:
+        resource.stop()
 
 
 def init_share_resource(evtbus, config, mediacollection_service):
-    resource = ShareService(evtbus=evtbus, config=config, mediacollection_service=mediacollection_service)
-    resource.start()
-    yield resource
-    resource.stop()
+    try:
+        resource = ShareService(evtbus=evtbus, config=config, mediacollection_service=mediacollection_service)
+        resource.start()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical(f"failed to start res {exc}")
+        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+    else:
+        yield resource
+    finally:
+        resource.stop()
 
 
 class ServicesContainer(containers.DeclarativeContainer):

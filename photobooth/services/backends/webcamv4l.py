@@ -104,11 +104,13 @@ class WebcamV4lBackend(AbstractBackend):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        self._v4l_process.join(timeout=5)
-        self._v4l_process.close()
+        if self._v4l_process and self._v4l_process.is_alive():
+            self._v4l_process.join()
+            self._v4l_process.close()
 
-        self._img_buffer.sharedmemory.close()
-        self._img_buffer.sharedmemory.unlink()
+        if self._img_buffer:
+            self._img_buffer.sharedmemory.close()
+            self._img_buffer.sharedmemory.unlink()
 
         logger.debug(f"{self.__module__} stopped")
 
