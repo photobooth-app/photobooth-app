@@ -45,7 +45,7 @@ class WledService(BaseService):
 
         self._reconnect_interval_timer.start()
 
-        self._logger.info(f"WledService enabled and connected, {self._serial_port=}")
+        self._logger.info(f"WledService enabled and initialized, using port {self._serial_port}")
 
     def stop(self):
         """close serial port connection"""
@@ -109,7 +109,7 @@ class WledService(BaseService):
 
             self._logger.info(f"WLED version response: {wled_response}")
         except UnicodeDecodeError as exc:
-            self._logger.critical(f"message from WLED module not understood {exc}")
+            self._logger.critical(f"message from WLED module not understood {exc} {wled_response}")
         except TimeoutError as exc:
             self._logger.critical(f"WLED device did not respond during setup. Check device and connections! {exc}")
 
@@ -117,6 +117,9 @@ class WledService(BaseService):
 
         if not wled_detected:
             # abort init due to problems
+            if self._serial:
+                self._logger.info("close port to WLED module")
+                self._serial.close()
             # program continues this way, but no light integration available,
             # use error log to find out how to solve
             self._logger.critical("WLED module failed. Please check wiring, device, connection and config.")
