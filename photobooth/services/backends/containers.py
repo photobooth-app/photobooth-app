@@ -26,13 +26,16 @@ def init_res_obj_backend(_obj_, evtbus, config):
         _backend.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"could not start backend {_backend}")
-
+        logger.critical("could not start backend")
         yield None
     else:
         yield _backend
-    finally:
+
+    try:
         _backend.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop backend")
 
 
 class BackendsContainer(containers.DeclarativeContainer):

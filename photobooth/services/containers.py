@@ -34,12 +34,16 @@ def init_aquisition_resource(evtbus, config, primary_backend, secondary_backend)
         resource.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"failed to start res {exc}")
-        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+        logger.critical(f"failed to start res: {exc}")
+        yield None
     else:
         yield resource
-    finally:
+
+    try:
         resource.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop resource")
 
 
 def init_information_resource(evtbus, config):
@@ -48,12 +52,16 @@ def init_information_resource(evtbus, config):
         resource.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"failed to start res {exc}")
-        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+        logger.critical(f"failed to start res: {exc}")
+        yield None
     else:
         yield resource
-    finally:
+
+    try:
         resource.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop resource")
 
 
 def init_wled_resource(evtbus, config):
@@ -62,12 +70,16 @@ def init_wled_resource(evtbus, config):
         resource.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"failed to start res {exc}")
-        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+        logger.critical(f"failed to start res: {exc}")
+        yield None
     else:
         yield resource
-    finally:
+
+    try:
         resource.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop resource")
 
 
 def init_gpio_resource(evtbus, config, processing_service, printing_service, mediacollection_service):
@@ -80,14 +92,19 @@ def init_gpio_resource(evtbus, config, processing_service, printing_service, med
             mediacollection_service=mediacollection_service,
         )
         resource.start()
+
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"failed to start res {exc}")
-        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+        logger.critical(f"failed to start res: {exc}")
+        yield None
     else:
         yield resource
-    finally:
+
+    try:
         resource.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop resource")
 
 
 def init_share_resource(evtbus, config, mediacollection_service):
@@ -96,12 +113,16 @@ def init_share_resource(evtbus, config, mediacollection_service):
         resource.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical(f"failed to start res {exc}")
-        raise RuntimeError(f"cannot start res, app fails, check configuration {exc}") from exc
+        logger.critical(f"failed to start res: {exc}")
+        yield None
     else:
         yield resource
-    finally:
+
+    try:
         resource.stop()
+    except Exception as exc:
+        logger.exception(exc)
+        logger.critical("could not stop resource")
 
 
 class ServicesContainer(containers.DeclarativeContainer):
