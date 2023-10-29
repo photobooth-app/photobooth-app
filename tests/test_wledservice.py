@@ -42,9 +42,8 @@ def test_enabled_nonexistentserialport(services: ServicesContainer):
     services.config().hardwareinputoutput.wled_enabled = True
     services.config().hardwareinputoutput.wled_serial_port = "nonexistentserialport"
 
-    with pytest.raises(RuntimeError):
-        # getting service starts automatically. here an Runtime Exception shall be thrown if connection fails.
-        services.wled_service()
+    # start service on nonexistant port shall not fail - it tries to reconnect and never shall fail
+    services.wled_service()
 
 
 def test_restart_class(services: ServicesContainer):
