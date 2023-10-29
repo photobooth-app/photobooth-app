@@ -155,13 +155,15 @@ class WledService(BaseService):
     def _write_request(self, request):
         # _serial is None if not initialized -> return
         # if not open() -> return also, fail in silence
-        if not self._serial or not self._serial.is_open:
+        if not self.is_connected():
             self._logger.warning("WLED module not connected, ignoring request")
             return
 
         try:
             self._serial.write(request)
         except serial.SerialException as exc:
+            # close connection because then the device is unconnected and can be reconnected later.
+            self._serial.close()
             self._logger.warning(f"error accessing WLED device, connection loss? device unpowered? {exc}")
 
     @staticmethod
