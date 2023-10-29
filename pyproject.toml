@@ -31,28 +31,28 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-    "fastapi>=0.100.0,<0.104.0",
+    "fastapi>=0.104.0,<0.105.0",
     "opencv-python>=4.7,<4.9",
-    "numpy>=1.25.0",
-    "pillow>=9.5,<10.1",
-    "psutil~=5.9.5",
-    "pydantic>=2.0.3",
-    "pydantic-extra-types>=2.0.0",
-    "pydantic-settings>=2.0.2",
-    "pymitter~=0.4.0",
-    "pyturbojpeg~=1.7.1",
-    "requests~=2.31.0",
-    "sse-starlette~=1.6.1",
-    "uvicorn>=0.22,<0.24",
+    "numpy>=1.26.0",
+    "pillow>=10.1.0,<10.2.0",
+    "psutil>=5.9.0",
+    "pydantic>=2.4.0",
+    "pydantic-extra-types>=2.1.0",
+    "pydantic-settings>=2.0.3",
+    "pymitter>=0.4.0",
+    "pyturbojpeg>=1.7.0",
+    "requests>=2.31.0",
+    "sse-starlette>=1.6.5",
+    "uvicorn>=0.23,<0.24",
     "python-dotenv~=1.0.0",
     "pyserial~=3.5",
     "jsonref~=1.1.0",
     "dependency-injector~=4.41.0",
-    "pilgram2~=2.0.2",
-    "v4l2py>=2.1.0,<2.4.0; platform_system == 'Linux'",
-    "gpiozero>=1.6.2,<2.1.0",
+    "pilgram2>=2.0.2",
+    "v4l2py>=2.3.0,<2.4.0; platform_system == 'Linux'",
+    "gpiozero>=2.0.0,<2.1.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
-    "python-statemachine>=2.0,<2.2",
+    "python-statemachine>=2.1,<2.2",
     "python-multipart>=0.0.6",
 ]
 
@@ -76,13 +76,12 @@ test = [
   "pytest-benchmark~=4.0.0",
   "pytest-cov~=4.1.0",
   "coverage[toml]~=7.3.0",
-  "simplejpeg~=1.7.1",
+  "simplejpeg~=1.7.0",
   "httpx-sse~=0.3.1",
-  "httpx~=0.24.1",
+  "httpx~=0.25.0",
 ]
 lint= [
-  "ruff~=0.0.286",
-  "black~=23.7.0",
+  "ruff~=0.1.3",
 ]
 
 [tool.pdm.build]
@@ -108,9 +107,6 @@ omit = ["test_*.py", "./tests/*", "./photobooth/vendor/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
-[tool.black]
-line-length = 150
-extend-exclude = "vendor"
 
 [tool.ruff]
 line-length = 150
@@ -127,6 +123,9 @@ ignore = [
   "B008", #used for DI injection
 ]
 extend-exclude = ["vendor"]
+
+[tool.ruff.format]
+
 
 [tool.ruff.per-file-ignores]
 "photobooth/appconfig.py" = ["E501"]
