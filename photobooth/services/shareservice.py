@@ -1,5 +1,5 @@
 """
-https://mgrl.github.io/photobooth-docs/extras/shareservice/
+https://photobooth-app.org/extras/shareservice/
 """
 
 import json

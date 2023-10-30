@@ -1,3 +1,3 @@
 <?php
-header("Location: https://mgrl.github.io/photobooth-docs/extras/shareservice-landing/");
+header("Location: https://photobooth-app.org/extras/shareservice-landing/");
 die();
