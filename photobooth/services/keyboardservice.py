@@ -40,11 +40,25 @@ class KeyboardService(BaseService):
         self._printing_service = printing_service
         self._mediacollection_service = mediacollection_service
 
+        self._started = False
+
+    def start(self):
         if self._config.hardwareinputoutput.keyboard_input_enabled:
             self._logger.info("keyboardservice enabled - listeners installed")
-            keyboard.on_press(self._on_key_callback)
+            try:
+                keyboard.on_press(self._on_key_callback)
+                self._started = True
+            except Exception as exc:
+                self._logger.exception(exc)
+                self._logger.error("error registering callbacks, check system config")
         else:
             self._logger.info("keyboardservice not enabled - enable for keyboard triggers")
+
+    def stop(self):
+        self._started = False
+
+    def is_started(self) -> bool:
+        return self._started
 
     def _on_key_callback(self, key):
         """_summary_

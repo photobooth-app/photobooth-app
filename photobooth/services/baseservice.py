@@ -57,3 +57,9 @@ class BaseService:
 
     def _set_status(self, new_status: EnumStatus):
         self._status = new_status
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass

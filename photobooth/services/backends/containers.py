@@ -10,29 +10,24 @@ from .webcamcv2 import WebcamCv2Backend
 
 logger = logging.getLogger(__name__)
 
-"""
-def init_res_simulated_backend(evtbus, config):
-    _simulated_backend = SimulatedBackend(evtbus, config)
-    _simulated_backend.start()
-    yield _simulated_backend
-    _simulated_backend.stop()
 
-"""
+def init_res_obj_backend(_obj_: AbstractBackend, evtbus: EventEmitter, config: AppConfig):
+    """actually same as in parent container."""
+    _backend = None
 
-
-def init_res_obj_backend(_obj_, evtbus, config):
     try:
-        _backend: AbstractBackend = _obj_(evtbus, config)
+        _backend = _obj_(evtbus, config)
         _backend.start()
     except Exception as exc:
         logger.exception(exc)
-        logger.critical("could not start backend")
-        yield None
-    else:
+        logger.critical("could not init/start backend")
+
+    finally:
         yield _backend
 
     try:
-        _backend.stop()
+        if _backend:  # if not none
+            _backend.stop()
     except Exception as exc:
         logger.exception(exc)
         logger.critical("could not stop backend")
