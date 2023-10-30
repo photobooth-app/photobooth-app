@@ -63,9 +63,9 @@ dependencies = [
 photobooth = "photobooth.__main__:main"
 
 [project.urls]
-homepage = "https://github.com/mgrl/photobooth-app"
-repository = "https://github.com/mgrl/photobooth-app"
-documentation = "https://mgrl.github.io/photobooth-docs"
+homepage = "https://github.com/photobooth-app/photobooth-app"
+repository = "https://github.com/photobooth-app/photobooth-app"
+documentation = "https://photobooth-app.org"
 
 [tool.pdm]
 version = { source = "file", path = "photobooth/__version__.py" }

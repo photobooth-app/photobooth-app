@@ -63,12 +63,12 @@ def _create_app() -> FastAPI:
         version="0.0.1",
         contact={
             "name": "mgrl",
-            "url": "https://github.com/mgrl/photobooth-app",
+            "url": "https://github.com/photobooth-app/photobooth-app",
             "email": "me@mgrl.de",
         },
         license_info={
             "name": "MIT",
-            "url": "https://github.com/mgrl/photobooth-app/blob/main/LICENSE.md",
+            "url": "https://github.com/photobooth-app/photobooth-app/blob/main/LICENSE.md",
         },
         docs_url="/api/doc",
         redoc_url=None,
