@@ -91,7 +91,7 @@ class GroupSharing(BaseModel):
         description="Enable share service. To enable URL needs to be configured and dl.php script setup properly.",
     )
     shareservice_url: str = Field(
-        default="https://explain-shareservice.photobooth-app.de/dl.php",
+        default="http://explain-shareservice.photobooth-app.org/dl.php",
         description="URL of php script that is used to serve files and share via QR code.",
     )
     shareservice_apikey: str = Field(
