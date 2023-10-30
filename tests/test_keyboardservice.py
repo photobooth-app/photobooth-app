@@ -30,10 +30,10 @@ def test_key_callback_takepic(services: ServicesContainer):
     services.config().hardwareinputoutput.keyboard_input_enabled = True
     services.config().hardwareinputoutput.keyboard_input_keycode_takepic = "a"
 
-    try:
-        keyboard_service = services.keyboard_service()
-    except Exception as exc:
-        logger.info(f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}")
+    keyboard_service = services.keyboard_service()
+
+    if not keyboard_service.is_started():
+        logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
@@ -47,10 +47,10 @@ def test_key_callback_takecollage(services: ServicesContainer):
     services.config().hardwareinputoutput.keyboard_input_enabled = True
     services.config().hardwareinputoutput.keyboard_input_keycode_takecollage = "c"
 
-    try:
-        keyboard_service = services.keyboard_service()
-    except Exception as exc:
-        logger.info(f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}")
+    keyboard_service = services.keyboard_service()
+
+    if not keyboard_service.is_started():
+        logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
@@ -66,10 +66,10 @@ def test_key_callback_print(mock_run, services: ServicesContainer):
     services.config().hardwareinputoutput.keyboard_input_keycode_print_recent_item = "b"
     services.config().hardwareinputoutput.printing_enabled = True
 
-    try:
-        keyboard_service = services.keyboard_service()
-    except Exception as exc:
-        logger.info(f"error setup keyboard service, ignore because it's due to permission on hosted system, {exc}")
+    keyboard_service = services.keyboard_service()
+
+    if not keyboard_service.is_started():
+        logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
