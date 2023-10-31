@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends
 
 from ...appconfig import AppConfig
 from ...containers import ApplicationContainer
-from ...services.systemservice import SystemService
 
 logger = logging.getLogger(__name__)
 admin_config_router = APIRouter(
@@ -27,15 +26,12 @@ def api_get_config_schema(schema_type: str = "default"):
 @inject
 def api_reset_config(
     config: AppConfig = Depends(Provide[ApplicationContainer.config]),
-    system_service: SystemService = Depends(Provide[ApplicationContainer.services.system_service]),
 ):
     """
     Reset config, deleting config.json file
 
     """
     config.deleteconfig()  #  delete file
-    # restart service to load new config
-    system_service.util_systemd_control("restart")
 
 
 @admin_config_router.get("/currentActive")

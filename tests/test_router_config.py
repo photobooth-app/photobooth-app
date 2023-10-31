@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -39,3 +40,13 @@ def test_config_post(client: TestClient):
 
     response = client.post("/admin/config/current", json=config_dict)
     assert response.status_code == 200
+
+
+@patch("os.remove")
+def test_config_reset(mock_remove, client: TestClient):
+    response = client.get("/admin/config/reset")
+
+    assert response.status_code == 200
+
+    # check os.remove was invoked
+    mock_remove.assert_called()
