@@ -2,19 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "pydeps",
-      "type": "shell",
-      "command": "pydeps photobooth"
-    },
-    {
-      "label": "pydeps internal only",
-      "type": "shell",
-      "command": "pydeps photobooth --max-bacon=1"
-    },
-    {
       "label": "test",
       "type": "shell",
-      "command": "poetry run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./",
+      "command": "pdm run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./",
       "problemMatcher": [],
       "group": {
         "kind": "test",
@@ -24,22 +14,17 @@
     {
       "label": "lint",
       "type": "shell",
-      "command": "poetry run ruff check ."
-    },
-    {
-      "label": "lint-fix",
-      "type": "shell",
-      "command": "poetry run ruff check . --fix"
+      "command": "pdm run ruff check ."
     },
     {
       "label": "format",
       "type": "shell",
-      "command": "poetry run black ."
+      "command": "pdm run ruff format ."
     },
     {
       "label": "build",
       "type": "shell",
-      "command": "poetry build",
+      "command": "pdm build",
       "problemMatcher": [],
       "group": {
         "kind": "build",
@@ -49,12 +34,12 @@
     {
       "label": "test-upload",
       "type": "shell",
-      "command": "poetry publish -r testpypi"
+      "command": "pdm publish -r testpypi"
     },
     {
       "label": "upload",
       "type": "shell",
-      "command": "poetry publish -r pypi"
+      "command": "pdm publish -r pypi"
     },
     {
       "label": "clean",

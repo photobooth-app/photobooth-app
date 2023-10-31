@@ -67,14 +67,15 @@ def zipfiles(paths: list[Path]):
 @admin_files_router.get("/list/{dir:path}")
 async def get_list(dir: str = "/"):
     """ """
+    try:
+        path = filenames_sanitize(dir).relative_to(Path.cwd())
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to get file: {exc}") from exc
+    if not path.is_dir():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file / does not exist!")
 
-    dir_path = filenames_sanitize(dir, check_exists=False).relative_to(Path.cwd())
-
-    if not dir_path.is_dir():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "folder does not exist!")
-
-    folders = [f for f in dir_path.iterdir() if f.is_dir()]
-    files = [f for f in dir_path.iterdir() if f.is_file()]
+    folders = [f for f in path.iterdir() if f.is_dir()]
+    files = [f for f in path.iterdir() if f.is_file()]
 
     output = []
     for f in folders:
@@ -90,17 +91,18 @@ async def get_list(dir: str = "/"):
 async def get_file(file: str = ""):
     """ """
     try:
-        path = filenames_sanitize(file, check_exists=False)
-    except Exception as exc:
-        raise HTTPException(500, f"failed to get file: {exc}") from exc
-
+        logger.info(file)
+        path = filenames_sanitize(file)
+        logger.info(path)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to get file: {exc}") from exc
     if not path.is_file():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} is not a file!")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} is not a file/does not exist!")
 
     return FileResponse(path)
 
 
-@admin_files_router.post("/file/upload")
+@admin_files_router.post("/file/upload", status_code=status.HTTP_201_CREATED)
 def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_files: list[UploadFile]):
     logger.info(f"file upload started, upload to folder '{upload_target_folder}'")
 
@@ -110,12 +112,12 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
 
     # check target directory
     try:
-        upload_target_folder_path = filenames_sanitize(upload_target_folder, check_exists=True)
+        upload_target_folder_path = filenames_sanitize(upload_target_folder)
         if not upload_target_folder_path.is_dir():
-            raise ValueError(f"{upload_target_folder_path=} is no directory")
+            raise ValueError(f"{upload_target_folder_path=} is no directory / does not exist")
 
     except Exception as exc:
-        raise HTTPException(500, f"{upload_target_folder=} does not exist or is no folder! {exc}") from exc
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{upload_target_folder=} does not exist or is no folder! {exc}") from exc
 
     try:
         for uploaded_file in uploaded_files:
@@ -142,13 +144,13 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
         logger.warning(f"no new folder name provided {new_folder_name=}")
 
     try:
-        new_path = filenames_sanitize(new_folder_name, check_exists=False)
+        new_path = filenames_sanitize(new_folder_name)
         new_path.mkdir(exist_ok=False, parents=True)
         logger.debug(f"folder {new_path=} created")
-
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to create folder: {new_folder_name}") from exc
     except FileExistsError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, f"folder {new_path} already exists!") from exc
-
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"folder creation failed: {exc}") from exc
@@ -157,7 +159,7 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
 @admin_files_router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
 async def post_delete(selected_paths: list[PathListItem] = None):
     """ """
-    filenames_to_process = [selected_path.filepath for selected_path in selected_paths]
+    filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]
     logger.info(f"request delete, {filenames_to_process=}")
 
     def rmdir(directory: Path):
@@ -169,9 +171,7 @@ async def post_delete(selected_paths: list[PathListItem] = None):
         directory.rmdir()
 
     try:
-        for filename_to_process in filenames_to_process:
-            path = filenames_sanitize(filename_to_process)
-
+        for path in filenames_to_process:
             # filter main data dir.
             if path == Path.cwd():
                 logger.warning("delete cwd skipped, need to explicit select all items to clear data dir")
