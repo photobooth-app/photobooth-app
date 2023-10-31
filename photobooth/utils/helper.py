@@ -7,16 +7,14 @@ from pathlib import Path
 from typing import Union
 
 
-def filenames_sanitize(path_str: str, check_exists: bool = True) -> Path:
+def filenames_sanitize(path_str: str) -> Path:
     """turn strings in paths and sanitize. Used for userinput to check the path is below CWD.
 
     Args:
         filenames (list[str]): _description_
-        check_exists (bool, optional): _description_. Defaults to True.
 
     Raises:
         ValueError: _description_
-        FileNotFoundError: _description_
 
     Returns:
         list[Path]: _description_
@@ -26,10 +24,6 @@ def filenames_sanitize(path_str: str, check_exists: bool = True) -> Path:
 
     if not fullpath.startswith(basepath):
         raise ValueError(f"illegal file requested: {fullpath}")
-
-    # path exists:
-    if check_exists and not os.path.exists(fullpath):
-        raise FileNotFoundError(f"path does not exist: {fullpath}")
 
     return Path(fullpath)
 

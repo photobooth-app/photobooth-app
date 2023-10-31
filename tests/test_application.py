@@ -35,7 +35,7 @@ def client() -> TestClient:
 def test_config_post_validationerror(client: TestClient):
     config_dict = json.loads(AppConfig().model_dump_json())
     # set illegal setting, that provokes validation error
-    config_dict["common"]["countdown_capture_first"] = 30
+    config_dict["common"]["countdown_capture_first"] = -1
 
     response = client.post("/admin/config/current", json=config_dict)
 
