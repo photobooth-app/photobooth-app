@@ -72,9 +72,7 @@ async def get_list(dir: str = "/"):
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to get file: {exc}") from exc
     if not path.is_dir():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file!")
-    if not path.exists():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} does not exist!")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file / does not exist!")
 
     folders = [f for f in path.iterdir() if f.is_dir()]
     files = [f for f in path.iterdir() if f.is_file()]
@@ -99,14 +97,12 @@ async def get_file(file: str = ""):
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to get file: {exc}") from exc
     if not path.is_file():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} is not a file!")
-    if not path.exists():
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} does not exist!")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} is not a file/does not exist!")
 
     return FileResponse(path)
 
 
-@admin_files_router.post("/file/upload")
+@admin_files_router.post("/file/upload", status_code=status.HTTP_201_CREATED)
 def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_files: list[UploadFile]):
     logger.info(f"file upload started, upload to folder '{upload_target_folder}'")
 
@@ -118,9 +114,7 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
     try:
         upload_target_folder_path = filenames_sanitize(upload_target_folder)
         if not upload_target_folder_path.is_dir():
-            raise ValueError(f"{upload_target_folder_path=} is no directory")
-        if not upload_target_folder_path.exists():
-            raise FileNotFoundError(f"{dir} does not exist!")
+            raise ValueError(f"{upload_target_folder_path=} is no directory / does not exist")
 
     except Exception as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{upload_target_folder=} does not exist or is no folder! {exc}") from exc
@@ -153,10 +147,10 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
         new_path = filenames_sanitize(new_folder_name)
         new_path.mkdir(exist_ok=False, parents=True)
         logger.debug(f"folder {new_path=} created")
-
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"failed to create folder: {new_folder_name}") from exc
     except FileExistsError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, f"folder {new_path} already exists!") from exc
-
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"folder creation failed: {exc}") from exc
