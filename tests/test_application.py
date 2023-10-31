@@ -15,12 +15,12 @@ logger = logging.getLogger(name=None)
 
 
 def test_app_runtime_exc_folder_creation_failed():
-    with patch.object(os, "makedirs", side_effect=OSError("test")):
-        # emulate write access issue and ensure an exception is received to make the app fail starting.
-        with pytest.raises(OSError):
-            from photobooth.application import app
+    import photobooth.application
 
-            _ = app
+    with patch.object(os, "makedirs", side_effect=RuntimeError("effect: failed creating folder")):
+        # emulate write access issue and ensure an exception is received to make the app fail starting.
+        with pytest.raises(RuntimeError):
+            photobooth.application._create_app()
 
 
 @pytest.fixture
