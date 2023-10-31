@@ -9,6 +9,7 @@ from photobooth.appconfig import (
     EnumImageBackendsMain,
 )
 from photobooth.containers import ApplicationContainer
+from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -89,3 +90,63 @@ def test_getimages_change_backend_during_runtime(services: ServicesContainer):
     # secondary fails, because disabled
     with pytest.raises(AttributeError):
         aquisition_service.secondary_backend.wait_for_hq_image()
+
+
+def test_nobackend_available_for_hq(services: ServicesContainer):
+    # now reconfigure
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+
+    aquisition_service: AquisitionService = services.aquisition_service()
+
+    with pytest.raises(RuntimeError):
+        aquisition_service.wait_for_hq_image()
+
+
+def test_gen_stream(services: ServicesContainer):
+    # now reconfigure
+    services.config().backends.LIVEPREVIEW_ENABLED = True
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+
+    aquisition_service: AquisitionService = services.aquisition_service()
+
+    with pytest.raises(RuntimeError):
+        aquisition_service.gen_stream()
+
+
+def test_gen_stream_main_backend(services: ServicesContainer):
+    # now reconfigure
+    services.config().backends.LIVEPREVIEW_ENABLED = True
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.SIMULATED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+
+    aquisition_service: AquisitionService = services.aquisition_service()
+
+    assert aquisition_service.gen_stream()
+    assert aquisition_service.primary_backend.gen_stream()
+    assert aquisition_service.secondary_backend is None
+
+
+def test_gen_stream_live_backend(services: ServicesContainer):
+    # now reconfigure
+    services.config().backends.LIVEPREVIEW_ENABLED = True
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+
+    aquisition_service: AquisitionService = services.aquisition_service()
+
+    assert aquisition_service.gen_stream()
+    assert aquisition_service.primary_backend is None
+    assert aquisition_service.secondary_backend.gen_stream()
+
+
+def test_get_stats(services: ServicesContainer):
+    # now reconfigure
+    services.config().backends.LIVEPREVIEW_ENABLED = True
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.SIMULATED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+
+    aquisition_service: AquisitionService = services.aquisition_service()
+
+    logger.info(aquisition_service.stats())
