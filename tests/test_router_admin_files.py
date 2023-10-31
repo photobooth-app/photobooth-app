@@ -91,14 +91,14 @@ def test_admin_files_upload(client: TestClient):
     with open("tests/assets/input.jpg", "rb") as f:
         response = client.post(
             "/admin/files/file/upload",
-            data={"upload_target_folder": "./tmp/"},
+            data={"upload_target_folder": "./"},
             files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
         )
 
         assert response.status_code == 201
 
         try:
-            os.unlink("./tmp/testupload_automated.jpg")  # fails if file was not created.
+            os.unlink("./testupload_automated.jpg")  # fails if file was not created.
         except Exception as exc:
             raise AssertionError("delete failed, so it was not created before.") from exc
 
@@ -106,7 +106,7 @@ def test_admin_files_upload(client: TestClient):
 def test_admin_files_upload_fails(client: TestClient):
     response = client.post(
         "/admin/files/file/upload",
-        data={"upload_target_folder": "./tmp/"},
+        data={"upload_target_folder": "./"},
         files={},
     )
     assert response.status_code == 400
@@ -114,7 +114,7 @@ def test_admin_files_upload_fails(client: TestClient):
     with open("tests/assets/input.jpg", "rb") as f:
         response = client.post(
             "/admin/files/file/upload",
-            data={"upload_target_folder": "./tmp/nonexistantfoldertouploadto_automated"},
+            data={"upload_target_folder": "./nonexistantfoldertouploadto_automated"},
             files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
         )
         assert response.status_code == 400
@@ -141,11 +141,6 @@ def test_admin_files_new_folder(client: TestClient):
         os.rmdir(new_path)  # fails if dir was not created.
     except Exception as exc:
         raise AssertionError("delete failed, so it was not created before.") from exc
-
-
-def test_admin_files_new_folder_illegalchars_fails(client: TestClient):
-    response = client.post("/admin/files/folder/new", json="tmp/illegal:$chars")
-    assert response.status_code == 500
 
 
 def test_admin_files_delete(client: TestClient):

@@ -15,7 +15,7 @@ from photobooth.services.containers import ServicesContainer
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def services() -> ServicesContainer:
     # setup
     application_container = ApplicationContainer()
