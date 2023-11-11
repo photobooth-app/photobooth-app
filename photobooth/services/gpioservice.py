@@ -60,7 +60,7 @@ class GpioService(BaseService):
                 self._logger.info("gpio not enabled - enable for gpio support on raspberry pi")
 
     def init_io(self):
-        self.shutdown_btn = Button(
+        self.shutdown_btn: Button = Button(
             self._config.hardwareinputoutput.gpio_pin_shutdown,
             hold_time=HOLD_TIME_SHUTDOWN,
             bounce_time=DEBOUNCE_TIME,

@@ -37,7 +37,7 @@ def test_button_shutdown(mock_check_call, services: ServicesContainer):
     services.gpio_service().shutdown_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME + HOLD_TIME_SHUTDOWN + 0.2)
+    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_SHUTDOWN + 0.2)
 
     # check subprocess.check_call was invoked
     mock_check_call.assert_called()
@@ -49,7 +49,7 @@ def test_button_reboot(mock_check_call, services: ServicesContainer):
     services.gpio_service().reboot_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME + HOLD_TIME_REBOOT + 0.2)
+    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_REBOOT + 0.2)
 
     # check subprocess.check_call was invoked
     mock_check_call.assert_called()
@@ -64,7 +64,7 @@ def test_button_take1pic(services: ServicesContainer):
         services.gpio_service().take1pic_btn.pin.drive_low()
 
         # wait debounce time
-        time.sleep(DEBOUNCE_TIME + 0.2)
+        time.sleep(DEBOUNCE_TIME or 0.0 + 0.2)
 
         services.processing_service().start_job_1pic.assert_called()
 
@@ -78,7 +78,7 @@ def test_button_takecollage(services: ServicesContainer):
         services.gpio_service().takecollage_btn.pin.drive_low()
 
         # wait debounce time
-        time.sleep(DEBOUNCE_TIME + 0.2)
+        time.sleep(DEBOUNCE_TIME or 0.0 + 0.2)
 
         services.processing_service().start_job_collage.assert_called()
 
@@ -91,7 +91,7 @@ def test_button_print(mock_run, services: ServicesContainer):
     services.gpio_service().print_recent_item_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME + HOLD_TIME_REBOOT + 0.2)
+    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_REBOOT + 0.2)
 
     # check subprocess.check_call was invoked
     mock_run.assert_called()
