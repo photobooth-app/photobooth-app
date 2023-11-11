@@ -20,7 +20,7 @@ from .processingservice import ProcessingService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
-DEBOUNCE_TIME = 0.1
+DEBOUNCE_TIME = None  # due to bugs in GPIOZERO this feature cannot be used and remains to default=None
 
 
 class GpioService(BaseService):
