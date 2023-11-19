@@ -22,6 +22,7 @@ from .mediacollection.mediaitem import (
     MediaItem,
 )
 from .mediaprocessingservice import MediaprocessingService
+from .sseservice import SseEventDbInsert, SseEventDbRemove
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +82,17 @@ class MediacollectionService(BaseService):
 
     def db_add_item(self, item: MediaItem):
         self._db.insert(0, item)  # insert at first position (prepend)
+
+        # and insert in client db collection so gallery is up to date.
+        self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=item))
+
         return item.id
 
     def _db_delete_item_by_item(self, item: MediaItem):
-        # self._db = [item for item in self._db if item['id'] != id]
         self._db.remove(item)
-        # del self._db[id]
+
+        # and remove from client db collection so gallery is up to date.
+        self._evtbus.emit("sse_dispatch_event", SseEventDbRemove(mediaitem=item))
 
     def _db_delete_items(self):
         self._db.clear()
@@ -163,22 +169,39 @@ class MediacollectionService(BaseService):
         self._logger.info(f"request delete item id {item_id}")
 
         try:
+            # lookup item in collection
             item = self.db_get_image_by_id(item_id)
             self._logger.debug(f"found item={item}")
 
-            os.remove(item.path_original)
-            os.remove(item.path_full_unprocessed)
-            os.remove(item.path_full)
-            os.remove(item.path_preview_unprocessed)
-            os.remove(item.path_preview)
-            os.remove(item.path_thumbnail_unprocessed)
-            os.remove(item.path_thumbnail)
+            # remove files from disk
+            self.delete_mediaitem_files(item)
 
+            # remove from collection
             self._db_delete_item_by_item(item)
         except Exception as exc:
             self._logger.exception(exc)
             self._logger.error(f"error deleting item id={item_id}")
-            raise exc
+
+        self._logger.debug(f"deleted mediaitem from db and files {item}")
+
+    def delete_mediaitem_files(self, mediaitem: MediaItem):
+        """delete single file and it's related thumbnails"""
+
+        self._logger.info(f"request delete files of {mediaitem}")
+
+        try:
+            os.remove(mediaitem.path_original)
+            os.remove(mediaitem.path_full_unprocessed)
+            os.remove(mediaitem.path_full)
+            os.remove(mediaitem.path_preview_unprocessed)
+            os.remove(mediaitem.path_preview)
+            os.remove(mediaitem.path_thumbnail_unprocessed)
+            os.remove(mediaitem.path_thumbnail)
+        except Exception as exc:
+            self._logger.exception(exc)
+            self._logger.error(f"error deleting files for item {mediaitem}")
+
+        self._logger.info(f"deleted files of {mediaitem}")
 
     def delete_images(self):
         """delete all images, inclusive thumbnails, ..."""

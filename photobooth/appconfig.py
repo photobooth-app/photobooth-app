@@ -76,7 +76,7 @@ class GroupCommon(BaseModel):
         description="IP/Hostname to bind the webserver to. 0.0.0.0 means bind to all IP adresses of host.",
     )
     webserver_port: int = Field(
-        default=8000,
+        default=80,
         description="Port to serve the photobooth website. Ensure the port is available.",
     )
 
@@ -104,7 +104,7 @@ class GroupSharing(BaseModel):
     )
 
     share_custom_qr_url: str = Field(
-        default="http://localhost:8000/data/processed/full/{filename}",
+        default="http://localhost/media/processed/full/{filename}",
         description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {filename} is replaced by actual filename in QR code.",
     )
 

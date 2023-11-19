@@ -17,7 +17,7 @@ from .mediacollectionservice import (
 )
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModel
-from .sseservice import SseEventDbInsert, SseEventProcessStateinfo
+from .sseservice import SseEventProcessStateinfo
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +34,22 @@ class ProcessingService(StateMachine):
     ## STATES
 
     idle = State(initial=True)
-    counting = State()
-    capture = State()
-    present_capture = State()
-    job_postprocess = State()
+    counting = State()  # countdown before capture
+    capture = State()  # capture from camera include postprocess single img postproc
+    approve_capture = State()  # waiting state to approve. transition by confirm,reject or autoconfirm
+    captures_completed = State()  # final postproc (mostly to create collage)
+    present_capture = State()  # final presentation of mediaitem
 
     ## TRANSITIONS
 
     start = idle.to(counting)
     _counted = counting.to(capture)
-    _captured = capture.to(present_capture)
-    confirm = present_capture.to(counting, unless="took_all_captures") | present_capture.to(job_postprocess, cond="took_all_captures")
-    reject = present_capture.to(counting)
-    _finalize = job_postprocess.to(idle)
-    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, present_capture, job_postprocess)
+    _captured = capture.to(approve_capture)
+    confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
+    reject = approve_capture.to(counting)
+    _present = captures_completed.to(present_capture)
+    _finalize = present_capture.to(idle)
+    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, present_capture, approve_capture, captures_completed)
 
     def __init__(
         self,
@@ -77,13 +79,25 @@ class ProcessingService(StateMachine):
         assert isinstance(typ, JobModel.Typ)
         assert isinstance(total_captures_to_take, int)
 
+        # reset old job data
+        # job is reset on start only, not on enter_idle because the UI relies on the last model-data to present last item.
+        self.model.reset_job()
+
         logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
 
-        self.model.start_model(typ, total_captures_to_take)
+        self.model.start_model(
+            typ,
+            total_captures_to_take,
+            collage_automatic_capture_continue=self._config.common.collage_automatic_capture_continue,
+        )
 
         logger.info(f"start job {self.model}")
 
     ## state actions
+
+    def _emit_model_state_update(self):
+        # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
+        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
 
     def on_enter_state(self, event, state):
         """_summary_"""
@@ -91,7 +105,16 @@ class ProcessingService(StateMachine):
         logger.info(f"on_enter_state {self.current_state.id=} ")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
-        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
+        self._emit_model_state_update()
+
+    def on_exit_state(self, event, state):
+        """_summary_"""
+        # logger.info(f"Entering '{state.id}' state from '{event}' event.")
+        logger.info(f"on_exit_state {self.current_state.id=} ")
+
+        # don't emit on exit state again because UI would display approval twice. UI needs to know when next state is entered,
+        # not leaving a state usually, if needed, on_exit_SPECIFIC-STATE would need to be created and emit model.
+        # self._emit_model_state_update()
 
     def on_exit_idle(self):
         # when idle left, check that all is properly set up!
@@ -103,8 +126,6 @@ class ProcessingService(StateMachine):
     def on_enter_idle(self):
         """_summary_"""
         logger.info("state idle entered.")
-        # reset old job data
-        self.model.reset_job()
 
     def on_enter_counting(self):
         """_summary_"""
@@ -195,7 +216,7 @@ class ProcessingService(StateMachine):
             logger.critical(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
             raise RuntimeError(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
 
-        # capture finished, go to next state which is present. present also postprocesses capture.
+        # capture finished, go to next state
         self._captured()
 
     def on_exit_capture(self):
@@ -248,44 +269,36 @@ class ProcessingService(StateMachine):
 
         assert mediaitem.fileset_valid()
 
-        # add result to db
-        # TODO: make configurable whether to hide pics that will be stitched to collage
-        self.model.add_capture(self.model.get_last_capture())
-        _ = self._mediacollection_service.db_add_item(mediaitem)
-
         logger.info(f"capture {mediaitem=} successful")
 
-    def on_enter_present_capture(self):
-        # get the last captured mediaitem for further processing
-        last_captured_mediaitem = self.model.get_last_capture()
+        # add to collection
+        self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
 
+    def on_enter_approve_capture(self):
         # if job is collage, each single capture could be confirmed or not:
-        if self.model._typ == JobModel.Typ.collage:
-            if self._config.common.collage_automatic_capture_continue:
-                # auto continue with next countdown
-                self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=last_captured_mediaitem, present=False))
-                self.confirm_capture()
-            else:
-                # present capture with buttons to approve.
-                logger.info("finished capture, present to user to confirm or start over")
-                self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=last_captured_mediaitem, present=True, to_confirm_or_reject=True))
-
-        elif self.model._typ == JobModel.Typ.image:
-            # if not collage, we do not support approval screen - just continue.
+        if self.model.ask_user_for_approval():
+            # present capture with buttons to approve.
+            logger.info("finished capture, present to user to confirm, reject or abort")
+        else:
+            # auto continue
+            logger.info("finished capture, automatic confirm enabled")
             self.confirm_capture()
 
-        else:
-            raise RuntimeError(f"illegal job type {self.model._typ}")
+    def on_exit_approve_capture(self, event):
+        if event == self.confirm.name:
+            # nothing to do
+            pass
+            # add result to temporary confirmed collection
+            # self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
 
-    def on_exit_present_capture(self, event):
         if event == self.reject.name:
-            delete_mediaitem = self.model._captures.pop()
-            logger.info(f"rejected: {delete_mediaitem=}")
-
-            self._mediacollection_service.delete_image_by_id(delete_mediaitem.id)
+            # remove rejected image
+            delete_mediaitem = self.model._confirmed_captures_collection.pop()
             self.model.set_last_capture(None)
+            logger.info(f"rejected: {delete_mediaitem=}")
+            self._mediacollection_service.delete_mediaitem_files(delete_mediaitem)
 
-    def on_enter_job_postprocess(self):
+    def on_enter_captures_completed(self):
         ## PHASE 2:
         # postprocess job as whole, create collage of single images, ...
         logger.info("start postprocessing phase 2")
@@ -293,28 +306,45 @@ class ProcessingService(StateMachine):
         if self.model._typ == JobModel.Typ.collage:
             # apply 1pic pipeline:
             tms = time.time()
-            mediaitem = self._mediaprocessing_service.process_collage(self.model._captures)
+
+            # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
+            mediaitem = self._mediaprocessing_service.process_collage(self.model._confirmed_captures_collection.copy())
+
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
-            # add collage to mediadb
-            _ = self._mediacollection_service.db_add_item(mediaitem)
+            # resulting collage mediaitem will be added to the collection as most recent item
+            self.model.add_confirmed_capture_to_collection(mediaitem)
+            self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
 
         else:
-            mediaitem = self.model.get_last_capture()
+            pass
+            # nothing to do for other job type
 
         ## FINISH:
         # to inform frontend about new image to display
-        logger.info("finished job")
-
-        # finally display end result to the user.
-        self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=mediaitem, present=True))
+        logger.info("finished postprocessing")
 
         # send machine to idle again
+        self._present()
+
+    def on_exit_captures_completed(self):
+        ## finish and add items to collection:
+        #
+        logger.info("exit job postprocess, adding items to db")
+
+        for item in self.model._confirmed_captures_collection:
+            logger.debug(f"adding {item} to collection")
+            _ = self._mediacollection_service.db_add_item(item)
+
+    def on_enter_present_capture(self):
         self._finalize()
 
-    def on_before_reset(self):
-        print("TODO: remove all images that were captured by now")
-        print("TODO: keep frontend in sync")
+    def on__reset(self):
+        logger.info("job reset, rollback captures during job")
+
+        for item in self.model._confirmed_captures_collection:
+            logger.debug(f"delete item {item}")
+            self._mediacollection_service.delete_mediaitem_files(mediaitem=item)
 
     def _check_occupied(self):
         if not self.idle.is_active:
