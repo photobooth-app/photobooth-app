@@ -77,9 +77,12 @@ class JobModel:  # TODO: derive from model class?
         self._typ: __class__.Typ = None
 
         # job model processing vars
-        self._captures: list[MediaItem] = []
+        self._confirmed_captures_collection: list[MediaItem] = []
         self._total_captures_to_take: int = 0
         self._last_captured_mediaitem: MediaItem = None
+
+        # job metadata processing ui interaction
+        self._collage_automatic_capture_continue = False
 
         # job model timer
         self._duration_user: float = 0
@@ -101,7 +104,10 @@ class JobModel:  # TODO: derive from model class?
             remaining_captures_to_take=self.remaining_captures_to_take(),
             number_captures_taken=self.number_captures_taken(),
             duration=self._duration_user,
-            captures=[captured_item.asdict() for captured_item in self._captures] if self._captures else [],
+            ask_user_for_approval=self.ask_user_for_approval(),
+            confirmed_captures_collection=[captured_item.asdict() for captured_item in self._confirmed_captures_collection]
+            if self._confirmed_captures_collection
+            else [],
             last_captured_mediaitem=self._last_captured_mediaitem.asdict() if self._last_captured_mediaitem else None,
         )
 
@@ -110,18 +116,23 @@ class JobModel:  # TODO: derive from model class?
     def __repr__(self):
         return (
             f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
-            f"captures={self._captures}, last_capture={self._last_captured_mediaitem}"
+            f"confirmed_captures_collection={self._confirmed_captures_collection}, last_capture={self._last_captured_mediaitem}"
         )
 
     def _validate_job(self):
-        if self._typ is None or self._total_captures_to_take is None or self._total_captures_to_take <= 0 or self._captures is None:
+        if (
+            self._typ is None
+            or self._total_captures_to_take is None
+            or self._total_captures_to_take <= 0
+            or self._confirmed_captures_collection is None
+        ):
             return False
         else:
             return True
 
     # external model processing controls
-    def add_capture(self, captured_item: MediaItem):
-        self._captures.append(captured_item)
+    def add_confirmed_capture_to_collection(self, captured_item: MediaItem):
+        self._confirmed_captures_collection.append(captured_item)  # most recent is always at N pos., get latest with get_last_capture
 
     def last_capture_successful(self) -> bool:
         return self._last_captured_mediaitem is not None
@@ -138,30 +149,38 @@ class JobModel:  # TODO: derive from model class?
         return self._total_captures_to_take
 
     def remaining_captures_to_take(self) -> int:
-        assert self._captures is not None
+        assert self._confirmed_captures_collection is not None
         assert self._total_captures_to_take is not None
 
-        return self._total_captures_to_take - len(self._captures)
+        return self._total_captures_to_take - len(self._confirmed_captures_collection)
 
     def number_captures_taken(self) -> int:
-        assert self._captures is not None
+        assert self._confirmed_captures_collection is not None
         assert self._total_captures_to_take is not None
 
-        return len(self._captures)
+        return len(self._confirmed_captures_collection)
 
-    def took_all_captures(self) -> bool:
-        assert self._captures is not None
+    def all_captures_confirmed(self) -> bool:
+        assert self._confirmed_captures_collection is not None
         assert self._total_captures_to_take is not None
 
-        return len(self._captures) >= self._total_captures_to_take
+        return len(self._confirmed_captures_collection) >= self._total_captures_to_take
+
+    def ask_user_for_approval(self) -> bool:
+        # display only for collage (multistep process if configured, otherwise always false)
+        if self._typ is JobModel.Typ.collage and not self._collage_automatic_capture_continue:
+            return True
+        else:
+            return False
 
     # external model start/stop controls
-    def start_model(self, typ: Typ, total_captures_to_take: int):
+    def start_model(self, typ: Typ, total_captures_to_take: int, collage_automatic_capture_continue: bool = False):
         self.reset_job()
         self._typ = typ
         self._total_captures_to_take = total_captures_to_take
         self._last_captured_mediaitem = None
-        self._captures = []
+        self._confirmed_captures_collection = []
+        self._collage_automatic_capture_continue = collage_automatic_capture_continue
 
         self._validate_job()
 
@@ -169,7 +188,7 @@ class JobModel:  # TODO: derive from model class?
         self._typ = None
         self._total_captures_to_take = 0
         self._last_captured_mediaitem = None
-        self._captures = []
+        self._confirmed_captures_collection = []
 
     # external countdown controls
     def start_countdown(self, duration_user: float, offset_camera: float = 0.0):

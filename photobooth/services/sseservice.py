@@ -85,16 +85,12 @@ class SseEventDbInsert(SseEventBase):
 
     event: str = "DbInsert"
     mediaitem: MediaItem = None
-    present: bool = False
-    to_confirm_or_reject: bool = False
 
     @property
     def data(self) -> str:
         return json.dumps(
             dict(
                 mediaitem=self.mediaitem.asdict(),
-                present=self.present,
-                to_confirm_or_reject=self.to_confirm_or_reject,
             )
         )
 
