@@ -76,8 +76,8 @@ class GroupCommon(BaseModel):
         description="IP/Hostname to bind the webserver to. 0.0.0.0 means bind to all IP adresses of host.",
     )
     webserver_port: int = Field(
-        default=80,
-        description="Port to serve the photobooth website. Ensure the port is available.",
+        default=8000,
+        description="Port to serve the photobooth website. Ensure the port is available. Ports below 1024 need root!",
     )
 
 
