@@ -1,4 +1,4 @@
-<h1 align="center"><img src="https://raw.githubusercontent.com/photobooth-app/photobooth-app/main/assets/logo/logo-text-black-transparent.png" alt="photobooth app logo" /></h1>
+<h1 align="center"><img src="https://raw.githubusercontent.com/photobooth-app/photobooth-app/main/assets/logo/logo-text-blue-transparent.png" alt="photobooth app logo" /></h1>
 
 Written in Python 🐍, coming along with a modern Vue frontend.
 
