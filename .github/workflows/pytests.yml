@@ -37,8 +37,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install system apt dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get -y install libturbojpeg python3-pip libgl1 git libcap-dev
+          sudo apt update
+          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
       - name: install pdm
         run: |
           pipx install pdm # on hosted pipx is installed
@@ -69,10 +69,10 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install apt dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get -y install libturbojpeg0 python3-pip git libgl1 python3-picamera2 python3-venv libexif-dev libcap-dev
-      - run: pip install --user --upgrade pipx
+          sudo apt update
+          sudo apt -y install libturbojpeg0 python3-pip libgl1 libgphoto2-dev pipx
       - run: pipx install pdm
+      - run: pipx ensurepath
       - run: pdm venv create --force 3.9 --system-site-packages # incl system site to allow for picamera2 to import
       - run: pdm install # install in-project env
       - name: Test with pytest
