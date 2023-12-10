@@ -73,7 +73,7 @@ jobs:
           sudo apt -y install libturbojpeg0 python3-pip libgl1 libgphoto2-dev pipx
       - run: pipx install pdm
       - run: pipx ensurepath
-      - run: pdm venv create --force 3.9 --system-site-packages # incl system site to allow for picamera2 to import
+      - run: pdm venv create --force 3.11 --system-site-packages # incl system site to allow for picamera2 to import
       - run: pdm install # install in-project env
       - name: Test with pytest
         run: |
