@@ -21,8 +21,6 @@ from .sseservice import SseEventProcessStateinfo
 
 logger = logging.getLogger(__name__)
 
-MAX_ATTEMPTS = 3
-
 
 class ProcessingService(StateMachine):
     """
@@ -183,7 +181,7 @@ class ProcessingService(StateMachine):
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        for attempt in range(1, MAX_ATTEMPTS + 1):
+        for attempt in range(1, self._config.backends.retry_capture + 1):
             try:
                 image_bytes = self._aquisition_service.wait_for_hq_image()
 
@@ -197,7 +195,7 @@ class ProcessingService(StateMachine):
                 logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
             except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
+                logger.error(f"error capture image. timeout expired {attempt=}/{self._config.backends.retry_capture}, retrying")
                 # can we do additional error handling here?
                 continue
 
@@ -213,8 +211,8 @@ class ProcessingService(StateMachine):
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
-            raise RuntimeError(f"finally failed after {MAX_ATTEMPTS} attempts to capture image!")
+            logger.critical(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
+            raise RuntimeError(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
 
         # capture finished, go to next state
         self._captured()
@@ -357,7 +355,7 @@ class ProcessingService(StateMachine):
         try:
             self.start(JobModel.Typ.image, 1)
         except Exception as exc:
-            logger.exception(exc)
+            logger.error(exc)
             self._reset()
             raise RuntimeError(f"error processing the job :| {exc}") from exc
 
@@ -366,7 +364,7 @@ class ProcessingService(StateMachine):
         try:
             self.start(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
         except Exception as exc:
-            logger.exception(exc)
+            logger.error(exc)
             self._reset()
             raise RuntimeError(f"error processing the job :| {exc}") from exc
 

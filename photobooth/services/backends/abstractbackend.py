@@ -15,9 +15,6 @@ from ...utils.exceptions import ShutdownInProcessError
 logger = logging.getLogger(__name__)
 
 
-# retry some times to get image for stream
-MAX_ATTEMPTS = 3
-
 #
 # Dataclass for stats
 #
@@ -132,13 +129,16 @@ class AbstractBackend(ABC):
         """
         logger.info(f"livestream started on backend {self=}")
 
+        # lores stream attempts is doubled so if still fails after retry_capture times gen_stream did not fail yet
+        stream_max_attempts = self._config.backends.retry_capture * 2
+
         last_time = time.time_ns()
         while True:
-            for attempt in range(1, MAX_ATTEMPTS + 1):
+            for attempt in range(1, stream_max_attempts + 1):
                 try:
                     buffer = self._wait_for_lores_image()
                 except TimeoutError:
-                    logger.error("error capture lores image for stream. " f"timeout expired {attempt=}/{MAX_ATTEMPTS}, retrying")
+                    logger.error("error capture lores image for stream. " f"timeout expired {attempt=}/{stream_max_attempts}, retrying")
                     # can we do additional error handling here?
                 except ShutdownInProcessError:
                     logger.warning("gather img failed due to resources shutting down")
@@ -146,7 +146,7 @@ class AbstractBackend(ABC):
                     break
             else:
                 # we failed finally all the attempts - deal with the consequences.
-                logger.critical("critical error getting stream. " f"failed to get lores image after {MAX_ATTEMPTS} attempts. giving up!")
+                logger.critical("critical error getting stream. " f"failed to get lores image after {stream_max_attempts} attempts. giving up!")
 
                 # return to signal stop yielding frames to calling function
                 return

@@ -181,6 +181,12 @@ class GroupBackends(BaseModel):
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
         json_schema_extra={"ui_component": "QSlider"},
     )
+    retry_capture: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Number of attempts to gather a picture from backend.",
+    )
 
     cv2_CAM_RESOLUTION_WIDTH: int = Field(
         default=10000,
