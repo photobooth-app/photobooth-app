@@ -31,7 +31,7 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-    "fastapi>=0.104.0,<0.105.0",
+    "fastapi>=0.104.0,<0.106.0",
     "opencv-python>=4.7,<4.9",
     "numpy>=1.26.0",
     "pillow>=10.1.0,<10.2.0",
@@ -43,7 +43,7 @@ dependencies = [
     "pyturbojpeg>=1.7.0",
     "requests>=2.31.0",
     "sse-starlette>=1.6.5",
-    "uvicorn>=0.23,<0.24",
+    "uvicorn>=0.23,<0.25",
     "python-dotenv~=1.0.0",
     "pyserial~=3.5",
     "jsonref~=1.1.0",
