@@ -73,6 +73,10 @@ class Gphoto2Backend(AbstractBackend):
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
         logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
 
+        # initialize the correct iso val
+        self._iso(self._config.backends.gphoto2_iso_liveview)
+        self._shutter_speed(self._config.backends.gphoto2_shutter_speed_liveview)
+
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
         self._logger_callback = gp.check_result(
@@ -172,6 +176,24 @@ class Gphoto2Backend(AbstractBackend):
         # nothing to do for this backend
         pass
 
+    def _iso(self, val):
+        if val == "":
+            return
+        try:
+            logger.info(f"setting custom iso value: {val}")
+            self._gp_set_config("iso", val)
+        except gp.GPhoto2Error as exc:
+            logger.warning(f"cannot set iso, command ignored {exc}")
+
+    def _shutter_speed(self, val):
+        if val == "":
+            return
+        try:
+            logger.info(f"setting custom shutter speed: {val}")
+            self._gp_set_config("shutterspeed", val)
+        except gp.GPhoto2Error as exc:
+            logger.warning(f"cannot set shutter speed, command ignored {exc}")
+
     def _gp_set_config(self, name, val):
         config = self._camera.get_config(self._camera_context)
         node = config.get_child_by_name(name)
@@ -269,6 +291,8 @@ class Gphoto2Backend(AbstractBackend):
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
                 if self._config.backends.gphoto2_disable_viewfinder_before_capture:
+                    self._iso(self._config.backends.gphoto2_iso_capture)
+                    self._shutter_speed(self._config.backends.gphoto2_shutter_speed_capture)
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
@@ -291,6 +315,8 @@ class Gphoto2Backend(AbstractBackend):
                     continue
 
                 self._evtbus.emit("frameserver/onCaptureFinished")
+                self._iso(self._config.backends.gphoto2_iso_liveview)
+                self._shutter_speed(self._config.backends.gphoto2_shutter_speed_liveview)
 
                 # read from camera
                 try:
