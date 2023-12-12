@@ -31,6 +31,19 @@ pip install git+https://github.com/photobooth-app/photobooth-app.git@dev
 Develop on Windows or Linux using VScode.
 Dependency management is realized using poetry.
 
+To get started on working on the backend:
+- First install pdm: `pip install pdm`
+- Install further dependencies: 
+  - `sudo apt-get install libturbojpeg` - In this case for Ubuntu based systems
+  - `pip install uvicorn`
+  - `pip install dependency-injector`
+  
+- Then install all the requirements: `pdm install`
+- Build with `pdm build`
+- Start with `pdm run python -m photobooth`
+
+
+
 Additional requirements for frontend development
     - nodejs 16 (nodejs 18 fails proxying the devServer)
     - yarn
