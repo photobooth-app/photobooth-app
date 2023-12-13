@@ -188,6 +188,26 @@ class GroupBackends(BaseModel):
         description="Number of attempts to gather a picture from backend.",
     )
 
+    gphoto2_iso_liveview: str = Field(
+        default="",
+        description="Sets the ISO for when the photobooth is in live preview modus. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
+    )
+
+    gphoto2_iso_capture: str = Field(
+        default="",
+        description="Sets the ISO for when the photobooth captures a photo. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
+    )
+
+    gphoto2_shutter_speed_liveview: str = Field(
+        default="",
+        description="Sets the shutter speed for the camera during the photobooth's live preview mode. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. This setting is effective only when the camera is in manual mode. (Example Values: 1, 1/5, 1/20, 1/30, 1/60, 1/1000, 1/4000, ...) Choose a very high default shutter speed in combination with Auto iso to emulate auto exposure. ",
+    )
+
+    gphoto2_shutter_speed_capture: str = Field(
+        default="",
+        description="Configures the shutter speed for the camera at the time of capturing a photo in the photobooth. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Operational only in manual mode. (Example Values: 1/60, 1/320, 1/1000, 1/2000, 1/4000, ...)",
+    )
+
     cv2_CAM_RESOLUTION_WIDTH: int = Field(
         default=10000,
         description="still photo camera resolution width to opencv2 backend",
