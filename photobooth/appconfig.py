@@ -684,6 +684,10 @@ class GroupUiSettings(BaseModel):
         description="Show link to admin center, usually only during setup.",
     )
 
+    livestream_mirror_effect: bool = Field(
+        default=True,
+        description="Flip livestream horizontally to create a mirror effect feeling more natural to users.",
+    )
     FRONTPAGE_TEXT: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
         description="Text/HTML displayed on frontpage.",
