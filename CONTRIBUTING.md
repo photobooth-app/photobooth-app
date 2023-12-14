@@ -17,6 +17,11 @@ For questions use the github discussions or issue tracker.
 
 ## Help Develop
 
+### Guidelines
+
+- Implementation shall be platform agnostic (Linux and Windows).
+- If possible avoid additional dependencies.
+
 ### Install development version
 
 Stable releases are published at [PyPI registry](https://pypi.org/project/photobooth-app/) usually.
