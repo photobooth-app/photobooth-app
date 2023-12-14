@@ -85,7 +85,7 @@ class FileTransferService(BaseService):
     @staticmethod
     def get_dir_size(path):
         total = 0
-        for root, dirs, files in os.walk(path):
+        for root, _dirs, files in os.walk(path):
             total += sum(os.path.getsize(os.path.join(root, name)) for name in files)
         return total
 
