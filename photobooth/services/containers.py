@@ -9,6 +9,7 @@ from pymitter import EventEmitter
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
+from .filtetransferservice import FileTransferService
 from .gpioservice import GpioService
 from .informationservice import InformationService
 from .keyboardservice import KeyboardService
@@ -153,4 +154,11 @@ class ServicesContainer(containers.DeclarativeContainer):
         evtbus,
         config,
         mediacollection_service,
+    )
+
+    filetransfer_service = providers.Resource(
+        init_res_obj_service,
+        FileTransferService,
+        evtbus,
+        config,
     )

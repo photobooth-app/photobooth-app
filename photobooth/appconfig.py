@@ -753,6 +753,15 @@ class GroupUiSettings(BaseModel):
     )
 
 
+class GroupFileTransfer(BaseModel):
+    """Configuration for USB File Transfer Service."""
+
+    model_config = ConfigDict(title="USB File Transfer Service Config")
+
+    enable_file_transfer: bool = Field(default=False, description="Enable the automatic file transfer to USB service.")
+    usb_folder_name: str = Field(default="photobooth", description="Name of the top-level folder on the USB drive where files will be copied.")
+
+
 class GroupMisc(BaseModel):
     """
     Quite advanced, usually not necessary to touch.
@@ -816,6 +825,7 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     sharing: GroupSharing = GroupSharing()
+    file_transfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
     mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()

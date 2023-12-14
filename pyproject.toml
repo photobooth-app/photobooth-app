@@ -54,6 +54,7 @@ dependencies = [
     "gphoto2~=2.5.0; platform_system == 'Linux'",
     "python-statemachine>=2.1,<2.2",
     "python-multipart>=0.0.6",
+    "pyudev~=0.24.1 "
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
