@@ -4,7 +4,8 @@ import time
 
 import psutil
 from pymitter import EventEmitter
-from pyudev import Context, Monitor, MonitorObserver
+
+from photobooth.utils.stoppablethread import StoppableThread
 
 from ..appconfig import AppConfig
 from .baseservice import BaseService
@@ -18,53 +19,58 @@ from .mediacollection.mediaitem import (
 class FileTransferService(BaseService):
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus, config)
-        self._context = Context()
-        self._monitor = Monitor.from_netlink(self._context)
-        self._monitor.filter_by(subsystem="block")
-        self._observer = MonitorObserver(self._monitor, callback=self.handle_device_event)
+        self.previous_devices = self.get_current_removable_media()
+        self._initialized: bool = False
+        self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
 
     def start(self):
         if not self._config.file_transfer.enable_file_transfer:
             self._logger.info("FileTransferService disabled, start aborted.")
             return
 
-        self._observer.start()
-        self._logger.info("FileTransferService started.")
+        if not self._initialized:
+            self._worker_thread.start()
+            self._initialized = True
+
+            self._logger.info("FileTransferService started.")
+        else:
+            self._logger.error("FileTransferService init was not successful. start service aborted.")
 
     def stop(self):
-        self._observer.stop()
+        self._worker_thread.stop()
+        if self._worker_thread.is_alive():
+            self._worker_thread.join()
         self._logger.info("FileTransferService stopped.")
+        self._initialized = False
 
-    def handle_device_event(self, device):
-        if self.is_usb_device(device):
-            if device.action == "add":
-                usb_path = self.wait_for_mount(device.device_node)
+    def _worker_fun(self):
+        while not self._worker_thread.stopped():
+            current_devices = self.get_current_removable_media()
+            added = current_devices - self.previous_devices
+            removed = self.previous_devices - current_devices
+
+            for device in added:
+                usb_path = device.mountpoint
                 if usb_path and self.has_enough_space(usb_path):
                     self.copy_folders_to_usb(usb_path)
                 elif usb_path:
                     self._logger.warning(f"Not enough space on USB device at {usb_path} to copy the folders.")
-            elif device.action == "remove":
-                self.handle_unmount(device.device_node)
+
+            for device in removed:
+                self.handle_unmount(device.device)
+
+            self.previous_devices = current_devices
+            time.sleep(1)  # Adjust the sleep time as needed
 
     def handle_unmount(self, device_node):
-        # Handle the logic when a device is unmounted
         self._logger.info(f"Device {device_node} has been removed.")
 
-    def wait_for_mount(self, device_node, retries=10, delay=1):
-        """Wait for the device to be mounted."""
-        for _ in range(retries):
-            mountpoint = self.get_mounted_path(device_node)
-            if mountpoint:
-                return mountpoint
-            time.sleep(delay)
-        self._logger.warning(f"Device {device_node} was not mounted after {retries} retries.")
-        return None
+    @staticmethod
+    def get_current_removable_media():
+        return {device for device in psutil.disk_partitions(all=False)}
 
     @staticmethod
-    def is_usb_device(device):
-        return device.get("ID_BUS") == "usb" and device.get("DEVTYPE") == "partition"
-
-    def get_mounted_path(self, device_node):
+    def get_mounted_path(device_node):
         for part in psutil.disk_partitions():
             if part.device == device_node:
                 return part.mountpoint
