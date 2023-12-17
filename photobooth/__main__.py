@@ -92,6 +92,7 @@ def main(run_server: bool = True):
     application_container.services().information_service.init()
     application_container.services().keyboard_service.init()
     application_container.services().share_service.init()
+    application_container.services().filetransfer_service.init()
     application_container.services().wled_service.init()
 
     # start main application
