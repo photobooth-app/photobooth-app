@@ -26,7 +26,7 @@ def test_filetransfer_service_disabled(services: ServicesContainer):
     """service is disabled by default - test for that."""
 
     # init when called
-    filetransfer_service = services.filetransfer_service()
+    _ = services.filetransfer_service()
 
     # nothing to check here...
     assert True
