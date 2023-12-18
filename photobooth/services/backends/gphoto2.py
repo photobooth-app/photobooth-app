@@ -64,6 +64,7 @@ class Gphoto2Backend(AbstractBackend):
 
         self._camera_connected = False
         self._camera_preview_available = False
+        self._camera_initialization_finished = False
 
         # worker threads
         self._worker_thread: StoppableThread = None
@@ -138,18 +139,22 @@ class Gphoto2Backend(AbstractBackend):
 
     def _check_camera_preview_available(self):
         """Test on init whether preview is available for this camera."""
-        preview_available = False
-        try:
-            self._camera.capture_preview()
-        except Exception as exc:
-            logger.info(f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}")
-        else:
-            preview_available = True
+        for attempt in range(1, self._config.backends.retry_capture + 1):
+            try:
+                self._camera.capture_preview()
+                return True
+            except Exception as exc:
+                logger.info(f"gather preview failed! retrying {attempt} / {self._config.backends.retry_capture + 1}, exc:{exc}")
+                time.sleep(1)
 
-        return preview_available
+        logger.info("gather preview failed; disabling preview in this session. consider to disable permanently!")
+        return False
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        while not self._camera_initialization_finished:
+            time.sleep(1)
+
         if self._config.backends.LIVEPREVIEW_ENABLED and not self._camera_preview_available:
             raise RuntimeError(
                 "Camera cannot deliver preview stream, capture preview is disabled in this session. "
@@ -240,6 +245,8 @@ class Gphoto2Backend(AbstractBackend):
 
             if self._config.backends.LIVEPREVIEW_ENABLED:
                 self._camera_preview_available = self._check_camera_preview_available()
+
+            self._camera_initialization_finished = True
 
             self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
