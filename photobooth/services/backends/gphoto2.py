@@ -27,6 +27,8 @@ class Gphoto2Backend(AbstractBackend):
     The backend implementation using gphoto2
     """
 
+    PREVIEW_CHECKS_AFTER_CAMERA_START = 5
+
     @dataclasses.dataclass
     class Gphoto2DataBytes:
         """
@@ -139,12 +141,12 @@ class Gphoto2Backend(AbstractBackend):
 
     def _check_camera_preview_available(self):
         """Test on init whether preview is available for this camera."""
-        for attempt in range(1, self._config.backends.retry_capture + 1):
+        for attempt in range(1, self.PREVIEW_CHECKS_AFTER_CAMERA_START + 1):
             try:
                 self._camera.capture_preview()
                 return True
             except Exception as exc:
-                logger.info(f"gather preview failed! retrying {attempt} / {self._config.backends.retry_capture + 1}, exc:{exc}")
+                logger.info(f"gather preview failed! retrying {attempt} / {self.PREVIEW_CHECKS_AFTER_CAMERA_START + 1}, exc:{exc}")
                 time.sleep(1)
 
         logger.info("gather preview failed; disabling preview in this session. consider to disable permanently!")
