@@ -133,6 +133,7 @@ class AbstractBackend(ABC):
         stream_max_attempts = self._config.backends.retry_capture * 2
 
         last_time = time.time_ns()
+        buffer = None
         while True:
             for attempt in range(1, stream_max_attempts + 1):
                 try:
@@ -145,18 +146,19 @@ class AbstractBackend(ABC):
                 else:
                     break
             else:
-                # we failed finally all the attempts - deal with the consequences.
-                logger.critical("critical error getting stream. " f"failed to get lores image after {stream_max_attempts} attempts. giving up!")
+                if not buffer:
+                    # we failed finally all the attempts - deal with the consequences.
+                    logger.critical("critical error getting stream. " f"failed to get lores image after {stream_max_attempts} attempts. giving up!")
 
-                # return to signal stop yielding frames to calling function
-                return
+                    # return to signal stop yielding frames to calling function
+                    return
 
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n")
+                    yield b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n"
 
                 except GeneratorExit:
                     # TODO: this is not triggered unfortunately. could be useful for cleanup if no stream is
