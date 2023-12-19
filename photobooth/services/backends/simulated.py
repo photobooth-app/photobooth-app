@@ -227,8 +227,6 @@ def img_aquisition(
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=90)
 
-        # TODO: remove time.sleep(random.randrange(2, 6))
-
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:
             jpeg_bytes = jpeg_buffer.getvalue()
