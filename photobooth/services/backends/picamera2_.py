@@ -13,6 +13,7 @@ from pymitter import EventEmitter
 from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig, EnumFocuserModule
+from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import AbstractBackend, BackendStats
 from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
 from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
@@ -287,7 +288,7 @@ class Picamera2Backend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         if self._generate_images_thread.stopped():
-            raise RuntimeError("shutdown already in progress, abort early")
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=4):

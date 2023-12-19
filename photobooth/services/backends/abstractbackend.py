@@ -5,8 +5,11 @@ import dataclasses
 import logging
 import time
 from abc import ABC, abstractmethod
+from io import BytesIO
 from multiprocessing import Condition, Lock, shared_memory
+from pathlib import Path
 
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
@@ -121,6 +124,27 @@ class AbstractBackend(ABC):
     # FUNCTIONS IMPLEMENTED IN ABSTRACT CLASS
     #
 
+    def _error_image(self, error_message: str) -> bytes:
+        path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
+        text_fill = "#888"
+
+        img = Image.new("RGB", (400, 300), "#ddd")
+        img_draw = ImageDraw.Draw(img)
+        font_large = ImageFont.truetype(font=str(path_font), size=22)
+        font_small = ImageFont.truetype(font=str(path_font), size=15)
+        img_draw.text((25, 100), "Oh no - stream error :(", fill=text_fill, font=font_large)
+        img_draw.text((25, 120), f"{error_message}", fill=text_fill, font=font_small)
+        img_draw.text((25, 140), "please check camera and logs", fill=text_fill, font=font_small)
+
+        # flip if mirror effect is on because messages shall be readable on screen
+        if self._config.uisettings.livestream_mirror_effect:
+            img = ImageOps.mirror(img)
+
+        # create jpeg
+        jpeg_buffer = BytesIO()
+        img.save(jpeg_buffer, format="jpeg", quality=80)
+        return jpeg_buffer.getvalue()
+
     def gen_stream(self):
         """
         yield jpeg images to stream to client (if not created otherwise)
@@ -129,40 +153,36 @@ class AbstractBackend(ABC):
         """
         logger.info(f"livestream started on backend {self=}")
 
-        # lores stream attempts is doubled so if still fails after retry_capture times gen_stream did not fail yet
-        stream_max_attempts = self._config.backends.retry_capture * 2
-
         last_time = time.time_ns()
         while True:
-            for attempt in range(1, stream_max_attempts + 1):
-                try:
-                    buffer = self._wait_for_lores_image()
-                except TimeoutError:
-                    logger.error("error capture lores image for stream. " f"timeout expired {attempt=}/{stream_max_attempts}, retrying")
-                    # can we do additional error handling here?
-                except ShutdownInProcessError:
-                    logger.warning("gather img failed due to resources shutting down")
-                else:
-                    break
-            else:
-                # we failed finally all the attempts - deal with the consequences.
-                logger.critical("critical error getting stream. " f"failed to get lores image after {stream_max_attempts} attempts. giving up!")
-
-                # return to signal stop yielding frames to calling function
+            try:
+                output_jpeg_bytes = self._wait_for_lores_image()
+            except TimeoutError:
+                logger.error("error capture lores image for stream. timeout expired, retrying")
+                # can we do additional error handling here?
+                output_jpeg_bytes = self._error_image("timeout error")
+            except ShutdownInProcessError:
+                logger.warning("gather img failed due to resources shutting down")
                 return
+            except Exception as exc:
+                logger.error(f"streaming exception: {exc}")
+                output_jpeg_bytes = self._error_image(exc)
 
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + buffer + b"\r\n\r\n")
+                    yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
 
                 except GeneratorExit:
-                    # TODO: this is not triggered unfortunately. could be useful for cleanup if no stream is
+                    # TODO: this is not triggered unfortunately if client exits.
+                    # could be useful for cleanup if no stream is
                     # requested any more. otherwise consider delete
                     logger.debug(f"request exit! {self=}")
                     break
+                except Exception as exc:
+                    logger.error(f"error streaming {exc}")
 
 
 #

@@ -10,7 +10,7 @@ from io import BytesIO
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
@@ -62,6 +62,7 @@ class SimulatedBackend(AbstractBackend):
                 self._condition_img_buffer_ready,
                 self._img_buffer_lock,
                 self._event_proc_shutdown,
+                self._config.uisettings.livestream_mirror_effect,
             ),
             daemon=True,
         )
@@ -163,6 +164,7 @@ def img_aquisition(
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
     _event_proc_shutdown: Event,
+    _mirror: bool,
 ):
     """function started in separate process to deliver images"""
 
@@ -217,9 +219,15 @@ def img_aquisition(
             font=font_small,
         )
 
+        # flip if mirror effect is on because messages shall be readable on screen
+        if _mirror:
+            img = ImageOps.mirror(img)
+
         # create jpeg
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=90)
+
+        # TODO: remove time.sleep(random.randrange(2, 6))
 
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:
