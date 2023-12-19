@@ -147,7 +147,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._worker_thread.stopped():
+        if self._worker_thread and self._worker_thread.stopped():
             raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._lores_data.condition:
