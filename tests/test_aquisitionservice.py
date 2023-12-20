@@ -23,8 +23,8 @@ def services() -> ServicesContainer:
     # application_container.services().init_resources()
 
     application_container.config().backends.LIVEPREVIEW_ENABLED = True
-    application_container.config().backends.MAIN_BACKEND = EnumImageBackendsMain.SIMULATED
-    application_container.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+    application_container.config().backends.MAIN_BACKEND = EnumImageBackendsMain.VIRTUALCAMERA
+    application_container.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     # deliver
     yield application_container.services()
@@ -118,7 +118,7 @@ def test_gen_stream(services: ServicesContainer):
 def test_gen_stream_main_backend(services: ServicesContainer):
     # now reconfigure
     services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.SIMULATED
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
     services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
 
     aquisition_service: AquisitionService = services.aquisition_service()
@@ -132,7 +132,7 @@ def test_gen_stream_live_backend(services: ServicesContainer):
     # now reconfigure
     services.config().backends.LIVEPREVIEW_ENABLED = True
     services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     aquisition_service: AquisitionService = services.aquisition_service()
 
@@ -144,8 +144,8 @@ def test_gen_stream_live_backend(services: ServicesContainer):
 def test_get_stats(services: ServicesContainer):
     # now reconfigure
     services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.SIMULATED
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.SIMULATED
+    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     aquisition_service: AquisitionService = services.aquisition_service()
 

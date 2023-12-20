@@ -127,7 +127,7 @@ class AbstractBackend(ABC):
     @staticmethod
     @cache
     def _substitute_image(caption: str = "", message: str = "", mirror: bool = False) -> bytes:
-        path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
+        path_font = Path(__file__).parent.joinpath("assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
 
         img = Image.new("RGB", (400, 300), "#ddd")

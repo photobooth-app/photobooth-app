@@ -1,5 +1,5 @@
 """
-Testing Simulated Backend
+Testing exceptions in backends
 """
 import logging
 from unittest import mock
@@ -12,7 +12,7 @@ from pymitter import EventEmitter
 from photobooth.appconfig import AppConfig
 from photobooth.containers import ApplicationContainer
 from photobooth.services.backends.containers import BackendsContainer
-from photobooth.services.backends.simulated import SimulatedBackend
+from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.containers import ServicesContainer
 from photobooth.services.informationservice import InformationService
 
@@ -34,9 +34,9 @@ def test_simulated_init_exceptions(backends: BackendsContainer):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(SimulatedBackend, "__init__", error_mock):
+    with patch.object(VirtualCameraBackend, "__init__", error_mock):
         try:
-            backends.simulated_backend()
+            backends.virtualcamera_backend()
         except Exception as exc:
             raise AssertionError(f"'simulated_backend' raised an exception, but it should fail in silence {exc}") from exc
 
@@ -45,9 +45,9 @@ def test_simulated_start_exceptions(backends: BackendsContainer):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(SimulatedBackend, "start", error_mock):
+    with patch.object(VirtualCameraBackend, "start", error_mock):
         try:
-            backends.simulated_backend()
+            backends.virtualcamera_backend()
         except Exception as exc:
             raise AssertionError(f"'simulated_backend' raised an exception, but it should fail in silence {exc}") from exc
 
@@ -56,9 +56,9 @@ def test_simulated_stop_exceptions(backends: BackendsContainer):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(SimulatedBackend, "stop", error_mock):
+    with patch.object(VirtualCameraBackend, "stop", error_mock):
         try:
-            backends.simulated_backend()
+            backends.virtualcamera_backend()
             backends.shutdown_resources()
 
         except Exception as exc:

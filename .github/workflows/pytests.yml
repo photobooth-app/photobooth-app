@@ -59,7 +59,7 @@ jobs:
   tests-hardware:
     env:
       ## Sets environment variable
-      backends__MAIN_BACKEND: Simulated
+      backends__MAIN_BACKEND: VirtualCamera
       backends__v4l_device_index: 2
       backends__cv2_device_index: 2
       hardwareinputoutput__wled_enabled: True

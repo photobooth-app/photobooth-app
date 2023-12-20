@@ -1,5 +1,5 @@
 """
-Testing Simulated Backend
+Testing virtual camera Backend
 """
 import logging
 
