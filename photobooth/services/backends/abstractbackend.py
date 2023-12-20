@@ -5,6 +5,7 @@ import dataclasses
 import logging
 import time
 from abc import ABC, abstractmethod
+from functools import cached
 from io import BytesIO
 from multiprocessing import Condition, Lock, shared_memory
 from pathlib import Path
@@ -123,8 +124,9 @@ class AbstractBackend(ABC):
     #
     # FUNCTIONS IMPLEMENTED IN ABSTRACT CLASS
     #
-
-    def _error_image(self, error_message: str) -> bytes:
+    @cached
+    @staticmethod
+    def _substitute_image(caption: str = "", message: str = "", mirror: bool = False) -> bytes:
         path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
 
@@ -132,12 +134,12 @@ class AbstractBackend(ABC):
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)
         font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 100), "Oh no - stream error :(", fill=text_fill, font=font_large)
-        img_draw.text((25, 120), f"{error_message}", fill=text_fill, font=font_small)
+        img_draw.text((25, 100), caption, fill=text_fill, font=font_large)
+        img_draw.text((25, 120), message, fill=text_fill, font=font_small)
         img_draw.text((25, 140), "please check camera and logs", fill=text_fill, font=font_small)
 
         # flip if mirror effect is on because messages shall be readable on screen
-        if self._config.uisettings.livestream_mirror_effect:
+        if mirror:
             img = ImageOps.mirror(img)
 
         # create jpeg
@@ -155,34 +157,35 @@ class AbstractBackend(ABC):
 
         last_time = time.time_ns()
         while True:
-            try:
-                output_jpeg_bytes = self._wait_for_lores_image()
-            except TimeoutError:
-                logger.error("error capture lores image for stream. timeout expired, retrying")
-                # can we do additional error handling here?
-                output_jpeg_bytes = self._error_image("timeout error")
-            except ShutdownInProcessError:
-                logger.warning("gather img failed due to resources shutting down")
-                return
-            except Exception as exc:
-                logger.error(f"streaming exception: {exc}")
-                output_jpeg_bytes = self._error_image(exc)
-
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
-
-                except GeneratorExit:
-                    # TODO: this is not triggered unfortunately if client exits.
-                    # could be useful for cleanup if no stream is
-                    # requested any more. otherwise consider delete
-                    logger.debug(f"request exit! {self=}")
-                    break
+                    output_jpeg_bytes = self._wait_for_lores_image()
+                except ShutdownInProcessError:
+                    logger.warning("gather img failed due to resources shutting down")
+                    return
+                except TimeoutError:
+                    # this error could be recovered (example: DSLR turned off/on again)
+                    logger.error("error capture lores image for stream. timeout expired, retrying")
+                    # can we do additional error handling here?
+                    output_jpeg_bytes = self._substitute_image(
+                        "Oh no - stream error :(",
+                        "timeout, no preview from cam. retrying.",
+                        self._config.uisettings.livestream_mirror_effect,
+                    )
                 except Exception as exc:
-                    logger.error(f"error streaming {exc}")
+                    # this error probably cannot recover.
+                    logger.exception(exc)
+                    logger.error(f"streaming exception: {exc}")
+                    output_jpeg_bytes = self._substitute_image(
+                        "Oh no - stream error :(",
+                        "exception, unknown error getting preview.",
+                        self._config.uisettings.livestream_mirror_effect,
+                    )
+
+                yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
 
 
 #
