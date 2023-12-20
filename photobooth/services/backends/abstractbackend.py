@@ -5,7 +5,7 @@ import dataclasses
 import logging
 import time
 from abc import ABC, abstractmethod
-from functools import cached
+from functools import cache
 from io import BytesIO
 from multiprocessing import Condition, Lock, shared_memory
 from pathlib import Path
@@ -124,7 +124,7 @@ class AbstractBackend(ABC):
     #
     # FUNCTIONS IMPLEMENTED IN ABSTRACT CLASS
     #
-    @cached
+    @cache
     @staticmethod
     def _substitute_image(caption: str = "", message: str = "", mirror: bool = False) -> bytes:
         path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
