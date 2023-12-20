@@ -144,7 +144,7 @@ class AbstractBackend(ABC):
 
         # create jpeg
         jpeg_buffer = BytesIO()
-        img.save(jpeg_buffer, format="jpeg", quality=80)
+        img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
 
     def gen_stream(self):
