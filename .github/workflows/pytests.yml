@@ -35,6 +35,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: add user to tty for keyboard input
+        run: |
+          sudo usermod -aG tty,input $USER
       - name: Install system apt dependencies
         run: |
           sudo apt update
@@ -45,7 +48,7 @@ jobs:
           pdm install
       - name: Run pytest
         run: |
-          pdm run test
+          sudo -s -u ${USER} pdm run test
       - name: output php logs
         if: always()
         run: |
