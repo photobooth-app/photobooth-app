@@ -329,13 +329,13 @@ class Picamera2Backend(AbstractBackend):
         """
         logger.info(f"{__name__} _init_autofocus call")
         try:
-            self._backend._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+            self._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
             logger.info("libcamautofocus set to continuous mode")
         except RuntimeError as exc:
             logger.critical(f"control not available on camera - autofocus not working properly {exc}")
 
         try:
-            self._backend._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
+            self._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
             logger.info("libcamautofocus AfSpeed set to fast mode")
         except RuntimeError as exc:
             logger.info(f"control not available on all cameras - can ignore {exc}")
