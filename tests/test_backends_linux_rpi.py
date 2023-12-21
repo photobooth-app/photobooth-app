@@ -1,10 +1,9 @@
 import logging
-import time
 
 import pytest
 from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig, EnumFocuserModule
+from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
 from photobooth.utils.helper import is_rpi
 
@@ -44,19 +43,6 @@ def backends() -> BackendsContainer:
     backends_container.shutdown_resources()
 
 
-@pytest.fixture(
-    params=[
-        EnumFocuserModule.NULL,
-        EnumFocuserModule.LIBCAM_AF_INTERVAL,
-        EnumFocuserModule.LIBCAM_AF_CONTINUOUS,
-    ]
-)
-def autofocus_algorithm(request):
-    # yield fixture instead return to allow for cleanup:
-    yield request.param
-    # cleanup
-
-
 ## tests
 
 
@@ -64,18 +50,3 @@ def test_getImages(backends: BackendsContainer):
     picamera2_backend = backends.picamera2_backend()
 
     get_images(picamera2_backend)
-
-
-def test_autofocus(autofocus_algorithm, backends: BackendsContainer):
-    check_focusavail_skip()
-
-    # reconfigure
-    backends.config().backends.picamera2_focuser_module = autofocus_algorithm
-
-    picamera2_backend = backends.picamera2_backend()
-
-    # TODO: test focus changes: picamera2_backend().pause_focus()
-    time.sleep(1)
-
-    # wait so some cycles had happen
-    time.sleep(1)

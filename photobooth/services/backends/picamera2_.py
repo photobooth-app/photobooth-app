@@ -10,14 +10,12 @@ from threading import Condition, Event
 
 from photobooth.utils.stoppablethread import StoppableThread
 
-from ...appconfig import AppConfig, EnumFocuserModule
+from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import AbstractBackend, BackendStats
-from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
-from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
 
 try:
-    from libcamera import Transform  # type: ignore
+    from libcamera import Transform, controls  # type: ignore
     from picamera2 import Picamera2  # type: ignore
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
@@ -88,18 +86,6 @@ class Picamera2Backend(AbstractBackend):
         self._preview_config = None
         self._current_config = None
         self._last_config = None
-
-        if not self._config.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
-            logger.info(f"loading autofocus module: " f"picamera2_{self._config.backends.picamera2_focuser_module}")
-            if self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_CONTINUOUS:
-                self._autofocus_module = Picamera2LibcamAfContinuous(self, config=config)
-            elif self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_INTERVAL:
-                self._autofocus_module = Picamera2LibcamAfInterval(self, config=config)
-            else:
-                self._autofocus_module = None
-
-        else:
-            logger.info("picamera2_focuser_module is disabled. " "Select a focuser module in config to enable autofocus.")
 
     def start(self):
         """To start the backend, configure picamera2"""
@@ -189,9 +175,6 @@ class Picamera2Backend(AbstractBackend):
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
 
-        if self._autofocus_module:
-            self._autofocus_module.start()
-
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         remaining_retries = 10
         while True:
@@ -211,11 +194,6 @@ class Picamera2Backend(AbstractBackend):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
-
-        if self._autofocus_module:
-            # autofocus module needs to stop their threads also for clean shutdown
-            logger.info("stopping autofocus module")
-            self._autofocus_module.stop()
 
         self._generate_images_thread.stop()
         self._stats_thread.stop()
@@ -304,16 +282,12 @@ class Picamera2Backend(AbstractBackend):
         self._last_config = self._current_config
         self._current_config = self._capture_config
 
-        if self._autofocus_module:
-            self._autofocus_module.on_capturemode()
-
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested")
         self._last_config = self._current_config
         self._current_config = self._preview_config
 
-        if self._autofocus_module:
-            self._autofocus_module.on_previewmode()
+        self._init_autofocus()
 
     def set_ae_exposure(self, newmode):
         """_summary_
@@ -347,6 +321,24 @@ class Picamera2Backend(AbstractBackend):
             quality=Quality[self._config.backends.picamera2_stream_quality.name],
         )
         logger.info("switchmode finished successfully")
+
+    def _init_autofocus(self):
+        """
+        on start set autofocus to continuous if requested by config or
+        auto and trigger regularly
+        """
+        logger.info(f"{__name__} _init_autofocus call")
+        try:
+            self._backend._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+            logger.info("libcamautofocus set to continuous mode")
+        except RuntimeError as exc:
+            logger.critical(f"control not available on camera - autofocus not working properly {exc}")
+
+        try:
+            self._backend._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
+            logger.info("libcamautofocus AfSpeed set to fast mode")
+        except RuntimeError as exc:
+            logger.info(f"control not available on all cameras - can ignore {exc}")
 
     #
     # INTERNAL IMAGE GENERATOR
