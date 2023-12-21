@@ -351,11 +351,11 @@ class Picamera2Backend(AbstractBackend):
             # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
             exposure_time = _metadata.get("ExposureTime", None)
             exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
-            self._backendstats.exposure_time_ms = (self._round_none(exposure_time_ms_raw, 1),)
-            self._backendstats.lens_position = (self._round_none(_metadata.get("LensPosition", None), 2),)
-            self._backendstats.gain = (self._round_none(_metadata.get("AnalogueGain", None), 1),)
-            self._backendstats.lux = (self._round_none(_metadata.get("Lux", None), 1),)
-            self._backendstats.colour_temperature = (_metadata.get("ColourTemperature", None),)
-            self._backendstats.sharpness = (_metadata.get("FocusFoM", None),)
+            self._backendstats.exposure_time_ms = self._round_none(exposure_time_ms_raw, 1)
+            self._backendstats.lens_position = self._round_none(_metadata.get("LensPosition", None), 2)
+            self._backendstats.gain = self._round_none(_metadata.get("AnalogueGain", None), 1)
+            self._backendstats.lux = self._round_none(_metadata.get("Lux", None), 1)
+            self._backendstats.colour_temperature = _metadata.get("ColourTemperature", None)
+            self._backendstats.sharpness = _metadata.get("FocusFoM", None)
 
         logger.info("_generate_images_fun left")
