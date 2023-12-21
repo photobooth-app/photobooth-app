@@ -5,7 +5,6 @@ Picamera2 backend implementation
 import dataclasses
 import io
 import logging
-import time
 from threading import Condition, Event
 
 from photobooth.utils.stoppablethread import StoppableThread
@@ -70,16 +69,12 @@ class Picamera2Backend(AbstractBackend):
         # private props
         self._picamera2: Picamera2 = None
 
-        self._count = 0
-        self._fps = 0
-
         # lores and hires data output
         self._lores_data: __class__.PicamLoresData = None
         self._hires_data: __class__.PicamHiresData = None
 
         # worker threads
         self._generate_images_thread: StoppableThread = None
-        self._stats_thread: StoppableThread = None
 
         self._capture_config = None
         self._preview_config = None
@@ -171,9 +166,6 @@ class Picamera2Backend(AbstractBackend):
         self._generate_images_thread = StoppableThread(name="_generateImagesThread", target=self._generate_images_fun, daemon=True)
         self._generate_images_thread.start()
 
-        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
-        self._stats_thread.start()
-
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         remaining_retries = 10
         while True:
@@ -191,22 +183,23 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
 
         self._generate_images_thread.stop()
-        self._stats_thread.stop()
 
         self._generate_images_thread.join()
-        self._stats_thread.join()
 
         self._picamera2.stop_encoder()
         self._picamera2.stop()
         self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
-        logger.debug(f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=},  {self._stats_thread.is_alive()=}")
+        logger.debug(f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=}")
 
     def wait_for_hq_image(self):
         """
@@ -231,7 +224,7 @@ class Picamera2Backend(AbstractBackend):
         exposure_time = self.metadata.get("ExposureTime", None)
         exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
         return BackendStats(
-            backend_name=__name__,
+            backend_name=__class__.__name__,
             fps=int(round(self._fps, 0)),
             exposure_time_ms=self._round_none(exposure_time_ms_raw, 1),
             lens_position=self._round_none(self.metadata.get("LensPosition", None), 2),
@@ -273,10 +266,6 @@ class Picamera2Backend(AbstractBackend):
                 raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame
-
-    def _wait_for_lores_frame(self):
-        """advanced autofocus currently not supported by this backend"""
-        raise NotImplementedError()
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode requested")
@@ -343,24 +332,6 @@ class Picamera2Backend(AbstractBackend):
     # INTERNAL IMAGE GENERATOR
     #
 
-    def _stats_fun(self):
-        # FPS = 1 / time to process loop
-        last_calc_time = time.time()  # start time of the loop
-
-        # to calc frames per second every second
-        while not self._stats_thread.stopped():
-            self._fps = round(
-                float(self._count) / (time.time() - last_calc_time),
-                1,
-            )
-
-            # reset
-            self._count = 0
-            last_calc_time = time.time()
-
-            # thread wait
-            time.sleep(0.2)
-
     def _generate_images_fun(self):
         while not self._generate_images_thread.stopped():  # repeat until stopped
             if self._hires_data.request_ready.is_set() is True and self._current_config != self._capture_config:
@@ -395,7 +366,4 @@ class Picamera2Backend(AbstractBackend):
             self.metadata = self._picamera2.capture_metadata()
             # time.sleep(0.1)
 
-            # counter to calc the fps
-            # broken since capture_metadata is commented.
-            # self._count += 1
         logger.info("_generate_images_fun left")

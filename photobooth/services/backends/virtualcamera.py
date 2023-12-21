@@ -83,7 +83,10 @@ class VirtualCameraBackend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         """To stop the image backend"""
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
@@ -119,7 +122,8 @@ class VirtualCameraBackend(AbstractBackend):
 
     def stats(self) -> BackendStats:
         return BackendStats(
-            backend_name=__name__,
+            backend_name=__class__.__name__,
+            fps=int(round(self._fps, 0)),
         )
 
     #
@@ -139,10 +143,6 @@ class VirtualCameraBackend(AbstractBackend):
             img = decompile_buffer(self._img_buffer_shm)
 
         return img
-
-    def _wait_for_lores_frame(self):
-        """autofocus not supported by this backend"""
-        raise NotImplementedError()
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode - means doing nothing in simulate")

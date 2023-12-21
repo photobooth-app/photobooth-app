@@ -96,7 +96,10 @@ class Gphoto2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
@@ -127,7 +130,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def stats(self) -> BackendStats:
         return BackendStats(
-            backend_name=__name__,
+            backend_name=__class__.__name__,
             fps=int(round(self._fps, 0)),
         )
 
@@ -153,10 +156,6 @@ class Gphoto2Backend(AbstractBackend):
             if not self._lores_data.condition.wait(timeout=4):
                 raise TimeoutError("timeout receiving preview from DSLR")
             return self._lores_data.data
-
-    def _wait_for_lores_frame(self):
-        """function not existant"""
-        raise NotImplementedError
 
     def _on_capture_mode(self):
         # nothing to do for this backend

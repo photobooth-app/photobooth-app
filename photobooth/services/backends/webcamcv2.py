@@ -48,7 +48,6 @@ class WebcamCv2Backend(AbstractBackend):
 
     def start(self):
         """To start the cv2 acquisition process"""
-        # start camera
 
         self._event_proc_shutdown.clear()
 
@@ -102,7 +101,11 @@ class WebcamCv2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
+
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
 
@@ -140,16 +143,13 @@ class WebcamCv2Backend(AbstractBackend):
 
     def stats(self) -> BackendStats:
         return BackendStats(
-            backend_name=__name__,
+            backend_name=__class__.__name__,
+            fps=int(round(self._fps, 0)),
         )
 
     #
     # INTERNAL FUNCTIONS
     #
-
-    def _wait_for_lores_frame(self):
-        """autofocus not supported by this backend"""
-        raise NotImplementedError()
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""

@@ -12,6 +12,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from photobooth.utils.stoppablethread import StoppableThread
+
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 
@@ -52,6 +54,7 @@ class AbstractBackend(ABC):
 
         # private
         self._fps = 0
+        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
 
         self._config = config
 
@@ -59,6 +62,18 @@ class AbstractBackend(ABC):
 
     def __repr__(self):
         return f"{self.__class__}"
+
+    def _stats_fun(self):
+        # FPS = 1 / time to process loop
+        last_calc_time = time.time()  # start time of the loop
+
+        # to calc frames per second every second
+        while not self._stats_thread.stopped():
+            self._wait_for_lores_image()
+            self._fps = round((1.0 / (time.time() - last_calc_time)), 1)
+
+            # store last time
+            last_calc_time = time.time()
 
     # @property
     # @abstractmethod
@@ -77,10 +92,13 @@ class AbstractBackend(ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
+        self._stats_thread.start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
+        self._stats_thread.stop()
+        self._stats_thread.join()
 
     @abstractmethod
     def stats(self) -> BackendStats:
@@ -98,12 +116,6 @@ class AbstractBackend(ABC):
     def _wait_for_lores_image(self):
         """
         function blocks until frame is available for preview stream
-        """
-
-    @abstractmethod
-    def _wait_for_lores_frame(self):
-        """
-        function blocks until frame is available for autofocus usually
         """
 
     @abstractmethod
