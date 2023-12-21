@@ -5,7 +5,6 @@ import logging
 
 import pytest
 from dependency_injector import providers
-from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
@@ -19,7 +18,6 @@ logger = logging.getLogger(name=None)
 def backends() -> BackendsContainer:
     # setup
     backends_container = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
     # deliver

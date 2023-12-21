@@ -4,7 +4,6 @@
 import logging
 
 from dependency_injector import containers, providers
-from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
@@ -25,15 +24,15 @@ from .wledservice import WledService
 logger = logging.getLogger(__name__)
 
 
-def init_res_obj_service(_obj_: BaseService, evtbus: EventEmitter, config: AppConfig, *args):
+def init_res_obj_service(_obj_: BaseService, config: AppConfig, sse_service: SseService, *args):
     """Initialize services as ressources.
     Ensure to no reraise exceptions, so only the service will fail instead the
     whole app crash because of exception not catched
 
     Args:
         _obj_ (BaseService): Class of type BaseService or derived from that
-        evtbus (EventEmitter): Instance of eventbus
         config (AppConfig): Instance of config
+        sse_service (sse_service)
 
     Yields:
         _obj_: Initialized resource (inherited from BaseService)
@@ -41,7 +40,7 @@ def init_res_obj_service(_obj_: BaseService, evtbus: EventEmitter, config: AppCo
     resource = None
 
     try:
-        resource = _obj_(evtbus, config, *args)
+        resource = _obj_(config, sse_service, *args)
         resource.start()
     except Exception as exc:
         logger.exception(exc)
@@ -58,23 +57,17 @@ def init_res_obj_service(_obj_: BaseService, evtbus: EventEmitter, config: AppCo
 
 
 class ServicesContainer(containers.DeclarativeContainer):
-    evtbus = providers.Dependency(instance_of=EventEmitter)
     config = providers.Dependency(instance_of=AppConfig)
+    sse_service = providers.Dependency(instance_of=SseService)
     backends = providers.DependenciesContainer()
 
     # Services: Core
 
-    sse_service = providers.Singleton(
-        SseService,
-        evtbus,
-        config,
-    )
-
     aquisition_service = providers.Resource(
         init_res_obj_service,
         AquisitionService,
-        evtbus,
         config,
+        sse_service,
         backends.primary_backend,
         backends.secondary_backend,
     )
@@ -82,57 +75,58 @@ class ServicesContainer(containers.DeclarativeContainer):
     information_service = providers.Resource(
         init_res_obj_service,
         InformationService,
-        evtbus,
         config,
-    )
-
-    mediaprocessing_service = providers.Singleton(
-        MediaprocessingService,
-        evtbus,
-        config,
-    )
-    mediacollection_service = providers.Singleton(
-        MediacollectionService,
-        evtbus,
-        config,
-        mediaprocessing_service,
-    )
-
-    processing_service = providers.Singleton(
-        ProcessingService,
-        evtbus,
-        config,
-        aquisition_service,
-        mediacollection_service,
-        mediaprocessing_service,
-    )
-
-    system_service = providers.Factory(
-        SystemService,
-        evtbus,
-        config,
+        sse_service,
     )
 
     wled_service = providers.Resource(
         init_res_obj_service,
         WledService,
-        evtbus,
         config,
+        sse_service,
+    )
+
+    mediaprocessing_service = providers.Singleton(
+        MediaprocessingService,
+        config,
+        sse_service,
+    )
+    mediacollection_service = providers.Singleton(
+        MediacollectionService,
+        config,
+        sse_service,
+        mediaprocessing_service,
+    )
+
+    processing_service = providers.Singleton(
+        ProcessingService,
+        config,
+        sse_service,
+        aquisition_service,
+        mediacollection_service,
+        mediaprocessing_service,
+        wled_service,
+    )
+
+    system_service = providers.Factory(
+        SystemService,
+        config,
+        sse_service,
     )
 
     printing_service = providers.Resource(
         init_res_obj_service,
         PrintingService,
-        evtbus,
         config,
+        sse_service,
         mediacollection_service,
     )
 
     keyboard_service = providers.Resource(
         init_res_obj_service,
         KeyboardService,
-        evtbus,
         config,
+        sse_service,
         processing_service,
         printing_service,
         mediacollection_service,
@@ -141,8 +135,8 @@ class ServicesContainer(containers.DeclarativeContainer):
     gpio_service = providers.Resource(
         init_res_obj_service,
         GpioService,
-        evtbus,
         config,
+        sse_service,
         processing_service,
         printing_service,
         mediacollection_service,
@@ -151,14 +145,14 @@ class ServicesContainer(containers.DeclarativeContainer):
     share_service = providers.Resource(
         init_res_obj_service,
         ShareService,
-        evtbus,
         config,
+        sse_service,
         mediacollection_service,
     )
 
     filetransfer_service = providers.Resource(
         init_res_obj_service,
         FileTransferService,
-        evtbus,
         config,
+        sse_service,
     )

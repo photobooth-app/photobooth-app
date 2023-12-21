@@ -4,8 +4,6 @@ v4l webcam implementation backend
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
-from pymitter import EventEmitter
-
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
@@ -33,19 +31,12 @@ class WebcamV4lBackend(AbstractBackend):
         AbstractBackend (_type_): _description_
     """
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        """_summary_
-
-        Args:
-            evtbus (EventEmitter): _description_
-            config (AppConfig): _description_
-        """
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
-        self._evtbus = evtbus
         self._config = config
 
         self._img_buffer: SharedMemoryDataExch = None
@@ -116,7 +107,6 @@ class WebcamV4lBackend(AbstractBackend):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
         with self._img_buffer.condition:
@@ -125,8 +115,6 @@ class WebcamV4lBackend(AbstractBackend):
 
             with self._img_buffer.lock:
                 img = decompile_buffer(self._img_buffer.sharedmemory)
-
-        self._evtbus.emit("frameserver/onCaptureFinished")
 
         # return to previewmode
         self._on_preview_mode()

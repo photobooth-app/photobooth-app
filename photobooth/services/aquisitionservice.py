@@ -3,11 +3,10 @@ manage up to two photobooth-app backends in this module
 """
 import dataclasses
 
-from pymitter import EventEmitter
-
 from ..appconfig import AppConfig
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
+from .sseservice import SseService
 
 
 class AquisitionService(BaseService):
@@ -21,12 +20,12 @@ class AquisitionService(BaseService):
 
     def __init__(
         self,
-        evtbus: EventEmitter,
         config: AppConfig,
+        sse_service: SseService,
         primary_backend: AbstractBackend,
         secondary_backend: AbstractBackend,
     ):
-        super().__init__(evtbus=evtbus, config=config)
+        super().__init__(config=config, sse_service=sse_service)
 
         self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
 
@@ -58,6 +57,18 @@ class AquisitionService(BaseService):
                 raise RuntimeError("no backend available to livestream")
 
         raise ConnectionRefusedError("livepreview not enabled")
+
+    def switch_backends_to_capture_mode(self):
+        """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
+        self.primary_backend._on_capture_mode()
+        if self.secondary_backend:
+            self.secondary_backend._on_capture_mode()
+
+    def switch_backends_to_preview_mode(self):
+        """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
+        self.primary_backend._on_preview_mode()
+        if self.secondary_backend:
+            self.secondary_backend._on_preview_mode()
 
     # @property
     # @abstractmethod

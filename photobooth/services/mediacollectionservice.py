@@ -7,8 +7,6 @@ import os
 import time
 from pathlib import Path
 
-from pymitter import EventEmitter
-
 from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .mediacollection.mediaitem import (
@@ -22,7 +20,7 @@ from .mediacollection.mediaitem import (
     MediaItem,
 )
 from .mediaprocessingservice import MediaprocessingService
-from .sseservice import SseEventDbInsert, SseEventDbRemove
+from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +30,11 @@ class MediacollectionService(BaseService):
 
     def __init__(
         self,
-        evtbus: EventEmitter,
         config: AppConfig,
+        sse_service: SseService,
         mediaprocessing_service: MediaprocessingService,
     ):
-        super().__init__(evtbus=evtbus, config=config)
+        super().__init__(sse_service=sse_service, config=config)
 
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 
@@ -84,7 +82,7 @@ class MediacollectionService(BaseService):
         self._db.insert(0, item)  # insert at first position (prepend)
 
         # and insert in client db collection so gallery is up to date.
-        self._evtbus.emit("sse_dispatch_event", SseEventDbInsert(mediaitem=item))
+        self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=item))
 
         return item.id
 
@@ -92,7 +90,7 @@ class MediacollectionService(BaseService):
         self._db.remove(item)
 
         # and remove from client db collection so gallery is up to date.
-        self._evtbus.emit("sse_dispatch_event", SseEventDbRemove(mediaitem=item))
+        self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=item))
 
     def _db_delete_items(self):
         self._db.clear()

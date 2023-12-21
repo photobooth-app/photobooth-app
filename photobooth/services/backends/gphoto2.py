@@ -12,7 +12,6 @@ try:
 except Exception as import_exc:
     raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
-from pymitter import EventEmitter
 
 from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
 from photobooth.utils.stoppablethread import StoppableThread
@@ -43,8 +42,8 @@ class Gphoto2Backend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
 
         # public props (defined in abstract class also)
         self.metadata = {}
@@ -287,8 +286,6 @@ class Gphoto2Backend(AbstractBackend):
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
-                self._evtbus.emit("frameserver/onCapture")
-
                 # capture hq picture
                 logger.info("taking hq picture")
                 try:
@@ -299,13 +296,9 @@ class Gphoto2Backend(AbstractBackend):
                 except gp.GPhoto2Error as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
 
-                    # inform finished anyway to signal WLED turn off lights
-                    self._evtbus.emit("frameserver/onCaptureFinished")
-
                     # try again in next loop
                     continue
 
-                self._evtbus.emit("frameserver/onCaptureFinished")
                 self._iso(self._config.backends.gphoto2_iso_liveview)
                 self._shutter_speed(self._config.backends.gphoto2_shutter_speed_liveview)
 

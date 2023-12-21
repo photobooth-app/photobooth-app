@@ -3,7 +3,6 @@ import time
 
 import pytest
 from dependency_injector import providers
-from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig, EnumFocuserModule
 from photobooth.services.backends.containers import BackendsContainer
@@ -38,7 +37,6 @@ def check_focusavail_skip():
 def backends() -> BackendsContainer:
     # setup
     backends_container = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
     # deliver
@@ -74,15 +72,9 @@ def test_autofocus(autofocus_algorithm, backends: BackendsContainer):
     # reconfigure
     backends.config().backends.picamera2_focuser_module = autofocus_algorithm
 
-    _ = backends.picamera2_backend()
+    picamera2_backend = backends.picamera2_backend()
 
-    backends.evtbus().emit("statemachine/on_thrill")
-    time.sleep(1)
-    backends.evtbus().emit("statemachine/on_exit_capture_still")
-    time.sleep(1)
-    backends.evtbus().emit("onCaptureMode")
-    time.sleep(1)
-    backends.evtbus().emit("onPreviewMode")
+    # TODO: test focus changes: picamera2_backend().pause_focus()
     time.sleep(1)
 
     # wait so some cycles had happen

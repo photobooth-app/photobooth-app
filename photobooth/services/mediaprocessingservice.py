@@ -8,7 +8,6 @@ import time
 
 from PIL import Image
 from pydantic_extra_types.color import Color
-from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
 from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage, TextsConfig
@@ -25,6 +24,7 @@ from .mediaprocessing.image_pipelinestages import (
     removechromakey_stage,
     text_stage,
 )
+from .sseservice import SseService
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 class MediaprocessingService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus=evtbus, config=config)
+    def __init__(self, config: AppConfig, sse_service: SseService):
+        super().__init__(config, sse_service)
 
     def _apply_stage_removechromakey(self, input_image: Image.Image) -> Image.Image:
         try:

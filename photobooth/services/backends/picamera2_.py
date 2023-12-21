@@ -8,8 +8,6 @@ import logging
 import time
 from threading import Condition, Event
 
-from pymitter import EventEmitter
-
 from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig, EnumFocuserModule
@@ -66,8 +64,8 @@ class Picamera2Backend(AbstractBackend):
                 self.frame = buf
                 self.condition.notify_all()
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
@@ -94,9 +92,9 @@ class Picamera2Backend(AbstractBackend):
         if not self._config.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
             logger.info(f"loading autofocus module: " f"picamera2_{self._config.backends.picamera2_focuser_module}")
             if self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_CONTINUOUS:
-                self._autofocus_module = Picamera2LibcamAfContinuous(self, evtbus=evtbus, config=config)
+                self._autofocus_module = Picamera2LibcamAfContinuous(self, config=config)
             elif self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_INTERVAL:
-                self._autofocus_module = Picamera2LibcamAfInterval(self, evtbus=evtbus, config=config)
+                self._autofocus_module = Picamera2LibcamAfInterval(self, config=config)
             else:
                 self._autofocus_module = None
 
@@ -306,10 +304,16 @@ class Picamera2Backend(AbstractBackend):
         self._last_config = self._current_config
         self._current_config = self._capture_config
 
+        if self._autofocus_module:
+            self._autofocus_module.on_capturemode()
+
     def _on_preview_mode(self):
         logger.debug("change to preview mode requested")
         self._last_config = self._current_config
         self._current_config = self._preview_config
+
+        if self._autofocus_module:
+            self._autofocus_module.on_previewmode()
 
     def set_ae_exposure(self, newmode):
         """_summary_
@@ -388,14 +392,10 @@ class Picamera2Backend(AbstractBackend):
                 if self._autofocus_module:
                     self._autofocus_module.ensure_focused()
 
-                self._evtbus.emit("frameserver/onCapture")
-
                 # capture hq picture
                 data = io.BytesIO()
                 self._picamera2.capture_file(data, format="jpeg")
                 self._hires_data.data = data.getbuffer()
-
-                self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hires_data.condition:
                     self._hires_data.condition.notify_all()

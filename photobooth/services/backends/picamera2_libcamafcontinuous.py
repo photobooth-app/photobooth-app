@@ -10,7 +10,6 @@ try:
     from libcamera import controls
 except Exception as import_exc:
     raise OSError("libcamera not supported on windows platform") from import_exc
-from pymitter import EventEmitter
 
 from photobooth.services.backends.abstractbackend import AbstractBackend
 
@@ -28,15 +27,9 @@ class Picamera2LibcamAfContinuous:
     option to trigger focus on thrill also possible
     """
 
-    def __init__(self, backend: AbstractBackend, evtbus: EventEmitter, config: AppConfig):
+    def __init__(self, backend: AbstractBackend, config: AppConfig):
         self._backend: AbstractBackend = backend
         self._config = config
-        self._evtbus = evtbus
-
-        self._evtbus.on("statemachine/on_thrill", self._on_thrill)
-        self._evtbus.on("statemachine/on_exit_capture_still", self._on_capture_finished)
-        self._evtbus.on("onCaptureMode", self._on_capturemode)
-        self._evtbus.on("onPreviewMode", self._on_previewmode)
 
         logger.info(f"{__name__} initialized")
 
@@ -51,18 +44,12 @@ class Picamera2LibcamAfContinuous:
         """ensure before shoot the focus algorithm is not currently in progress"""
         # nothing to do here.
 
-    def _on_thrill(self):
+    def on_capturemode(self):
         """nothing to do in continous mode here"""
 
-    def _on_capture_finished(self):
+    def on_previewmode(self):
         """nothing to do in continous mode here"""
         self._init_autofocus()
-
-    def _on_capturemode(self):
-        """nothing to do in continous mode here"""
-
-    def _on_previewmode(self):
-        """nothing to do in continous mode here"""
 
     def _init_autofocus(self):
         """

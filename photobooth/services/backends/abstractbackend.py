@@ -11,7 +11,6 @@ from multiprocessing import Condition, Lock, shared_memory
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
@@ -47,20 +46,14 @@ class AbstractBackend(ABC):
     """
 
     @abstractmethod
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+    def __init__(self, config: AppConfig):
         # public
         self.metadata = {}
 
         # private
         self._fps = 0
 
-        self._evtbus = evtbus
         self._config = config
-
-        self._evtbus.on("statemachine/on_thrill", self._on_capture_mode)
-
-        self._evtbus.on("onCaptureMode", self._on_capture_mode)
-        self._evtbus.on("onPreviewMode", self._on_preview_mode)
 
         super().__init__()
 

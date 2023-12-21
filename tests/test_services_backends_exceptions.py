@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 from dependency_injector import providers
-from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
 from photobooth.containers import ApplicationContainer
@@ -23,7 +22,6 @@ logger = logging.getLogger(name=None)
 def backends() -> BackendsContainer:
     # setup
     backends_container = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
     # deliver

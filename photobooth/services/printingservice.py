@@ -4,12 +4,11 @@ Handle all media collection related functions
 import subprocess
 import time
 
-from pymitter import EventEmitter
-
 from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
+from .sseservice import SseService
 
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 
@@ -17,8 +16,8 @@ TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 class PrintingService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig, mediacollection_service: MediacollectionService):
-        super().__init__(evtbus=evtbus, config=config)
+    def __init__(self, config: AppConfig, sse_service: SseService, mediacollection_service: MediacollectionService):
+        super().__init__(config, sse_service)
 
         # common objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
