@@ -1,5 +1,5 @@
 """
-Testing Simulated Backend
+Testing VIRTUALCAMERA Backend
 """
 import logging
 
@@ -27,11 +27,11 @@ def backends() -> BackendsContainer:
     backends_container.shutdown_resources()
 
 
-def test_get_images_simulated(backends: BackendsContainer):
-    simulated_backend = backends.simulated_backend()
+def test_get_images_virtualcamera(backends: BackendsContainer):
+    virtualcamera_backend = backends.virtualcamera_backend()
 
     """get lores and hires images from backend and assert"""
-    get_images(simulated_backend)
+    get_images(virtualcamera_backend)
 
 
 def test_get_images_webcamcv2(backends: BackendsContainer):

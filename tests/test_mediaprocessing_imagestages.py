@@ -1,5 +1,5 @@
 """
-Testing Simulated Backend
+Testing mediaprocessing singleimages pipeline
 """
 import logging
 

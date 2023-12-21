@@ -1,5 +1,5 @@
 """
-Simulated backend for testing.
+Virtual Camera backend for testing.
 """
 import glob
 import logging
@@ -10,7 +10,7 @@ from io import BytesIO
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
@@ -27,8 +27,8 @@ SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
 logger = logging.getLogger(__name__)
 
 
-class SimulatedBackend(AbstractBackend):
-    """simulated backend to test photobooth"""
+class VirtualCameraBackend(AbstractBackend):
+    """Virtual camera backend to test photobooth"""
 
     def __init__(self, evtbus: EventEmitter, config: AppConfig):
         super().__init__(evtbus=evtbus, config=config)
@@ -56,12 +56,13 @@ class SimulatedBackend(AbstractBackend):
 
         self._p = Process(
             target=img_aquisition,
-            name="SimulatedAquisitionProcess",
+            name="VirtualCameraAquisitionProcess",
             args=(
                 self._img_buffer_shm.name,
                 self._condition_img_buffer_ready,
                 self._img_buffer_lock,
                 self._event_proc_shutdown,
+                self._config.uisettings.livestream_mirror_effect,
             ),
             daemon=True,
         )
@@ -103,7 +104,7 @@ class SimulatedBackend(AbstractBackend):
         """for other threads to receive a hq JPEG image"""
         self._evtbus.emit("frameserver/onCapture")
 
-        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_simulated", "hq_img").resolve()}/*.jpg')
+        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "hq_img").resolve()}/*.jpg')
         current_hq_image_index = random.randint(0, len(hq_images) - 1)
 
         # get img off the producing queue
@@ -163,6 +164,7 @@ def img_aquisition(
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
     _event_proc_shutdown: Event,
+    _mirror: bool,
 ):
     """function started in separate process to deliver images"""
 
@@ -178,8 +180,8 @@ def img_aquisition(
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    path_live_img = Path(__file__).parent.joinpath("assets", "backend_simulated", "simulated_background.jpg").resolve()
-    path_font = Path(__file__).parent.joinpath("assets", "backend_simulated", "fonts", "Roboto-Bold.ttf").resolve()
+    path_live_img = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "background.jpg").resolve()
+    path_font = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "fonts", "Roboto-Bold.ttf").resolve()
 
     img_original = Image.open(path_live_img)
     text_fill = "#888"
@@ -201,7 +203,7 @@ def img_aquisition(
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)
         font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 100), "simulated image source", fill=text_fill, font=font_large)
+        img_draw.text((25, 100), "virtual camera preview", fill=text_fill, font=font_large)
 
         img_draw.text(
             (25, 130),
@@ -216,6 +218,10 @@ def img_aquisition(
             fill=text_fill,
             font=font_small,
         )
+
+        # flip if mirror effect is on because messages shall be readable on screen
+        if _mirror:
+            img = ImageOps.mirror(img)
 
         # create jpeg
         jpeg_buffer = BytesIO()

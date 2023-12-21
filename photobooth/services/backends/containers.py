@@ -5,7 +5,7 @@ from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
 from .abstractbackend import AbstractBackend
-from .simulated import SimulatedBackend
+from .virtualcamera import VirtualCameraBackend
 from .webcamcv2 import WebcamCv2Backend
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     ## Services: Backends (for image aquisition)
     disabled_backend = providers.Object(None)
-    simulated_backend = providers.Resource(init_res_obj_backend, SimulatedBackend, evtbus, config)
+    virtualcamera_backend = providers.Resource(init_res_obj_backend, VirtualCameraBackend, evtbus, config)
     webcamcv2_backend = providers.Resource(init_res_obj_backend, WebcamCv2Backend, evtbus, config)
     picamera2_backend = providers.Object(None)
     gphoto2_backend = providers.Object(None)
@@ -79,7 +79,7 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     backends_set = {
         "disabled": disabled_backend,
-        "simulated": simulated_backend,
+        "virtualcamera": virtualcamera_backend,
         "webcamcv2": webcamcv2_backend,
         "picamera2": picamera2_backend,
         "gphoto2": gphoto2_backend,

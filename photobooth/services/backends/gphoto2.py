@@ -18,6 +18,7 @@ from photobooth.services.backends.abstractbackend import AbstractBackend, Backen
 from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig
+from ...utils.exceptions import ShutdownInProcessError
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,6 @@ class Gphoto2Backend(AbstractBackend):
         )
 
         self._camera_connected = False
-        self._camera_preview_available = False
 
         # worker threads
         self._worker_thread: StoppableThread = None
@@ -138,30 +138,21 @@ class Gphoto2Backend(AbstractBackend):
 
     def _check_camera_preview_available(self):
         """Test on init whether preview is available for this camera."""
-        preview_available = False
         try:
             self._camera.capture_preview()
         except Exception as exc:
             logger.info(f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}")
         else:
-            preview_available = True
-
-        return preview_available
+            logger.info("preview is available")
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._config.backends.LIVEPREVIEW_ENABLED and not self._camera_preview_available:
-            raise RuntimeError(
-                "Camera cannot deliver preview stream, capture preview is disabled in this session. "
-                "Consider disable livestream on gphoto2 backend permanently."
-            )
-
-        if self._worker_thread.stopped():
-            raise RuntimeError("shutdown already in progress, abort early")
+        if self._worker_thread and self._worker_thread.stopped():
+            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=4):
-                raise TimeoutError("timeout receiving frames")
+                raise TimeoutError("timeout receiving preview from DSLR")
             return self._lores_data.data
 
     def _wait_for_lores_frame(self):
@@ -239,7 +230,7 @@ class Gphoto2Backend(AbstractBackend):
                 logger.debug(f"{self.__module__} started")
 
             if self._config.backends.LIVEPREVIEW_ENABLED:
-                self._camera_preview_available = self._check_camera_preview_available()
+                self._check_camera_preview_available()
 
             self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
@@ -258,7 +249,7 @@ class Gphoto2Backend(AbstractBackend):
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if self._config.backends.LIVEPREVIEW_ENABLED and self._camera_preview_available:
+                if self._config.backends.LIVEPREVIEW_ENABLED:
                     try:
                         capture = self._camera.capture_preview()
                         preview_failcounter = 0
@@ -266,7 +257,7 @@ class Gphoto2Backend(AbstractBackend):
                         preview_failcounter += 1
 
                         if preview_failcounter <= 10:
-                            logger.warning(f"error capturing frame despite general availability. {exc}")
+                            logger.warning(f"error capturing frame from DSLR: {exc}")
                             # abort this loop iteration and continue sleeping...
                             time.sleep(0.5)  # add another delay to avoid flooding logs
 

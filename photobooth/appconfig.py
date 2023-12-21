@@ -112,7 +112,7 @@ class GroupSharing(BaseModel):
 class EnumImageBackendsMain(str, Enum):
     """enum to choose image backend MAIN from"""
 
-    SIMULATED = "Simulated"
+    VIRTUALCAMERA = "VirtualCamera"
     PICAMERA2 = "Picamera2"
     WEBCAMCV2 = "WebcamCv2"
     WEBCAMV4L = "WebcamV4l"
@@ -125,7 +125,7 @@ class EnumImageBackendsLive(str, Enum):
     """enum to choose image backend LIVE from"""
 
     DISABLED = "Disabled"
-    SIMULATED = "Simulated"
+    VIRTUALCAMERA = "VirtualCamera"
     PICAMERA2 = "Picamera2"
     WEBCAMCV2 = "WebcamCv2"
     WEBCAMV4L = "WebcamV4l"
@@ -162,7 +162,7 @@ class GroupBackends(BaseModel):
 
     MAIN_BACKEND: EnumImageBackendsMain = Field(
         title="Main Backend",
-        default=EnumImageBackendsMain.SIMULATED,
+        default=EnumImageBackendsMain.VIRTUALCAMERA,
         description="Main backend to use for high quality still captures. Also used for livepreview if backend is capable of.",
     )
     LIVE_BACKEND: EnumImageBackendsLive = Field(
