@@ -69,7 +69,6 @@ class Picamera2Backend(AbstractBackend):
 
         # private props
         self._picamera2: Picamera2 = None
-        self._autofocus_module = None
 
         self._count = 0
         self._fps = 0
@@ -146,7 +145,7 @@ class Picamera2Backend(AbstractBackend):
             ),
         )
 
-        # activate preview mode on init
+        # select preview mode on init
         self._on_preview_mode()
 
         # configure; camera needs to be stopped before
@@ -187,6 +186,8 @@ class Picamera2Backend(AbstractBackend):
 
                 remaining_retries -= 1
                 logger.info("waiting for backend to start up...")
+
+        self._init_autofocus()
 
         logger.debug(f"{self.__module__} started")
 
@@ -287,8 +288,6 @@ class Picamera2Backend(AbstractBackend):
         self._last_config = self._current_config
         self._current_config = self._preview_config
 
-        self._init_autofocus()
-
     def set_ae_exposure(self, newmode):
         """_summary_
 
@@ -327,18 +326,18 @@ class Picamera2Backend(AbstractBackend):
         on start set autofocus to continuous if requested by config or
         auto and trigger regularly
         """
-        logger.info(f"{__name__} _init_autofocus call")
+
         try:
             self._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
-            logger.info("libcamautofocus set to continuous mode")
         except RuntimeError as exc:
             logger.critical(f"control not available on camera - autofocus not working properly {exc}")
 
         try:
             self._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
-            logger.info("libcamautofocus AfSpeed set to fast mode")
         except RuntimeError as exc:
             logger.info(f"control not available on all cameras - can ignore {exc}")
+
+        logger.debug("autofocus set")
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -380,10 +379,6 @@ class Picamera2Backend(AbstractBackend):
                 # only capture one pic and return to lores streaming afterwards
                 self._hires_data.request_ready.clear()
 
-                # ensure before shoot that no focus is active; module may decide how to handle or cancel current run
-                if self._autofocus_module:
-                    self._autofocus_module.ensure_focused()
-
                 # capture hq picture
                 data = io.BytesIO()
                 self._picamera2.capture_file(data, format="jpeg")
@@ -397,8 +392,8 @@ class Picamera2Backend(AbstractBackend):
 
             # capture metadata blocks until new metadata is avail
             # fixme: following seems to block occasionally the switch_mode function. # pylint: disable=fixme
-            # self.metadata = self._picamera2.capture_metadata()
-            time.sleep(0.1)
+            self.metadata = self._picamera2.capture_metadata()
+            # time.sleep(0.1)
 
             # counter to calc the fps
             # broken since capture_metadata is commented.
