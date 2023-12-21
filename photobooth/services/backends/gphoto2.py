@@ -13,7 +13,7 @@ except Exception as import_exc:
     raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
 
-from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
+from photobooth.services.backends.abstractbackend import AbstractBackend
 from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig
@@ -45,10 +45,6 @@ class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: AppConfig):
         super().__init__(config)
 
-        # public props (defined in abstract class also)
-        self.metadata = {}
-
-        # private props
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
 
@@ -127,12 +123,6 @@ class Gphoto2Backend(AbstractBackend):
 
         self._hires_data.request_ready.clear()
         return self._hires_data.data
-
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__class__.__name__,
-            fps=int(round(self._fps, 0)),
-        )
 
     #
     # INTERNAL FUNCTIONS

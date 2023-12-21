@@ -33,8 +33,6 @@ class AquisitionService(BaseService):
         self.primary_backend: AbstractBackend = primary_backend
         self.secondary_backend: AbstractBackend = secondary_backend
 
-        self.metadata = {}
-
         self._logger.info(f"init {self.primary_backend=}")
         self._logger.info(f"init {self.secondary_backend=}")
 

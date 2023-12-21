@@ -49,19 +49,21 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def __init__(self, config: AppConfig):
-        # public
-        self.metadata = {}
-
-        # private
+        self._config = config
+        self._backendstats: BackendStats = BackendStats(
+            backend_name=self.__class__.__name__,
+        )
         self._fps = 0
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
-
-        self._config = config
 
         super().__init__()
 
     def __repr__(self):
         return f"{self.__class__}"
+
+    def stats(self) -> BackendStats:
+        self._backendstats.fps = int(round(self._fps, 0))
+        return self._backendstats
 
     def _stats_fun(self):
         # FPS = 1 / time to process loop
@@ -99,14 +101,6 @@ class AbstractBackend(ABC):
         """To stop the backend to serve"""
         self._stats_thread.stop()
         self._stats_thread.join()
-
-    @abstractmethod
-    def stats(self) -> BackendStats:
-        """gather backend specific stats
-
-        Returns:
-            BackendStats: _description_
-        """
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED

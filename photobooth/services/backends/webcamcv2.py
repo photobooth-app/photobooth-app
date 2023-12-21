@@ -12,7 +12,6 @@ from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
-    BackendStats,
     SharedMemoryDataExch,
     compile_buffer,
     decompile_buffer,
@@ -31,10 +30,7 @@ class WebcamCv2Backend(AbstractBackend):
 
     def __init__(self, config: AppConfig):
         super().__init__(config)
-        # public props (defined in abstract class also)
-        self.metadata = {}
 
-        # private props
         self._config = config
 
         self._img_buffer_lores: SharedMemoryDataExch = None
@@ -140,12 +136,6 @@ class WebcamCv2Backend(AbstractBackend):
         self._on_preview_mode()
 
         return img
-
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__class__.__name__,
-            fps=int(round(self._fps, 0)),
-        )
 
     #
     # INTERNAL FUNCTIONS

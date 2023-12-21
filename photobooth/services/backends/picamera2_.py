@@ -11,7 +11,7 @@ from photobooth.utils.stoppablethread import StoppableThread
 
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
-from .abstractbackend import AbstractBackend, BackendStats
+from .abstractbackend import AbstractBackend
 
 try:
     from libcamera import Transform, controls  # type: ignore
@@ -64,7 +64,6 @@ class Picamera2Backend(AbstractBackend):
     def __init__(self, config: AppConfig):
         super().__init__(config)
         # public props (defined in abstract class also)
-        self.metadata = {}
 
         # private props
         self._picamera2: Picamera2 = None
@@ -218,22 +217,6 @@ class Picamera2Backend(AbstractBackend):
         self._hires_data.request_ready.clear()
         return self._hires_data.data
 
-    def stats(self) -> BackendStats:
-        # exposure time needs math on a possibly None value, do it here separate
-        # because None/1000 raises an exception.
-        exposure_time = self.metadata.get("ExposureTime", None)
-        exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
-        return BackendStats(
-            backend_name=__class__.__name__,
-            fps=int(round(self._fps, 0)),
-            exposure_time_ms=self._round_none(exposure_time_ms_raw, 1),
-            lens_position=self._round_none(self.metadata.get("LensPosition", None), 2),
-            gain=self._round_none(self.metadata.get("AnalogueGain", None), 1),
-            lux=self._round_none(self.metadata.get("Lux", None), 1),
-            colour_temperature=self.metadata.get("ColourTemperature", None),
-            sharpness=self.metadata.get("FocusFoM", None),
-        )
-
     #
     # INTERNAL FUNCTIONS
     #
@@ -362,8 +345,17 @@ class Picamera2Backend(AbstractBackend):
                 self._on_preview_mode()
 
             # capture metadata blocks until new metadata is avail
-            # fixme: following seems to block occasionally the switch_mode function. # pylint: disable=fixme
-            self.metadata = self._picamera2.capture_metadata()
-            # time.sleep(0.1)
+            _metadata = self._picamera2.capture_metadata()
+
+            # update backendstats (optional for backends, but this one has so many information that are easy to display)
+            # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
+            exposure_time = _metadata.get("ExposureTime", None)
+            exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
+            self._backendstats.exposure_time_ms = (self._round_none(exposure_time_ms_raw, 1),)
+            self._backendstats.lens_position = (self._round_none(_metadata.get("LensPosition", None), 2),)
+            self._backendstats.gain = (self._round_none(_metadata.get("AnalogueGain", None), 1),)
+            self._backendstats.lux = (self._round_none(_metadata.get("Lux", None), 1),)
+            self._backendstats.colour_temperature = (_metadata.get("ColourTemperature", None),)
+            self._backendstats.sharpness = (_metadata.get("FocusFoM", None),)
 
         logger.info("_generate_images_fun left")

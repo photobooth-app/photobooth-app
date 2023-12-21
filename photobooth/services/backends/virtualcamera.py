@@ -16,7 +16,6 @@ from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
-    BackendStats,
     compile_buffer,
     decompile_buffer,
 )
@@ -32,10 +31,6 @@ class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: AppConfig):
         super().__init__(config)
 
-        # public props (defined in abstract class also)
-        self.metadata = {}
-
-        # private props
         self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
@@ -119,12 +114,6 @@ class VirtualCameraBackend(AbstractBackend):
         self._on_preview_mode()
 
         return img
-
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__class__.__name__,
-            fps=int(round(self._fps, 0)),
-        )
 
     #
     # INTERNAL FUNCTIONS
