@@ -14,11 +14,9 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Request
-from pymitter import EventEmitter
 from sse_starlette import ServerSentEvent
 
 from ..appconfig import AppConfig
-from .baseservice import BaseService
 from .mediacollection.mediaitem import MediaItem
 from .processing.jobmodels import JobModel
 
@@ -200,15 +198,12 @@ class Client:
     queue: Queue = None
 
 
-class SseService(BaseService):
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+class SseService:
+    def __init__(self, config: AppConfig):
+        self._config = config
 
         # keep track of client connections with each individual request and queue.
         self._clients: [Client] = []
-
-        # listener services use to send messages to connected clients.
-        self._evtbus.on("sse_dispatch_event", self.dispatch_event)
 
     def setup_client(self, client):
         self._clients.append(client)

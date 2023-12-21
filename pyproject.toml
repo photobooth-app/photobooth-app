@@ -39,7 +39,6 @@ dependencies = [
     "pydantic>=2.4.0",
     "pydantic-extra-types>=2.1.0",
     "pydantic-settings>=2.0.3",
-    "pymitter>=0.4.0",
     "pyturbojpeg>=1.7.0",
     "requests>=2.31.0",
     "sse-starlette>=1.6.5",

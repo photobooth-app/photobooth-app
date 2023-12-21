@@ -11,7 +11,6 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
-from pymitter import EventEmitter
 
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
@@ -30,8 +29,8 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus=evtbus, config=config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
 
         # public props (defined in abstract class also)
         self.metadata = {}
@@ -102,7 +101,6 @@ class VirtualCameraBackend(AbstractBackend):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        self._evtbus.emit("frameserver/onCapture")
 
         hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "hq_img").resolve()}/*.jpg')
         current_hq_image_index = random.randint(0, len(hq_images) - 1)
@@ -113,8 +111,6 @@ class VirtualCameraBackend(AbstractBackend):
 
         # virtual delay for camera to create picture
         time.sleep(0.1)
-
-        self._evtbus.emit("frameserver/onCaptureFinished")
 
         # return to previewmode
         self._on_preview_mode()

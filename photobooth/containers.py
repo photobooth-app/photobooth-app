@@ -3,37 +3,36 @@
 
 import logging.config
 
-import pymitter
 from dependency_injector import containers, providers
 
 from .appconfig import AppConfig
 from .services import loggingservice
 from .services.backends.containers import BackendsContainer
 from .services.containers import ServicesContainer
+from .services.sseservice import SseService
 
 logger = logging.getLogger(f"{__name__}")
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
-    evtbus = providers.Singleton(pymitter.EventEmitter)
     config = providers.Singleton(AppConfig)
+    sse_service = providers.Singleton(SseService, config)
 
     logging_service = providers.Resource(
         loggingservice.LoggingService,
-        evtbus=evtbus,
         config=config,
+        sse_service=sse_service,
     )
 
     config_service = providers.Singleton(AppConfig)
 
     backends = providers.Container(
         BackendsContainer,
-        evtbus=evtbus,
         config=config,
     )
     services = providers.Container(
         ServicesContainer,
-        evtbus=evtbus,
         config=config,
         backends=backends,
+        sse_service=sse_service,
     )

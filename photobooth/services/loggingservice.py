@@ -12,11 +12,9 @@ from datetime import datetime
 from logging import FileHandler, LogRecord
 from pathlib import Path
 
-from pymitter import EventEmitter
-
 from ..appconfig import AppConfig
 from .baseservice import BaseService
-from .sseservice import SseEventLogRecord
+from .sseservice import SseEventLogRecord, SseService
 
 LOG_DIR = "log"
 
@@ -27,23 +25,10 @@ class EventstreamLogHandler(logging.Handler):
     to be displayed in console.log on browser frontend
     """
 
-    def __init__(self, evtbus: EventEmitter):
-        self._evtbus = evtbus
-
-        self._initlogrecords_emitted = False
-        self._initlogrecords = []
-
-        self._evtbus.on("sse_dispatch_event/initial", self._emit_initlogs)
+    def __init__(self, sse_service: SseService):
+        self._sse_service = sse_service
 
         logging.Handler.__init__(self)
-
-    def _emit_initlogs(self):
-        for logrecord in self._initlogrecords:
-            self._evtbus.emit("sse_dispatch_event", logrecord)
-        # stop adding new records
-        self._initlogrecords_emitted = True
-
-        # self._initlogrecords = []
 
     def emit(self, record: LogRecord):
         sse_logrecord = SseEventLogRecord(
@@ -55,13 +40,7 @@ class EventstreamLogHandler(logging.Handler):
             lineno=record.lineno,
         )
 
-        if not self._initlogrecords_emitted and len(self._initlogrecords) < 50:
-            # after logrecords were first time emitted to client via eventstream,
-            # not add any new records to array.
-            # only log first 50 messgaes to not pollute the sse queue
-            self._initlogrecords.append(sse_logrecord)
-
-        self._evtbus.emit("sse_dispatch_event", sse_logrecord)
+        self._sse_service.dispatch_event(sse_logrecord)
 
 
 class LoggingService(BaseService):
@@ -69,13 +48,13 @@ class LoggingService(BaseService):
 
     debug_level = logging.DEBUG
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
+    def __init__(self, config: AppConfig, sse_service: SseService):
         """Setup logger
 
         Args:
-            evtbus (EventEmitter): _description_
+            sse_service (SseService): _description_
         """
-        super().__init__(evtbus=evtbus, config=config)
+        super().__init__(config=config, sse_service=sse_service)
 
         # ensure dir exists
         os.makedirs(LOG_DIR, exist_ok=True)
@@ -112,7 +91,7 @@ class LoggingService(BaseService):
         self.file_handler.setFormatter(log_formatter)
 
         # create rotatingFileHandler
-        self.eventstream_handler = EventstreamLogHandler(evtbus=evtbus)
+        self.eventstream_handler = EventstreamLogHandler(sse_service=sse_service)
         self.eventstream_handler.setFormatter(log_formatter)
 
         ## wire logger and handler ##

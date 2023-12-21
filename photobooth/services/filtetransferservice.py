@@ -4,7 +4,6 @@ import time
 from pathlib import Path
 
 import psutil
-from pymitter import EventEmitter
 
 from photobooth.utils.stoppablethread import StoppableThread
 
@@ -15,13 +14,14 @@ from .mediacollection.mediaitem import (
     PATH_FULL_UNPROCESSED,
     PATH_ORIGINAL,
 )
+from .sseservice import SseService
 
 LIST_FOLDERS_TO_COPY = [PATH_ORIGINAL, PATH_FULL, PATH_FULL_UNPROCESSED]
 
 
 class FileTransferService(BaseService):
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig, sse_service: SseService):
+        super().__init__(config, sse_service)
 
         self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
 

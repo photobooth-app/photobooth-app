@@ -4,11 +4,11 @@ import json
 import time
 
 import serial
-from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
+from .sseservice import SseService
 
 # these presets are set on WLED module to control lights:
 PRESET_ID_STANDBY = 1
@@ -21,8 +21,8 @@ RECONNECT_INTERVAL_TIMER = 10
 class WledService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config=config)
+    def __init__(self, config: AppConfig, sse_service: SseService):
+        super().__init__(config, sse_service)
 
         self._enabled = config.hardwareinputoutput.wled_enabled
         self._serial_port = config.hardwareinputoutput.wled_serial_port
@@ -41,7 +41,6 @@ class WledService(BaseService):
             return
 
         self.connect()
-        self.register_listener()
 
         self._reconnect_interval_timer.start()
 
@@ -126,16 +125,6 @@ class WledService(BaseService):
             raise RuntimeError("WLED module failed. Please check wiring, device, connection and config.")
 
         return wled_detected
-
-    def register_listener(self):
-        self._logger.info("register events for WLED")
-        self._evtbus.on("statemachine/on_thrill", self.preset_thrill)
-        self._evtbus.on("frameserver/onCapture", self.preset_shoot)
-        self._evtbus.on("frameserver/onCaptureFinished", self.preset_standby)
-
-        self._evtbus.on("wled/preset_standby", self.preset_standby)
-        self._evtbus.on("wled/preset_thrill", self.preset_thrill)
-        self._evtbus.on("wled/preset_shoot", self.preset_shoot)
 
     def preset_standby(self):
         """_summary_"""

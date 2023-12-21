@@ -9,10 +9,9 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from pymitter import EventEmitter
-
 from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .sseservice import SseService
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +24,8 @@ PHOTOBOOTH_APP_SERVICE_FILE = Path(f"{str(Path.home())}/.local/share/systemd/use
 class SystemService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig, sse_service: SseService):
+        super().__init__(config, sse_service)
 
         self._logger.info("initialized systemservice")
 

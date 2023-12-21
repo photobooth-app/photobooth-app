@@ -3,7 +3,6 @@ import logging
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response, StreamingResponse
-from pymitter import EventEmitter
 
 from ..containers import ApplicationContainer
 from ..services.aquisitionservice import AquisitionService
@@ -68,20 +67,15 @@ def api_still_get(aquisition_service: AquisitionService = Depends(Provide[Applic
 @aquisition_router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
 @inject
 def api_cmd_aquisition_capturemode_get(
-    mode: str = "preview", wled_control: bool = True, evtbus: EventEmitter = Depends(Provide[ApplicationContainer.evtbus])
+    mode: str = "preview",
+    aquisition_service: AquisitionService = Depends(
+        Provide[ApplicationContainer.services.aquisition_service],
+    ),
 ):
-    """_summary_
-
-    Args:
-        wled_control (bool, optional): Also control wled module. Request WLED module preset thrill. Defaults to True.
-    """
+    """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        evtbus.emit("onCaptureMode")
-        if wled_control:
-            evtbus.emit("wled/preset_thrill")
+        aquisition_service.switch_backends_to_capture_mode()
     elif mode == "preview":
-        evtbus.emit("onPreviewMode")
-        if wled_control:
-            evtbus.emit("wled/preset_standby")
+        aquisition_service.switch_backends_to_preview_mode()
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="illegal mode")

@@ -8,18 +8,14 @@ import logging
 import time
 from threading import Condition, Event
 
-from pymitter import EventEmitter
-
 from photobooth.utils.stoppablethread import StoppableThread
 
-from ...appconfig import AppConfig, EnumFocuserModule
+from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import AbstractBackend, BackendStats
-from .picamera2_libcamafcontinuous import Picamera2LibcamAfContinuous
-from .picamera2_libcamafinterval import Picamera2LibcamAfInterval
 
 try:
-    from libcamera import Transform  # type: ignore
+    from libcamera import Transform, controls  # type: ignore
     from picamera2 import Picamera2  # type: ignore
     from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
     from picamera2.outputs import FileOutput  # type: ignore
@@ -66,14 +62,13 @@ class Picamera2Backend(AbstractBackend):
                 self.frame = buf
                 self.condition.notify_all()
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
         self._picamera2: Picamera2 = None
-        self._autofocus_module = None
 
         self._count = 0
         self._fps = 0
@@ -90,18 +85,6 @@ class Picamera2Backend(AbstractBackend):
         self._preview_config = None
         self._current_config = None
         self._last_config = None
-
-        if not self._config.backends.picamera2_focuser_module == EnumFocuserModule.NULL:
-            logger.info(f"loading autofocus module: " f"picamera2_{self._config.backends.picamera2_focuser_module}")
-            if self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_CONTINUOUS:
-                self._autofocus_module = Picamera2LibcamAfContinuous(self, evtbus=evtbus, config=config)
-            elif self._config.backends.picamera2_focuser_module == EnumFocuserModule.LIBCAM_AF_INTERVAL:
-                self._autofocus_module = Picamera2LibcamAfInterval(self, evtbus=evtbus, config=config)
-            else:
-                self._autofocus_module = None
-
-        else:
-            logger.info("picamera2_focuser_module is disabled. " "Select a focuser module in config to enable autofocus.")
 
     def start(self):
         """To start the backend, configure picamera2"""
@@ -162,7 +145,7 @@ class Picamera2Backend(AbstractBackend):
             ),
         )
 
-        # activate preview mode on init
+        # select preview mode on init
         self._on_preview_mode()
 
         # configure; camera needs to be stopped before
@@ -191,9 +174,6 @@ class Picamera2Backend(AbstractBackend):
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
 
-        if self._autofocus_module:
-            self._autofocus_module.start()
-
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         remaining_retries = 10
         while True:
@@ -207,17 +187,14 @@ class Picamera2Backend(AbstractBackend):
                 remaining_retries -= 1
                 logger.info("waiting for backend to start up...")
 
+        self._init_autofocus()
+
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
-
-        if self._autofocus_module:
-            # autofocus module needs to stop their threads also for clean shutdown
-            logger.info("stopping autofocus module")
-            self._autofocus_module.stop()
 
         self._generate_images_thread.stop()
         self._stats_thread.stop()
@@ -344,6 +321,24 @@ class Picamera2Backend(AbstractBackend):
         )
         logger.info("switchmode finished successfully")
 
+    def _init_autofocus(self):
+        """
+        on start set autofocus to continuous if requested by config or
+        auto and trigger regularly
+        """
+
+        try:
+            self._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+        except RuntimeError as exc:
+            logger.critical(f"control not available on camera - autofocus not working properly {exc}")
+
+        try:
+            self._picamera2.set_controls({"AfSpeed": controls.AfSpeedEnum.Fast})
+        except RuntimeError as exc:
+            logger.info(f"control not available on all cameras - can ignore {exc}")
+
+        logger.debug("autofocus set")
+
     #
     # INTERNAL IMAGE GENERATOR
     #
@@ -384,18 +379,10 @@ class Picamera2Backend(AbstractBackend):
                 # only capture one pic and return to lores streaming afterwards
                 self._hires_data.request_ready.clear()
 
-                # ensure before shoot that no focus is active; module may decide how to handle or cancel current run
-                if self._autofocus_module:
-                    self._autofocus_module.ensure_focused()
-
-                self._evtbus.emit("frameserver/onCapture")
-
                 # capture hq picture
                 data = io.BytesIO()
                 self._picamera2.capture_file(data, format="jpeg")
                 self._hires_data.data = data.getbuffer()
-
-                self._evtbus.emit("frameserver/onCaptureFinished")
 
                 with self._hires_data.condition:
                     self._hires_data.condition.notify_all()
@@ -405,8 +392,8 @@ class Picamera2Backend(AbstractBackend):
 
             # capture metadata blocks until new metadata is avail
             # fixme: following seems to block occasionally the switch_mode function. # pylint: disable=fixme
-            # self.metadata = self._picamera2.capture_metadata()
-            time.sleep(0.1)
+            self.metadata = self._picamera2.capture_metadata()
+            # time.sleep(0.1)
 
             # counter to calc the fps
             # broken since capture_metadata is commented.

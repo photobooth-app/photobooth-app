@@ -6,7 +6,6 @@ import platform
 import pytest
 from dependency_injector import providers
 from PIL import Image
-from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
@@ -68,7 +67,6 @@ def has_vcam():
 def backends() -> BackendsContainer:
     # setup
     backends_container = BackendsContainer(
-        evtbus=providers.Singleton(EventEmitter),
         config=providers.Singleton(AppConfig),
     )
     # deliver

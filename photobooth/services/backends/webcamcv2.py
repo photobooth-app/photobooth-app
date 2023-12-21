@@ -6,7 +6,6 @@ import platform
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
 import cv2
-from pymitter import EventEmitter
 from turbojpeg import TurboJPEG
 
 from ...appconfig import AppConfig
@@ -30,13 +29,12 @@ class WebcamCv2Backend(AbstractBackend):
     opencv2 backend implementation for webcameras
     """
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig):
+        super().__init__(config)
         # public props (defined in abstract class also)
         self.metadata = {}
 
         # private props
-        self._evtbus = evtbus
         self._config = config
 
         self._img_buffer_lores: SharedMemoryDataExch = None
@@ -124,7 +122,6 @@ class WebcamCv2Backend(AbstractBackend):
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
-        self._evtbus.emit("frameserver/onCapture")
 
         # get img off the producing queue
         with self._img_buffer_hires.condition:
@@ -135,8 +132,6 @@ class WebcamCv2Backend(AbstractBackend):
 
             with self._img_buffer_hires.lock:
                 img = decompile_buffer(self._img_buffer_hires.sharedmemory)
-
-        self._evtbus.emit("frameserver/onCaptureFinished")
 
         # return to previewmode
         self._on_preview_mode()

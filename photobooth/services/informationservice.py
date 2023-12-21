@@ -9,13 +9,12 @@ import threading
 from pathlib import Path
 
 import psutil
-from pymitter import EventEmitter
 
 from ..__version__ import __version__
 from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
-from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
+from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
@@ -23,15 +22,11 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig, sse_service: SseService):
+        super().__init__(config, sse_service)
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
-
-        # registered events
-        self._evtbus.on("sse_dispatch_event/initial", self._on_stats_interval_timer)
-        self._evtbus.on("sse_dispatch_event/initial", self._on_stats_one_off)
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -69,12 +64,11 @@ class InformationService(BaseService):
         """_summary_"""
         self._stats_interval_timer.stop()
 
-    def _on_stats_one_off(self):
+    def initial_emit(self):
         """_summary_"""
 
         # gather one time on connect information to be sent off:
-        self._evtbus.emit(
-            "sse_dispatch_event",
+        self._sse_service.dispatch_event(
             SseEventOnetimeInformationRecord(
                 version=__version__,
                 platform_system=platform.system(),
@@ -89,12 +83,14 @@ class InformationService(BaseService):
             ),
         )
 
+        # also send interval data initially once
+        self._on_stats_interval_timer()
+
     def _on_stats_interval_timer(self):
         """_summary_"""
 
         # gather information to be sent off on timer tick:
-        self._evtbus.emit(
-            "sse_dispatch_event",
+        self._sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
                 cpu1_5_15=self._gather_cpu1_5_15(),
                 active_threads=self._gather_active_threads(),

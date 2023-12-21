@@ -5,7 +5,6 @@ import logging
 import os
 import time
 
-from pymitter import EventEmitter
 from statemachine import State, StateMachine
 
 from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
@@ -17,7 +16,8 @@ from .mediacollectionservice import (
 )
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModel
-from .sseservice import SseEventProcessStateinfo
+from .sseservice import SseEventProcessStateinfo, SseService
+from .wledservice import WledService
 
 logger = logging.getLogger(__name__)
 
@@ -51,25 +51,28 @@ class ProcessingService(StateMachine):
 
     def __init__(
         self,
-        evtbus: EventEmitter,
         config: AppConfig,
+        _sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
+        wled_service: WledService,
     ):
-        self._evtbus: EventEmitter = evtbus
         self._config: AppConfig = config
+        self._sse_service: SseService = _sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
+        self._wled_service: WledService = wled_service
 
         super().__init__(model=JobModel())
 
         # for proper linting
         self.model: JobModel
 
-        # register to send initial data SSE
-        self._evtbus.on("sse_dispatch_event/initial", lambda: self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model)))
+    ##
+    def initial_emit(self):
+        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
     ## transition actions
 
@@ -95,7 +98,7 @@ class ProcessingService(StateMachine):
 
     def _emit_model_state_update(self):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
-        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
+        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
     def on_enter_state(self, event, state):
         """_summary_"""
@@ -127,8 +130,11 @@ class ProcessingService(StateMachine):
 
     def on_enter_counting(self):
         """_summary_"""
-        # to prepare autofocus on backends and wled
-        self._evtbus.emit("statemachine/on_thrill")
+        # wled signaling
+        self._wled_service.preset_thrill()
+
+        # set backends to capture mode; backends take their own actions if needed.
+        self._aquisition_service.switch_backends_to_capture_mode()
 
         # determine countdown time, first and following could have different times
         duration = (
@@ -157,7 +163,7 @@ class ProcessingService(StateMachine):
             offset_camera=self._config.common.countdown_camera_capture_offset,
         )
         # inform UI to count
-        self._evtbus.emit("sse_dispatch_event", SseEventProcessStateinfo(self.model))
+        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
         # wait for countdown finished before continue machine
         self.model.wait_countdown_finished()  # blocking call
@@ -171,7 +177,6 @@ class ProcessingService(StateMachine):
             f"current capture ({self.model.number_captures_taken()+1}/{self.model.total_captures_to_take()}, "
             f"remaining {self.model.remaining_captures_to_take()-1})"
         )
-        self._evtbus.emit("statemachine/on_enter_capture_still")
 
         filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
@@ -183,7 +188,11 @@ class ProcessingService(StateMachine):
         # waitforpic and store to disk
         for attempt in range(1, self._config.backends.retry_capture + 1):
             try:
+                self._wled_service.preset_shoot()
+
                 image_bytes = self._aquisition_service.wait_for_hq_image()
+
+                self._wled_service.preset_standby()
 
                 with open(filepath_neworiginalfile, "wb") as file:
                     file.write(image_bytes)
@@ -214,12 +223,16 @@ class ProcessingService(StateMachine):
             logger.critical(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
             raise RuntimeError(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
 
+        self._wled_service.preset_standby()
+
         # capture finished, go to next state
         self._captured()
 
     def on_exit_capture(self):
         """_summary_"""
-        self._evtbus.emit("statemachine/on_exit_capture_still")
+
+        # TODO: check if switch back here or somewhere else.
+        self._aquisition_service.switch_backends_to_preview_mode()
 
         if not self.model.last_capture_successful():
             logger.critical("on_exit_capture no valid image taken! abort processing")

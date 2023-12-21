@@ -7,7 +7,6 @@ Pin Numbering: https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-number
 import subprocess
 
 from gpiozero import Button
-from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
@@ -17,6 +16,7 @@ from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
 from .processingservice import ProcessingService
+from .sseservice import SseService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
@@ -28,13 +28,13 @@ class GpioService(BaseService):
 
     def __init__(
         self,
-        evtbus: EventEmitter,
         config: AppConfig,
+        sse_service: SseService,
         processing_service: ProcessingService,
         printing_service: PrintingService,
         mediacollection_service: MediacollectionService,
     ):
-        super().__init__(evtbus=evtbus, config=config)
+        super().__init__(config=config, sse_service=sse_service)
 
         self._processing_service = processing_service
         self._printing_service = printing_service

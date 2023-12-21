@@ -4,7 +4,6 @@ Testing virtual camera Backend
 import logging
 
 from dependency_injector import providers
-from pymitter import EventEmitter
 
 from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
@@ -13,7 +12,7 @@ logger = logging.getLogger(name=None)
 
 
 def test_appconfig_singleton():
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
+    backend = BackendsContainer(config=providers.Singleton(AppConfig))
 
     # modify config:
     backend.config().common.DEBUG_LEVEL = 99
@@ -21,7 +20,7 @@ def test_appconfig_singleton():
 
 
 def test_appconfig_factory():
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Factory(AppConfig))
+    backend = BackendsContainer(config=providers.Factory(AppConfig))
 
     # modify config:
     backend.config().common.DEBUG_LEVEL = 99
@@ -33,7 +32,7 @@ def test_appconfig_dependency_singleton():
 
     # test no working any more
     """
-    backend = BackendsContainer(evtbus=providers.Singleton(EventEmitter), config=providers.Singleton(AppConfig))
+    backend = BackendsContainer(config=providers.Singleton(AppConfig))
 
     original_value = backend.config().backends.cv2_device_index
     modified_value = original_value + 1

@@ -6,19 +6,19 @@ import json
 import time
 
 import requests
-from pymitter import EventEmitter
 
 from ..appconfig import AppConfig
 from ..utils.stoppablethread import StoppableThread
 from .baseservice import BaseService
 from .mediacollectionservice import MediacollectionService
+from .sseservice import SseService
 
 
 class ShareService(BaseService):
     """_summary_"""
 
-    def __init__(self, evtbus: EventEmitter, config: AppConfig, mediacollection_service: MediacollectionService):
-        super().__init__(evtbus, config)
+    def __init__(self, config: AppConfig, sse_service: SseService, mediacollection_service: MediacollectionService):
+        super().__init__(config, sse_service)
 
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service

@@ -131,14 +131,6 @@ class EnumImageBackendsLive(str, Enum):
     WEBCAMV4L = "WebcamV4l"
 
 
-class EnumFocuserModule(str, Enum):
-    """List to choose focuser module from"""
-
-    NULL = None
-    LIBCAM_AF_CONTINUOUS = "LibcamAfContinuous"
-    LIBCAM_AF_INTERVAL = "LibcamAfInterval"
-
-
 class EnumPicamStreamQuality(str, Enum):
     """Enum type to describe the quality wanted from an encoder.
     This may be passed if a specific value (such as bitrate) has not been set.
@@ -298,19 +290,10 @@ class GroupBackends(BaseModel):
         le=4,
         description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
     )
-    picamera2_focuser_module: EnumFocuserModule = Field(
-        title="Picamera2 Focuser Module",
-        default=EnumFocuserModule.NULL,
-        description="Choose continuous or interval mode to trigger autofocus of picamera2 cam.",
-    )
     picamera2_stream_quality: EnumPicamStreamQuality = Field(
         title="Picamera2 Stream Quality (for livepreview)",
         default=EnumPicamStreamQuality.MEDIUM,
         description="Lower quality results in less data to be transferred and may reduce load on display device.",
-    )
-    picamera2_focuser_interval: int = Field(
-        default=10,
-        description="Every x seconds trigger autofocus",
     )
 
 

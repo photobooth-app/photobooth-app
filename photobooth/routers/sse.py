@@ -4,10 +4,12 @@ from datetime import datetime
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
-from pymitter import EventEmitter
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from ..containers import ApplicationContainer
+from ..services.informationservice import InformationService
+from ..services.loggingservice import LoggingService
+from ..services.processingservice import ProcessingService
 from ..services.sseservice import Client, SseService
 
 logger = logging.getLogger(__name__)
@@ -20,8 +22,10 @@ sse_router = APIRouter(
 @inject
 async def subscribe(
     request: Request,
-    evtbus: EventEmitter = Depends(Provide[ApplicationContainer.services.evtbus]),
     sse_service: SseService = Depends(Provide[ApplicationContainer.services.sse_service]),
+    logging_service: LoggingService = Depends(Provide[ApplicationContainer.logging_service]),
+    information_service: InformationService = Depends(Provide[ApplicationContainer.services.information_service]),
+    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
 ):
     """
     Eventstream to feed clients with server generated events and data
@@ -39,8 +43,9 @@ async def subscribe(
     client = Client(request, queue)
     sse_service.setup_client(client=client)
 
-    # all modules can register this event to send initial messages on connection
-    await evtbus.emit_async("sse_dispatch_event/initial")
+    # following modules send some data on connection init to client:
+    information_service.initial_emit()
+    processing_service.initial_emit()
 
     return EventSourceResponse(
         sse_service.event_iterator(client=client),
