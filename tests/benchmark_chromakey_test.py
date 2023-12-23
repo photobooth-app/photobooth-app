@@ -110,9 +110,6 @@ def opencv_chromakey(pil_image: Image):
 def opencv_chromakey_live(pil_image: Image):
     # reduced quality optimized for higher speed.
 
-    BLUR_SIZE = 2
-    DILATE_SIZE = 4
-
     def convert_from_cv2_to_image(img: np.ndarray) -> Image:
         return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
 
