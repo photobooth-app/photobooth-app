@@ -14,6 +14,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ...utils.stoppablethread import StoppableThread
 
 logger = logging.getLogger(__name__)
 
@@ -47,26 +48,36 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def __init__(self, config: AppConfig):
-        # public
-        self.metadata = {}
-
-        # private
-        self._fps = 0
-
         self._config = config
+        self._backendstats: BackendStats = BackendStats(
+            backend_name=self.__class__.__name__,
+        )
+        self._fps = 0
+        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
 
         super().__init__()
 
     def __repr__(self):
         return f"{self.__class__}"
 
-    # @property
-    # @abstractmethod
-    # def stream_url(self):
-    #    """
-    #    get the default backend stream
-    #    """
-    #    pass
+    def stats(self) -> BackendStats:
+        self._backendstats.fps = int(round(self._fps, 0))
+        return self._backendstats
+
+    def _stats_fun(self):
+        # FPS = 1 / time to process loop
+        last_calc_time = time.time()  # start time of the loop
+
+        # to calc frames per second every second
+        while not self._stats_thread.stopped():
+            try:
+                self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
+                self._fps = 1.0 / (time.time() - last_calc_time)
+            except (TimeoutError, ZeroDivisionError):
+                self._fps = 0
+
+            # store last time
+            last_calc_time = time.time()
 
     @abstractmethod
     def wait_for_hq_image(self):
@@ -77,18 +88,13 @@ class AbstractBackend(ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
+        self._stats_thread.start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-
-    @abstractmethod
-    def stats(self) -> BackendStats:
-        """gather backend specific stats
-
-        Returns:
-            BackendStats: _description_
-        """
+        self._stats_thread.stop()
+        self._stats_thread.join()
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED
@@ -98,12 +104,6 @@ class AbstractBackend(ABC):
     def _wait_for_lores_image(self):
         """
         function blocks until frame is available for preview stream
-        """
-
-    @abstractmethod
-    def _wait_for_lores_frame(self):
-        """
-        function blocks until frame is available for autofocus usually
         """
 
     @abstractmethod

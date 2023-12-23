@@ -117,8 +117,7 @@ class EnumImageBackendsMain(str, Enum):
     WEBCAMCV2 = "WebcamCv2"
     WEBCAMV4L = "WebcamV4l"
     GPHOTO2 = "Gphoto2"
-    # Not yet finished backends:
-    # Digicamcontrol = 'Digicamcontrol'
+    DIGICAMCONTROL = "Digicamcontrol"
 
 
 class EnumImageBackendsLive(str, Enum):
@@ -242,6 +241,11 @@ class GroupBackends(BaseModel):
     gphoto2_wait_event_after_capture_trigger: bool = Field(
         default=False,
         description="Usually wait_for_event not necessary before downloading the file from camera. Adjust if necessary.",
+    )
+
+    digicamcontrol_base_url: str = Field(
+        default="http://127.0.0.1:5513",
+        description="Base URL used to connect to the host running the digicamcontrol software. Usually photobooth-app and digicamcontrol are on the same computer and no adjustmend needed.",
     )
 
     picamera2_CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
@@ -719,7 +723,7 @@ class GroupUiSettings(BaseModel):
     )
     gallery_filter_userselectable: list[EnumPilgramFilter] = Field(
         title="Pic1 Filter Userselectable",
-        default=[EnumPilgramFilter.original, EnumPilgramFilter.clarendon, EnumPilgramFilter.moon],
+        default=[e.value for e in EnumPilgramFilter],
         description="Filter the user may choose from in the gallery. 'original' applies no filter.",
     )
     gallery_show_download: bool = Field(

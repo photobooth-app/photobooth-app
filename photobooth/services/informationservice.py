@@ -13,6 +13,7 @@ import psutil
 from ..__version__ import __version__
 from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
+from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
@@ -22,8 +23,10 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService):
+    def __init__(self, config: AppConfig, sse_service: SseService, aquisition_service: AquisitionService):
         super().__init__(config, sse_service)
+
+        self._aquisition_service = aquisition_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
@@ -96,6 +99,7 @@ class InformationService(BaseService):
                 active_threads=self._gather_active_threads(),
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
+                backends=self._gather_backends_stats(),
             ),
         )
 
@@ -122,6 +126,9 @@ class InformationService(BaseService):
             cma = {"CmaTotal": None, "CmaFree": None}
 
         return cma
+
+    def _gather_backends_stats(self):
+        return self._aquisition_service.stats()
 
     def _gather_disk(self):
         if platform.system() == "Linux":

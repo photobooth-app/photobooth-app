@@ -77,6 +77,7 @@ class ServicesContainer(containers.DeclarativeContainer):
         InformationService,
         config,
         sse_service,
+        aquisition_service,
     )
 
     wled_service = providers.Resource(

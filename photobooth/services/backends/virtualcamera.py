@@ -16,7 +16,6 @@ from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
-    BackendStats,
     compile_buffer,
     decompile_buffer,
 )
@@ -32,10 +31,6 @@ class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: AppConfig):
         super().__init__(config)
 
-        # public props (defined in abstract class also)
-        self.metadata = {}
-
-        # private props
         self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
         self._img_buffer_lock = Lock()
@@ -83,7 +78,10 @@ class VirtualCameraBackend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         """To stop the image backend"""
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
@@ -117,11 +115,6 @@ class VirtualCameraBackend(AbstractBackend):
 
         return img
 
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__name__,
-        )
-
     #
     # INTERNAL FUNCTIONS
     #
@@ -139,10 +132,6 @@ class VirtualCameraBackend(AbstractBackend):
             img = decompile_buffer(self._img_buffer_shm)
 
         return img
-
-    def _wait_for_lores_frame(self):
-        """autofocus not supported by this backend"""
-        raise NotImplementedError()
 
     def _on_capture_mode(self):
         logger.debug("change to capture mode - means doing nothing in simulate")

@@ -133,6 +133,8 @@ class LoggingService(BaseService):
             "PIL.TiffImagePlugin",
             "multipart",
             "v4l2py",
+            "requests",
+            "urllib3",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)

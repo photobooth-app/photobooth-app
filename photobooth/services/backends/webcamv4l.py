@@ -8,7 +8,6 @@ from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from .abstractbackend import (
     AbstractBackend,
-    BackendStats,
     SharedMemoryDataExch,
     compile_buffer,
     decompile_buffer,
@@ -33,10 +32,7 @@ class WebcamV4lBackend(AbstractBackend):
 
     def __init__(self, config: AppConfig):
         super().__init__(config)
-        # public props (defined in abstract class also)
-        self.metadata = {}
 
-        # private props
         self._config = config
 
         self._img_buffer: SharedMemoryDataExch = None
@@ -90,7 +86,10 @@ class WebcamV4lBackend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
 
@@ -121,18 +120,9 @@ class WebcamV4lBackend(AbstractBackend):
 
         return img
 
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__name__,
-        )
-
     #
     # INTERNAL FUNCTIONS
     #
-
-    def _wait_for_lores_frame(self):
-        """autofocus not supported by this backend"""
-        raise NotImplementedError()
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""

@@ -13,11 +13,10 @@ except Exception as import_exc:
     raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
 
-from photobooth.services.backends.abstractbackend import AbstractBackend, BackendStats
-from photobooth.utils.stoppablethread import StoppableThread
-
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ...utils.stoppablethread import StoppableThread
+from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +44,6 @@ class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: AppConfig):
         super().__init__(config)
 
-        # public props (defined in abstract class also)
-        self.metadata = {}
-
-        # private props
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
 
@@ -96,7 +91,10 @@ class Gphoto2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
+        super().start()
+
     def stop(self):
+        super().stop()
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
@@ -125,12 +123,6 @@ class Gphoto2Backend(AbstractBackend):
         self._hires_data.request_ready.clear()
         return self._hires_data.data
 
-    def stats(self) -> BackendStats:
-        return BackendStats(
-            backend_name=__name__,
-            fps=int(round(self._fps, 0)),
-        )
-
     #
     # INTERNAL FUNCTIONS
     #
@@ -153,10 +145,6 @@ class Gphoto2Backend(AbstractBackend):
             if not self._lores_data.condition.wait(timeout=4):
                 raise TimeoutError("timeout receiving preview from DSLR")
             return self._lores_data.data
-
-    def _wait_for_lores_frame(self):
-        """function not existant"""
-        raise NotImplementedError
 
     def _on_capture_mode(self):
         # nothing to do for this backend
@@ -238,10 +226,12 @@ class Gphoto2Backend(AbstractBackend):
             time.sleep(0.5)
 
         # supervising connection thread was asked to stop - so we ask to stop worker fun also
-        self._worker_thread.stop()
-        self._worker_thread.join()
+        if self._worker_thread:
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
-        self._camera.exit()
+        if self._camera:
+            self._camera.exit()
 
     def _worker_fun(self):
         preview_failcounter = 0
@@ -251,7 +241,7 @@ class Gphoto2Backend(AbstractBackend):
                 if self._config.backends.LIVEPREVIEW_ENABLED:
                     try:
                         capture = self._camera.capture_preview()
-                        preview_failcounter = 0
+
                     except Exception as exc:
                         preview_failcounter += 1
 
@@ -266,6 +256,8 @@ class Gphoto2Backend(AbstractBackend):
                             self._camera.exit()
                             self._camera_connected = False
                             break
+                    else:
+                        preview_failcounter = 0
 
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 
@@ -326,7 +318,7 @@ class Gphoto2Backend(AbstractBackend):
 
                     self._hires_data.condition.notify_all()
 
-        logger.warning("_generate_images_fun exits")
+        logger.warning("_worker_fun exits")
 
 
 def available_camera_indexes():
