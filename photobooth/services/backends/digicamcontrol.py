@@ -265,18 +265,14 @@ class DigicamcontrolBackend(AbstractBackend):
                     logger.info(f"tmp_dir={tmp_dir}, tmp_filename={tmp_filename}")
 
                     r = session.get(
-                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir,
-                                                                                                                                    safe='',
-                                                                                                                                    )}"
+                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
                     )
                     assert r.status_code == 200
                     if not r.text == "OK":
                         raise RuntimeError(f"error setting directory {r.text}")
 
                     r = session.get(
-                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename,
-                                                                                                                                              safe='',
-                                                                                                                                              )}"
+                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename, safe='',)}"  # noqa: E501
                     )
                     assert r.status_code == 200
                     if not r.text == "OK":
