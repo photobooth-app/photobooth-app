@@ -4,7 +4,7 @@
 [metadata]
 groups = ["default", "lint", "test"]
 strategy = ["cross_platform"]
-lock_version = "4.4"
+lock_version = "4.4.1"
 content_hash = "sha256:7cb24693ca7ba2f9d94eafdf39b188f12a4f857dcc50050b8a99dd1d77820066"
 
 [[package]]
