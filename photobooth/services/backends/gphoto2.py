@@ -13,11 +13,10 @@ except Exception as import_exc:
     raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
 
 
-from photobooth.services.backends.abstractbackend import AbstractBackend
-from photobooth.utils.stoppablethread import StoppableThread
-
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ...utils.stoppablethread import StoppableThread
+from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +314,7 @@ class Gphoto2Backend(AbstractBackend):
 
                     self._hires_data.condition.notify_all()
 
-        logger.warning("_generate_images_fun exits")
+        logger.warning("_worker_fun exits")
 
 
 def available_camera_indexes():

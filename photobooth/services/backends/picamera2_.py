@@ -7,10 +7,9 @@ import io
 import logging
 from threading import Condition, Event
 
-from photobooth.utils.stoppablethread import StoppableThread
-
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ...utils.stoppablethread import StoppableThread
 from .abstractbackend import AbstractBackend
 
 try:

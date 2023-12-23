@@ -117,8 +117,7 @@ class EnumImageBackendsMain(str, Enum):
     WEBCAMCV2 = "WebcamCv2"
     WEBCAMV4L = "WebcamV4l"
     GPHOTO2 = "Gphoto2"
-    # Not yet finished backends:
-    # Digicamcontrol = 'Digicamcontrol'
+    DIGICAMCONTROL = "Digicamcontrol"
 
 
 class EnumImageBackendsLive(str, Enum):

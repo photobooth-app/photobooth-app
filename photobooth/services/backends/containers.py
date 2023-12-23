@@ -4,6 +4,7 @@ from dependency_injector import containers, providers
 
 from ...appconfig import AppConfig
 from .abstractbackend import AbstractBackend
+from .digicamcontrol import DigicamcontrolBackend
 from .virtualcamera import VirtualCameraBackend
 from .webcamcv2 import WebcamCv2Backend
 
@@ -37,10 +38,11 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     ## Services: Backends (for image aquisition)
     disabled_backend = providers.Object(None)
+    digicamcontrol_backend = providers.Resource(init_res_obj_backend, DigicamcontrolBackend, config)
+    gphoto2_backend = providers.Object(None)
+    picamera2_backend = providers.Object(None)
     virtualcamera_backend = providers.Resource(init_res_obj_backend, VirtualCameraBackend, config)
     webcamcv2_backend = providers.Resource(init_res_obj_backend, WebcamCv2Backend, config)
-    picamera2_backend = providers.Object(None)
-    gphoto2_backend = providers.Object(None)
     webcamv4l_backend = providers.Object(None)
 
     # picamera2 backend import
@@ -77,10 +79,11 @@ class BackendsContainer(containers.DeclarativeContainer):
 
     backends_set = {
         "disabled": disabled_backend,
+        "digicamcontrol": digicamcontrol_backend,
+        "gphoto2": gphoto2_backend,
+        "picamera2": picamera2_backend,
         "virtualcamera": virtualcamera_backend,
         "webcamcv2": webcamcv2_backend,
-        "picamera2": picamera2_backend,
-        "gphoto2": gphoto2_backend,
         "webcamv4l": webcamv4l_backend,
     }
 

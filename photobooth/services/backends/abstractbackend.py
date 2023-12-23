@@ -12,10 +12,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from photobooth.utils.stoppablethread import StoppableThread
-
 from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ...utils.stoppablethread import StoppableThread
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +70,16 @@ class AbstractBackend(ABC):
 
         # to calc frames per second every second
         while not self._stats_thread.stopped():
-            self._wait_for_lores_image()
-            self._fps = round((1.0 / (time.time() - last_calc_time)), 1)
+            try:
+                self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
+                self._fps = round((1.0 / (time.time() - last_calc_time)), 1)
+            except (TimeoutError, ZeroDivisionError):
+                self._fps = 0
 
             # store last time
             last_calc_time = time.time()
+
+            # time.sleep(0.1)
 
     # @property
     # @abstractmethod
