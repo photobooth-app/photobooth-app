@@ -72,22 +72,12 @@ class AbstractBackend(ABC):
         while not self._stats_thread.stopped():
             try:
                 self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
-                self._fps = round((1.0 / (time.time() - last_calc_time)), 1)
+                self._fps = 1.0 / (time.time() - last_calc_time)
             except (TimeoutError, ZeroDivisionError):
                 self._fps = 0
 
             # store last time
             last_calc_time = time.time()
-
-            # time.sleep(0.1)
-
-    # @property
-    # @abstractmethod
-    # def stream_url(self):
-    #    """
-    #    get the default backend stream
-    #    """
-    #    pass
 
     @abstractmethod
     def wait_for_hq_image(self):
