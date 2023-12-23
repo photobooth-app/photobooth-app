@@ -243,6 +243,11 @@ class GroupBackends(BaseModel):
         description="Usually wait_for_event not necessary before downloading the file from camera. Adjust if necessary.",
     )
 
+    digicamcontrol_base_url: str = Field(
+        default="http://127.0.0.1:5513",
+        description="Base URL used to connect to the host running the digicamcontrol software. Usually photobooth-app and digicamcontrol are on the same computer and no adjustmend needed.",
+    )
+
     picamera2_CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
         description="camera resolution width to capture high resolution photo",

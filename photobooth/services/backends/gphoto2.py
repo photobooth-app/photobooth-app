@@ -226,10 +226,12 @@ class Gphoto2Backend(AbstractBackend):
             time.sleep(0.5)
 
         # supervising connection thread was asked to stop - so we ask to stop worker fun also
-        self._worker_thread.stop()
-        self._worker_thread.join()
+        if self._worker_thread:
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
-        self._camera.exit()
+        if self._camera:
+            self._camera.exit()
 
     def _worker_fun(self):
         preview_failcounter = 0
@@ -239,7 +241,7 @@ class Gphoto2Backend(AbstractBackend):
                 if self._config.backends.LIVEPREVIEW_ENABLED:
                     try:
                         capture = self._camera.capture_preview()
-                        preview_failcounter = 0
+
                     except Exception as exc:
                         preview_failcounter += 1
 
@@ -254,6 +256,8 @@ class Gphoto2Backend(AbstractBackend):
                             self._camera.exit()
                             self._camera_connected = False
                             break
+                    else:
+                        preview_failcounter = 0
 
                     img_bytes = memoryview(capture.get_data_and_size()).tobytes()
 
