@@ -4,7 +4,6 @@ import time
 
 import pytest
 from dependency_injector import providers
-from pytest_httpserver import HTTPServer
 
 from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
@@ -23,7 +22,7 @@ if not platform.system() == "Windows":
 
 
 @pytest.fixture()
-def backends(httpserver: HTTPServer) -> BackendsContainer:
+def backends() -> BackendsContainer:
     # setup
     backends_container = BackendsContainer(
         config=providers.Singleton(AppConfig),
@@ -48,13 +47,13 @@ def backends(httpserver: HTTPServer) -> BackendsContainer:
     yield backends_container
     backends_container.shutdown_resources()
 
-    httpserver.check_assertions()  # this will raise AssertionError and make the test failing
+    # httpserver.check_assertions()  # this will raise AssertionError and make the test failing
 
 
 ## tests
 
 
-def test_get_images_digicamcontrol(backends: BackendsContainer, httpserver: HTTPServer):
+def test_get_images_digicamcontrol(backends: BackendsContainer):
     # get lores and hires images from backend and assert
     digicamcontrol_backend = backends.digicamcontrol_backend()
 
