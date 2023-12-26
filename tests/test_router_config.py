@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.appconfig import AppConfig
 from photobooth.application import app
+from photobooth.services.config import AppConfig
 
 
 @pytest.fixture

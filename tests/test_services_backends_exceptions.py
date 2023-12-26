@@ -6,9 +6,7 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
 from photobooth.containers import ApplicationContainer
 from photobooth.services.backends.containers import BackendsContainer
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
@@ -21,9 +19,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture()
 def backends() -> BackendsContainer:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
+    backends_container = BackendsContainer()
     # deliver
     yield backends_container
 

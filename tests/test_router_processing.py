@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.appconfig import AppConfig
 from photobooth.application import app
+from photobooth.services.config import appconfig
 from photobooth.services.processingservice import ProcessingService
 from photobooth.utils.exceptions import ProcessMachineOccupiedError
 
@@ -51,11 +51,7 @@ def test_confirm_reject_abort_in_idle(client: TestClient):
 
 
 def test_confirm_reject_in_collage(client: TestClient):
-    # get config
-    config: AppConfig = client.app.container.config()
-
-    # testing is made for defaults, only little tweaks to test different scenarios
-    config.common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     # statemachine in idle
     response = client.get("/processing/chose/collage")

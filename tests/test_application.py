@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.appconfig import AppConfig
+from photobooth.services.config import AppConfig
 
 logger = logging.getLogger(name=None)
 

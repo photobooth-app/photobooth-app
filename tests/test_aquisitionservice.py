@@ -4,12 +4,13 @@ import logging
 import pytest
 from PIL import Image
 
-from photobooth.appconfig import (
+from photobooth.containers import ApplicationContainer
+from photobooth.services.aquisitionservice import AquisitionService
+from photobooth.services.config import appconfig
+from photobooth.services.config.appconfig import (
     EnumImageBackendsLive,
     EnumImageBackendsMain,
 )
-from photobooth.containers import ApplicationContainer
-from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -22,9 +23,9 @@ def services() -> ServicesContainer:
 
     # application_container.services().init_resources()
 
-    application_container.config().backends.LIVEPREVIEW_ENABLED = True
-    application_container.config().backends.MAIN_BACKEND = EnumImageBackendsMain.VIRTUALCAMERA
-    application_container.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVEPREVIEW_ENABLED = True
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsMain.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     # deliver
     yield application_container.services()
@@ -74,7 +75,7 @@ def test_getimages_change_backend_during_runtime(services: ServicesContainer):
         img.verify()
 
     # now reconfigure
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
     # shutdown/init to restart resources
     services.shutdown_resources()
     # services.init_resources(), init is automatic if needed.
@@ -94,8 +95,8 @@ def test_getimages_change_backend_during_runtime(services: ServicesContainer):
 
 def test_nobackend_available_for_hq(services: ServicesContainer):
     # now reconfigure
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
 
     aquisition_service: AquisitionService = services.aquisition_service()
 
@@ -105,9 +106,9 @@ def test_nobackend_available_for_hq(services: ServicesContainer):
 
 def test_gen_stream(services: ServicesContainer):
     # now reconfigure
-    services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVEPREVIEW_ENABLED = True
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
 
     aquisition_service: AquisitionService = services.aquisition_service()
 
@@ -117,9 +118,9 @@ def test_gen_stream(services: ServicesContainer):
 
 def test_gen_stream_main_backend(services: ServicesContainer):
     # now reconfigure
-    services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVEPREVIEW_ENABLED = True
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
 
     aquisition_service: AquisitionService = services.aquisition_service()
 
@@ -130,9 +131,9 @@ def test_gen_stream_main_backend(services: ServicesContainer):
 
 def test_gen_stream_live_backend(services: ServicesContainer):
     # now reconfigure
-    services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVEPREVIEW_ENABLED = True
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     aquisition_service: AquisitionService = services.aquisition_service()
 
@@ -143,9 +144,9 @@ def test_gen_stream_live_backend(services: ServicesContainer):
 
 def test_get_stats(services: ServicesContainer):
     # now reconfigure
-    services.config().backends.LIVEPREVIEW_ENABLED = True
-    services.config().backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    services.config().backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVEPREVIEW_ENABLED = True
+    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
 
     aquisition_service: AquisitionService = services.aquisition_service()
 

@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 import photobooth.services.mediaprocessing.collage_pipelinestages as collage_stages
-from photobooth.appconfig import CollageMergeDefinition
+from photobooth.services.config.appconfig import CollageMergeDefinition
 
 logger = logging.getLogger(name=None)
 

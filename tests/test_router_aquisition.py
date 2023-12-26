@@ -9,6 +9,7 @@ from PIL import Image
 
 from photobooth.application import app
 from photobooth.services.aquisitionservice import AquisitionService
+from photobooth.services.config import appconfig
 
 
 @pytest.fixture
@@ -78,7 +79,7 @@ def test_stream(client: TestClient):
 
 def test_stream_exception_disabled(client: TestClient):
     # disable livestream
-    client.app.container.config().backends.LIVEPREVIEW_ENABLED = False
+    appconfig.backends.LIVEPREVIEW_ENABLED = False
 
     # shall result in error 405
     response = client.get("/aquisition/stream.mjpg")

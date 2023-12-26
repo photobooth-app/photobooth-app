@@ -3,9 +3,7 @@ import platform
 import time
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
 
 from .backends_utils import get_images
@@ -24,9 +22,7 @@ if not platform.system() == "Windows":
 @pytest.fixture()
 def backends() -> BackendsContainer:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
+    backends_container = BackendsContainer()
     # deliver
 
     # backends_container.config().backends.digicamcontrol_base_url = httpserver.url_for("/")

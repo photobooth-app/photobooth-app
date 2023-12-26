@@ -8,8 +8,8 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 import cv2
 from turbojpeg import TurboJPEG
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ..config import AppConfig, appconfig
 from .abstractbackend import (
     AbstractBackend,
     SharedMemoryDataExch,
@@ -28,10 +28,8 @@ class WebcamCv2Backend(AbstractBackend):
     opencv2 backend implementation for webcameras
     """
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
-
-        self._config = config
+    def __init__(self):
+        super().__init__()
 
         self._img_buffer_lores: SharedMemoryDataExch = None
         self._img_buffer_hires: SharedMemoryDataExch = None
@@ -75,7 +73,7 @@ class WebcamCv2Backend(AbstractBackend):
                 self._event_hq_capture,
                 self._img_buffer_lores.condition,
                 self._img_buffer_hires.condition,
-                self._config,
+                appconfig,
                 self._event_proc_shutdown,
             ),
             daemon=True,

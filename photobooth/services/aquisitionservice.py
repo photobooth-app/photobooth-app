@@ -3,9 +3,9 @@ manage up to two photobooth-app backends in this module
 """
 import dataclasses
 
-from ..appconfig import AppConfig
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
+from .config import appconfig
 from .sseservice import SseService
 
 
@@ -20,14 +20,11 @@ class AquisitionService(BaseService):
 
     def __init__(
         self,
-        config: AppConfig,
         sse_service: SseService,
         primary_backend: AbstractBackend,
         secondary_backend: AbstractBackend,
     ):
-        super().__init__(config=config, sse_service=sse_service)
-
-        self._LIVEPREVIEW_ENABLED = config.backends.LIVEPREVIEW_ENABLED
+        super().__init__(sse_service=sse_service)
 
         # public
         self.primary_backend: AbstractBackend = primary_backend
@@ -43,7 +40,7 @@ class AquisitionService(BaseService):
         """
         assigns a backend to generate a stream
         """
-        if self._LIVEPREVIEW_ENABLED:
+        if appconfig.backends.LIVEPREVIEW_ENABLED:
             if self.secondary_backend:
                 self._logger.info("livestream requested from secondary backend")
                 return self.secondary_backend.gen_stream()

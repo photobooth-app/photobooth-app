@@ -1,10 +1,9 @@
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from dependency_injector.wiring import inject
+from fastapi import APIRouter
 
-from ...appconfig import AppConfig
-from ...containers import ApplicationContainer
+from ...services.config import AppConfig, appconfig
 
 logger = logging.getLogger(__name__)
 admin_config_router = APIRouter(
@@ -19,28 +18,24 @@ def api_get_config_schema(schema_type: str = "default"):
     Get schema to build the client UI
     :param str schema_type: default or dereferenced.
     """
-    return AppConfig().get_schema(schema_type=schema_type)
+    return appconfig.get_schema(schema_type=schema_type)
 
 
 @admin_config_router.get("/reset")
 @inject
-def api_reset_config(
-    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
-):
+def api_reset_config():
     """
     Reset config, deleting config.json file
 
     """
-    config.deleteconfig()  #  delete file
+    appconfig.deleteconfig()  #  delete file
 
 
 @admin_config_router.get("/currentActive")
 @inject
-def api_get_config_current_active(
-    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
-):
+def api_get_config_current_active():
     """returns currently cached and active settings"""
-    return config
+    return appconfig
 
 
 @admin_config_router.get("/current")
@@ -53,15 +48,13 @@ def api_get_config_current():
 @inject
 def api_post_config_current(
     updated_config: AppConfig,
-    # appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
-    config: AppConfig = Depends(Provide[ApplicationContainer.config]),
 ):
     # save settings to disc
     updated_config.persist()
 
     # update central config to make new config avail immediately
     # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
-    config.__dict__.update(updated_config)
+    appconfig.__dict__.update(updated_config)
 
     # appcontainer.shutdown_resources()
     # appcontainer.init_resources()

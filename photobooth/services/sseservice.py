@@ -16,7 +16,6 @@ from typing import Any
 from fastapi import Request
 from sse_starlette import ServerSentEvent
 
-from ..appconfig import AppConfig
 from .mediacollection.mediaitem import MediaItem
 from .processing.jobmodels import JobModel
 
@@ -201,9 +200,7 @@ class Client:
 
 
 class SseService:
-    def __init__(self, config: AppConfig):
-        self._config = config
-
+    def __init__(self):
         # keep track of client connections with each individual request and queue.
         self._clients: [Client] = []
 

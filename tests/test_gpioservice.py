@@ -7,6 +7,7 @@ from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
@@ -85,7 +86,7 @@ def test_button_takecollage(services: ServicesContainer):
 
 @patch("subprocess.run")
 def test_button_print(mock_run, services: ServicesContainer):
-    services.config().hardwareinputoutput.printing_enabled = True
+    appconfig.hardwareinputoutput.printing_enabled = True
 
     # emulate gpio active low driven (simulates button press)
     services.gpio_service().print_recent_item_btn.pin.drive_low()

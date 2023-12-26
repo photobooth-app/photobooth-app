@@ -7,8 +7,8 @@ import psutil
 
 from photobooth.utils.stoppablethread import StoppableThread
 
-from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import (
     PATH_FULL,
     PATH_FULL_UNPROCESSED,
@@ -20,13 +20,13 @@ LIST_FOLDERS_TO_COPY = [PATH_ORIGINAL, PATH_FULL, PATH_FULL_UNPROCESSED]
 
 
 class FileTransferService(BaseService):
-    def __init__(self, config: AppConfig, sse_service: SseService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService):
+        super().__init__(sse_service)
 
         self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
 
     def start(self):
-        if not self._config.filetransfer.enabled:
+        if not appconfig.filetransfer.enabled:
             self._logger.info("FileTransferService disabled, start aborted.")
             return
 
@@ -89,11 +89,11 @@ class FileTransferService(BaseService):
         return sum(f.stat().st_size for f in path.glob("**/*") if f.is_file())
 
     def copy_folders_to_usb(self, usb_path):
-        if not self._config.filetransfer.target_folder_name:
+        if not appconfig.filetransfer.target_folder_name:
             self._logger.warn("Target USB parent foldername cannot be empty")
             return
 
-        destination_path = Path(usb_path, self._config.filetransfer.target_folder_name)
+        destination_path = Path(usb_path, appconfig.filetransfer.target_folder_name)
 
         try:
             os.makedirs(destination_path, exist_ok=True)

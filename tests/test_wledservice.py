@@ -4,6 +4,7 @@ import time
 import pytest
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -24,7 +25,7 @@ def services() -> ServicesContainer:
 def test_disabled(services: ServicesContainer):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    services.config().hardwareinputoutput.wled_enabled = False
+    appconfig.hardwareinputoutput.wled_enabled = False
 
     try:
         wled_service = services.wled_service()
@@ -39,8 +40,8 @@ def test_disabled(services: ServicesContainer):
 def test_enabled_nonexistentserialport(services: ServicesContainer):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    services.config().hardwareinputoutput.wled_enabled = True
-    services.config().hardwareinputoutput.wled_serial_port = "nonexistentserialport"
+    appconfig.hardwareinputoutput.wled_enabled = True
+    appconfig.hardwareinputoutput.wled_serial_port = "nonexistentserialport"
 
     # start service on nonexistant port shall not fail - it tries to reconnect and never shall fail
     services.wled_service()

@@ -5,7 +5,6 @@ import logging
 
 from dependency_injector import containers, providers
 
-from ..appconfig import AppConfig
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .filtetransferservice import FileTransferService
@@ -24,7 +23,7 @@ from .wledservice import WledService
 logger = logging.getLogger(__name__)
 
 
-def init_res_obj_service(_obj_: BaseService, config: AppConfig, sse_service: SseService, *args):
+def init_res_obj_service(_obj_: BaseService, sse_service: SseService, *args):
     """Initialize services as ressources.
     Ensure to no reraise exceptions, so only the service will fail instead the
     whole app crash because of exception not catched
@@ -40,7 +39,7 @@ def init_res_obj_service(_obj_: BaseService, config: AppConfig, sse_service: Sse
     resource = None
 
     try:
-        resource = _obj_(config, sse_service, *args)
+        resource = _obj_(sse_service, *args)
         resource.start()
     except Exception as exc:
         logger.exception(exc)
@@ -57,7 +56,6 @@ def init_res_obj_service(_obj_: BaseService, config: AppConfig, sse_service: Sse
 
 
 class ServicesContainer(containers.DeclarativeContainer):
-    config = providers.Dependency(instance_of=AppConfig)
     sse_service = providers.Dependency(instance_of=SseService)
     backends = providers.DependenciesContainer()
 
@@ -66,7 +64,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     aquisition_service = providers.Resource(
         init_res_obj_service,
         AquisitionService,
-        config,
         sse_service,
         backends.primary_backend,
         backends.secondary_backend,
@@ -75,7 +72,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     information_service = providers.Resource(
         init_res_obj_service,
         InformationService,
-        config,
         sse_service,
         aquisition_service,
     )
@@ -83,25 +79,21 @@ class ServicesContainer(containers.DeclarativeContainer):
     wled_service = providers.Resource(
         init_res_obj_service,
         WledService,
-        config,
         sse_service,
     )
 
     mediaprocessing_service = providers.Singleton(
         MediaprocessingService,
-        config,
         sse_service,
     )
     mediacollection_service = providers.Singleton(
         MediacollectionService,
-        config,
         sse_service,
         mediaprocessing_service,
     )
 
     processing_service = providers.Singleton(
         ProcessingService,
-        config,
         sse_service,
         aquisition_service,
         mediacollection_service,
@@ -111,14 +103,12 @@ class ServicesContainer(containers.DeclarativeContainer):
 
     system_service = providers.Factory(
         SystemService,
-        config,
         sse_service,
     )
 
     printing_service = providers.Resource(
         init_res_obj_service,
         PrintingService,
-        config,
         sse_service,
         mediacollection_service,
     )
@@ -126,7 +116,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     keyboard_service = providers.Resource(
         init_res_obj_service,
         KeyboardService,
-        config,
         sse_service,
         processing_service,
         printing_service,
@@ -136,7 +125,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     gpio_service = providers.Resource(
         init_res_obj_service,
         GpioService,
-        config,
         sse_service,
         processing_service,
         printing_service,
@@ -146,7 +134,6 @@ class ServicesContainer(containers.DeclarativeContainer):
     share_service = providers.Resource(
         init_res_obj_service,
         ShareService,
-        config,
         sse_service,
         mediacollection_service,
     )
@@ -154,6 +141,5 @@ class ServicesContainer(containers.DeclarativeContainer):
     filetransfer_service = providers.Resource(
         init_res_obj_service,
         FileTransferService,
-        config,
         sse_service,
     )

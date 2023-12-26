@@ -4,11 +4,10 @@ import os
 import platform
 
 import pytest
-from dependency_injector import providers
 from PIL import Image
 
-from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
+from photobooth.services.config import appconfig
 
 from .backends_utils import get_images
 
@@ -66,9 +65,7 @@ def has_vcam():
 @pytest.fixture()
 def backends() -> BackendsContainer:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
+    backends_container = BackendsContainer()
     # deliver
     yield backends_container
     backends_container.shutdown_resources()
@@ -89,7 +86,7 @@ def test_get_images_webcamv4l(backends: BackendsContainer):
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
-    backends.config().backends.v4l_device_index = cameraIndex
+    appconfig.backends.v4l_device_index = cameraIndex
 
     # get lores and hires images from backend and assert
     webcamv4l_backend = backends.webcamv4l_backend()

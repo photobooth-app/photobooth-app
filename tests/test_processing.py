@@ -4,6 +4,7 @@ import pytest
 import statemachine.exceptions
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -23,7 +24,7 @@ def services() -> ServicesContainer:
 
 def test_capture(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
-    services.config().common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     services.processing_service().start_job_1pic()
 
@@ -32,7 +33,7 @@ def test_capture(services: ServicesContainer):
 
 def test_capture_autoconfirm(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
-    services.config().common.collage_automatic_capture_continue = True
+    appconfig.common.collage_automatic_capture_continue = True
 
     services.processing_service().start_job_1pic()
 
@@ -41,7 +42,7 @@ def test_capture_autoconfirm(services: ServicesContainer):
 
 def test_capture_zero_countdown(services: ServicesContainer):
     """this function processes single images (in contrast to collages or videos)"""
-    services.config().common.countdown_capture_first = 0
+    appconfig.common.countdown_capture_first = 0
 
     services.processing_service().start_job_1pic()
 
@@ -64,7 +65,7 @@ def test_simple_capture_illegal_jobs(services: ServicesContainer):
 
 
 def test_collage(services: ServicesContainer):
-    services.config().common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     services.processing_service().start_job_collage()
 
@@ -77,7 +78,7 @@ def test_collage(services: ServicesContainer):
 
 
 def test_collage_autoconfirm(services: ServicesContainer):
-    services.config().common.collage_automatic_capture_continue = True
+    appconfig.common.collage_automatic_capture_continue = True
 
     services.processing_service().start_job_collage()
 
@@ -85,7 +86,7 @@ def test_collage_autoconfirm(services: ServicesContainer):
 
 
 def test_collage_manual_confirm(services: ServicesContainer):
-    services.config().common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     services.processing_service().start_job_collage()
 
@@ -98,7 +99,7 @@ def test_collage_manual_confirm(services: ServicesContainer):
 
 
 def test_collage_manual_reject(services: ServicesContainer):
-    services.config().common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     services.processing_service().start_job_collage()
 
@@ -114,7 +115,7 @@ def test_collage_manual_reject(services: ServicesContainer):
 
 
 def test_collage_manual_abort(services: ServicesContainer):
-    services.config().common.collage_automatic_capture_continue = False
+    appconfig.common.collage_automatic_capture_continue = False
 
     services.processing_service().start_job_collage()
 

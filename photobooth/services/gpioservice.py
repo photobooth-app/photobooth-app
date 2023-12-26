@@ -8,10 +8,10 @@ import subprocess
 
 from gpiozero import Button
 
-from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
@@ -28,13 +28,12 @@ class GpioService(BaseService):
 
     def __init__(
         self,
-        config: AppConfig,
         sse_service: SseService,
         processing_service: ProcessingService,
         printing_service: PrintingService,
         mediacollection_service: MediacollectionService,
     ):
-        super().__init__(config=config, sse_service=sse_service)
+        super().__init__(sse_service=sse_service)
 
         self._processing_service = processing_service
         self._printing_service = printing_service
@@ -49,7 +48,7 @@ class GpioService(BaseService):
         # output signals
         # none yet
 
-        if self._config.hardwareinputoutput.gpio_enabled:
+        if appconfig.hardwareinputoutput.gpio_enabled:
             if is_rpi():
                 self.init_io()
                 self._logger.info("gpio enabled - listeners installed")
@@ -61,25 +60,25 @@ class GpioService(BaseService):
 
     def init_io(self):
         self.shutdown_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_shutdown,
+            appconfig.hardwareinputoutput.gpio_pin_shutdown,
             hold_time=HOLD_TIME_SHUTDOWN,
             bounce_time=DEBOUNCE_TIME,
         )
         self.reboot_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_reboot,
+            appconfig.hardwareinputoutput.gpio_pin_reboot,
             hold_time=HOLD_TIME_REBOOT,
             bounce_time=DEBOUNCE_TIME,
         )
         self.take1pic_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_take1pic,
+            appconfig.hardwareinputoutput.gpio_pin_take1pic,
             bounce_time=DEBOUNCE_TIME,
         )
         self.takecollage_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_collage,
+            appconfig.hardwareinputoutput.gpio_pin_collage,
             bounce_time=DEBOUNCE_TIME,
         )
         self.print_recent_item_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_print_recent_item,
+            appconfig.hardwareinputoutput.gpio_pin_print_recent_item,
             bounce_time=DEBOUNCE_TIME,
         )
 

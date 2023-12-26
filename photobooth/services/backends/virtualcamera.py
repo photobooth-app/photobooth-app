@@ -12,8 +12,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ..config import appconfig
 from .abstractbackend import (
     AbstractBackend,
     compile_buffer,
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
 
         self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
@@ -56,7 +56,7 @@ class VirtualCameraBackend(AbstractBackend):
                 self._condition_img_buffer_ready,
                 self._img_buffer_lock,
                 self._event_proc_shutdown,
-                self._config.uisettings.livestream_mirror_effect,
+                appconfig.uisettings.livestream_mirror_effect,
             ),
             daemon=True,
         )

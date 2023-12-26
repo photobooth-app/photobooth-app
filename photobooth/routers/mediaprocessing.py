@@ -5,8 +5,9 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from PIL import Image
 
-from ..appconfig import EnumPilgramFilter
 from ..containers import ApplicationContainer
+from ..services.config import appconfig
+from ..services.config.appconfig import EnumPilgramFilter
 from ..services.mediacollectionservice import MediacollectionService
 from ..services.mediaprocessing.image_pipelinestages import pilgram_stage
 from ..services.mediaprocessingservice import MediaprocessingService
@@ -66,14 +67,10 @@ def api_get_applyfilter(
     mediaprocessing_service: MediaprocessingService = Depends(Provide[ApplicationContainer.services.mediaprocessing_service]),
 ):
     try:
-        if not mediaprocessing_service._config.mediaprocessing_pipeline_singleimage.pipeline_enable:
-            raise RuntimeError("singleimage pipeline needs to be enabled!")
-
         mediaitem = mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
         # create updated config that is the image is processed according to
-        config = mediaprocessing_service._config.mediaprocessing_pipeline_singleimage.model_copy()
-
+        config = appconfig.mediaprocessing_pipeline_singleimage.model_copy()
         config.filter = EnumPilgramFilter(filter)
 
         mediaprocessing_service.process_singleimage(mediaitem, config)

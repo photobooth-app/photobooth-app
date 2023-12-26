@@ -7,9 +7,9 @@ import time
 
 import requests
 
-from ..appconfig import AppConfig
 from ..utils.stoppablethread import StoppableThread
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollectionservice import MediacollectionService
 from .sseservice import SseService
 
@@ -17,8 +17,8 @@ from .sseservice import SseService
 class ShareService(BaseService):
     """_summary_"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService, mediacollection_service: MediacollectionService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService):
+        super().__init__(sse_service)
 
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -30,7 +30,7 @@ class ShareService(BaseService):
 
         self._logger.info("checking shareservice api endpoint")
         try:
-            r = requests.get(self._config.sharing.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
+            r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
         except Exception as exc:
             self._logger.warning(f"error checking shareservice api endpoint: {exc}")
         else:
@@ -48,7 +48,7 @@ class ShareService(BaseService):
 
     def start(self):
         """_summary_"""
-        if not self._config.sharing.shareservice_enabled:
+        if not appconfig.sharing.shareservice_enabled:
             self._logger.info("shareservice disabled, start aborted.")
             return
         self._initialize()
@@ -76,7 +76,7 @@ class ShareService(BaseService):
             payload = {"action": "upload_queue"}
             try:
                 r = requests.get(
-                    self._config.sharing.shareservice_url,
+                    appconfig.sharing.shareservice_url,
                     params=payload,
                     stream=True,
                     timeout=8,
@@ -130,7 +130,7 @@ class ShareService(BaseService):
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
-                            if self._config.sharing.shareservice_share_original:
+                            if appconfig.sharing.shareservice_share_original:
                                 filepath_to_upload = mediaitem_to_upload.path_original
                             else:
                                 filepath_to_upload = mediaitem_to_upload.path_full
@@ -144,11 +144,11 @@ class ShareService(BaseService):
 
                         try:
                             r = requests.post(
-                                self._config.sharing.shareservice_url,
+                                appconfig.sharing.shareservice_url,
                                 files=request_upload_file,
                                 data={
                                     "action": "upload",
-                                    "apikey": self._config.sharing.shareservice_apikey,
+                                    "apikey": appconfig.sharing.shareservice_apikey,
                                     "id": decoded_line["file_identifier"],
                                 },
                                 timeout=9,

@@ -13,8 +13,8 @@ from dependency_injector.wiring import Provide, inject
 from photobooth.__version__ import __version__
 from photobooth.application import app
 
-from .appconfig import AppConfig
 from .containers import ApplicationContainer
+from .services.config import appconfig
 from .services.loggingservice import LoggingService
 
 logger = logging.getLogger(f"{__name__}")
@@ -22,7 +22,6 @@ logger = logging.getLogger(f"{__name__}")
 
 @inject
 def _server(
-    config: AppConfig = Provide[ApplicationContainer.config],
     logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
 ) -> uvicorn.Server:
     logger.info("Welcome to photobooth-app")
@@ -41,8 +40,8 @@ def _server(
     server = uvicorn.Server(
         uvicorn.Config(
             app=app,
-            host=config.common.webserver_bind_ip,
-            port=config.common.webserver_port,
+            host=appconfig.common.webserver_bind_ip,
+            port=appconfig.common.webserver_port,
             log_level="debug",
         )
     )

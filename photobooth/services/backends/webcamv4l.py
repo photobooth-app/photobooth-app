@@ -4,8 +4,8 @@ v4l webcam implementation backend
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ..config import AppConfig, appconfig
 from .abstractbackend import (
     AbstractBackend,
     SharedMemoryDataExch,
@@ -30,10 +30,8 @@ class WebcamV4lBackend(AbstractBackend):
         AbstractBackend (_type_): _description_
     """
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
-
-        self._config = config
+    def __init__(self):
+        super().__init__()
 
         self._img_buffer: SharedMemoryDataExch = None
         self._event_proc_shutdown: Event = Event()
@@ -52,7 +50,7 @@ class WebcamV4lBackend(AbstractBackend):
             lock=Lock(),
         )
 
-        logger.info(f"starting webcam process, {self._config.backends.v4l_device_index=}")
+        logger.info(f"starting webcam process, {appconfig.backends.v4l_device_index=}")
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
@@ -63,7 +61,7 @@ class WebcamV4lBackend(AbstractBackend):
                 self._img_buffer.lock,
                 # need to pass config, because unittests can change config,
                 # if not passed, the config are not available in the separate process!
-                self._config,
+                appconfig,
                 self._event_proc_shutdown,
             ),
             daemon=True,

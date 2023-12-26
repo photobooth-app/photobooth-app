@@ -12,9 +12,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,7 @@ class AbstractBackend(ABC):
     """
 
     @abstractmethod
-    def __init__(self, config: AppConfig):
-        self._config = config
+    def __init__(self):
         self._backendstats: BackendStats = BackendStats(
             backend_name=self.__class__.__name__,
         )
@@ -151,7 +150,7 @@ class AbstractBackend(ABC):
         last_time = time.time_ns()
         while True:
             now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
@@ -166,7 +165,7 @@ class AbstractBackend(ABC):
                     output_jpeg_bytes = self._substitute_image(
                         "Oh no - stream error :(",
                         "timeout, no preview from cam. retrying.",
-                        self._config.uisettings.livestream_mirror_effect,
+                        appconfig.uisettings.livestream_mirror_effect,
                     )
                 except Exception as exc:
                     # this error probably cannot recover.
@@ -175,7 +174,7 @@ class AbstractBackend(ABC):
                     output_jpeg_bytes = self._substitute_image(
                         "Oh no - stream error :(",
                         "exception, unknown error getting preview.",
-                        self._config.uisettings.livestream_mirror_effect,
+                        appconfig.uisettings.livestream_mirror_effect,
                     )
 
                 yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")

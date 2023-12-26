@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -25,8 +26,11 @@ def services() -> ServicesContainer:
     services.shutdown_resources()
 
 
-def test_print_service_disabled(services: ServicesContainer):
+@patch("subprocess.run")
+def test_print_service_disabled(mock_run, services: ServicesContainer):
     """service is disabled by default - test for that."""
+
+    appconfig.hardwareinputoutput.printing_enabled = False
 
     # init when called
     printing_service = services.printing_service()
@@ -37,12 +41,14 @@ def test_print_service_disabled(services: ServicesContainer):
     with pytest.raises(ConnectionRefusedError):
         printing_service.print(latest_mediaitem)
 
+    assert not mock_run.called
+
 
 @patch("subprocess.run")
 def test_print_image(mock_run, services: ServicesContainer):
     """enable service and try to print"""
 
-    services.config().hardwareinputoutput.printing_enabled = True
+    appconfig.hardwareinputoutput.printing_enabled = True
 
     # init when called
     printing_service = services.printing_service()
@@ -62,8 +68,8 @@ def test_print_image(mock_run, services: ServicesContainer):
 def test_print_image_blocked(mock_run, services: ServicesContainer):
     """enable service and try to print, check that it repsonds blocking correctly"""
 
-    services.config().hardwareinputoutput.printing_enabled = True
-    services.config().hardwareinputoutput.printing_blocked_time = 2
+    appconfig.hardwareinputoutput.printing_enabled = True
+    appconfig.hardwareinputoutput.printing_blocked_time = 2
 
     # init when called
     printing_service = services.printing_service()

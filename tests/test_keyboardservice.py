@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 from photobooth.vendor.packages.keyboard.keyboard import KEY_DOWN
 from photobooth.vendor.packages.keyboard.keyboard._keyboard_event import KeyboardEvent
@@ -27,8 +28,8 @@ def test_key_callback_takepic(services: ServicesContainer):
     """try to emulate key presses as best as possible without actual hardware/user input"""
 
     # modify config
-    services.config().hardwareinputoutput.keyboard_input_enabled = True
-    services.config().hardwareinputoutput.keyboard_input_keycode_takepic = "a"
+    appconfig.hardwareinputoutput.keyboard_input_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_keycode_takepic = "a"
 
     keyboard_service = services.keyboard_service()
 
@@ -44,8 +45,8 @@ def test_key_callback_takecollage(services: ServicesContainer):
     """try to emulate key presses as best as possible without actual hardware/user input"""
 
     # modify config
-    services.config().hardwareinputoutput.keyboard_input_enabled = True
-    services.config().hardwareinputoutput.keyboard_input_keycode_takecollage = "c"
+    appconfig.hardwareinputoutput.keyboard_input_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage = "c"
 
     keyboard_service = services.keyboard_service()
 
@@ -62,9 +63,9 @@ def test_key_callback_print(mock_run, services: ServicesContainer):
     """try to emulate key presses as best as possible without actual hardware/user input"""
 
     # modify config
-    services.config().hardwareinputoutput.keyboard_input_enabled = True
-    services.config().hardwareinputoutput.keyboard_input_keycode_print_recent_item = "b"
-    services.config().hardwareinputoutput.printing_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item = "b"
+    appconfig.hardwareinputoutput.printing_enabled = True
 
     keyboard_service = services.keyboard_service()
 

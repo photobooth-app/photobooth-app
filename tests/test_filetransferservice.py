@@ -5,6 +5,7 @@ import psutil
 import pytest
 
 from photobooth.containers import ApplicationContainer
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 
 logger = logging.getLogger(name=None)
@@ -35,7 +36,7 @@ def test_filetransfer_service_disabled(services: ServicesContainer):
 def test_filetransfer_service_enabled(services: ServicesContainer):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
+    appconfig.filetransfer.enabled = True
 
     # init when called
     filetransfer_service = services.filetransfer_service()
@@ -47,7 +48,7 @@ def test_filetransfer_service_enabled(services: ServicesContainer):
 def test_filetransfer_handle_unmount(services: ServicesContainer):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
+    appconfig.filetransfer.enabled = True
 
     # init when called
     filetransfer_service = services.filetransfer_service()
@@ -59,7 +60,7 @@ def test_filetransfer_handle_unmount(services: ServicesContainer):
 def test_filetransfer_handle_mount(mock_copytree, services: ServicesContainer):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
+    appconfig.filetransfer.enabled = True
 
     # init when called
     filetransfer_service = services.filetransfer_service()
@@ -74,8 +75,8 @@ def test_filetransfer_handle_mount(mock_copytree, services: ServicesContainer):
 def test_filetransfer_handle_mount_no_target_name(mock_copytree, services: ServicesContainer):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
-    services.config().filetransfer.target_folder_name = ""
+    appconfig.filetransfer.enabled = True
+    appconfig.filetransfer.target_folder_name = ""
 
     # init when called
     filetransfer_service = services.filetransfer_service()

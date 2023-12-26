@@ -4,8 +4,8 @@ Handle all media collection related functions
 import subprocess
 import time
 
-from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .sseservice import SseService
@@ -16,8 +16,8 @@ TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 class PrintingService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService, mediacollection_service: MediacollectionService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService):
+        super().__init__(sse_service)
 
         # common objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -29,7 +29,7 @@ class PrintingService(BaseService):
     def print(self, mediaitem: MediaItem):
         ## print mediaitem
 
-        if not self._config.hardwareinputoutput.printing_enabled:
+        if not appconfig.hardwareinputoutput.printing_enabled:
             raise ConnectionRefusedError("Printing is disabled! Enable in config first.")
 
         # block queue new prints until configured time is over
@@ -44,7 +44,7 @@ class PrintingService(BaseService):
             self._logger.info(f"printing {filename=}")
 
             completed_process = subprocess.run(
-                str(self._config.hardwareinputoutput.printing_command).format(filename=filename),
+                str(appconfig.hardwareinputoutput.printing_command).format(filename=filename),
                 capture_output=True,
                 check=True,
                 timeout=TIMEOUT_PROCESS_RUN,
@@ -70,12 +70,12 @@ class PrintingService(BaseService):
             return 0.0
 
         delta = time.time() - self._last_print_time
-        if delta >= self._config.hardwareinputoutput.printing_blocked_time:
+        if delta >= appconfig.hardwareinputoutput.printing_blocked_time:
             # last print is longer than configured time in the past - return 0 to indicate no wait time
             return 0.0
         else:
             # there is some time to wait left.
-            return self._config.hardwareinputoutput.printing_blocked_time - delta
+            return appconfig.hardwareinputoutput.printing_blocked_time - delta
 
     def _start_time_blocked(self):
         self._last_print_time = time.time()

@@ -1,9 +1,7 @@
 import logging
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
 from photobooth.services.backends.containers import BackendsContainer
 from photobooth.utils.helper import is_rpi
 
@@ -35,9 +33,7 @@ def check_focusavail_skip():
 @pytest.fixture()
 def backends() -> BackendsContainer:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
+    backends_container = BackendsContainer()
     # deliver
     yield backends_container
     backends_container.shutdown_resources()

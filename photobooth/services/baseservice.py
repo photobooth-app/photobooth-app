@@ -3,7 +3,6 @@
 import logging
 from enum import Enum, auto
 
-from ..appconfig import AppConfig
 from .sseservice import SseService
 
 
@@ -26,12 +25,11 @@ class BaseService:
 
     _status = EnumStatus.uninitialized
 
-    def __init__(self, config: AppConfig, sse_service: SseService) -> None:
+    def __init__(self, sse_service: SseService) -> None:
         self._logger = logging.getLogger(
             f"{__name__}.{self.__class__.__name__}",
         )
 
-        self._config = config
         self._sse_service = sse_service
 
         self.set_status_initialized()
