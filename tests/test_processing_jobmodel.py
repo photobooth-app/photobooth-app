@@ -1,11 +1,10 @@
 import logging
 import time
-from importlib import reload
 
-import photobooth.services.config
+from photobooth.services.config import AppConfig, appconfig
 from photobooth.services.processing.jobmodels import CountdownTimer, JobModel
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 logger = logging.getLogger(name=None)
 
 

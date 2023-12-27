@@ -1,16 +1,14 @@
 import time
-from importlib import reload
 from unittest import mock
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-import photobooth.services.config
 from photobooth.application import app
-from photobooth.services.config import appconfig
+from photobooth.services.config import AppConfig, appconfig
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 
 
 @pytest.fixture

@@ -2,21 +2,19 @@
 Testing mediaprocessing singleimages pipeline
 """
 import logging
-from importlib import reload
 
 import pytest
 from PIL import Image
 from pydantic_extra_types.color import Color
 
-import photobooth.services.config
 import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
-from photobooth.services.config.appconfig import AppConfig
+from photobooth.services.config import AppConfig, appconfig
 from photobooth.services.config.groups.mediaprocessing import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
 from .image_utils import is_same
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 
 logger = logging.getLogger(name=None)
 

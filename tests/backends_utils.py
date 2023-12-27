@@ -1,12 +1,11 @@
 import io
-from importlib import reload
 
 from PIL import Image
 
-import photobooth.services.config
 from photobooth.services.backends.abstractbackend import AbstractBackend
+from photobooth.services.config import AppConfig, appconfig
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 
 
 def get_images(backend: AbstractBackend):

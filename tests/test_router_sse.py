@@ -1,14 +1,13 @@
 import logging
-from importlib import reload
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx_sse import connect_sse
 
-import photobooth.services.config
 from photobooth.application import app
+from photobooth.services.config import AppConfig, appconfig
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 logger = logging.getLogger(name=None)
 
 

@@ -1,17 +1,16 @@
 import io
 import logging
-from importlib import reload
 
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-import photobooth.services.config
 from photobooth.application import app
+from photobooth.services.config import AppConfig, appconfig
 
 from .image_utils import is_same
 
-reload(photobooth.services.config)  # reset config to defaults.
+appconfig.__dict__.update(AppConfig())
 logger = logging.getLogger(name=None)
 
 
