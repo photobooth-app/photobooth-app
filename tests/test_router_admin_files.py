@@ -1,12 +1,16 @@
 import os
 from dataclasses import asdict
+from importlib import reload
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
+import photobooth.services.config
 from photobooth.application import app
 from photobooth.routers.admin.files import PathListItem
+
+reload(photobooth.services.config)  # reset config to defaults.
 
 
 @pytest.fixture

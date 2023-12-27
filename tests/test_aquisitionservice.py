@@ -1,11 +1,13 @@
 import io
 import logging
+from importlib import reload
 from unittest import mock
 from unittest.mock import patch
 
 import pytest
 from PIL import Image
 
+import photobooth.services.config
 from photobooth.containers import ApplicationContainer
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
@@ -15,6 +17,7 @@ from photobooth.services.config.groups.backends import (
 )
 from photobooth.services.containers import ServicesContainer
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

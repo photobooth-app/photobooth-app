@@ -1,13 +1,16 @@
 import logging
 import time
+from importlib import reload
 from unittest.mock import patch
 
 import pytest
 
+import photobooth.services.config
 from photobooth.containers import ApplicationContainer
 from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

@@ -1,7 +1,11 @@
 import logging
+from importlib import reload
 
 from PIL import Image, ImageChops
 
+import photobooth.services.config
+
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

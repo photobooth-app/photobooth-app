@@ -1,7 +1,12 @@
+from importlib import reload
+
 import pytest
 from fastapi.testclient import TestClient
 
+import photobooth.services.config
 from photobooth.application import app
+
+reload(photobooth.services.config)  # reset config to defaults.
 
 
 @pytest.fixture

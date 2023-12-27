@@ -4,9 +4,13 @@ Testing main
 
 import logging
 import socket
+from importlib import reload
 
 import pytest
 
+import photobooth.services.config
+
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

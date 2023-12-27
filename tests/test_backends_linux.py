@@ -2,14 +2,17 @@ import io
 import logging
 import os
 import platform
+from importlib import reload
 
 import pytest
 from PIL import Image
 
+import photobooth.services.config
 from photobooth.services.config import appconfig
 
 from .backends_utils import get_images
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 """

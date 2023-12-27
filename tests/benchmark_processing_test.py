@@ -1,10 +1,13 @@
 import logging
+from importlib import reload
 
 import pytest
 
+import photobooth.services.config
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

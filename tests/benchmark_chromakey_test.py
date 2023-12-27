@@ -1,4 +1,5 @@
 import logging
+from importlib import reload
 
 import cv2
 import numpy as np
@@ -6,6 +7,9 @@ import pytest
 from PIL import Image
 from turbojpeg import TurboJPEG
 
+import photobooth.services.config
+
+reload(photobooth.services.config)  # reset config to defaults.
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 

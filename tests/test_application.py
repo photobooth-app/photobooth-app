@@ -4,13 +4,16 @@ Testing virtual camera Backend
 import json
 import logging
 import os
+from importlib import reload
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+import photobooth.services.config
 from photobooth.services.config import AppConfig
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

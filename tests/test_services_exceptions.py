@@ -2,15 +2,18 @@
 Testing exceptions in backends
 """
 import logging
+from importlib import reload
 from unittest import mock
 from unittest.mock import patch
 
 import pytest
 
+import photobooth.services.config
 from photobooth.containers import ApplicationContainer
 from photobooth.services.containers import ServicesContainer
 from photobooth.services.informationservice import InformationService
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

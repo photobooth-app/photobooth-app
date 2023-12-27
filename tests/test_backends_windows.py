@@ -1,13 +1,16 @@
 import logging
 import platform
 import time
+from importlib import reload
 
 import pytest
 
+import photobooth.services.config
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 
 from .backends_utils import get_images
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

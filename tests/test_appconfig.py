@@ -2,9 +2,12 @@
 Testing virtual camera Backend
 """
 import logging
+from importlib import reload
 
+import photobooth.services.config
 from photobooth.services.config import AppConfig, appconfig
 
+reload(photobooth.services.config)  # reset config to defaults.
 logger = logging.getLogger(name=None)
 
 

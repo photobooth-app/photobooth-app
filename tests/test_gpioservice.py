@@ -1,19 +1,20 @@
 import logging
 import time
+from importlib import reload
 from unittest.mock import patch
 
 import pytest
 from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
 
+import photobooth.services.config
 from photobooth.containers import ApplicationContainer
 from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
+reload(photobooth.services.config)  # reset config to defaults.
 Device.pin_factory = MockFactory()
-
-
 logger = logging.getLogger(name=None)
 
 
