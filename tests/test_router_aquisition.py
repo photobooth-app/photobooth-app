@@ -1,4 +1,5 @@
 import io
+import logging
 import time
 from unittest import mock
 from unittest.mock import patch
@@ -9,9 +10,16 @@ from PIL import Image
 
 from photobooth.application import app
 from photobooth.services.aquisitionservice import AquisitionService
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 
-appconfig.__dict__.update(AppConfig())
+logger = logging.getLogger(name=None)
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture

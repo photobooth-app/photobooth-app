@@ -4,12 +4,19 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.containers import ApplicationContainer
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 from photobooth.services.containers import ServicesContainer
 from photobooth.vendor.packages.keyboard.keyboard import KEY_DOWN
 from photobooth.vendor.packages.keyboard.keyboard._keyboard_event import KeyboardEvent
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
+
 logger = logging.getLogger(name=None)
 
 

@@ -8,14 +8,21 @@ from PIL import Image
 
 from photobooth.containers import ApplicationContainer
 from photobooth.services.aquisitionservice import AquisitionService
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import (
     EnumImageBackendsLive,
     EnumImageBackendsMain,
 )
 from photobooth.services.containers import ServicesContainer
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
+
 logger = logging.getLogger(name=None)
 
 

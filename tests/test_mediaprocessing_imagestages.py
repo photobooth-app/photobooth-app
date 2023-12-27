@@ -14,7 +14,13 @@ from photobooth.utils.exceptions import PipelineError
 
 from .image_utils import is_same
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 

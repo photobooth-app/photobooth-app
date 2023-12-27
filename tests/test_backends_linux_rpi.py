@@ -2,12 +2,19 @@ import logging
 
 import pytest
 
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 from photobooth.utils.helper import is_rpi
 
 from .backends_utils import get_images
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
+
 logger = logging.getLogger(name=None)
 
 ## check skip if wrong platform

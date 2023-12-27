@@ -1,11 +1,17 @@
 import io
 
+import pytest
 from PIL import Image
 
 from photobooth.services.backends.abstractbackend import AbstractBackend
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 def get_images(backend: AbstractBackend):

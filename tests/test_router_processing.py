@@ -5,11 +5,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import appconfig
 from photobooth.services.processingservice import ProcessingService
 from photobooth.utils.exceptions import ProcessMachineOccupiedError
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture

@@ -1,10 +1,19 @@
 import logging
 import time
 
-from photobooth.services.config import AppConfig, appconfig
+import pytest
+
+from photobooth.services.config import appconfig
 from photobooth.services.processing.jobmodels import CountdownTimer, JobModel
 
-appconfig.__dict__.update(AppConfig())
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
+
 logger = logging.getLogger(name=None)
 
 
