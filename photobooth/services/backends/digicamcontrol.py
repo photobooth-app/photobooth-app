@@ -95,10 +95,6 @@ class DigicamcontrolBackend(AbstractBackend):
         self._worker_thread: StoppableThread = None
         self._connect_thread = StoppableThread(name="digicamcontrol_connect_thread", target=self._connect_fun, daemon=True)
 
-        # logger.info(f"python-gphoto2: {gp.__version__}")
-        # logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-        # logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
-
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
 

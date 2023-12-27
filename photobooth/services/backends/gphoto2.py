@@ -7,11 +7,7 @@ import logging
 import time
 from threading import Condition, Event
 
-try:
-    import gphoto2 as gp
-except Exception as import_exc:
-    raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
-
+import gphoto2 as gp
 
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread

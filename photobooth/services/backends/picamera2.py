@@ -7,18 +7,15 @@ import io
 import logging
 from threading import Condition, Event
 
+from libcamera import Transform, controls  # type: ignore
+from picamera2 import Picamera2  # type: ignore
+from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
+from picamera2.outputs import FileOutput  # type: ignore
+
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
 from .abstractbackend import AbstractBackend
-
-try:
-    from libcamera import Transform, controls  # type: ignore
-    from picamera2 import Picamera2  # type: ignore
-    from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
-    from picamera2.outputs import FileOutput  # type: ignore
-except Exception as import_exc:
-    raise OSError("picamera2/libcamera import error; check picamera2/libcamera installation") from import_exc
 
 logger = logging.getLogger(__name__)
 

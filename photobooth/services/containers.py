@@ -57,7 +57,6 @@ def init_res_obj_service(_obj_: BaseService, sse_service: SseService, *args):
 
 class ServicesContainer(containers.DeclarativeContainer):
     sse_service = providers.Dependency(instance_of=SseService)
-    backends = providers.DependenciesContainer()
 
     # Services: Core
 
@@ -65,8 +64,6 @@ class ServicesContainer(containers.DeclarativeContainer):
         init_res_obj_service,
         AquisitionService,
         sse_service,
-        backends.primary_backend,
-        backends.secondary_backend,
     )
 
     information_service = providers.Resource(

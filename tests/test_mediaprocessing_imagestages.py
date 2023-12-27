@@ -8,7 +8,8 @@ from PIL import Image
 from pydantic_extra_types.color import Color
 
 import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
-from photobooth.services.config.appconfig import AppConfig, TextsConfig
+from photobooth.services.config.appconfig import AppConfig
+from photobooth.services.config.groups.mediaprocessing import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
 from .image_utils import is_same

@@ -4,6 +4,8 @@ v4l webcam implementation backend
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
+from v4l2py import Device, VideoCapture  # type: ignore
+
 from ...utils.exceptions import ShutdownInProcessError
 from ..config import AppConfig, appconfig
 from .abstractbackend import (
@@ -12,11 +14,6 @@ from .abstractbackend import (
     compile_buffer,
     decompile_buffer,
 )
-
-try:
-    from v4l2py import Device, VideoCapture
-except Exception as import_exc:
-    raise OSError("v4l2py import error; check v4l2py installation") from import_exc
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 

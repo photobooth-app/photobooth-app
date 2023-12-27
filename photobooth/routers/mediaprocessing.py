@@ -7,7 +7,7 @@ from PIL import Image
 
 from ..containers import ApplicationContainer
 from ..services.config import appconfig
-from ..services.config.appconfig import EnumPilgramFilter
+from ..services.config.groups.mediaprocessing import EnumPilgramFilter
 from ..services.mediacollectionservice import MediacollectionService
 from ..services.mediaprocessing.image_pipelinestages import pilgram_stage
 from ..services.mediaprocessingservice import MediaprocessingService

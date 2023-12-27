@@ -14,7 +14,7 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.appconfig import GroupMediaprocessingPipelineSingleImage, TextsConfig
+from .config.groups.mediaprocessing import GroupMediaprocessingPipelineSingleImage, TextsConfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
