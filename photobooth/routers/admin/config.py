@@ -54,7 +54,7 @@ def api_post_config_current(
 
     # update central config to make new config avail immediately
     # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
-    appconfig.__dict__.update(AppConfig())
+    appconfig.__dict__.update(updated_config)
 
     # appcontainer.shutdown_resources()
     # appcontainer.init_resources()
