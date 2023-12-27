@@ -162,17 +162,10 @@ class Picamera2Backend(AbstractBackend):
         self._generate_images_thread.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
-        while True:
-            with self._lores_data.condition:
-                if self._lores_data.condition.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        try:
+            self.wait_for_lores_image()
+        except Exception as exc:
+            raise RuntimeError("failed to start up backend") from exc
 
         self._init_autofocus()
 
@@ -236,13 +229,12 @@ class Picamera2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._generate_images_thread.stopped():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
-
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=4):
-                # wait returns true if timeout expired
-                raise TimeoutError("timeout receiving frames")
+            if not self._lores_data.condition.wait(timeout=0.2):
+                if self._generate_images_thread.stopped():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame
 

@@ -81,17 +81,10 @@ class WebcamCv2Backend(AbstractBackend):
         self._cv2_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 20
-        while True:
-            with self._img_buffer_lores.condition:
-                if self._img_buffer_lores.condition.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        try:
+            self.wait_for_lores_image()
+        except Exception as exc:
+            raise RuntimeError("failed to start up backend") from exc
 
         logger.debug(f"{self.__module__} started")
 
@@ -141,12 +134,13 @@ class WebcamCv2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._event_proc_shutdown.is_set():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._img_buffer_lores.condition:
-            if not self._img_buffer_lores.condition.wait(timeout=4):
-                raise TimeoutError("timeout receiving frames")
+            if not self._img_buffer_lores.condition.wait(timeout=0.2):
+                if self._event_proc_shutdown.is_set():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer_lores.lock:
                 img = decompile_buffer(self._img_buffer_lores.sharedmemory)

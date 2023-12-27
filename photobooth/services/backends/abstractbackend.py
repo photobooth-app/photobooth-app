@@ -139,6 +139,23 @@ class AbstractBackend(ABC):
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
 
+    def wait_for_lores_image(self):
+        remaining_retries = 10
+        while True:
+            try:
+                return self._wait_for_lores_image()
+            except ShutdownInProcessError as exc:
+                logger.info("ShutdownInProcess, stopping aquisition")
+                raise exc
+            except Exception as exc:
+                if remaining_retries < 0:
+                    raise exc
+
+                remaining_retries -= 1
+                logger.warning("waiting for backend provide low resolution image...")
+
+                continue
+
     def gen_stream(self):
         """
         yield jpeg images to stream to client (if not created otherwise)
@@ -154,9 +171,9 @@ class AbstractBackend(ABC):
                 last_time = now_time
 
                 try:
-                    output_jpeg_bytes = self._wait_for_lores_image()
+                    output_jpeg_bytes = self.wait_for_lores_image()
                 except ShutdownInProcessError:
-                    logger.warning("gather img failed due to resources shutting down")
+                    logger.info("ShutdownInProcess, stopping stream")
                     return
                 except TimeoutError:
                     # this error could be recovered (example: DSLR turned off/on again)
