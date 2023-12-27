@@ -141,6 +141,9 @@ class AppConfig(BaseSettings):
 
         return self.model_json_schema()
 
+    def reset_defaults(self):
+        self.__dict__.update(__class__())
+
     def persist(self):
         """Persist config to file"""
         logger.debug("persist config to json file")
