@@ -127,7 +127,7 @@ extend-exclude = ["vendor"]
 
 
 [tool.ruff.per-file-ignores]
-"photobooth/appconfig.py" = ["E501"]
+"photobooth/services/config/groups/*.py" = ["E501"]
 
 [tool.ruff.pydocstyle]
 convention = "google"

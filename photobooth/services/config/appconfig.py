@@ -79,7 +79,8 @@ class AppConfig(BaseSettings):
     """
     AppConfig class glueing all together
 
-    In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows (in descending order of priority):
+    In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows
+    (in descending order of priority):
 
     1 Arguments passed to the Settings class initialiser.
     2 Environment variables, e.g. my_prefix_special_function as described above.

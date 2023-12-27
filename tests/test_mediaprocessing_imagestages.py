@@ -14,8 +14,9 @@ from photobooth.services.config.appconfig import AppConfig
 from photobooth.services.config.groups.mediaprocessing import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
-reload(photobooth.services.config)  # reset config to defaults.
 from .image_utils import is_same
+
+reload(photobooth.services.config)  # reset config to defaults.
 
 logger = logging.getLogger(name=None)
 
