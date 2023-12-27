@@ -139,11 +139,11 @@ class AbstractBackend(ABC):
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
 
-    def wait_for_lores_image(self):
-        remaining_retries = 10
+    def wait_for_lores_image(self, retries: int = 10):
+        remaining_retries = retries
         while True:
             try:
-                return self._wait_for_lores_image()
+                return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
             except ShutdownInProcessError as exc:
                 logger.info("ShutdownInProcess, stopping aquisition")
                 raise exc
