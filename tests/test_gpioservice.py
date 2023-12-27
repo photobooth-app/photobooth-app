@@ -30,6 +30,10 @@ def services() -> ServicesContainer:
     application_container = ApplicationContainer()
 
     services = application_container.services()
+
+    # create one image to ensure there is at least one
+    services.processing_service().start_job_1pic()
+
     # force register listener for testing purposes
     services.gpio_service().init_io()
 
@@ -98,7 +102,7 @@ def test_button_print(mock_run, services: ServicesContainer):
     services.gpio_service().print_recent_item_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_REBOOT + 0.2)
+    time.sleep(DEBOUNCE_TIME or 0.0 + 0.2)
 
     # check subprocess.check_call was invoked
     mock_run.assert_called()
