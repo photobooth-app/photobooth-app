@@ -35,7 +35,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: 'x64'
       - name: Install system apt dependencies
         run: |
           sudo apt update
@@ -43,7 +42,7 @@ jobs:
       - name: install pdm
         run: |
           pipx install pdm # on hosted pipx is installed
-          pdm install
+          PDM_PREFER_BINARY=gphoto2 pdm install
       - name: Run pytest
         run: |
           pdm run test
