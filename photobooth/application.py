@@ -47,8 +47,8 @@ def _create_basic_folders():
 
 
 def _create_app() -> FastAPI:
-    application_container = ApplicationContainer()
-    application_container.logging_service()  # to foce init of logger earliest possible
+    services_container = ApplicationContainer()
+    services_container.services().logging_service()  # to force init of logger earliest possible
     logger = logging.getLogger(f"{__name__}")
 
     try:
@@ -104,7 +104,7 @@ def _create_app() -> FastAPI:
     _app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     # store container here and wire routers, to inject providers
-    _app.container = application_container
+    _app.container = services_container
     _app.container.wire(modules=[__name__], packages=[".routers", ".routers.admin"])
 
     return _app

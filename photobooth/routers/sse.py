@@ -6,7 +6,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
-from ..containers import ApplicationContainer
+from ..containers import ServicesContainer
 from ..services.informationservice import InformationService
 from ..services.loggingservice import LoggingService
 from ..services.processingservice import ProcessingService
@@ -22,10 +22,10 @@ sse_router = APIRouter(
 @inject
 async def subscribe(
     request: Request,
-    sse_service: SseService = Depends(Provide[ApplicationContainer.services.sse_service]),
-    logging_service: LoggingService = Depends(Provide[ApplicationContainer.logging_service]),
-    information_service: InformationService = Depends(Provide[ApplicationContainer.services.information_service]),
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
+    sse_service: SseService = Depends(Provide[ServicesContainer.sse_service]),
+    logging_service: LoggingService = Depends(Provide[ServicesContainer.logging_service]),
+    information_service: InformationService = Depends(Provide[ServicesContainer.information_service]),
+    processing_service: ProcessingService = Depends(Provide[ServicesContainer.processing_service]),
 ):
     """
     Eventstream to feed clients with server generated events and data

@@ -22,9 +22,9 @@ logger = logging.getLogger(f"{__name__}")
 
 @inject
 def _server(
-    logging_service: LoggingService = Provide[ApplicationContainer.logging_service],
+    logging_service: LoggingService = Provide[ApplicationContainer.services.logging_service],
 ) -> uvicorn.Server:
-    logger.info("Welcome to photobooth-app")
+    logger.info("Welcome to the photobooth-app")
 
     # set spawn for all systems (defaults fork on linux currently and spawn on windows platform)
     # spawn will be the default for all systems in future so it's set here now to have same
