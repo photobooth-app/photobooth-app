@@ -41,7 +41,8 @@ class EventstreamLogHandler(logging.Handler):
             name=record.name,
             funcName=record.funcName,
             lineno=record.lineno,
-            # TODO: maybe later: display_notification=bool(getattr(record, "display_notification", False)),  # if present display also in the UI as notification
+            # TODO: maybe later: display_notification=bool(getattr(record, "display_notification", False)),
+            # if present display also in the UI as notification
         )
 
         self._sse_service.dispatch_event(sse_logrecord)
