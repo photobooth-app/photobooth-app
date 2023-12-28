@@ -23,7 +23,7 @@ class ShareService(BaseService):
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._initialized: bool = False
-        self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
+        self._worker_thread: StoppableThread = None
 
     def _initialize(self):
         self._initialized = False
@@ -53,6 +53,7 @@ class ShareService(BaseService):
             return
         self._initialize()
         if self._initialized:
+            self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
 
             # short sleep until workerthread is started and likely to be connected to service or failed.
@@ -64,9 +65,12 @@ class ShareService(BaseService):
 
     def stop(self):
         """_summary_"""
-        self._worker_thread.stop()
-        if self._worker_thread.is_alive():
-            self._worker_thread.join()
+        self._logger.debug(f"{self.__module__} stop called")
+
+        if self._worker_thread:
+            self._worker_thread.stop()
+            if self._worker_thread.is_alive():
+                self._worker_thread.join()
 
     def _worker_fun(self):
         # init
