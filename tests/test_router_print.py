@@ -50,7 +50,7 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
     appconfig.hardwareinputoutput.printing_enabled = True
 
     # get an image to print
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get(f"/print/item/{mediaitem.id}")
 

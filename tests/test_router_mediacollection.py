@@ -43,7 +43,7 @@ def test_get_items_exception(client: TestClient):
 
 @patch("os.remove")
 def test_delete_item(mock_remove, client: TestClient):
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get("/mediacollection/delete", params={"image_id": mediaitem.id})
 
