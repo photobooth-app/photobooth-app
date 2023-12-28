@@ -1,11 +1,10 @@
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, status
+from dependency_injector.wiring import inject
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import Response, StreamingResponse
 
-from ..containers import ApplicationContainer
-from ..services.aquisitionservice import AquisitionService
+from ..container import container
 
 logger = logging.getLogger(__name__)
 aquisition_router = APIRouter(
@@ -16,14 +15,16 @@ aquisition_router = APIRouter(
 
 @aquisition_router.get("/stream.mjpg")
 @inject
-def video_stream(aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service])):
+def video_stream():
     """
     endpoint to stream live video to clients
     """
     headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
 
     try:
-        return StreamingResponse(content=aquisition_service.gen_stream(), headers=headers, media_type="multipart/x-mixed-replace; boundary=frame")
+        return StreamingResponse(
+            content=container.aquisition_service.gen_stream(), headers=headers, media_type="multipart/x-mixed-replace; boundary=frame"
+        )
     except ConnectionRefusedError as exc:
         logger.warning(exc)
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled") from exc
@@ -43,7 +44,7 @@ def video_stream(aquisition_service: AquisitionService = Depends(Provide[Applica
     response_class=Response,
 )
 @inject
-def api_still_get(aquisition_service: AquisitionService = Depends(Provide[ApplicationContainer.services.aquisition_service])):
+def api_still_get():
     """Aquire image and serve to download
 
     Raises:
@@ -53,7 +54,7 @@ def api_still_get(aquisition_service: AquisitionService = Depends(Provide[Applic
         Response: Returns jpeg image to download
     """
     try:
-        still_image: bytes = bytes(aquisition_service.wait_for_hq_image())
+        still_image: bytes = bytes(container.aquisition_service.wait_for_hq_image())
         logger.info(f"aquired still_image, {len(still_image)}bytes to be sent to client")
         return Response(still_image, media_type="image/jpeg")
     except Exception as exc:
@@ -68,14 +69,11 @@ def api_still_get(aquisition_service: AquisitionService = Depends(Provide[Applic
 @inject
 def api_cmd_aquisition_capturemode_get(
     mode: str = "preview",
-    aquisition_service: AquisitionService = Depends(
-        Provide[ApplicationContainer.services.aquisition_service],
-    ),
 ):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        aquisition_service.switch_backends_to_capture_mode()
+        container.aquisition_service.switch_backends_to_capture_mode()
     elif mode == "preview":
-        aquisition_service.switch_backends_to_preview_mode()
+        container.aquisition_service.switch_backends_to_preview_mode()
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="illegal mode")

@@ -1,8 +1,19 @@
-"""Containers module."""
+"""Dependencies definition.
+
+3 levels of dependencies:
+  - app: FastAPI(dependencies=[Depends() ...])
+  - route: APIRouter(dependencies=[Depends() ...])
+  - endpoint: add Depends to endpoint.
+
+Extra:
+  - appconfig as global module (similar as logging module a global module that keeps the one instance of the appconfig.)
+"""
 
 
+import contextlib
 import logging.config
 
+import inject
 from dependency_injector import containers, providers
 
 from .services.aquisitionservice import AquisitionService
@@ -56,13 +67,52 @@ def init_res_obj_service(_obj_: BaseService, sse_service: SseService, *args):
         logger.critical("could not stop resource")
 
 
-# Dependency
+# Dependencies
+@contextlib.contextmanager
 def get_sse_service():
-    db = SseService()
+    sse_service = SseService()
+    print("start sse")
+    # setup
     try:
-        yield db
+        print("yield sse")
+        yield sse_service
     finally:
-        db.close()
+        print("stop sse")
+        pass  # terminate
+
+
+@contextlib.contextmanager
+@inject.params(sse_service=SseService)
+def get_logging_service(sse_service: SseService = None):
+    logging_service = LoggingService(sse_service=sse_service)
+    print("init log")
+    try:
+        logging_service.start()
+        print("start log")
+        yield logging_service
+    finally:
+        print("stop log")
+        logging_service.stop()
+
+
+# Create an optional configuration.
+def my_config(binder):
+    binder.bind_to_provider(SseService, get_sse_service)
+    binder.bind_to_provider(LoggingService, get_logging_service)
+
+
+# Configure a shared injector.
+inject.configure(my_config)
+
+
+@inject.autoparams()
+def useItExample(logger: LoggingService, sse: SseService):
+    # Connection and file will be automatically destroyed on exit.
+    print(sse.dispatch_event("test"))
+    pass
+
+
+# useItExample()
 
 
 class ServicesContainer(containers.DeclarativeContainer):

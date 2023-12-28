@@ -3,9 +3,8 @@ import os
 
 import pytest
 
-from photobooth.containers import ApplicationContainer
+from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.containers import ServicesContainer
 
 
 @pytest.fixture(autouse=True)
@@ -18,26 +17,24 @@ def run_around_tests():
 logger = logging.getLogger(name=None)
 
 
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
-def services() -> ServicesContainer:
+def _container() -> Container:
     # setup
-    application_container = ApplicationContainer()
-
-    services = application_container.services()
-
+    container.start()
     # create one image to ensure there is at least one
-    services.processing_service().start_job_1pic()
+    container.processing_service.start_job_1pic()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_ensure_scaled_repr_created(services: ServicesContainer):
+def test_ensure_scaled_repr_created(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
 
     # get the newest image id
-    mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # should just run without any exceptions.
     try:
@@ -46,11 +43,11 @@ def test_ensure_scaled_repr_created(services: ServicesContainer):
         raise AssertionError(f"'ensure_scaled_repr_created' raised an exception :( {exc}") from exc
 
 
-def test_ensure_scaled_repr_created_processed(services: ServicesContainer):
+def test_ensure_scaled_repr_created_processed(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
 
     # get the newest image id
-    mediaitem = services.mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     os.remove(mediaitem.path_full)
     os.remove(mediaitem.path_preview)

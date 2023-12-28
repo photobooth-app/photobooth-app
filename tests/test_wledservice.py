@@ -3,9 +3,10 @@ import time
 
 import pytest
 
-from photobooth.containers import ApplicationContainer
+from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.containers import ServicesContainer
+
+logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(autouse=True)
@@ -15,66 +16,63 @@ def run_around_tests():
     yield
 
 
-logger = logging.getLogger(name=None)
-
-
-@pytest.fixture()
-def services() -> ServicesContainer:
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
+@pytest.fixture(scope="module")
+def _container() -> Container:
     # setup
-    application_container = ApplicationContainer()
-
-    services = application_container.services()
+    container.start()
+    # create one image to ensure there is at least one
+    container.processing_service.start_job_1pic()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_disabled(services: ServicesContainer):
+def test_disabled(_container: Container):
     """should just fail in silence if disabled but app triggers some presets"""
 
     appconfig.hardwareinputoutput.wled_enabled = False
 
     try:
-        wled_service = services.wled_service()
+        _container.wled_service.start()
 
         # test this, because should be ignored, no error
-        wled_service.preset_standby()
+        _container.wled_service.preset_standby()
 
     except Exception as exc:
         raise AssertionError("init failed") from exc
 
 
-def test_enabled_nonexistentserialport(services: ServicesContainer):
+def test_enabled_nonexistentserialport(_container: Container):
     """should just fail in silence if disabled but app triggers some presets"""
 
     appconfig.hardwareinputoutput.wled_enabled = True
     appconfig.hardwareinputoutput.wled_serial_port = "nonexistentserialport"
 
     # start service on nonexistant port shall not fail - it tries to reconnect and never shall fail
-    services.wled_service()
+    _container.wled_service.start()
 
 
-def test_restart_class(services: ServicesContainer):
+def test_restart_class(_container: Container):
     logger.debug("getting service, starting resource")
-    services.wled_service()
+    _container.wled_service.start()
 
     logger.debug("shutdown resource")
-    services.wled_service.shutdown()
+    _container.wled_service.stop()
 
     logger.debug("getting service, starting resource again")
-    services.wled_service()
+    _container.wled_service.start()
 
 
-def test_change_presets(services: ServicesContainer):
+def test_change_presets(_container: Container):
     logger.debug("getting service, starting resource")
-    wled_service = services.wled_service()
 
-    time.sleep(1)
+    time.sleep(0.1)
 
-    wled_service.preset_thrill()
-    time.sleep(2)
-    wled_service.preset_shoot()
-    time.sleep(1)
-    wled_service.preset_standby()
+    _container.wled_service.preset_thrill()
     time.sleep(0.5)
+    _container.wled_service.preset_shoot()
+    time.sleep(0.5)
+    _container.wled_service.preset_standby()
+    time.sleep(0.1)

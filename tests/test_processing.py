@@ -3,9 +3,10 @@ import logging
 import pytest
 import statemachine.exceptions
 
-from photobooth.containers import ApplicationContainer
+from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.containers import ServicesContainer
+
+logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(autouse=True)
@@ -15,121 +16,119 @@ def run_around_tests():
     yield
 
 
-logger = logging.getLogger(name=None)
-
-
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
-def services() -> ServicesContainer:
+def _container() -> Container:
     # setup
-    application_container = ApplicationContainer()
-
-    services = application_container.services()
+    container.start()
+    # create one image to ensure there is at least one
+    container.processing_service.start_job_1pic()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_capture(services: ServicesContainer):
+def test_capture(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
     appconfig.common.collage_automatic_capture_continue = False
 
-    services.processing_service().start_job_1pic()
+    _container.processing_service.start_job_1pic()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_capture_autoconfirm(services: ServicesContainer):
+def test_capture_autoconfirm(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
     appconfig.common.collage_automatic_capture_continue = True
 
-    services.processing_service().start_job_1pic()
+    _container.processing_service.start_job_1pic()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_capture_zero_countdown(services: ServicesContainer):
+def test_capture_zero_countdown(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
     appconfig.common.countdown_capture_first = 0
 
-    services.processing_service().start_job_1pic()
+    _container.processing_service.start_job_1pic()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_capture_manual_confirm(services: ServicesContainer):
+def test_capture_manual_confirm(_container: Container):
     # there is not confirm/reject for single captures possible
     pass
 
 
-def test_simple_capture_illegal_jobs(services: ServicesContainer):
+def test_simple_capture_illegal_jobs(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
 
-    services.processing_service().start_job_1pic()
+    _container.processing_service.start_job_1pic()
     with pytest.raises(statemachine.exceptions.TransitionNotAllowed):
-        services.processing_service().confirm_capture()
+        _container.processing_service.confirm_capture()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_collage(services: ServicesContainer):
+def test_collage(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
-    services.processing_service().start_job_collage()
+    _container.processing_service.start_job_collage()
 
-    assert services.processing_service().idle.is_active is False
+    assert _container.processing_service.idle.is_active is False
 
-    while not services.processing_service().job_finished():
-        services.processing_service().confirm_capture()
+    while not _container.processing_service.job_finished():
+        _container.processing_service.confirm_capture()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_collage_autoconfirm(services: ServicesContainer):
+def test_collage_autoconfirm(_container: Container):
     appconfig.common.collage_automatic_capture_continue = True
 
-    services.processing_service().start_job_collage()
+    _container.processing_service.start_job_collage()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_collage_manual_confirm(services: ServicesContainer):
+def test_collage_manual_confirm(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
-    services.processing_service().start_job_collage()
+    _container.processing_service.start_job_collage()
 
-    assert not services.processing_service().idle.is_active
+    assert not _container.processing_service.idle.is_active
 
-    while not services.processing_service().job_finished():
-        services.processing_service().confirm_capture()
+    while not _container.processing_service.job_finished():
+        _container.processing_service.confirm_capture()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_collage_manual_reject(services: ServicesContainer):
+def test_collage_manual_reject(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
-    services.processing_service().start_job_collage()
+    _container.processing_service.start_job_collage()
 
-    assert not services.processing_service().idle.is_active
+    assert not _container.processing_service.idle.is_active
 
-    services.processing_service().reject_capture()
+    _container.processing_service.reject_capture()
     # TODO: need to ensure database is updated properly!
 
-    while not services.processing_service().job_finished():
-        services.processing_service().confirm_capture()
+    while not _container.processing_service.job_finished():
+        _container.processing_service.confirm_capture()
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active
 
 
-def test_collage_manual_abort(services: ServicesContainer):
+def test_collage_manual_abort(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
-    services.processing_service().start_job_collage()
+    _container.processing_service.start_job_collage()
 
-    assert not services.processing_service().idle.is_active
+    assert not _container.processing_service.idle.is_active
 
-    services.processing_service().abort_process()
+    _container.processing_service.abort_process()
     # TODO: need to ensure database is updated properly!
 
-    assert services.processing_service().idle.is_active
+    assert _container.processing_service.idle.is_active

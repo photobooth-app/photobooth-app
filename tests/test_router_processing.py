@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
+from photobooth.container import container
 from photobooth.services.config import appconfig
 from photobooth.services.processingservice import ProcessingService
 from photobooth.utils.exceptions import ProcessMachineOccupiedError
@@ -20,8 +21,9 @@ def run_around_tests():
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_chose_1pic(client: TestClient):

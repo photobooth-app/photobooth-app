@@ -163,6 +163,7 @@ def img_aquisition(
     path_font = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "fonts", "Roboto-Bold.ttf").resolve()
 
     img_original = Image.open(path_live_img)
+    img_original.load()
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():
@@ -218,7 +219,4 @@ def img_aquisition(
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
 
-    img_original.close()
-    if img:
-        img.close()
     logger.info("img_aquisition process finished")

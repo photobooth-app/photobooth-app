@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.application import app
+from photobooth.container import container
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
 
@@ -25,8 +26,9 @@ def run_around_tests():
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def capture(client: TestClient):

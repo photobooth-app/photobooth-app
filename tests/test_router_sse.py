@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from httpx_sse import connect_sse
 
 from photobooth.application import app
+from photobooth.container import container
 from photobooth.services.config import appconfig
 
 
@@ -21,12 +22,9 @@ logger = logging.getLogger(name=None)
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-        # explicit start the informationservice as there is no autostart
-        client.app.container.services().processing_service()
-        client.app.container.services().information_service.init()
-
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_sse_stream(client: TestClient):

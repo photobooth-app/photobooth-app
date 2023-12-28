@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.application import app
+from photobooth.container import container
 from photobooth.services.config import appconfig
 
 from .image_utils import is_same
@@ -24,12 +25,10 @@ logger = logging.getLogger(name=None)
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-        # create one image to ensure there is at least one
-        services = client.app.container.services()
-        services.processing_service().start_job_1pic()
-
+        container.start()
+        container.processing_service.start_job_1pic()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_preview_filter_original(client: TestClient):

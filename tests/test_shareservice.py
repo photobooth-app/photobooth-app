@@ -5,9 +5,10 @@ import pytest
 import requests
 from PIL import Image
 
-from photobooth.containers import ApplicationContainer
+from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.containers import ServicesContainer
+
+logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(autouse=True)
@@ -15,9 +16,6 @@ def run_around_tests():
     appconfig.reset_defaults()
 
     yield
-
-
-logger = logging.getLogger(name=None)
 
 
 r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
@@ -65,32 +63,29 @@ def test_shareservice_urls_valid():
     assert r.status_code == 500
 
 
-@pytest.fixture()
-def services() -> ServicesContainer:
-    # setup
-    application_container = ApplicationContainer()
-
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
+@pytest.fixture(scope="module")
+def _container() -> Container:
     appconfig.sharing.shareservice_enabled = True
 
-    services = application_container.services()
-
+    # setup
+    container.start()
     # create one image to ensure there is at least one
-
-    services.processing_service().start_job_1pic()
+    container.processing_service.start_job_1pic()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_shareservice_download_image(services: ServicesContainer):
+def test_shareservice_download_image(_container: Container):
     """start service and try to download an image"""
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert _container.share_service._initialized
 
     # get the newest image id
-    mediaitem_id = services.mediacollection_service().db_get_most_recent_mediaitem().id
+    mediaitem_id = _container.mediacollection_service.db_get_most_recent_mediaitem().id
 
     logger.info(f"check to download {mediaitem_id=}")
     r = requests.get(
@@ -108,11 +103,11 @@ def test_shareservice_download_image(services: ServicesContainer):
         raise AssertionError(f"shareservice did not return valid image bytes, {exc}") from exc
 
 
-def test_shareservice_download_nonexistant_image(services: ServicesContainer):
+def test_shareservice_download_nonexistant_image(_container: Container):
     """start service and try to download an image that does not exist"""
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert _container.share_service._initialized
 
     r = requests.get(
         appconfig.sharing.shareservice_url,

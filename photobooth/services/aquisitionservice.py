@@ -40,6 +40,7 @@ class AquisitionService(BaseService):
         """
         assigns a backend to generate a stream
         """
+
         if appconfig.backends.LIVEPREVIEW_ENABLED:
             if self._is_real_backend(self._live_backend):
                 logger.info("livestream requested from dedicated live backend")

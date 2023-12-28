@@ -26,6 +26,13 @@ class PrintingService(BaseService):
         self._last_print_time = None
         self._printing_queue = None  # TODO: could add queue later
 
+    def start(self):
+        # unblock after restart immediately
+        self._last_print_time = None
+
+    def stop(self):
+        pass
+
     def print(self, mediaitem: MediaItem):
         ## print mediaitem
 

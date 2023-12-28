@@ -12,8 +12,8 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
-# from .routers import home, config, mediacollection
-from .containers import ApplicationContainer
+from .__version__ import __version__
+from .container import container
 from .routers.admin.config import admin_config_router
 from .routers.admin.files import admin_files_router
 from .routers.aquisition import aquisition_router
@@ -26,6 +26,8 @@ from .routers.print import print_router
 from .routers.processing import processing_router
 from .routers.sse import sse_router
 from .routers.system import system_router
+
+logger = logging.getLogger(f"{__name__}")
 
 FASTAPI_DECRIPTION = """
 Photobooth App 🚀
@@ -47,9 +49,7 @@ def _create_basic_folders():
 
 
 def _create_app() -> FastAPI:
-    services_container = ApplicationContainer()
-    services_container.services().logging_service()  # to force init of logger earliest possible
-    logger = logging.getLogger(f"{__name__}")
+    container.logging_service.start()
 
     try:
         _create_basic_folders()
@@ -60,7 +60,7 @@ def _create_app() -> FastAPI:
     _app = FastAPI(
         title="Photobooth App API",
         description=FASTAPI_DECRIPTION,
-        version="0.0.1",
+        version=__version__,
         contact={
             "name": "mgrl",
             "url": "https://github.com/photobooth-app/photobooth-app",
@@ -73,6 +73,7 @@ def _create_app() -> FastAPI:
         docs_url="/api/doc",
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        dependencies=[],
     )
 
     _app.include_router(admin_config_router)
@@ -104,8 +105,6 @@ def _create_app() -> FastAPI:
     _app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     # store container here and wire routers, to inject providers
-    _app.container = services_container
-    _app.container.wire(modules=[__name__], packages=[".routers", ".routers.admin"])
 
     return _app
 

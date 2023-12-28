@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from photobooth.container import container
 from photobooth.services.config import AppConfig, appconfig
 
 
@@ -36,8 +37,9 @@ def client() -> TestClient:
     from photobooth.application import app
 
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_config_post_validationerror(client: TestClient):
