@@ -7,7 +7,6 @@ import os
 import time
 from pathlib import Path
 
-from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .mediacollection.mediaitem import (
     PATH_FULL,
@@ -30,11 +29,10 @@ class MediacollectionService(BaseService):
 
     def __init__(
         self,
-        config: AppConfig,
         sse_service: SseService,
         mediaprocessing_service: MediaprocessingService,
     ):
-        super().__init__(sse_service=sse_service, config=config)
+        super().__init__(sse_service=sse_service)
 
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 

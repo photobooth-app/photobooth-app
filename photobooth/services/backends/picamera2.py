@@ -7,18 +7,15 @@ import io
 import logging
 from threading import Condition, Event
 
-from ...appconfig import AppConfig
+from libcamera import Transform, controls  # type: ignore
+from picamera2 import Picamera2  # type: ignore
+from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
+from picamera2.outputs import FileOutput  # type: ignore
+
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 from .abstractbackend import AbstractBackend
-
-try:
-    from libcamera import Transform, controls  # type: ignore
-    from picamera2 import Picamera2  # type: ignore
-    from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
-    from picamera2.outputs import FileOutput  # type: ignore
-except Exception as import_exc:
-    raise OSError("picamera2/libcamera import error; check picamera2/libcamera installation") from import_exc
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +57,8 @@ class Picamera2Backend(AbstractBackend):
                 self.frame = buf
                 self.condition.notify_all()
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
         # public props (defined in abstract class also)
 
         # private props
@@ -96,22 +93,22 @@ class Picamera2Backend(AbstractBackend):
         self._capture_config = self._picamera2.create_still_configuration(
             main={
                 "size": (
-                    self._config.backends.picamera2_CAPTURE_CAM_RESOLUTION_WIDTH,
-                    self._config.backends.picamera2_CAPTURE_CAM_RESOLUTION_HEIGHT,
+                    appconfig.backends.picamera2_CAPTURE_CAM_RESOLUTION_WIDTH,
+                    appconfig.backends.picamera2_CAPTURE_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
+                    appconfig.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
+                    appconfig.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=self._config.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
+                hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
+                vflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
             ),
         )
 
@@ -119,22 +116,22 @@ class Picamera2Backend(AbstractBackend):
         self._preview_config = self._picamera2.create_video_configuration(
             main={
                 "size": (
-                    self._config.backends.picamera2_PREVIEW_CAM_RESOLUTION_WIDTH,
-                    self._config.backends.picamera2_PREVIEW_CAM_RESOLUTION_HEIGHT,
+                    appconfig.backends.picamera2_PREVIEW_CAM_RESOLUTION_WIDTH,
+                    appconfig.backends.picamera2_PREVIEW_CAM_RESOLUTION_HEIGHT,
                 )
             },
             lores={
                 "size": (
-                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
+                    appconfig.backends.picamera2_LIVEVIEW_RESOLUTION_WIDTH,
+                    appconfig.backends.picamera2_LIVEVIEW_RESOLUTION_HEIGHT,
                 )
             },
             encode="lores",
             buffer_count=2,
             display="lores",
             transform=Transform(
-                hflip=self._config.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
+                hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
+                vflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_VFLIP,
             ),
         )
 
@@ -145,19 +142,19 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.configure(self._current_config)
 
         # capture_file image quality
-        self._picamera2.options["quality"] = self._config.mediaprocessing.HIRES_STILL_QUALITY
+        self._picamera2.options["quality"] = appconfig.mediaprocessing.HIRES_STILL_QUALITY
 
         logger.info(f"camera_config: {self._picamera2.camera_config}")
         logger.info(f"camera_controls: {self._picamera2.camera_controls}")
         logger.info(f"controls: {self._picamera2.controls}")
 
-        self.set_ae_exposure(self._config.backends.picamera2_AE_EXPOSURE_MODE)
-        logger.info(f"stream quality {Quality[self._config.backends.picamera2_stream_quality.name]=}")
+        self.set_ae_exposure(appconfig.backends.picamera2_AE_EXPOSURE_MODE)
+        logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality.name]=}")
         # start camera
         self._picamera2.start_encoder(
             MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
             FileOutput(self._lores_data),
-            quality=Quality[self._config.backends.picamera2_stream_quality.name],
+            quality=Quality[appconfig.backends.picamera2_stream_quality.name],
         )
         self._picamera2.start()
 
@@ -165,17 +162,10 @@ class Picamera2Backend(AbstractBackend):
         self._generate_images_thread.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
-        while True:
-            with self._lores_data.condition:
-                if self._lores_data.condition.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        try:
+            self.wait_for_lores_image()
+        except Exception as exc:
+            raise RuntimeError("failed to start up backend") from exc
 
         self._init_autofocus()
 
@@ -239,13 +229,12 @@ class Picamera2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._generate_images_thread.stopped():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
-
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=4):
-                # wait returns true if timeout expired
-                raise TimeoutError("timeout receiving frames")
+            if not self._lores_data.condition.wait(timeout=0.2):
+                if self._generate_images_thread.stopped():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame
 
@@ -288,7 +277,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.start_encoder(
             MJPEGEncoder(),
             FileOutput(self._lores_data),
-            quality=Quality[self._config.backends.picamera2_stream_quality.name],
+            quality=Quality[appconfig.backends.picamera2_stream_quality.name],
         )
         logger.info("switchmode finished successfully")
 

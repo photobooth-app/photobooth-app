@@ -1,10 +1,8 @@
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from ..containers import ApplicationContainer
-from ..services.processingservice import ProcessingService
+from ..container import container
 from ..utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(__name__)
@@ -14,7 +12,6 @@ processing_router = APIRouter(
 )
 
 
-@inject
 def _capture(job):
     try:
         job()
@@ -36,28 +33,19 @@ def _capture(job):
 
 
 @processing_router.get("/chose/1pic")
-@inject
-def api_chose_1pic_get(
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
-):
-    return _capture(processing_service.start_job_1pic)
+def api_chose_1pic_get():
+    return _capture(container.processing_service.start_job_1pic)
 
 
 @processing_router.get("/chose/collage")
-@inject
-def api_chose_collage_get(
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
-):
-    return _capture(processing_service.start_job_collage)
+def api_chose_collage_get():
+    return _capture(container.processing_service.start_job_collage)
 
 
 @processing_router.get("/cmd/confirm")
-@inject
-def api_cmd_confirm_get(
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
-):
+def api_cmd_confirm_get():
     try:
-        processing_service.confirm_capture()
+        container.processing_service.confirm_capture()
         return "OK"
     except Exception as exc:
         # other errors
@@ -69,12 +57,9 @@ def api_cmd_confirm_get(
 
 
 @processing_router.get("/cmd/reject")
-@inject
-def api_cmd_reject_get(
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
-):
+def api_cmd_reject_get():
     try:
-        processing_service.reject_capture()
+        container.processing_service.reject_capture()
         return "OK"
     except Exception as exc:
         # other errors
@@ -86,12 +71,9 @@ def api_cmd_reject_get(
 
 
 @processing_router.get("/cmd/abort")
-@inject
-def api_cmd_abort_get(
-    processing_service: ProcessingService = Depends(Provide[ApplicationContainer.services.processing_service]),
-):
+def api_cmd_abort_get():
     try:
-        processing_service.abort_process()
+        container.processing_service.abort_process()
         return "OK"
     except Exception as exc:
         # other errors

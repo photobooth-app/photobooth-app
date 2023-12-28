@@ -5,18 +5,25 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
+from photobooth.container import container
+from photobooth.services.config import appconfig
 from photobooth.services.mediacollectionservice import MediacollectionService
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-        # create one image to ensure there is at least one
-        services = client.app.container.services()
-        services.processing_service().start_job_1pic()
-
+        container.start()
+        container.processing_service.start_job_1pic()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_get_items(client: TestClient):
@@ -36,7 +43,7 @@ def test_get_items_exception(client: TestClient):
 
 @patch("os.remove")
 def test_delete_item(mock_remove, client: TestClient):
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get("/mediacollection/delete", params={"image_id": mediaitem.id})
 

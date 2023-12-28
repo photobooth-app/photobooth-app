@@ -1,19 +1,27 @@
 import platform
-from unittest import mock
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
-from photobooth.services.systemservice import SystemService
+from photobooth.container import container
+from photobooth.services.config import appconfig
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 @pytest.fixture(
@@ -57,24 +65,21 @@ def system_service_installuninstall_endpoint(request):
 
 
 def test_system_service_startstop_endpoints(client: TestClient, system_service_startstop_endpoint):
-    system_service_mock = mock.Mock(spec=SystemService)
+    with patch.object(container.system_service, "util_systemd_control"):
+        response = client.get(system_service_startstop_endpoint)
+        assert response.status_code == 200
 
-    with patch.object(system_service_mock, "util_systemd_control"):
-        with app.container.services.system_service.override(system_service_mock):
-            response = client.get(system_service_startstop_endpoint)
-            assert response.status_code == 200
-
-            system_service_mock.util_systemd_control.assert_called()
+        container.system_service.util_systemd_control.assert_called()
 
 
 def test_system_service_reload_endpoints(client: TestClient, system_service_reload_endpoint):
-    with patch.object(client.app.container, "shutdown_resources"):
-        with patch.object(client.app.container, "init_resources"):
+    with patch.object(container, "start"):
+        with patch.object(container, "stop"):
             response = client.get(system_service_reload_endpoint)
             assert response.status_code == 200
 
-            client.app.container.shutdown_resources.assert_called()
-            client.app.container.init_resources.assert_called()
+            container.start.assert_called()
+            container.stop.assert_called()
 
 
 @patch("os.system")

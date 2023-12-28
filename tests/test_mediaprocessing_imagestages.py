@@ -8,10 +8,19 @@ from PIL import Image
 from pydantic_extra_types.color import Color
 
 import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
-from photobooth.appconfig import AppConfig, TextsConfig
+from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config.groups.mediaprocessing import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
 from .image_utils import is_same
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 

@@ -9,7 +9,6 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from ..appconfig import AppConfig
 from .baseservice import BaseService
 from .sseservice import SseService
 
@@ -24,8 +23,8 @@ PHOTOBOOTH_APP_SERVICE_FILE = Path(f"{str(Path.home())}/.local/share/systemd/use
 class SystemService(BaseService):
     """_summary_"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService):
+        super().__init__(sse_service)
 
         self._logger.info("initialized systemservice")
 

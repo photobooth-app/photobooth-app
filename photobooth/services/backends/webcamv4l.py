@@ -4,19 +4,16 @@ v4l webcam implementation backend
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
-from ...appconfig import AppConfig
+from v4l2py import Device, VideoCapture  # type: ignore
+
 from ...utils.exceptions import ShutdownInProcessError
+from ..config import AppConfig, appconfig
 from .abstractbackend import (
     AbstractBackend,
     SharedMemoryDataExch,
     compile_buffer,
     decompile_buffer,
 )
-
-try:
-    from v4l2py import Device, VideoCapture
-except Exception as import_exc:
-    raise OSError("v4l2py import error; check v4l2py installation") from import_exc
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
@@ -30,10 +27,8 @@ class WebcamV4lBackend(AbstractBackend):
         AbstractBackend (_type_): _description_
     """
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
-
-        self._config = config
+    def __init__(self):
+        super().__init__()
 
         self._img_buffer: SharedMemoryDataExch = None
         self._event_proc_shutdown: Event = Event()
@@ -52,7 +47,7 @@ class WebcamV4lBackend(AbstractBackend):
             lock=Lock(),
         )
 
-        logger.info(f"starting webcam process, {self._config.backends.v4l_device_index=}")
+        logger.info(f"starting webcam process, {appconfig.backends.v4l_device_index=}")
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
@@ -63,7 +58,7 @@ class WebcamV4lBackend(AbstractBackend):
                 self._img_buffer.lock,
                 # need to pass config, because unittests can change config,
                 # if not passed, the config are not available in the separate process!
-                self._config,
+                appconfig,
                 self._event_proc_shutdown,
             ),
             daemon=True,
@@ -72,17 +67,10 @@ class WebcamV4lBackend(AbstractBackend):
         self._v4l_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
-        while True:
-            with self._img_buffer.condition:
-                if self._img_buffer.condition.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        try:
+            self.wait_for_lores_image()
+        except Exception as exc:
+            raise RuntimeError("failed to start up backend") from exc
 
         logger.debug(f"{self.__module__} started")
 

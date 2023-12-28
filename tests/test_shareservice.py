@@ -3,22 +3,24 @@ import logging
 
 import pytest
 import requests
-from dependency_injector import providers
 from PIL import Image
 
-from photobooth.appconfig import AppConfig
-from photobooth.containers import ApplicationContainer
-from photobooth.services.containers import ServicesContainer
+from photobooth.container import Container, container
+from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 
 
-## check skip if no shareapi url is set
-config = providers.Singleton(AppConfig)
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
 
-r = requests.get(config().sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
+    yield
+
+
+r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
 if not (r.status_code == 200 and "version" in r.text):
-    logger.warning(f"no webservice found, skipping tests {config().sharing.shareservice_url}")
+    logger.warning(f"no webservice found, skipping tests {appconfig.sharing.shareservice_url}")
     pytest.skip(
         "no webservice found, skipping tests",
         allow_module_level=True,
@@ -27,30 +29,29 @@ if not (r.status_code == 200 and "version" in r.text):
 
 def test_shareservice_urls_valid():
     """test some common actions on url"""
-    config = providers.Singleton(AppConfig)
 
     # /
-    r = requests.get(config().sharing.shareservice_url)
+    r = requests.get(appconfig.sharing.shareservice_url)
     assert r.status_code == 406
 
     # info action
-    r = requests.get(config().sharing.shareservice_url, params={"action": "info"})
+    r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"})
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
     # list action
-    r = requests.get(config().sharing.shareservice_url, params={"action": "list"})
+    r = requests.get(appconfig.sharing.shareservice_url, params={"action": "list"})
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
     # invalid action
-    r = requests.get(config().sharing.shareservice_url, params={"action": "nonexistentaction"})
+    r = requests.get(appconfig.sharing.shareservice_url, params={"action": "nonexistentaction"})
     logger.info(f"{r.text=}")
     assert r.status_code == 406
 
     # invalid apikey
     r = requests.post(
-        config().sharing.shareservice_url,
+        appconfig.sharing.shareservice_url,
         files=None,
         data={
             "action": "upload",
@@ -62,36 +63,33 @@ def test_shareservice_urls_valid():
     assert r.status_code == 500
 
 
-@pytest.fixture()
-def services() -> ServicesContainer:
+# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
+@pytest.fixture(scope="module")
+def _container() -> Container:
+    appconfig.sharing.shareservice_enabled = True
+
     # setup
-    application_container = ApplicationContainer()
-
-    application_container.config().sharing.shareservice_enabled = True
-
-    services = application_container.services()
-
+    container.start()
     # create one image to ensure there is at least one
-
-    services.processing_service().start_job_1pic()
+    container.processing_service.start_job_1pic()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_shareservice_download_image(services: ServicesContainer):
+def test_shareservice_download_image(_container: Container):
     """start service and try to download an image"""
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert _container.share_service._initialized
 
     # get the newest image id
-    mediaitem_id = services.mediacollection_service().db_get_most_recent_mediaitem().id
+    mediaitem_id = _container.mediacollection_service.db_get_most_recent_mediaitem().id
 
     logger.info(f"check to download {mediaitem_id=}")
     r = requests.get(
-        config().sharing.shareservice_url,
+        appconfig.sharing.shareservice_url,
         params={"action": "download", "id": mediaitem_id},
     )
 
@@ -105,14 +103,14 @@ def test_shareservice_download_image(services: ServicesContainer):
         raise AssertionError(f"shareservice did not return valid image bytes, {exc}") from exc
 
 
-def test_shareservice_download_nonexistant_image(services: ServicesContainer):
+def test_shareservice_download_nonexistant_image(_container: Container):
     """start service and try to download an image that does not exist"""
 
     # check that share_service was initialized properly, otherwise fail
-    assert services.share_service()._initialized
+    assert _container.share_service._initialized
 
     r = requests.get(
-        config().sharing.shareservice_url,
+        appconfig.sharing.shareservice_url,
         params={"action": "download", "id": "nonexistentidentifier"},
     )
 

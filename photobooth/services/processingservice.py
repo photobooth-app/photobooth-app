@@ -7,9 +7,10 @@ import time
 
 from statemachine import State, StateMachine
 
-from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
+from .config import appconfig
+from .config.appconfig import GroupMediaprocessingPipelineSingleImage
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
     MediacollectionService,
@@ -51,14 +52,12 @@ class ProcessingService(StateMachine):
 
     def __init__(
         self,
-        config: AppConfig,
         _sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
     ):
-        self._config: AppConfig = config
         self._sse_service: SseService = _sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -89,7 +88,7 @@ class ProcessingService(StateMachine):
         self.model.start_model(
             typ,
             total_captures_to_take,
-            collage_automatic_capture_continue=self._config.common.collage_automatic_capture_continue,
+            collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
         )
 
         logger.info(f"start job {self.model}")
@@ -138,9 +137,9 @@ class ProcessingService(StateMachine):
 
         # determine countdown time, first and following could have different times
         duration = (
-            self._config.common.countdown_capture_first
+            appconfig.common.countdown_capture_first
             if (self.model.number_captures_taken() == 0)
-            else self._config.common.countdown_capture_second_following
+            else appconfig.common.countdown_capture_second_following
         )
 
         # if countdown is 0, skip following and transition to next state directy
@@ -154,13 +153,13 @@ class ProcessingService(StateMachine):
             # do not continue here again after counted has processed
 
         # starting countdown
-        if (duration - self._config.common.countdown_camera_capture_offset) <= 0:
+        if (duration - appconfig.common.countdown_camera_capture_offset) <= 0:
             logger.warning("duration equal/shorter than camera offset makes no sense. this results in 0s countdown!")
 
-        logger.info(f"start countdown, duration_user={duration=}, offset_camera={self._config.common.countdown_camera_capture_offset}")
+        logger.info(f"start countdown, duration_user={duration=}, offset_camera={appconfig.common.countdown_camera_capture_offset}")
         self.model.start_countdown(
             duration_user=duration,
-            offset_camera=self._config.common.countdown_camera_capture_offset,
+            offset_camera=appconfig.common.countdown_camera_capture_offset,
         )
         # inform UI to count
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
@@ -186,7 +185,7 @@ class ProcessingService(StateMachine):
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        for attempt in range(1, self._config.backends.retry_capture + 1):
+        for attempt in range(1, appconfig.backends.retry_capture + 1):
             try:
                 self._wled_service.preset_shoot()
 
@@ -204,7 +203,7 @@ class ProcessingService(StateMachine):
                 logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
             except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{self._config.backends.retry_capture}, retrying")
+                logger.error(f"error capture image. timeout expired {attempt=}/{appconfig.backends.retry_capture}, retrying")
                 # can we do additional error handling here?
                 continue
 
@@ -220,8 +219,8 @@ class ProcessingService(StateMachine):
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
-            raise RuntimeError(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
+            logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
+            raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
 
         self._wled_service.preset_standby()
 
@@ -255,10 +254,10 @@ class ProcessingService(StateMachine):
         # apply 1pic pipeline:
         tms = time.time()
         if self.model._typ == JobModel.Typ.image:
-            self._mediaprocessing_service.process_singleimage(mediaitem, self._config.mediaprocessing_pipeline_singleimage)
+            self._mediaprocessing_service.process_singleimage(mediaitem, appconfig.mediaprocessing_pipeline_singleimage)
         elif self.model._typ == JobModel.Typ.collage:
             # the captures in the context of a collage job can be processed differently:
-            cfg_collage = self._config.mediaprocessing_pipeline_collage
+            cfg_collage = appconfig.mediaprocessing_pipeline_collage
 
             # list only captured_images from merge_definition (excludes predefined)
             captured_images = [item for item in cfg_collage.canvas_merge_definition if not item.predefined_image]

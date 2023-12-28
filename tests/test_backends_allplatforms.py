@@ -4,39 +4,32 @@ Testing VIRTUALCAMERA Backend
 import logging
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.services.backends.virtualcamera import VirtualCameraBackend
+from photobooth.services.backends.webcamcv2 import WebcamCv2Backend
+from photobooth.services.backends.webcamcv2 import available_camera_indexes as cv2_avail
+from photobooth.services.config import appconfig
 
 from .backends_utils import get_images
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def backends() -> BackendsContainer:
+def backend_cv2() -> WebcamCv2Backend:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
-    # deliver
-    yield backends_container
-    backends_container.shutdown_resources()
-
-
-def test_get_images_virtualcamera(backends: BackendsContainer):
-    virtualcamera_backend = backends.virtualcamera_backend()
-
-    """get lores and hires images from backend and assert"""
-    get_images(virtualcamera_backend)
-
-
-def test_get_images_webcamcv2(backends: BackendsContainer):
-    from photobooth.services.backends.webcamcv2 import available_camera_indexes
+    backend = WebcamCv2Backend()
 
     logger.info("probing for available cameras")
-    _availableCameraIndexes = available_camera_indexes()
+    _availableCameraIndexes = cv2_avail()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
 
@@ -44,9 +37,31 @@ def test_get_images_webcamcv2(backends: BackendsContainer):
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
-    backends.config().backends.cv2_device_index = cameraIndex
 
+    appconfig.backends.cv2_device_index = cameraIndex
+
+    # deliver
+    backend.start()
+    yield backend
+    backend.stop()
+
+
+@pytest.fixture()
+def backend_virtual() -> VirtualCameraBackend:
+    # setup
+    backend = VirtualCameraBackend()
+
+    # deliver
+    backend.start()
+    yield backend
+    backend.stop()
+
+
+def test_get_images_virtualcamera(backend_virtual: WebcamCv2Backend):
     """get lores and hires images from backend and assert"""
+    get_images(backend_virtual)
 
-    webcamcv2_backend = backends.webcamcv2_backend()
-    get_images(webcamcv2_backend)
+
+def test_get_images_webcamcv2(backend_cv2: WebcamCv2Backend):
+    """get lores and hires images from backend and assert"""
+    get_images(backend_cv2)

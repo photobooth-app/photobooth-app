@@ -4,15 +4,24 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.appconfig import AppConfig
 from photobooth.application import app
+from photobooth.container import container
+from photobooth.services.config import AppConfig, appconfig
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 @pytest.fixture(

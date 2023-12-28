@@ -12,9 +12,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +47,7 @@ class AbstractBackend(ABC):
     """
 
     @abstractmethod
-    def __init__(self, config: AppConfig):
-        self._config = config
+    def __init__(self):
         self._backendstats: BackendStats = BackendStats(
             backend_name=self.__class__.__name__,
         )
@@ -114,12 +113,20 @@ class AbstractBackend(ABC):
     def _on_preview_mode(self):
         """called externally via events and used to change to a preview mode if necessary"""
 
-    #
-    # FUNCTIONS IMPLEMENTED IN ABSTRACT CLASS
-    #
     @staticmethod
     @cache
-    def _substitute_image(caption: str = "", message: str = "", mirror: bool = False) -> bytes:
+    def _substitute_image(caption: str = "Error", message: str = "Something happened!", mirror: bool = False) -> bytes:
+        """Create a substitute image in case the stream fails.
+        The image shall clarify some error occured to the user while trying to recover.
+
+        Args:
+            caption (str, optional): Caption in first line. Defaults to "".
+            message (str, optional): Additional error message in second line. Defaults to "".
+            mirror (bool, optional): Flip left/right in case the stream has mirror effect applied. Defaults to False.
+
+        Returns:
+            bytes: _description_
+        """
         path_font = Path(__file__).parent.joinpath("assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
 
@@ -140,6 +147,36 @@ class AbstractBackend(ABC):
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
 
+    def wait_for_lores_image(self, retries: int = 10):
+        """Function called externally to receivea low resolution image.
+        Also used to stream. Tries to recover up to retries times before giving up.
+
+        Args:
+            retries (int, optional): How often retry to use the private _wait_for_lores_image function before failing. Defaults to 10.
+
+        Raises:
+            exc: Shutdown is handled different, no retry
+            exc: All other exceptions will lead to retry before finally fail.
+
+        Returns:
+            _type_: _description_
+        """
+        remaining_retries = retries
+        while True:
+            try:
+                return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
+            except ShutdownInProcessError as exc:
+                logger.info("ShutdownInProcess, stopping aquisition")
+                raise exc
+            except Exception as exc:
+                if remaining_retries < 0:
+                    raise exc
+
+                remaining_retries -= 1
+                logger.warning("waiting for backend provide low resolution image...")
+
+                continue
+
     def gen_stream(self):
         """
         yield jpeg images to stream to client (if not created otherwise)
@@ -151,13 +188,13 @@ class AbstractBackend(ABC):
         last_time = time.time_ns()
         while True:
             now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / self._config.backends.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
-                    output_jpeg_bytes = self._wait_for_lores_image()
+                    output_jpeg_bytes = self.wait_for_lores_image()
                 except ShutdownInProcessError:
-                    logger.warning("gather img failed due to resources shutting down")
+                    logger.info("ShutdownInProcess, stopping stream")
                     return
                 except TimeoutError:
                     # this error could be recovered (example: DSLR turned off/on again)
@@ -166,7 +203,7 @@ class AbstractBackend(ABC):
                     output_jpeg_bytes = self._substitute_image(
                         "Oh no - stream error :(",
                         "timeout, no preview from cam. retrying.",
-                        self._config.uisettings.livestream_mirror_effect,
+                        appconfig.uisettings.livestream_mirror_effect,
                     )
                 except Exception as exc:
                     # this error probably cannot recover.
@@ -175,7 +212,7 @@ class AbstractBackend(ABC):
                     output_jpeg_bytes = self._substitute_image(
                         "Oh no - stream error :(",
                         "exception, unknown error getting preview.",
-                        self._config.uisettings.livestream_mirror_effect,
+                        appconfig.uisettings.livestream_mirror_effect,
                     )
 
                 yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")

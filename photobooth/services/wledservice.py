@@ -5,9 +5,9 @@ import time
 
 import serial
 
-from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .baseservice import BaseService
+from .config import appconfig
 from .sseservice import SseService
 
 # these presets are set on WLED module to control lights:
@@ -21,11 +21,11 @@ RECONNECT_INTERVAL_TIMER = 10
 class WledService(BaseService):
     """_summary_"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService):
+        super().__init__(sse_service)
 
-        self._enabled = config.hardwareinputoutput.wled_enabled
-        self._serial_port = config.hardwareinputoutput.wled_serial_port
+        self._enabled = appconfig.hardwareinputoutput.wled_enabled
+        self._serial_port = appconfig.hardwareinputoutput.wled_serial_port
 
         self._serial: serial.Serial = None
         self._reconnect_interval_timer: RepeatedTimer = RepeatedTimer(RECONNECT_INTERVAL_TIMER, self.connect)

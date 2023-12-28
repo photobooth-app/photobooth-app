@@ -12,10 +12,10 @@ sshkeyboard: ?
 """
 
 
-from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..vendor.packages.keyboard import keyboard
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
@@ -28,13 +28,12 @@ class KeyboardService(BaseService):
 
     def __init__(
         self,
-        config: AppConfig,
         sse_service: SseService,
         processing_service: ProcessingService,
         printing_service: PrintingService,
         mediacollection_service: MediacollectionService,
     ):
-        super().__init__(config=config, sse_service=sse_service)
+        super().__init__(sse_service=sse_service)
 
         self._processing_service = processing_service
         self._printing_service = printing_service
@@ -43,7 +42,7 @@ class KeyboardService(BaseService):
         self._started = False
 
     def start(self):
-        if self._config.hardwareinputoutput.keyboard_input_enabled:
+        if appconfig.hardwareinputoutput.keyboard_input_enabled:
             self._logger.info("keyboardservice enabled - listeners installed")
             try:
                 keyboard.on_press(self._on_key_callback)
@@ -68,8 +67,8 @@ class KeyboardService(BaseService):
         """
         self._logger.debug(f"key '{key.name}' triggered.")
 
-        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takepic:
-            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takepic}")
+        if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takepic:
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takepic}")
             self._logger.info("trigger start_job_1pic")
 
             try:
@@ -81,8 +80,8 @@ class KeyboardService(BaseService):
                 # other errors
                 self._logger.critical(exc)
 
-        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_takecollage:
-            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_takecollage}")
+        if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage:
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage}")
             self._logger.info("trigger start_job_collage")
 
             try:
@@ -94,8 +93,8 @@ class KeyboardService(BaseService):
                 # other errors
                 self._logger.critical(exc)
 
-        if key.name == self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
-            self._logger.info(f"got key.name={self._config.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")
+        if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")
             self._logger.info("trigger _print_recent_item")
 
             try:

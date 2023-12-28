@@ -16,7 +16,7 @@ from pathlib import Path
 from PIL import Image
 from turbojpeg import TurboJPEG
 
-from ...appconfig import AppConfig
+from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
@@ -176,12 +176,12 @@ class MediaItem:
 
         # exception here for now to use appconfig like this not via container - maybe find better solution in future.
         # config changes are not reflected like this, always needs restart
-        if AppConfig().sharing.shareservice_enabled:
+        if appconfig.sharing.shareservice_enabled:
             # if shareservice enabled, generate URL automatically as needed:
-            return f"{AppConfig().sharing.shareservice_url}?action=download&id={self.id}"
+            return f"{appconfig.sharing.shareservice_url}?action=download&id={self.id}"
         else:
             # if not, user can sync images on his own and provide a download URL:
-            return AppConfig().sharing.share_custom_qr_url.format(filename=self.filename)
+            return appconfig.sharing.share_custom_qr_url.format(filename=self.filename)
 
     def __post_init__(self):
         if not self.filename:
@@ -264,22 +264,22 @@ class MediaItem:
     def _get_full_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().mediaprocessing.HIRES_STILL_QUALITY,
-            AppConfig().mediaprocessing.FULL_STILL_WIDTH,
+            appconfig.mediaprocessing.HIRES_STILL_QUALITY,
+            appconfig.mediaprocessing.FULL_STILL_WIDTH,
         )
 
     def _get_preview_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().mediaprocessing.PREVIEW_STILL_QUALITY,
-            AppConfig().mediaprocessing.PREVIEW_STILL_WIDTH,
+            appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
+            appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
         )
 
     def _get_thumbnail_repr(self, buffer_in: bytes) -> bytes:
         return self.resize_jpeg(
             buffer_in,
-            AppConfig().mediaprocessing.THUMBNAIL_STILL_QUALITY,
-            AppConfig().mediaprocessing.THUMBNAIL_STILL_WIDTH,
+            appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
+            appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
         )
 
     @staticmethod

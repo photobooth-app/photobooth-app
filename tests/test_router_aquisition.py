@@ -1,4 +1,5 @@
 import io
+import logging
 import time
 from unittest import mock
 from unittest.mock import patch
@@ -8,14 +9,26 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.application import app
+from photobooth.container import container
 from photobooth.services.aquisitionservice import AquisitionService
+from photobooth.services.config import appconfig
+
+logger = logging.getLogger(name=None)
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
+        container.start()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def capture(client: TestClient):
@@ -78,7 +91,7 @@ def test_stream(client: TestClient):
 
 def test_stream_exception_disabled(client: TestClient):
     # disable livestream
-    client.app.container.config().backends.LIVEPREVIEW_ENABLED = False
+    appconfig.backends.LIVEPREVIEW_ENABLED = False
 
     # shall result in error 405
     response = client.get("/aquisition/stream.mjpg")

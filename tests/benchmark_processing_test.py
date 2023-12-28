@@ -2,33 +2,33 @@ import logging
 
 import pytest
 
-from photobooth.containers import ApplicationContainer
-from photobooth.services.containers import ServicesContainer
+from photobooth.container import Container, container
+from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 
 
-# need fixture on module scope
-@pytest.fixture(scope="module")
-def services() -> ServicesContainer:
-    # setup
-    application_container = ApplicationContainer()
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
 
-    # application_container.services().init_resources()
+    yield
+
+
+@pytest.fixture(scope="function")
+def _container() -> Container:
+    # setup
+
+    container.start()
 
     # deliver
-    yield application_container.services()
-    application_container.services().shutdown_resources()
+    yield container
+    container.stop()
 
 
-def proc_shoot(services: ServicesContainer):
-    services.processing_service().start_job_1pic()
-    # services.processing_service()._reset()
-
-
-def proc_postprocess(services: ServicesContainer):
-    services.processing_service()._postprocess()
-    # services.processing_service()._reset()
+def proc_shoot(_container: Container):
+    _container.processing_service.start_job_1pic()
+    # _container.processing_service._reset()
 
 
 # needs pip install pytest-benchmark
@@ -36,10 +36,3 @@ def proc_postprocess(services: ServicesContainer):
 def test_shoot(benchmark, services):
     benchmark(proc_shoot, services)
     assert True
-
-
-# needs pip install pytest-benchmark
-@pytest.mark.benchmark()
-def test_postprocess(benchmark, services):
-    pass
-    # TODO.
