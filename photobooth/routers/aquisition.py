@@ -1,6 +1,5 @@
 import logging
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import Response, StreamingResponse
 
@@ -14,7 +13,6 @@ aquisition_router = APIRouter(
 
 
 @aquisition_router.get("/stream.mjpg")
-@inject
 def video_stream():
     """
     endpoint to stream live video to clients
@@ -43,7 +41,6 @@ def video_stream():
     # https://github.com/tiangolo/fastapi/issues/3258
     response_class=Response,
 )
-@inject
 def api_still_get():
     """Aquire image and serve to download
 
@@ -66,7 +63,6 @@ def api_still_get():
 
 
 @aquisition_router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
-@inject
 def api_cmd_aquisition_capturemode_get(
     mode: str = "preview",
 ):

@@ -1,7 +1,6 @@
 import io
 import logging
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException, Response, status
 from PIL import Image
 
@@ -19,7 +18,6 @@ mediaprocessing_router = APIRouter(
 
 
 @mediaprocessing_router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
-@inject
 def api_get_preview_image_filtered(mediaitem_id, filter=None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
@@ -53,7 +51,6 @@ def api_get_preview_image_filtered(mediaitem_id, filter=None):
 
 
 @mediaprocessing_router.get("/applyfilter/{mediaitem_id}/{filter}")
-@inject
 def api_get_applyfilter(mediaitem_id, filter: str = None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)

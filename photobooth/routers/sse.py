@@ -2,7 +2,6 @@ import logging
 from asyncio import Queue
 from datetime import datetime
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, Request
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
@@ -16,7 +15,6 @@ sse_router = APIRouter(
 
 
 @sse_router.get("/sse")
-@inject
 async def subscribe(request: Request):
     """
     Eventstream to feed clients with server generated events and data

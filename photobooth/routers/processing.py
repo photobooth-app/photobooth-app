@@ -1,6 +1,5 @@
 import logging
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException
 
 from ..container import container
@@ -13,7 +12,6 @@ processing_router = APIRouter(
 )
 
 
-@inject
 def _capture(job):
     try:
         job()
@@ -35,19 +33,16 @@ def _capture(job):
 
 
 @processing_router.get("/chose/1pic")
-@inject
 def api_chose_1pic_get():
     return _capture(container.processing_service.start_job_1pic)
 
 
 @processing_router.get("/chose/collage")
-@inject
 def api_chose_collage_get():
     return _capture(container.processing_service.start_job_collage)
 
 
 @processing_router.get("/cmd/confirm")
-@inject
 def api_cmd_confirm_get():
     try:
         container.processing_service.confirm_capture()
@@ -62,7 +57,6 @@ def api_cmd_confirm_get():
 
 
 @processing_router.get("/cmd/reject")
-@inject
 def api_cmd_reject_get():
     try:
         container.processing_service.reject_capture()
@@ -77,7 +71,6 @@ def api_cmd_reject_get():
 
 
 @processing_router.get("/cmd/abort")
-@inject
 def api_cmd_abort_get():
     try:
         container.processing_service.abort_process()

@@ -1,6 +1,5 @@
 import logging
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException, status
 
 from ..container import container
@@ -13,7 +12,6 @@ mediacollection_router = APIRouter(
 
 
 @mediacollection_router.get("/getitems")
-@inject
 def api_getitems():
     try:
         return container.mediacollection_service.db_get_images_as_dict()
@@ -23,7 +21,6 @@ def api_getitems():
 
 
 @mediacollection_router.get("/delete", status_code=status.HTTP_204_NO_CONTENT)
-@inject
 def api_gallery_delete(image_id: str):
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
@@ -34,7 +31,6 @@ def api_gallery_delete(image_id: str):
 
 
 @mediacollection_router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
-@inject
 def api_gallery_delete_all():
     """Warning: deletes all files permanently without any further confirmation
 

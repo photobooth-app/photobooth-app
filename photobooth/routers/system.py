@@ -1,7 +1,6 @@
 import logging
 import os
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter, HTTPException
 
 from ..container import container
@@ -14,7 +13,6 @@ system_router = APIRouter(
 
 
 @system_router.get("/{action}/{param}")
-@inject
 def api_cmd(
     action,
     param,

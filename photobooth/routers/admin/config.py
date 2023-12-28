@@ -1,6 +1,5 @@
 import logging
 
-from dependency_injector.wiring import inject
 from fastapi import APIRouter
 
 from ...services.config import AppConfig, appconfig
@@ -22,7 +21,6 @@ def api_get_config_schema(schema_type: str = "default"):
 
 
 @admin_config_router.get("/reset")
-@inject
 def api_reset_config():
     """
     Reset config, deleting config.json file
@@ -32,7 +30,6 @@ def api_reset_config():
 
 
 @admin_config_router.get("/currentActive")
-@inject
 def api_get_config_current_active():
     """returns currently cached and active settings"""
     return appconfig
@@ -45,7 +42,6 @@ def api_get_config_current():
 
 
 @admin_config_router.post("/current")
-@inject
 def api_post_config_current(
     updated_config: AppConfig,
 ):
