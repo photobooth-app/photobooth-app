@@ -23,6 +23,9 @@ class EventstreamLogHandler(logging.Handler):
     """
     Logging handler to emit events to eventstream;
     to be displayed in console.log on browser frontend
+
+    TODO, could replace the FrontendNotification, also logs with extras used to control the UI:
+      - record.display_notification (bool): Show the log in the UI or not.
     """
 
     def __init__(self, sse_service: SseService):
@@ -38,6 +41,7 @@ class EventstreamLogHandler(logging.Handler):
             name=record.name,
             funcName=record.funcName,
             lineno=record.lineno,
+            # TODO: maybe later: display_notification=bool(getattr(record, "display_notification", False)),  # if present display also in the UI as notification
         )
 
         self._sse_service.dispatch_event(sse_logrecord)

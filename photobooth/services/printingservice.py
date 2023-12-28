@@ -8,7 +8,7 @@ from .baseservice import BaseService
 from .config import appconfig
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
-from .sseservice import SseService
+from .sseservice import SseEventFrontendNotification, SseService
 
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 
@@ -67,6 +67,7 @@ class PrintingService(BaseService):
             # update last print time to calc block time on next run
             self._start_time_blocked()
         except Exception as exc:
+            self._sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Print Error"))
             raise RuntimeError(f"print failed, error {exc}") from exc
 
     def is_blocked(self):

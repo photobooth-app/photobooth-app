@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from ..container import container
-from ..services.sseservice import Client
+from ..services.sseservice import Client, SseEventFrontendNotification
 
 logger = logging.getLogger(__name__)
 sse_router = APIRouter(
@@ -35,6 +35,8 @@ async def subscribe(request: Request):
     # following modules send some data on connection init to client:
     container.information_service.initial_emit()
     container.processing_service.initial_emit()
+
+    container.sse_service.dispatch_event(SseEventFrontendNotification(color="positive", message="Photobooth-App ready!", caption="Connected"))
 
     return EventSourceResponse(
         container.sse_service.event_iterator(client=client),

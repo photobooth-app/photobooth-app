@@ -46,7 +46,7 @@ def main(run_server: bool = True):
     logger.info(f"app version started: {__version__}")
 
     # start main application server
-    logger.info("Welcome to the photobooth-app")
+    logger.info("Welcome to the photobooth-app")  # TODO, could be used later:, extra={"display_notification": True})
 
     # log_level="trace", default info
     server = uvicorn.Server(
