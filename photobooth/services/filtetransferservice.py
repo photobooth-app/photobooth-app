@@ -23,20 +23,23 @@ class FileTransferService(BaseService):
     def __init__(self, sse_service: SseService):
         super().__init__(sse_service)
 
-        self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
+        self._worker_thread: StoppableThread = None
 
     def start(self):
         if not appconfig.filetransfer.enabled:
             self._logger.info("FileTransferService disabled, start aborted.")
             return
 
+        self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
+
         self._logger.info("FileTransferService started.")
 
     def stop(self):
-        self._worker_thread.stop()
-        if self._worker_thread.is_alive():
-            self._worker_thread.join()
+        if self._worker_thread:
+            self._worker_thread.stop()
+            if self._worker_thread.is_alive():
+                self._worker_thread.join()
 
         self._logger.info("FileTransferService stopped.")
 
