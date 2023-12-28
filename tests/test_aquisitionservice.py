@@ -51,7 +51,7 @@ def test_getimages_directlyaccess_backends(_container: Container):
         logger.info(img)
         img.verify()
 
-    with Image.open(io.BytesIO(_container.aquisition_service._main_backend._wait_for_lores_image())) as img:
+    with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
 
@@ -59,7 +59,7 @@ def test_getimages_directlyaccess_backends(_container: Container):
         logger.info(img)
         img.verify()
 
-    with Image.open(io.BytesIO(_container.aquisition_service._live_backend._wait_for_lores_image())) as img:
+    with Image.open(io.BytesIO(_container.aquisition_service._live_backend.wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
 

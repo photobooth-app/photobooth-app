@@ -25,7 +25,7 @@ def get_images(backend: AbstractBackend):
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
 
     try:
-        with Image.open(io.BytesIO(backend._wait_for_lores_image())) as img:
+        with Image.open(io.BytesIO(backend.wait_for_lores_image())) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
