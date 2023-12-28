@@ -5,7 +5,7 @@ AppConfig class providing central config
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, NonNegativeInt, PositiveInt
 from pydantic_extra_types.color import Color
 
 
@@ -72,6 +72,12 @@ class CollageMergeDefinition(BaseModel):
     width: NonNegativeInt = 600
     height: NonNegativeInt = 600
     rotate: int = 0
+    predefined_image: str = ""
+    filter: EnumPilgramFilter = EnumPilgramFilter.original
+
+
+class GifMergeDefinition(BaseModel):
+    seconds: NonNegativeFloat = 2.0
     predefined_image: str = ""
     filter: EnumPilgramFilter = EnumPilgramFilter.original
 
@@ -292,6 +298,23 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
             ),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+    )
+
+
+class GroupMediaprocessingPipelineGif(BaseModel):
+    """Configure stages how to process collage after capture."""
+
+    model_config = ConfigDict(title="Process GIF after capture")
+
+    sequence_merge_definition: list[GifMergeDefinition] = Field(
+        default=[
+            GifMergeDefinition(filter=EnumPilgramFilter.earlybird),
+            GifMergeDefinition(
+                filter=EnumPilgramFilter.mayfair,
+                predefined_image="predefined_images/pexels-marcelo-miranda-7708722.jpg",
+            ),
+        ],
+        description="Sequence single images in a GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
 

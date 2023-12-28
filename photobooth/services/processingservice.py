@@ -383,6 +383,15 @@ class ProcessingService(StateMachine):
     def start_job_video(self):
         raise NotImplementedError
 
+    def start_job_gif(self):
+        self._check_occupied()
+        try:
+            self.start(JobModel.Typ.gif, self._mediaprocessing_service.number_of_captures_to_take_for_gif())
+        except Exception as exc:
+            logger.error(exc)
+            self._reset()
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
+
     def job_finished(self):
         return self.idle.is_active
 

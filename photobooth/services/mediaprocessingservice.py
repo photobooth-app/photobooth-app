@@ -5,6 +5,7 @@ import io
 import logging
 import os
 import time
+from typing import Union
 
 from PIL import Image
 from pydantic_extra_types.color import Color
@@ -14,7 +15,7 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.mediaprocessing import GroupMediaprocessingPipelineSingleImage, TextsConfig
+from .config.groups.mediaprocessing import CollageMergeDefinition, GifMergeDefinition, GroupMediaprocessingPipelineSingleImage, TextsConfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
@@ -248,8 +249,27 @@ class MediaprocessingService(BaseService):
             raise PipelineError("collage definition not set up!")
 
         collage_merge_definition = appconfig.mediaprocessing_pipeline_collage.canvas_merge_definition
+
+        return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
+
+    def number_of_captures_to_take_for_gif(self) -> int:
+        """analyze the configuration and return the needed number of captures to take by camera.
+        If there are fixed images given these do not count to the number to capture.
+
+        Returns:
+            int: number of captures
+        """
+        if not appconfig.mediaprocessing_pipeline_gif.sequence_merge_definition:
+            raise PipelineError("collage definition not set up!")
+
+        collage_merge_definition = appconfig.mediaprocessing_pipeline_gif.sequence_merge_definition
+
+        return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
+
+    @staticmethod
+    def get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[GifMergeDefinition]]) -> int:
         # item.predefined_image None or "" are considered as to capture aka not predefined
-        predefined_images = [item.predefined_image for item in collage_merge_definition if item.predefined_image]
+        predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
         for predefined_image in predefined_images:
             try:
                 # preflight check here without use.
@@ -258,7 +278,7 @@ class MediaprocessingService(BaseService):
                 logger.exception(exc)
                 raise PipelineError(f"predefined image {predefined_image} not found!") from exc
 
-        total_images_in_collage = len(collage_merge_definition)
+        total_images_in_collage = len(merge_definition)
         fixed_images = len(predefined_images)
 
         captures_to_take = total_images_in_collage - fixed_images

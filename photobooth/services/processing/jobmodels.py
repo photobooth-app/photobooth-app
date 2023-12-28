@@ -67,6 +67,7 @@ class JobModel:  # TODO: derive from model class?
         image = "image"
         collage = "collage"
         video = "video"
+        gif = "gif"
 
     def __init__(self):
         """_summary_
