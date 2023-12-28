@@ -134,7 +134,7 @@ def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 
     with pytest.raises(TimeoutError):
-        with Image.open(io.BytesIO(backend_gphoto2._wait_for_lores_image())) as img:
+        with Image.open(io.BytesIO(backend_gphoto2.wait_for_lores_image())) as img:
             img.verify()
 
     with Image.open(io.BytesIO(backend_gphoto2.wait_for_hq_image())) as img:

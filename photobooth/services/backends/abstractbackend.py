@@ -113,12 +113,20 @@ class AbstractBackend(ABC):
     def _on_preview_mode(self):
         """called externally via events and used to change to a preview mode if necessary"""
 
-    #
-    # FUNCTIONS IMPLEMENTED IN ABSTRACT CLASS
-    #
     @staticmethod
     @cache
-    def _substitute_image(caption: str = "", message: str = "", mirror: bool = False) -> bytes:
+    def _substitute_image(caption: str = "Error", message: str = "Something happened!", mirror: bool = False) -> bytes:
+        """Create a substitute image in case the stream fails.
+        The image shall clarify some error occured to the user while trying to recover.
+
+        Args:
+            caption (str, optional): Caption in first line. Defaults to "".
+            message (str, optional): Additional error message in second line. Defaults to "".
+            mirror (bool, optional): Flip left/right in case the stream has mirror effect applied. Defaults to False.
+
+        Returns:
+            bytes: _description_
+        """
         path_font = Path(__file__).parent.joinpath("assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
 
@@ -140,6 +148,19 @@ class AbstractBackend(ABC):
         return jpeg_buffer.getvalue()
 
     def wait_for_lores_image(self, retries: int = 10):
+        """Function called externally to receivea low resolution image.
+        Also used to stream. Tries to recover up to retries times before giving up.
+
+        Args:
+            retries (int, optional): How often retry to use the private _wait_for_lores_image function before failing. Defaults to 10.
+
+        Raises:
+            exc: Shutdown is handled different, no retry
+            exc: All other exceptions will lead to retry before finally fail.
+
+        Returns:
+            _type_: _description_
+        """
         remaining_retries = retries
         while True:
             try:
