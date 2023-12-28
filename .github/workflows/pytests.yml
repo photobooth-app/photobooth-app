@@ -16,6 +16,8 @@ jobs:
       sharing__shareservice_apikey: "runnertestingpassword"
       sharing__shareservice_url: "http://localhost:8082/dl.php"
       PHP_CLI_SERVER_WORKERS: 6
+      common__countdown_capture_first: 0.2
+      common__countdown_capture_second_following: 0.2
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -60,10 +62,11 @@ jobs:
     env:
       ## Sets environment variable
       backends__MAIN_BACKEND: VirtualCamera
-      backends__v4l_device_index: 2
-      backends__cv2_device_index: 2
       hardwareinputoutput__wled_enabled: True
       hardwareinputoutput__wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
+      common__countdown_capture_first: 0.2
+      common__countdown_capture_second_following: 0.2
+
     runs-on: self-hosted
     if: ${{ github.repository_owner == 'photobooth-app' }}
 
