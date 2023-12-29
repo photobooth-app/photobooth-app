@@ -38,10 +38,10 @@ via remotecmd
 
 import dataclasses
 import logging
-import os
 import tempfile
 import time
 import urllib.parse
+from pathlib import Path
 from threading import Condition, Event
 
 import requests
@@ -250,9 +250,8 @@ class DigicamcontrolBackend(AbstractBackend):
                 try:
                     # capture request, afterwards read file to buffer
                     tmp_dir = tempfile.gettempdir()
-                    tmp_filepath = tempfile.mktemp(prefix="booth_", suffix="", dir=tmp_dir)
-                    tmp_filename = os.path.basename(tmp_filepath)
-                    logger.info(f"tmp_dir={tmp_dir}, tmp_filename={tmp_filename}")
+
+                    logger.info(f"requesting digicamcontrol to store files to {tmp_dir=}")
 
                     r = session.get(
                         f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
@@ -261,20 +260,22 @@ class DigicamcontrolBackend(AbstractBackend):
                     if not r.text == "OK":
                         raise RuntimeError(f"error setting directory {r.text}")
 
-                    r = session.get(
-                        f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename, safe='',)}"  # noqa: E501
-                    )
-                    assert r.status_code == 200
-                    if not r.text == "OK":
-                        raise RuntimeError(f"error setting filename {r.text}")
-
                     r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
                     assert r.status_code == 200
                     if not r.text == "OK":
                         raise RuntimeError(f"error capture {r.text}")
 
-                    logger.info(f"saved camera file to f{tmp_filepath}.jpg")
-                    with open(f"{tmp_filepath}.jpg", "rb") as fh:
+                    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
+                    assert r.status_code == 200
+                    if r.text in ("-", "?"):  # "-" means capture in progress, "?" means not yet an image captured
+                        error_translation = {"-": "capture still in process", "?": "not yet an image captured"}
+                        raise RuntimeError(f"error retrieving capture, {error_translation[r.text]}")
+
+                    # at this point it's assumed that r.text holds the filename:
+                    captured_filepath = Path(tmp_dir, r.text)
+
+                    logger.info(f"trying to open captured file {captured_filepath}")
+                    with open(captured_filepath, "rb") as fh:
                         img_bytes = fh.read()
 
                 except Exception as exc:
@@ -302,7 +303,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
                         if self._lores_data.data and (self._lores_data.data == r.content):
                             raise RuntimeError(
-                                "received same frame again - digicamcontrol liveview might be closed or delivers framerate lower 10fps"
+                                "received same frame again - digicamcontrol liveview might be closed or delivers "
+                                "low framerate only. Consider to reduce resolution or Livepreview Framerate."
                             )
 
                     except Exception as exc:

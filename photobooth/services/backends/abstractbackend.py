@@ -173,7 +173,7 @@ class AbstractBackend(ABC):
                     raise exc
 
                 remaining_retries -= 1
-                logger.warning("waiting for backend provide low resolution image...")
+                logger.debug("waiting for backend provide low resolution image...")
 
                 continue
 
