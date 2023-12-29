@@ -41,6 +41,8 @@ def api_get_preview_image_filtered(mediaitem_id, filter=None):
         ) from exc
 
     buffer_preview_pipeline_applied = io.BytesIO()
+    if image.mode == "P":  # convert GIF palette to RGB so it can be stored as jpeg
+        image = image.convert("RGB")
     image.save(
         buffer_preview_pipeline_applied,
         format="jpeg",
