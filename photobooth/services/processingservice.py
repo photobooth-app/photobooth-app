@@ -181,9 +181,9 @@ class ProcessingService(StateMachine):
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
         _type = MediaItemTypes.image
         if self.model._typ is JobModel.Typ.collage:
-            _type = MediaItemTypes.collage_image  # 1st phase collage image
+            _type = MediaItemTypes.collageimage  # 1st phase collage image
         if self.model._typ is JobModel.Typ.animation:
-            _type = MediaItemTypes.animation_image  # 1st phase collage image
+            _type = MediaItemTypes.animationimage  # 1st phase collage image
 
         filepath_neworiginalfile = get_new_filename(type=_type)
         logger.debug(f"capture to {filepath_neworiginalfile=}")

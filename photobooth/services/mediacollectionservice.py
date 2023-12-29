@@ -1,7 +1,6 @@
 """
 Handle all media collection related functions
 """
-import glob
 import logging
 import os
 import time
@@ -17,6 +16,7 @@ from .mediacollection.mediaitem import (
     PATH_THUMBNAIL,
     PATH_THUMBNAIL_UNPROCESSED,
     MediaItem,
+    MediaItemAllowedFileendings,
 )
 from .mediaprocessingservice import MediaprocessingService
 from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
@@ -54,7 +54,9 @@ class MediacollectionService(BaseService):
     def _init_db(self):
         self._logger.info("init database and creating missing scaled images. this might take some time.")
 
-        image_paths = sorted(glob.glob(f"{PATH_ORIGINAL}*.jpg"))
+        search_for_fileendings = [f".{e.value}" for e in MediaItemAllowedFileendings]
+        self._logger.info(f"watching for filetypes: {search_for_fileendings}")
+        image_paths = (p.resolve() for p in Path(PATH_ORIGINAL).glob("**/*") if p.suffix in search_for_fileendings)
 
         start_time_initialize = time.time()
 
@@ -202,19 +204,19 @@ class MediacollectionService(BaseService):
     def delete_images(self):
         """delete all images, inclusive thumbnails, ..."""
         try:
-            for file in Path(f"{PATH_ORIGINAL}").glob("*.jpg"):
+            for file in Path(f"{PATH_ORIGINAL}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_FULL}").glob("*.jpg"):
+            for file in Path(f"{PATH_FULL}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_PREVIEW}").glob("*.jpg"):
+            for file in Path(f"{PATH_PREVIEW}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_THUMBNAIL}").glob("*.jpg"):
+            for file in Path(f"{PATH_THUMBNAIL}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_FULL_UNPROCESSED}").glob("*.jpg"):
+            for file in Path(f"{PATH_FULL_UNPROCESSED}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_PREVIEW_UNPROCESSED}").glob("*.jpg"):
+            for file in Path(f"{PATH_PREVIEW_UNPROCESSED}").glob("*.*"):
                 os.remove(file)
-            for file in Path(f"{PATH_THUMBNAIL_UNPROCESSED}").glob("*.jpg"):
+            for file in Path(f"{PATH_THUMBNAIL_UNPROCESSED}").glob("*.*"):
                 os.remove(file)
             self._db_delete_items()
         except OSError as exc:

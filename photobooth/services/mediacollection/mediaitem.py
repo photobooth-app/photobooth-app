@@ -41,17 +41,29 @@ PATH_THUMBNAIL = "".join([PATH_PROCESSED, "thumbnail/"])
 class MediaItemTypes(str, Enum):
     image = "image"  # captured single image that is NOT part of a collage (normal process)
     collage = "collage"  # canvas image that was made out of several collage_image
-    collage_image = "collage_image"  # captured image that is part of a collage (so it can be treated differently in UI than other images)
-    animation = "gif"  # canvas image that was made out of several animation_image
-    animation_image = "animation_image"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
+    collageimage = "collageimage"  # captured image that is part of a collage (so it can be treated differently in UI than other images)
+    animation = "animation"  # canvas image that was made out of several animation_image
+    animationimage = "animationimage"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
     video = "video"  # captured video - not yet implemented
 
 
+class MediaItemAllowedFileendings(str, Enum):
+    """Define allowed fileendings here so it can be imported from everywhere
+    Used in mediacollectionservice to initially import all existing items.
+
+    """
+
+    jpg = "jpg"  # images
+    gif = "gif"  # animated gifs
+
+
 def get_new_filename(type: MediaItemTypes = MediaItemTypes.image, visibility: bool = True) -> Path:
-    filename_ending = "jpg"  # image, collage, collage_image, animation_image are jpg
+    filename_ending = MediaItemAllowedFileendings.jpg.value  # image, collage, collage_image, animation_image are jpg
     if type is MediaItemTypes.animation:
-        filename_ending = "gif"  # only result of animation is gif, other can be jpg because more efficient and better quality.
-    if type is MediaItemTypes.video:  # not yet implemented.
+        # only result of animation is gif, other can be jpg because more efficient and better quality.
+        filename_ending = MediaItemAllowedFileendings.gif.value
+    if type is MediaItemTypes.video:
+        # not yet implemented.
         filename_ending = "mjpg"
 
     return Path(
