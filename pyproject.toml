@@ -1,6 +1,6 @@
 [project]
 name = "photobooth-app"
-requires-python = ">=3.9,<3.12"
+requires-python = ">=3.9,<3.13"
 dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [
@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Multimedia :: Graphics",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
@@ -46,7 +47,6 @@ dependencies = [
     "python-dotenv~=1.0.0",
     "pyserial~=3.5",
     "jsonref~=1.1.0",
-    "dependency-injector~=4.41.0",
     "pilgram2>=2.0.2",
     "v4l2py>=2.3.0,<2.4.0; platform_system == 'Linux'",
     "gpiozero>=2.0.0,<2.1.0",
@@ -87,7 +87,7 @@ lint= [
 includes = ["./photobooth"]
 
 [tool.pdm.scripts]
-test = "pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
+test = "pytest --benchmark-skip -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
 
 [build-system]
 requires = ["pdm-backend"]
@@ -123,11 +123,8 @@ ignore = [
 ]
 extend-exclude = ["vendor"]
 
-[tool.ruff.format]
-
-
 [tool.ruff.per-file-ignores]
-"photobooth/appconfig.py" = ["E501"]
+"photobooth/services/config/groups/*.py" = ["E501"]
 
 [tool.ruff.pydocstyle]
 convention = "google"

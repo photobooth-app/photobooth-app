@@ -3,45 +3,45 @@ Testing virtual camera Backend
 """
 import logging
 
-from dependency_injector import providers
+import pytest
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.services.config import AppConfig, appconfig
 
 logger = logging.getLogger(name=None)
 
 
+@pytest.fixture(autouse=False)
+def run_around_tests():
+    # slightly modified fixture to ensure it's executed as expected during tests.
+    # modify config, autouse fixture resets in next statement and shall give default values.
+    appconfig.common.DEBUG_LEVEL = 98
+
+    yield
+
+    appconfig.reset_defaults()
+
+    assert appconfig.common.DEBUG_LEVEL == AppConfig().common.DEBUG_LEVEL
+
+
 def test_appconfig_singleton():
-    backend = BackendsContainer(config=providers.Singleton(AppConfig))
-
     # modify config:
-    backend.config().common.DEBUG_LEVEL = 99
-    assert backend.config().common.DEBUG_LEVEL == 99
+    appconfig.common.DEBUG_LEVEL = 99
+    assert appconfig.common.DEBUG_LEVEL == 99
+    assert not AppConfig().common.DEBUG_LEVEL == 99
 
 
-def test_appconfig_factory():
-    backend = BackendsContainer(config=providers.Factory(AppConfig))
-
+def test_appconfig_singleton_reset_defaults_manually():
     # modify config:
-    backend.config().common.DEBUG_LEVEL = 99
-    assert not backend.config().common.DEBUG_LEVEL == 99
+    appconfig.common.DEBUG_LEVEL = 99
+    assert appconfig.common.DEBUG_LEVEL == 99
+    assert not AppConfig().common.DEBUG_LEVEL == 99
+
+    appconfig.reset_defaults()
+
+    assert appconfig.common.DEBUG_LEVEL == AppConfig().common.DEBUG_LEVEL
 
 
-def test_appconfig_dependency_singleton():
-    assert True
+def test_appconfig_singleton_reset_autouse_fixture(run_around_tests):
+    # autoreset works:
 
-    # test no working any more
-    """
-    backend = BackendsContainer(config=providers.Singleton(AppConfig))
-
-    original_value = backend.config().backends.cv2_device_index
-    modified_value = original_value + 1
-
-    # modify config ensure
-    backend.config().backends.cv2_device_index = modified_value
-    assert backend.config().backends.cv2_device_index == modified_value
-
-    # check that dependency received also the modified value
-    webcamcv2_backend = backend.webcamcv2_backend
-    assert webcamcv2_backend._config.backends.cv2_device_index == modified_value
-    """
+    assert appconfig.common.DEBUG_LEVEL == 98

@@ -12,8 +12,8 @@ from datetime import datetime
 from logging import FileHandler, LogRecord
 from pathlib import Path
 
-from ..appconfig import AppConfig
 from .baseservice import BaseService
+from .config import appconfig
 from .sseservice import SseEventLogRecord, SseService
 
 LOG_DIR = "log"
@@ -23,6 +23,9 @@ class EventstreamLogHandler(logging.Handler):
     """
     Logging handler to emit events to eventstream;
     to be displayed in console.log on browser frontend
+
+    TODO, could replace the FrontendNotification, also logs with extras used to control the UI:
+      - record.display_notification (bool): Show the log in the UI or not.
     """
 
     def __init__(self, sse_service: SseService):
@@ -38,6 +41,8 @@ class EventstreamLogHandler(logging.Handler):
             name=record.name,
             funcName=record.funcName,
             lineno=record.lineno,
+            # TODO: maybe later: display_notification=bool(getattr(record, "display_notification", False)),
+            # if present display also in the UI as notification
         )
 
         self._sse_service.dispatch_event(sse_logrecord)
@@ -48,13 +53,13 @@ class LoggingService(BaseService):
 
     debug_level = logging.DEBUG
 
-    def __init__(self, config: AppConfig, sse_service: SseService):
+    def __init__(self, sse_service: SseService):
         """Setup logger
 
         Args:
             sse_service (SseService): _description_
         """
-        super().__init__(config=config, sse_service=sse_service)
+        super().__init__(sse_service=sse_service)
 
         # ensure dir exists
         os.makedirs(LOG_DIR, exist_ok=True)
@@ -74,7 +79,7 @@ class LoggingService(BaseService):
         logging.debug("loggingservice __init__ basicConfig set")
         logging.debug("loggingservice __init__ started")
 
-        self.debug_level = config.common.DEBUG_LEVEL.value
+        self.debug_level = appconfig.common.DEBUG_LEVEL.value
 
         ## logger
         # default logger (root = None or "")

@@ -3,12 +3,19 @@ import platform
 import time
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
+from photobooth.services.config import appconfig
 
 from .backends_utils import get_images
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 
@@ -22,12 +29,18 @@ if not platform.system() == "Windows":
 
 
 @pytest.fixture()
-def backends() -> BackendsContainer:
+def backend_digicamcontrol() -> DigicamcontrolBackend:
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
-    # deliver
+    backend = DigicamcontrolBackend()
+
+    logger.info("probing for available cameras")
+    _availableCameraIndexes = backend.available_camera_indexes()
+    if not _availableCameraIndexes:
+        pytest.skip("no camera found, skipping test")
+
+    logger.info(f"available camera indexes: {_availableCameraIndexes}")
+
+    time.sleep(2)  # wait little time until backend is ready to deliver. otherwise HQ image would miss the event to trigger
 
     # backends_container.config().backends.digicamcontrol_base_url = httpserver.url_for("/")
     # logger.info(f"set mockup testserver: {backends_container.config().backends.digicamcontrol_base_url}")
@@ -44,26 +57,13 @@ def backends() -> BackendsContainer:
     # httpserver.expect_request("/liveview.jpg", method="GET").respond_with_data(in_file_read, mimetype="image/jpeg")
     # httpserver.expect_request("/", method="GET").respond_with_data("OK")
 
-    yield backends_container
-    backends_container.shutdown_resources()
-
-    # httpserver.check_assertions()  # this will raise AssertionError and make the test failing
-
-
-## tests
+    # deliver
+    backend.start()
+    yield backend
+    backend.stop()
 
 
-def test_get_images_digicamcontrol(backends: BackendsContainer):
+def test_get_images_digicamcontrol(backend_digicamcontrol: DigicamcontrolBackend):
     # get lores and hires images from backend and assert
-    digicamcontrol_backend = backends.digicamcontrol_backend()
 
-    logger.info("probing for available cameras")
-    _availableCameraIndexes = digicamcontrol_backend.available_camera_indexes()
-    if not _availableCameraIndexes:
-        pytest.skip("no camera found, skipping test")
-
-    logger.info(f"available camera indexes: {_availableCameraIndexes}")
-
-    time.sleep(2)  # wait little time until backend is ready to deliver. otherwise HQ image would miss the event to trigger
-
-    get_images(digicamcontrol_backend)
+    get_images(backend_digicamcontrol)

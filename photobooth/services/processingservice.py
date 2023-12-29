@@ -7,9 +7,10 @@ import time
 
 from statemachine import State, StateMachine
 
-from ..appconfig import AppConfig, GroupMediaprocessingPipelineSingleImage
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
+from .config import appconfig
+from .config.appconfig import GroupMediaprocessingPipelineSingleImage
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
     MediacollectionService,
@@ -51,14 +52,12 @@ class ProcessingService(StateMachine):
 
     def __init__(
         self,
-        config: AppConfig,
         _sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
     ):
-        self._config: AppConfig = config
         self._sse_service: SseService = _sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -89,7 +88,7 @@ class ProcessingService(StateMachine):
         self.model.start_model(
             typ,
             total_captures_to_take,
-            collage_automatic_capture_continue=self._config.common.collage_automatic_capture_continue,
+            collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
         )
 
         logger.info(f"start job {self.model}")
@@ -138,9 +137,9 @@ class ProcessingService(StateMachine):
 
         # determine countdown time, first and following could have different times
         duration = (
-            self._config.common.countdown_capture_first
+            appconfig.common.countdown_capture_first
             if (self.model.number_captures_taken() == 0)
-            else self._config.common.countdown_capture_second_following
+            else appconfig.common.countdown_capture_second_following
         )
 
         # if countdown is 0, skip following and transition to next state directy
@@ -154,13 +153,13 @@ class ProcessingService(StateMachine):
             # do not continue here again after counted has processed
 
         # starting countdown
-        if (duration - self._config.common.countdown_camera_capture_offset) <= 0:
+        if (duration - appconfig.common.countdown_camera_capture_offset) <= 0:
             logger.warning("duration equal/shorter than camera offset makes no sense. this results in 0s countdown!")
 
-        logger.info(f"start countdown, duration_user={duration=}, offset_camera={self._config.common.countdown_camera_capture_offset}")
+        logger.info(f"start countdown, duration_user={duration=}, offset_camera={appconfig.common.countdown_camera_capture_offset}")
         self.model.start_countdown(
             duration_user=duration,
-            offset_camera=self._config.common.countdown_camera_capture_offset,
+            offset_camera=appconfig.common.countdown_camera_capture_offset,
         )
         # inform UI to count
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
@@ -178,15 +177,22 @@ class ProcessingService(StateMachine):
             f"remaining {self.model.remaining_captures_to_take()-1})"
         )
 
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
-        logger.debug(f"capture to {filepath_neworiginalfile=}")
+        # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
+        # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
+        _type = MediaItemTypes.image
+        if self.model._typ is JobModel.Typ.collage:
+            _type = MediaItemTypes.collageimage  # 1st phase collage image
+        if self.model._typ is JobModel.Typ.animation:
+            _type = MediaItemTypes.animationimage  # 1st phase collage image
 
-        start_time_capture = time.time()
+        filepath_neworiginalfile = get_new_filename(type=_type)
+        logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
-        for attempt in range(1, self._config.backends.retry_capture + 1):
+        start_time_capture = time.time()
+        for attempt in range(1, appconfig.backends.retry_capture + 1):
             try:
                 self._wled_service.preset_shoot()
 
@@ -204,7 +210,7 @@ class ProcessingService(StateMachine):
                 logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
             except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{self._config.backends.retry_capture}, retrying")
+                logger.error(f"error capture image. timeout expired {attempt=}/{appconfig.backends.retry_capture}, retrying")
                 # can we do additional error handling here?
                 continue
 
@@ -220,8 +226,8 @@ class ProcessingService(StateMachine):
                 break
         else:
             # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
-            raise RuntimeError(f"finally failed after {self._config.backends.retry_capture} attempts to capture image!")
+            logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
+            raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
 
         self._wled_service.preset_standby()
 
@@ -255,10 +261,10 @@ class ProcessingService(StateMachine):
         # apply 1pic pipeline:
         tms = time.time()
         if self.model._typ == JobModel.Typ.image:
-            self._mediaprocessing_service.process_singleimage(mediaitem, self._config.mediaprocessing_pipeline_singleimage)
+            self._mediaprocessing_service.process_singleimage(mediaitem, appconfig.mediaprocessing_pipeline_singleimage)
         elif self.model._typ == JobModel.Typ.collage:
             # the captures in the context of a collage job can be processed differently:
-            cfg_collage = self._config.mediaprocessing_pipeline_collage
+            cfg_collage = appconfig.mediaprocessing_pipeline_collage
 
             # list only captured_images from merge_definition (excludes predefined)
             captured_images = [item for item in cfg_collage.canvas_merge_definition if not item.predefined_image]
@@ -275,10 +281,27 @@ class ProcessingService(StateMachine):
             )
 
             self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)
+        elif self.model._typ == JobModel.Typ.animation:
+            # the captures in the context of a animation job can be processed differently:
+            cfg_animation = appconfig.mediaprocessing_pipeline_animation
+
+            # list only captured_images from merge_definition (excludes predefined)
+            captured_images = [item for item in cfg_animation.sequence_merge_definition if not item.predefined_image]
+
+            config_singleimage_captures_for_animation = GroupMediaprocessingPipelineSingleImage(
+                pipeline_enable=True,  # for convenience this is always true now
+                # TODO: maybe add further options later?
+                texts_enable=False,
+                img_frame_enable=False,
+                filter=captured_images[self.model.number_captures_taken()].filter.value,
+            )
+
+            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_animation)
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
-        assert mediaitem.fileset_valid()
+        if not mediaitem.fileset_valid():
+            raise RuntimeError("created fileset invalid! check logs for additional errors")
 
         logger.info(f"capture {mediaitem=} successful")
 
@@ -314,12 +337,25 @@ class ProcessingService(StateMachine):
         # postprocess job as whole, create collage of single images, ...
         logger.info("start postprocessing phase 2")
 
-        if self.model._typ == JobModel.Typ.collage:
-            # apply 1pic pipeline:
+        if self.model._typ is JobModel.Typ.collage:
+            # apply collage phase2 pipeline:
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.process_collage(self.model._confirmed_captures_collection.copy())
+
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+
+            # resulting collage mediaitem will be added to the collection as most recent item
+            self.model.add_confirmed_capture_to_collection(mediaitem)
+            self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
+
+        elif self.model._typ is JobModel.Typ.animation:
+            # apply animation phase2 pipeline:
+            tms = time.time()
+
+            # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
+            mediaitem = self._mediaprocessing_service.process_animation(self.model._confirmed_captures_collection.copy())
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
@@ -383,6 +419,15 @@ class ProcessingService(StateMachine):
 
     def start_job_video(self):
         raise NotImplementedError
+
+    def start_job_animation(self):
+        self._check_occupied()
+        try:
+            self.start(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
+        except Exception as exc:
+            logger.error(exc)
+            self._reset()
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
 
     def job_finished(self):
         return self.idle.is_active

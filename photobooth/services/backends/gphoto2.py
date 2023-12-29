@@ -7,15 +7,11 @@ import logging
 import time
 from threading import Condition, Event
 
-try:
-    import gphoto2 as gp
-except Exception as import_exc:
-    raise RuntimeError("gphoto2 import error; check gphoto2 installation") from import_exc
+import gphoto2 as gp
 
-
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -41,8 +37,8 @@ class Gphoto2Backend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
@@ -68,8 +64,8 @@ class Gphoto2Backend(AbstractBackend):
         logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
 
         # initialize the correct iso val
-        self._iso(self._config.backends.gphoto2_iso_liveview)
-        self._shutter_speed(self._config.backends.gphoto2_shutter_speed_liveview)
+        self._iso(appconfig.backends.gphoto2_iso_liveview)
+        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
@@ -138,12 +134,13 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._worker_thread and self._worker_thread.stopped():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
-
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=4):
-                raise TimeoutError("timeout receiving preview from DSLR")
+            if not self._lores_data.condition.wait(timeout=0.2):
+                if self._worker_thread and self._worker_thread.stopped():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
+
             return self._lores_data.data
 
     def _on_capture_mode(self):
@@ -216,7 +213,7 @@ class Gphoto2Backend(AbstractBackend):
                 self._camera_connected = True
                 logger.debug(f"{self.__module__} started")
 
-            if self._config.backends.LIVEPREVIEW_ENABLED:
+            if appconfig.backends.LIVEPREVIEW_ENABLED:
                 self._check_camera_preview_available()
 
             self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
@@ -238,7 +235,7 @@ class Gphoto2Backend(AbstractBackend):
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if self._config.backends.LIVEPREVIEW_ENABLED:
+                if appconfig.backends.LIVEPREVIEW_ENABLED:
                     try:
                         capture = self._camera.capture_preview()
 
@@ -272,9 +269,9 @@ class Gphoto2Backend(AbstractBackend):
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
-                if self._config.backends.gphoto2_disable_viewfinder_before_capture:
-                    self._iso(self._config.backends.gphoto2_iso_capture)
-                    self._shutter_speed(self._config.backends.gphoto2_shutter_speed_capture)
+                if appconfig.backends.gphoto2_disable_viewfinder_before_capture:
+                    self._iso(appconfig.backends.gphoto2_iso_capture)
+                    self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
@@ -291,12 +288,12 @@ class Gphoto2Backend(AbstractBackend):
                     # try again in next loop
                     continue
 
-                self._iso(self._config.backends.gphoto2_iso_liveview)
-                self._shutter_speed(self._config.backends.gphoto2_shutter_speed_liveview)
+                self._iso(appconfig.backends.gphoto2_iso_liveview)
+                self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
                 # read from camera
                 try:
-                    if self._config.backends.gphoto2_wait_event_after_capture_trigger:
+                    if appconfig.backends.gphoto2_wait_event_after_capture_trigger:
                         self._camera.wait_for_event(1000)
 
                     camera_file = self._camera.file_get(

@@ -1,12 +1,9 @@
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from ..containers import ApplicationContainer
+from ..container import container
 from ..services.mediacollection.mediaitem import MediaItem
-from ..services.mediacollectionservice import MediacollectionService
-from ..services.printingservice import PrintingService
 
 logger = logging.getLogger(__name__)
 print_router = APIRouter(
@@ -15,14 +12,13 @@ print_router = APIRouter(
 )
 
 
-@inject
-def _print(mediaitem, ps: PrintingService = Depends(Provide[ApplicationContainer.services.printing_service])):
+def _print(mediaitem):
     try:
-        ps.print(mediaitem=mediaitem)
+        container.printing_service.print(mediaitem=mediaitem)
     except BlockingIOError as exc:
         raise HTTPException(
             status_code=status.HTTP_425_TOO_EARLY,
-            detail=f"Wait {ps.remaining_time_blocked():.0f}s until next print is possible.",
+            detail=f"Wait {container.printing_service.remaining_time_blocked():.0f}s until next print is possible.",
         ) from exc
     except ConnectionRefusedError as exc:
         raise HTTPException(
@@ -38,19 +34,12 @@ def _print(mediaitem, ps: PrintingService = Depends(Provide[ApplicationContainer
 
 
 @print_router.get("/latest")
-@inject
-def api_print_latest(
-    ms: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
-):
-    latest_mediaitem = ms.db_get_most_recent_mediaitem()
+def api_print_latest():
+    latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
     _print(mediaitem=latest_mediaitem)
 
 
 @print_router.get("/item/{id}")
-@inject
-def api_print_item_id(
-    id: str,
-    ms: MediacollectionService = Depends(Provide[ApplicationContainer.services.mediacollection_service]),
-):
-    requested_mediaitem: MediaItem = ms.db_get_image_by_id(id)
+def api_print_item_id(id: str):
+    requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
     _print(mediaitem=requested_mediaitem)

@@ -1,13 +1,19 @@
 import logging
 
 import pytest
-from dependency_injector import providers
 
-from photobooth.appconfig import AppConfig
-from photobooth.services.backends.containers import BackendsContainer
+from photobooth.services.config import appconfig
 from photobooth.utils.helper import is_rpi
 
 from .backends_utils import get_images
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 
@@ -20,33 +26,24 @@ if not is_rpi():
     )
 
 
-def check_focusavail_skip():
-    if is_rpi():
-        from picamera2 import Picamera2
-
-        with Picamera2() as picamera2:
-            if "AfMode" not in picamera2.camera_controls:
-                pytest.skip("SKIPPED (no AF available)")
-
-
 ## fixtures
 
 
 @pytest.fixture()
-def backends() -> BackendsContainer:
+def backend_picamera2():
+    from photobooth.services.backends.picamera2 import Picamera2Backend
+
     # setup
-    backends_container = BackendsContainer(
-        config=providers.Singleton(AppConfig),
-    )
+    backend = Picamera2Backend()
+
     # deliver
-    yield backends_container
-    backends_container.shutdown_resources()
+    backend.start()
+    yield backend
+    backend.stop()
 
 
 ## tests
 
 
-def test_getImages(backends: BackendsContainer):
-    picamera2_backend = backends.picamera2_backend()
-
-    get_images(picamera2_backend)
+def test_getImages(backend_picamera2):
+    get_images(backend_picamera2)

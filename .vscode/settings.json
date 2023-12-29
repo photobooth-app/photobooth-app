@@ -1,7 +1,7 @@
 {
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["-v", "./"],
+  "python.testing.pytestArgs": ["--benchmark-skip", "-v", "./"],
   "[python]": {
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {

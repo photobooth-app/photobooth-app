@@ -8,10 +8,10 @@ import subprocess
 
 from gpiozero import Button
 
-from ..appconfig import AppConfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
@@ -28,13 +28,12 @@ class GpioService(BaseService):
 
     def __init__(
         self,
-        config: AppConfig,
         sse_service: SseService,
         processing_service: ProcessingService,
         printing_service: PrintingService,
         mediacollection_service: MediacollectionService,
     ):
-        super().__init__(config=config, sse_service=sse_service)
+        super().__init__(sse_service=sse_service)
 
         self._processing_service = processing_service
         self._printing_service = printing_service
@@ -45,11 +44,12 @@ class GpioService(BaseService):
         self.reboot_btn: Button = None
         self.take1pic_btn: Button = None
         self.takecollage_btn: Button = None
+        self.takeanimation_btn: Button = None
 
         # output signals
         # none yet
 
-        if self._config.hardwareinputoutput.gpio_enabled:
+        if appconfig.hardwareinputoutput.gpio_enabled:
             if is_rpi():
                 self.init_io()
                 self._logger.info("gpio enabled - listeners installed")
@@ -61,25 +61,29 @@ class GpioService(BaseService):
 
     def init_io(self):
         self.shutdown_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_shutdown,
+            appconfig.hardwareinputoutput.gpio_pin_shutdown,
             hold_time=HOLD_TIME_SHUTDOWN,
             bounce_time=DEBOUNCE_TIME,
         )
         self.reboot_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_reboot,
+            appconfig.hardwareinputoutput.gpio_pin_reboot,
             hold_time=HOLD_TIME_REBOOT,
             bounce_time=DEBOUNCE_TIME,
         )
         self.take1pic_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_take1pic,
+            appconfig.hardwareinputoutput.gpio_pin_take1pic,
             bounce_time=DEBOUNCE_TIME,
         )
         self.takecollage_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_collage,
+            appconfig.hardwareinputoutput.gpio_pin_collage,
+            bounce_time=DEBOUNCE_TIME,
+        )
+        self.takeanimation_btn: Button = Button(
+            appconfig.hardwareinputoutput.gpio_pin_animation,
             bounce_time=DEBOUNCE_TIME,
         )
         self.print_recent_item_btn: Button = Button(
-            self._config.hardwareinputoutput.gpio_pin_print_recent_item,
+            appconfig.hardwareinputoutput.gpio_pin_print_recent_item,
             bounce_time=DEBOUNCE_TIME,
         )
 
@@ -99,29 +103,28 @@ class GpioService(BaseService):
         self._logger.info("trigger _reboot")
         subprocess.check_call(["reboot"])
 
-    def _take1pic(self):
-        self._logger.info("trigger _take1pic")
-
+    def _startjob(self, job):
         try:
-            self._processing_service.start_job_1pic()
+            job()
         except ProcessMachineOccupiedError as exc:
             # raised if processingservice not idle
             self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
         except Exception as exc:
             # other errors
+            self._logger.exception(exc)
             self._logger.critical(exc)
+
+    def _take1pic(self):
+        self._logger.info(f"trigger {__name__}")
+        self._startjob(self._processing_service.start_job_1pic)
 
     def _takecollage(self):
-        self._logger.info("trigger _takecollage")
+        self._logger.info(f"trigger {__name__}")
+        self._startjob(self._processing_service.start_job_collage)
 
-        try:
-            self._processing_service.start_job_collage()
-        except ProcessMachineOccupiedError as exc:
-            # raised if processingservice not idle
-            self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
-        except Exception as exc:
-            # other errors
-            self._logger.critical(exc)
+    def _takeanimation(self):
+        self._logger.info(f"trigger {__name__}")
+        self._startjob(self._processing_service.start_job_animation)
 
     def _print_recent_item(self):
         self._logger.info("trigger _print_recent_item")
@@ -146,8 +149,10 @@ class GpioService(BaseService):
         self.reboot_btn.when_held = self._reboot
         # takepic single
         self.take1pic_btn.when_pressed = self._take1pic
-        # takepic single
+        # takepic collage
         self.takecollage_btn.when_pressed = self._takecollage
+        # takepic animation
+        self.takeanimation_btn.when_pressed = self._takeanimation
         # print
         self.print_recent_item_btn.when_pressed = self._print_recent_item
 

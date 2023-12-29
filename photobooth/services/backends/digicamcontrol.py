@@ -46,9 +46,9 @@ from threading import Condition, Event
 
 import requests
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -74,8 +74,8 @@ class DigicamcontrolBackend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
 
         # self._camera = gp.Camera()
         # self._camera_context = gp.Context()
@@ -94,10 +94,6 @@ class DigicamcontrolBackend(AbstractBackend):
         # worker threads
         self._worker_thread: StoppableThread = None
         self._connect_thread = StoppableThread(name="digicamcontrol_connect_thread", target=self._connect_fun, daemon=True)
-
-        # logger.info(f"python-gphoto2: {gp.__version__}")
-        # logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-        # logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
@@ -136,13 +132,6 @@ class DigicamcontrolBackend(AbstractBackend):
         self._hires_data.request_ready.clear()
         return self._hires_data.data
 
-    """
-    def gen_stream(self):
-        # this backend overwrites gen_stream to simply proxy the existing stream.
-        logger.info("starting to proxy stream from digicamcontrol")
-        # TODO: implement.
-        raise NotImplementedError
-    """
     #
     # INTERNAL FUNCTIONS
     #
@@ -158,12 +147,13 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._worker_thread and self._worker_thread.stopped():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
-
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=4):
-                raise TimeoutError("timeout receiving preview from DSLR")
+            if not self._lores_data.condition.wait(timeout=0.2):
+                if self._worker_thread and self._worker_thread.stopped():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
+
             return self._lores_data.data
 
     def _on_capture_mode(self):
@@ -173,12 +163,12 @@ class DigicamcontrolBackend(AbstractBackend):
         logger.debug("enable liveview and minimize windows")
         try:
             session = requests.Session()
-            r = session.get(f"{self._config.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show")
+            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show")
             assert r.status_code == 200
             if not r.ok:
                 raise RuntimeError(f"error starting liveview {r.text}")
 
-            r = session.get(f"{self._config.backends.digicamcontrol_base_url}/?CMD=All_Minimize")
+            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=All_Minimize")
             assert r.status_code == 200
             if not r.ok:
                 raise RuntimeError(f"error minimize liveview {r.text}")
@@ -214,7 +204,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
             try:
                 session = requests.Session()
-                r = session.get(self._config.backends.digicamcontrol_base_url)
+                r = session.get(appconfig.backends.digicamcontrol_base_url)
                 assert r.status_code == 200
                 if not r.ok:
                     raise RuntimeError(f"error connecting to digicam webservice {r.text}")
@@ -225,7 +215,7 @@ class DigicamcontrolBackend(AbstractBackend):
                 self._camera_connected = True
                 logger.debug(f"{self.__module__} camera connected")
 
-            if self._config.backends.LIVEPREVIEW_ENABLED:
+            if appconfig.backends.LIVEPREVIEW_ENABLED:
                 self._check_camera_preview_available()
 
             self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
@@ -265,20 +255,20 @@ class DigicamcontrolBackend(AbstractBackend):
                     logger.info(f"tmp_dir={tmp_dir}, tmp_filename={tmp_filename}")
 
                     r = session.get(
-                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
+                        f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
                     )
                     assert r.status_code == 200
                     if not r.text == "OK":
                         raise RuntimeError(f"error setting directory {r.text}")
 
                     r = session.get(
-                        f"{self._config.backends.digicamcontrol_base_url}/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename, safe='',)}"  # noqa: E501
+                        f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.filenametemplate&param2={urllib.parse.quote(tmp_filename, safe='',)}"  # noqa: E501
                     )
                     assert r.status_code == 200
                     if not r.text == "OK":
                         raise RuntimeError(f"error setting filename {r.text}")
 
-                    r = session.get(f"{self._config.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
+                    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
                     assert r.status_code == 200
                     if not r.text == "OK":
                         raise RuntimeError(f"error capture {r.text}")
@@ -301,9 +291,9 @@ class DigicamcontrolBackend(AbstractBackend):
                 self._on_preview_mode()
 
             else:
-                if self._config.backends.LIVEPREVIEW_ENABLED:
+                if appconfig.backends.LIVEPREVIEW_ENABLED:
                     try:
-                        r = session.get(f"{self._config.backends.digicamcontrol_base_url}/liveview.jpg")
+                        r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/liveview.jpg")
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
                         assert r.status_code == 200
 
@@ -352,7 +342,7 @@ class DigicamcontrolBackend(AbstractBackend):
         session = requests.Session()
 
         try:
-            r = session.get(f"{self._config.backends.digicamcontrol_base_url}?slc=list&param1=cameras&param2=")
+            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}?slc=list&param1=cameras&param2=")
             assert r.status_code == 200
 
             if not r.ok:

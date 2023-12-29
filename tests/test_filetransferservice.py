@@ -4,83 +4,88 @@ from unittest.mock import patch
 import psutil
 import pytest
 
-from photobooth.containers import ApplicationContainer
-from photobooth.services.containers import ServicesContainer
+from photobooth.container import Container, container
+from photobooth.services.config import appconfig
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def services() -> ServicesContainer:
+def _container() -> Container:
     # setup
-    application_container = ApplicationContainer()
-
-    services = application_container.services()
+    container.start()
 
     # deliver
-    yield services
-    services.shutdown_resources()
+    yield container
+    container.stop()
 
 
-def test_filetransfer_service_disabled(services: ServicesContainer):
+def test_filetransfer_service_disabled(_container: Container):
     """service is disabled by default - test for that."""
 
     # init when called
-    _ = services.filetransfer_service()
+    _ = _container.filetransfer_service.start()
 
     # nothing to check here...
     assert True
 
 
-def test_filetransfer_service_enabled(services: ServicesContainer):
+def test_filetransfer_service_enabled(_container: Container):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
-
-    # init when called
-    filetransfer_service = services.filetransfer_service()
+    appconfig.filetransfer.enabled = True
+    _container.filetransfer_service.stop()
+    _container.filetransfer_service.start()
 
     # check that worker_thread came up.
-    assert filetransfer_service._worker_thread.is_alive() is True
+    assert _container.filetransfer_service._worker_thread.is_alive() is True
 
 
-def test_filetransfer_handle_unmount(services: ServicesContainer):
+def test_filetransfer_handle_unmount(_container: Container):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
+    appconfig.filetransfer.enabled = True
 
-    # init when called
-    filetransfer_service = services.filetransfer_service()
+    _container.filetransfer_service.stop()
+    _container.filetransfer_service.start()
 
-    filetransfer_service.handle_unmount(psutil.disk_partitions()[-1])
+    _container.filetransfer_service.handle_unmount(psutil.disk_partitions()[-1])
 
 
 @patch("shutil.copytree")
-def test_filetransfer_handle_mount(mock_copytree, services: ServicesContainer):
+def test_filetransfer_handle_mount(mock_copytree, _container: Container):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
+    appconfig.filetransfer.enabled = True
 
-    # init when called
-    filetransfer_service = services.filetransfer_service()
+    _container.filetransfer_service.stop()
+    _container.filetransfer_service.start()
 
-    filetransfer_service.handle_mount(psutil.disk_partitions()[-1])
+    _container.filetransfer_service.handle_mount(psutil.disk_partitions()[-1])
 
     # check shutil.copytree was invoked
     mock_copytree.assert_called()
 
 
 @patch("shutil.copytree")
-def test_filetransfer_handle_mount_no_target_name(mock_copytree, services: ServicesContainer):
+def test_filetransfer_handle_mount_no_target_name(mock_copytree, _container: Container):
     """service is disabled by default - test for that."""
 
-    services.config().filetransfer.enabled = True
-    services.config().filetransfer.target_folder_name = ""
+    appconfig.filetransfer.enabled = True
+    appconfig.filetransfer.target_folder_name = ""
 
-    # init when called
-    filetransfer_service = services.filetransfer_service()
+    _container.filetransfer_service.stop()
+    _container.filetransfer_service.start()
 
-    filetransfer_service.handle_mount(psutil.disk_partitions()[-1])
+    _container.filetransfer_service.handle_mount(psutil.disk_partitions()[-1])
 
     # check shutil.copytree was invoked
     assert not mock_copytree.called

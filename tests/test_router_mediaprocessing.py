@@ -6,8 +6,18 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.application import app
+from photobooth.container import container
+from photobooth.services.config import appconfig
 
 from .image_utils import is_same
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    appconfig.reset_defaults()
+
+    yield
+
 
 logger = logging.getLogger(name=None)
 
@@ -15,17 +25,15 @@ logger = logging.getLogger(name=None)
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
-        # create one image to ensure there is at least one
-        services = client.app.container.services()
-        services.processing_service().start_job_1pic()
-
+        container.start()
+        container.processing_service.start_job_1pic()
         yield client
-        client.app.container.shutdown_resources()
+        container.stop()
 
 
 def test_preview_filter_original(client: TestClient):
     # get the newest mediaitem
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
 
@@ -40,7 +48,7 @@ def test_preview_filter_original(client: TestClient):
 
 def test_preview_filter_1977(client: TestClient):
     # get the newest mediaitem
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/_1977")
 
@@ -55,7 +63,7 @@ def test_preview_filter_1977(client: TestClient):
 
 def test_preview_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/theresnofilterlikethis")
 
@@ -64,7 +72,7 @@ def test_preview_filter_nonexistentfilter(client: TestClient):
 
 def test_apply_filter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     image_before = Image.open(mediaitem.path_full)
     image_before.load()  # force load (open is lazy!)
@@ -79,7 +87,7 @@ def test_apply_filter(client: TestClient):
 
 def test_apply_filter_original(client: TestClient):
     # get the newest mediaitem
-    mediaitem = client.app.container.services().mediacollection_service().db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
     assert response.status_code == 200

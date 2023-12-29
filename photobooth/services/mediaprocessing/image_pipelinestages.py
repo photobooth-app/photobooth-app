@@ -9,9 +9,9 @@ import pilgram2
 from PIL import Image, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
-from ...appconfig import TextsConfig
 from ...utils.exceptions import PipelineError
 from ...utils.helper import get_user_file
+from ..config.groups.mediaprocessing import TextsConfig
 from .pipelinestages_utils import draw_rotated_text
 
 logger = logging.getLogger(__name__)
@@ -28,10 +28,13 @@ def pilgram_stage(image: Image.Image, filter: str) -> Image.Image:
         # apply filter
         filtered_image: Image.Image = algofun(image.copy())
 
-        if image.mode in ("RGBA", "P"):
+        if image.mode == "RGBA":
+            # remark: "P" mode is palette (like GIF) that could have a transparent color defined also
+            # since we do not use transparent GIFs currently we can ignore here.
+            # P would not have an alphachannel but only a transparent color defined.
             logger.debug("need to convert to rgba and readd transparency mask to filtered image")
             # get alpha from original image
-            _, _, _, a = image.split()
+            a = image.getchannel("A")
             # get rgb from filtered image
             r, g, b = filtered_image.split()
             # and merge both

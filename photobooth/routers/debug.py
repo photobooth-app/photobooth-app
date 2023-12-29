@@ -36,7 +36,7 @@ async def get_log_latest():
 
 # TODO: not used for now, maybe later...
 # @debug_router.get("/service/status")
-# @inject
+#
 # async def get_service_status(
 #     appcontainer: ApplicationContainer = Depends(Provide[ApplicationContainer]),
 # ):

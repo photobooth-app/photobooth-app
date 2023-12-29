@@ -11,7 +11,6 @@ from pathlib import Path
 import psutil
 
 from ..__version__ import __version__
-from ..appconfig import AppConfig
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
@@ -23,8 +22,8 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, config: AppConfig, sse_service: SseService, aquisition_service: AquisitionService):
-        super().__init__(config, sse_service)
+    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService):
+        super().__init__(sse_service)
 
         self._aquisition_service = aquisition_service
 

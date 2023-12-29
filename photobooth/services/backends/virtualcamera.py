@@ -12,8 +12,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ...appconfig import AppConfig
 from ...utils.exceptions import ShutdownInProcessError
+from ..config import appconfig
 from .abstractbackend import (
     AbstractBackend,
     compile_buffer,
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self, config: AppConfig):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
 
         self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
@@ -56,7 +56,7 @@ class VirtualCameraBackend(AbstractBackend):
                 self._condition_img_buffer_ready,
                 self._img_buffer_lock,
                 self._event_proc_shutdown,
-                self._config.uisettings.livestream_mirror_effect,
+                appconfig.uisettings.livestream_mirror_effect,
             ),
             daemon=True,
         )
@@ -64,17 +64,10 @@ class VirtualCameraBackend(AbstractBackend):
         self._p.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        remaining_retries = 10
-        while True:
-            with self._condition_img_buffer_ready:
-                if self._condition_img_buffer_ready.wait(timeout=0.5):
-                    break
-
-                if remaining_retries < 0:
-                    raise RuntimeError("failed to start up backend")
-
-                remaining_retries -= 1
-                logger.info("waiting for backend to start up...")
+        try:
+            self.wait_for_lores_image()
+        except Exception as exc:
+            raise RuntimeError("failed to start up backend") from exc
 
         logger.debug(f"{self.__module__} started")
 
@@ -121,12 +114,13 @@ class VirtualCameraBackend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        if self._event_proc_shutdown.is_set():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
 
         with self._condition_img_buffer_ready:
-            if not self._condition_img_buffer_ready.wait(timeout=4):
-                raise TimeoutError("timeout receiving frames")
+            if not self._condition_img_buffer_ready.wait(timeout=0.2):
+                if self._event_proc_shutdown.is_set():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
 
         with self._img_buffer_lock:
             img = decompile_buffer(self._img_buffer_shm)
@@ -169,6 +163,7 @@ def img_aquisition(
     path_font = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "fonts", "Roboto-Bold.ttf").resolve()
 
     img_original = Image.open(path_live_img)
+    img_original.load()
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():
@@ -224,7 +219,4 @@ def img_aquisition(
             # wait to be notified
             _condition_img_buffer_ready.notify_all()
 
-    img_original.close()
-    if img:
-        img.close()
     logger.info("img_aquisition process finished")

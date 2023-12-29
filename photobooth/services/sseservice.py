@@ -16,7 +16,6 @@ from typing import Any
 from fastapi import Request
 from sse_starlette import ServerSentEvent
 
-from ..appconfig import AppConfig
 from .mediacollection.mediaitem import MediaItem
 from .processing.jobmodels import JobModel
 
@@ -36,8 +35,11 @@ class SseEventFrontendNotification(SseEventBase):
     """some visible message in frontend"""
 
     # TODO: implement in frontend
-    type: str = None  # could be enum green, yellow, red...
+    caption: str = ""
     message: str = ""
+    color: str = None  # could a color or "positive", "negative", "warning", "info" or None, the UI default
+    icon: str = None  # could a quasar icon or None, the UI default
+    spinner: str = None  # could be True or False, None same as False
 
     event: str = "FrontendNotification"
 
@@ -45,8 +47,11 @@ class SseEventFrontendNotification(SseEventBase):
     def data(self) -> str:
         return json.dumps(
             dict(
-                type=self.type,
+                caption=self.caption,
                 message=self.message,
+                color=self.color,
+                icon=self.icon,
+                spinner=self.spinner,
             )
         )
 
@@ -115,6 +120,7 @@ class SseEventLogRecord(SseEventBase):
     name: str = None
     funcName: str = None
     lineno: str = None
+    # display_notification: bool = None
 
     event: str = "LogRecord"
 
@@ -128,6 +134,7 @@ class SseEventLogRecord(SseEventBase):
                 name=self.name,
                 funcName=self.funcName,
                 lineno=self.lineno,
+                # display_notification=self.display_notification,
             )
         )
 
@@ -201,9 +208,7 @@ class Client:
 
 
 class SseService:
-    def __init__(self, config: AppConfig):
-        self._config = config
-
+    def __init__(self):
         # keep track of client connections with each individual request and queue.
         self._clients: [Client] = []
 
