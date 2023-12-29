@@ -5,7 +5,7 @@ AppConfig class providing central config
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeFloat, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt
 from pydantic_extra_types.color import Color
 
 
@@ -76,8 +76,8 @@ class CollageMergeDefinition(BaseModel):
     filter: EnumPilgramFilter = EnumPilgramFilter.original
 
 
-class GifMergeDefinition(BaseModel):
-    seconds: NonNegativeFloat = 2.0
+class AnimationMergeDefinition(BaseModel):
+    duration: NonNegativeInt = 2000
     predefined_image: str = ""
     filter: EnumPilgramFilter = EnumPilgramFilter.original
 
@@ -301,20 +301,31 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
 
 
-class GroupMediaprocessingPipelineGif(BaseModel):
+class GroupMediaprocessingPipelineAnimation(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Process GIF after capture")
+    model_config = ConfigDict(title="Process Animation (GIF) after capture")
 
-    sequence_merge_definition: list[GifMergeDefinition] = Field(
+    ## phase 2 per collage settings.
+
+    canvas_width: int = Field(
+        default=1500,
+        description="Width (X) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    canvas_height: int = Field(
+        default=900,
+        description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    sequence_merge_definition: list[AnimationMergeDefinition] = Field(
         default=[
-            GifMergeDefinition(filter=EnumPilgramFilter.earlybird),
-            GifMergeDefinition(
-                filter=EnumPilgramFilter.mayfair,
+            AnimationMergeDefinition(filter=EnumPilgramFilter.crema),
+            AnimationMergeDefinition(
+                duration=4000,
+                filter=EnumPilgramFilter.helena,
                 predefined_image="predefined_images/pexels-marcelo-miranda-7708722.jpg",
             ),
         ],
-        description="Sequence single images in a GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
+        description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
 

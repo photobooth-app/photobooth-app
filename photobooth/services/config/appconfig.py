@@ -25,8 +25,8 @@ from .groups.filetransfer import GroupFileTransfer
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
 from .groups.mediaprocessing import (
     GroupMediaprocessing,
+    GroupMediaprocessingPipelineAnimation,
     GroupMediaprocessingPipelineCollage,
-    GroupMediaprocessingPipelineGif,
     GroupMediaprocessingPipelinePrint,
     GroupMediaprocessingPipelineSingleImage,
 )
@@ -99,7 +99,7 @@ class AppConfig(BaseSettings):
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
     mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()
-    mediaprocessing_pipeline_gif: GroupMediaprocessingPipelineGif = GroupMediaprocessingPipelineGif()
+    mediaprocessing_pipeline_animation: GroupMediaprocessingPipelineAnimation = GroupMediaprocessingPipelineAnimation()
     mediaprocessing_pipeline_printing: GroupMediaprocessingPipelinePrint = GroupMediaprocessingPipelinePrint()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()

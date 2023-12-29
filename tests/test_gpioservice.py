@@ -90,6 +90,20 @@ def test_button_takecollage(_container: Container):
         _container.processing_service.start_job_collage.assert_called()
 
 
+def test_button_takegif(_container: Container):
+    # modify config
+    # services.config().hardwareinputoutput.gpio_enabled = True
+
+    with patch.object(_container.processing_service, "start_job_gif"):
+        # emulate gpio active low driven (simulates button press)
+        _container.gpio_service.takeanimation_btn.pin.drive_low()
+
+        # wait debounce time
+        time.sleep(DEBOUNCE_TIME or 0.0 + 0.2)
+
+        _container.processing_service.start_job_animation.assert_called()
+
+
 @patch("subprocess.run")
 def test_button_print(mock_run, _container: Container):
     appconfig.hardwareinputoutput.printing_enabled = True

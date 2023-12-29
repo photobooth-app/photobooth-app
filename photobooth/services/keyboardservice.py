@@ -59,6 +59,17 @@ class KeyboardService(BaseService):
     def is_started(self) -> bool:
         return self._started
 
+    def _startjob(self, job):
+        try:
+            job()
+        except ProcessMachineOccupiedError as exc:
+            # raised if processingservice not idle
+            self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+        except Exception as exc:
+            # other errors
+            self._logger.exception(exc)
+            self._logger.critical(exc)
+
     def _on_key_callback(self, key):
         """_summary_
 
@@ -69,29 +80,18 @@ class KeyboardService(BaseService):
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takepic:
             self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takepic}")
-            self._logger.info("trigger start_job_1pic")
-
-            try:
-                self._processing_service.start_job_1pic()
-            except ProcessMachineOccupiedError as exc:
-                # raised if processingservice not idle
-                self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
-            except Exception as exc:
-                # other errors
-                self._logger.critical(exc)
+            self._logger.info(f"trigger {__name__}")
+            self._startjob(self._processing_service.start_job_1pic)
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage:
             self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage}")
-            self._logger.info("trigger start_job_collage")
+            self._logger.info(f"trigger {__name__}")
+            self._startjob(self._processing_service.start_job_collage)
 
-            try:
-                self._processing_service.start_job_collage()
-            except ProcessMachineOccupiedError as exc:
-                # raised if processingservice not idle
-                self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
-            except Exception as exc:
-                # other errors
-                self._logger.critical(exc)
+        if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation:
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation}")
+            self._logger.info(f"trigger {__name__}")
+            self._startjob(self._processing_service.start_job_animation)
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
             self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")

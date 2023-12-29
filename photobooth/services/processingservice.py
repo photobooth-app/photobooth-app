@@ -177,14 +177,21 @@ class ProcessingService(StateMachine):
             f"remaining {self.model.remaining_captures_to_take()-1})"
         )
 
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.IMAGE)
-        logger.debug(f"capture to {filepath_neworiginalfile=}")
+        # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
+        # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
+        _type = MediaItemTypes.image
+        if self.model._typ is JobModel.Typ.collage:
+            _type = MediaItemTypes.collage_image  # 1st phase collage image
+        if self.model._typ is JobModel.Typ.animation:
+            _type = MediaItemTypes.animation_image  # 1st phase collage image
 
-        start_time_capture = time.time()
+        filepath_neworiginalfile = get_new_filename(type=_type)
+        logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         # at this point it's assumed, a HQ image was requested by statemachine.
         # seems to not make sense now, maybe revert hat...
         # waitforpic and store to disk
+        start_time_capture = time.time()
         for attempt in range(1, appconfig.backends.retry_capture + 1):
             try:
                 self._wled_service.preset_shoot()
@@ -274,10 +281,27 @@ class ProcessingService(StateMachine):
             )
 
             self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)
+        elif self.model._typ == JobModel.Typ.animation:
+            # the captures in the context of a animation job can be processed differently:
+            cfg_animation = appconfig.mediaprocessing_pipeline_animation
+
+            # list only captured_images from merge_definition (excludes predefined)
+            captured_images = [item for item in cfg_animation.sequence_merge_definition if not item.predefined_image]
+
+            config_singleimage_captures_for_animation = GroupMediaprocessingPipelineSingleImage(
+                pipeline_enable=True,  # for convenience this is always true now
+                # TODO: maybe add further options later?
+                texts_enable=False,
+                img_frame_enable=False,
+                filter=captured_images[self.model.number_captures_taken()].filter.value,
+            )
+
+            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_animation)
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
-        assert mediaitem.fileset_valid()
+        if not mediaitem.fileset_valid():
+            raise RuntimeError("created fileset invalid! check logs for additional errors")
 
         logger.info(f"capture {mediaitem=} successful")
 
@@ -313,12 +337,25 @@ class ProcessingService(StateMachine):
         # postprocess job as whole, create collage of single images, ...
         logger.info("start postprocessing phase 2")
 
-        if self.model._typ == JobModel.Typ.collage:
-            # apply 1pic pipeline:
+        if self.model._typ is JobModel.Typ.collage:
+            # apply collage phase2 pipeline:
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.process_collage(self.model._confirmed_captures_collection.copy())
+
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+
+            # resulting collage mediaitem will be added to the collection as most recent item
+            self.model.add_confirmed_capture_to_collection(mediaitem)
+            self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
+
+        elif self.model._typ is JobModel.Typ.animation:
+            # apply animation phase2 pipeline:
+            tms = time.time()
+
+            # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
+            mediaitem = self._mediaprocessing_service.process_animation(self.model._confirmed_captures_collection.copy())
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
@@ -383,10 +420,10 @@ class ProcessingService(StateMachine):
     def start_job_video(self):
         raise NotImplementedError
 
-    def start_job_gif(self):
+    def start_job_animation(self):
         self._check_occupied()
         try:
-            self.start(JobModel.Typ.gif, self._mediaprocessing_service.number_of_captures_to_take_for_gif())
+            self.start(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
         except Exception as exc:
             logger.error(exc)
             self._reset()

@@ -27,6 +27,10 @@ class GroupHardwareInputOutput(BaseModel):
         default="c",
         description="Keycode triggers capture of collage",
     )
+    keyboard_input_keycode_takeanimation: str = Field(
+        default="g",
+        description="Keycode triggers capture of animation (GIF)",
+    )
     keyboard_input_keycode_print_recent_item: str = Field(
         default="p",
         description="Keycode triggers printing most recent image captured",
@@ -62,6 +66,10 @@ class GroupHardwareInputOutput(BaseModel):
     gpio_pin_collage: int = Field(
         default=22,
         description="GPIO pin to take a collage.",
+    )
+    gpio_pin_animation: int = Field(
+        default=24,
+        description="GPIO pin to take an animation (GIF).",
     )
     gpio_pin_print_recent_item: int = Field(
         default=23,

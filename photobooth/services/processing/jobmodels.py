@@ -66,8 +66,8 @@ class JobModel:  # TODO: derive from model class?
         undefined = "undefined"
         image = "image"
         collage = "collage"
+        animation = "animation"
         video = "video"
-        gif = "gif"
 
     def __init__(self):
         """_summary_
@@ -124,7 +124,7 @@ class JobModel:  # TODO: derive from model class?
         if (
             self._typ is None
             or self._total_captures_to_take is None
-            or self._total_captures_to_take <= 0
+            or self._total_captures_to_take < 1
             or self._confirmed_captures_collection is None
         ):
             return False

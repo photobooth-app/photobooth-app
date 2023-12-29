@@ -15,8 +15,9 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.mediaprocessing import CollageMergeDefinition, GifMergeDefinition, GroupMediaprocessingPipelineSingleImage, TextsConfig
+from .config.groups.mediaprocessing import AnimationMergeDefinition, CollageMergeDefinition, GroupMediaprocessingPipelineSingleImage, TextsConfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
+from .mediaprocessing.animation_pipelinestages import align_sizes_stage
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
     image_fill_background_stage,
@@ -171,7 +172,7 @@ class MediaprocessingService(BaseService):
 
         tms = time.time()
 
-        ## prepare: create canvas - need to determine the size if not given
+        ## prepare: create canvas
         canvas_size = (_config.canvas_width, _config.canvas_height)
         canvas = Image.new("RGBA", canvas_size, color=None)
 
@@ -221,11 +222,81 @@ class MediaprocessingService(BaseService):
 
         ## final: save full result and create scaled versions
         tms = time.time()
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.COLLAGE)
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.collage)
 
         # convert to RGB and store jpeg as new original
         canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
         canvas.save(filepath_neworiginalfile, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
+
+        # instanciate mediaitem with new original file
+        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+
+        # create scaled versions (unprocessed and processed are same here for now
+        mediaitem.create_fileset_unprocessed()
+        mediaitem.copy_fileset_processed()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
+
+        return mediaitem
+
+    def process_animation(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
+        """apply preconfigured pipeline."""
+
+        # get the local config
+        _config = appconfig.mediaprocessing_pipeline_animation
+
+        tms = time.time()
+
+        ## prepare: create canvas
+        canvas_size = (_config.canvas_width, _config.canvas_height)
+
+        ## stage: merge captured images and predefined to one image with transparency
+        if True:  # merge is mandatory for collages
+            # get all images to process
+            animation_images: list[Image.Image] = []
+
+            for _definition in _config.sequence_merge_definition:
+                if _definition.predefined_image:
+                    try:
+                        predefined_image = Image.open(get_user_file(_definition.predefined_image))
+
+                        # apply filter to predefined imgs here. captured images get processed during capture already.
+                        if _definition.filter and _definition.filter.value and _definition.filter.value != "original":
+                            predefined_image = self._apply_stage_pilgram(predefined_image, _definition.filter.value)
+
+                        animation_images.append(predefined_image)
+                    except FileNotFoundError as exc:
+                        raise PipelineError(f"error getting predefined file {exc}") from exc
+                else:
+                    animation_images.append(Image.open(captured_mediaitems.pop(0).path_full))
+
+            try:
+                animation_images_resized = align_sizes_stage(canvas_size, animation_images)
+            except PipelineError as exc:
+                logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
+                raise RuntimeError("abort processing due to pipelineerror") from exc
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process animation pipeline")
+
+        ## final: save full result and create scaled versions
+        tms = time.time()
+        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.animation)
+
+        # convert to RGB and store jpeg as new original
+        try:
+            animation_images_resized[0].save(
+                filepath_neworiginalfile,
+                format="gif",
+                save_all=True,
+                append_images=animation_images_resized[1:] if len(animation_images_resized) > 1 else None,
+                optimize=True,
+                # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
+                duration=[definition.duration for definition in _config.sequence_merge_definition],
+                loop=0,  # loop forever
+            )
+        except PipelineError as exc:
+            logger.error(f"error saving animation, reason: {exc}.")
+            raise RuntimeError("abort processing due to pipelineerror") from exc
 
         # instanciate mediaitem with new original file
         mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
@@ -252,22 +323,22 @@ class MediaprocessingService(BaseService):
 
         return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
 
-    def number_of_captures_to_take_for_gif(self) -> int:
+    def number_of_captures_to_take_for_animation(self) -> int:
         """analyze the configuration and return the needed number of captures to take by camera.
         If there are fixed images given these do not count to the number to capture.
 
         Returns:
             int: number of captures
         """
-        if not appconfig.mediaprocessing_pipeline_gif.sequence_merge_definition:
+        if not appconfig.mediaprocessing_pipeline_animation.sequence_merge_definition:
             raise PipelineError("collage definition not set up!")
 
-        collage_merge_definition = appconfig.mediaprocessing_pipeline_gif.sequence_merge_definition
+        collage_merge_definition = appconfig.mediaprocessing_pipeline_animation.sequence_merge_definition
 
         return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
 
     @staticmethod
-    def get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[GifMergeDefinition]]) -> int:
+    def get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[AnimationMergeDefinition]]) -> int:
         # item.predefined_image None or "" are considered as to capture aka not predefined
         predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
         for predefined_image in predefined_images:

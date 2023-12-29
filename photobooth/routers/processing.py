@@ -25,6 +25,7 @@ def _capture(job):
         ) from exc
     except Exception as exc:
         # other errors
+        logger.exception(exc)
         logger.critical(exc)
         raise HTTPException(
             status_code=500,
@@ -40,6 +41,11 @@ def api_chose_1pic_get():
 @processing_router.get("/chose/collage")
 def api_chose_collage_get():
     return _capture(container.processing_service.start_job_collage)
+
+
+@processing_router.get("/chose/animation")
+def api_chose_animation_get():
+    return _capture(container.processing_service.start_job_animation)
 
 
 @processing_router.get("/cmd/confirm")

@@ -13,7 +13,7 @@ from enum import Enum
 from functools import cached_property
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageSequence, UnidentifiedImageError
 from turbojpeg import TurboJPEG
 
 from ..config import appconfig
@@ -39,15 +39,24 @@ PATH_THUMBNAIL = "".join([PATH_PROCESSED, "thumbnail/"])
 
 
 class MediaItemTypes(str, Enum):
-    IMAGE = "image"
-    COLLAGE = "collage"
-    VIDEO = "video"
+    image = "image"  # captured single image that is NOT part of a collage (normal process)
+    collage = "collage"  # canvas image that was made out of several collage_image
+    collage_image = "collage_image"  # captured image that is part of a collage (so it can be treated differently in UI than other images)
+    animation = "gif"  # canvas image that was made out of several animation_image
+    animation_image = "animation_image"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
+    video = "video"  # captured video - not yet implemented
 
 
-def get_new_filename(type: MediaItemTypes = MediaItemTypes.IMAGE, visibility: bool = True) -> Path:
+def get_new_filename(type: MediaItemTypes = MediaItemTypes.image, visibility: bool = True) -> Path:
+    filename_ending = "jpg"  # image, collage, collage_image, animation_image are jpg
+    if type is MediaItemTypes.animation:
+        filename_ending = "gif"  # only result of animation is gif, other can be jpg because more efficient and better quality.
+    if type is MediaItemTypes.video:  # not yet implemented.
+        filename_ending = "mjpg"
+
     return Path(
         PATH_ORIGINAL,
-        f"{type.value}_{visibility}_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.jpg",
+        f"{type.name}_{'show' if visibility else 'hide'}_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.{filename_ending}",
     )
 
 
@@ -57,11 +66,11 @@ def split_filename(filename):
 
 
 def get_type(filename) -> MediaItemTypes:
-    return MediaItemTypes(value=split_filename(filename)[0])
+    return MediaItemTypes[split_filename(filename)[0]]
 
 
 def get_visibility(filename) -> bool:
-    return split_filename(filename)[1].lower() == "true"
+    return split_filename(filename)[1].lower() in ("true", "show")
 
 
 def get_caption(filename) -> str:
@@ -223,64 +232,131 @@ class MediaItem:
                 raise exc
 
     def create_fileset_unprocessed(self):
-        buffer_in = self._read_original()
+        """function that creates the scaled versions (fileset) of the unprocessed mediaitem.
+        Function handles the different filetypes transparently in the most efficient way.
+
+        Currently need to support jpeg (images, collage_images, collage, animation_images) and gif (animation)
+        - jpeg most efficient is turbojpeg as per benchmark.
+        - gif PIL is used
+
+        """
+        suffix = Path(PATH_ORIGINAL, self.filename).suffix
+
+        if suffix.lower() in (".jpg", ".jpeg"):
+            self._create_fileset_unprocessed_jpg()
+        elif suffix.lower() == ".gif":
+            self._create_fileset_unprocessed_gif()
+        else:
+            raise RuntimeError(f"filetype not supported {suffix}")
+
+    def create_fileset_processed(self, buffer_in: bytes):
+        """function that creates the scaled versions (fileset) of the processed mediaitem.
+        Function handles the different filetypes transparently in the most efficient way.
+
+        Currently supports jpeg only
+        """
+
+        try:
+            self._create_fileset_processed_jpg(buffer_in)
+        except Exception as exc:
+            # fail: currently only jpeg supported. if it failed, we have a problem here.
+            raise RuntimeError(f"filetype not supported, error: {exc}") from exc
+
+    def _create_fileset_unprocessed_jpg(self):
+        """create jpeg fileset in most efficient way."""
+
+        with open(self.path_original, "rb") as file:
+            buffer_in = file.read()
 
         ## full version
         with open(self.path_full_unprocessed, "wb") as file:
-            file.write(self._get_full_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.HIRES_STILL_QUALITY,
+                    appconfig.mediaprocessing.FULL_STILL_WIDTH,
+                )
+            )
 
         ## preview version
         with open(self.path_preview_unprocessed, "wb") as file:
-            file.write(self._get_preview_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
+                    appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
+                )
+            )
 
         ## thumbnail version
         with open(self.path_thumbnail_unprocessed, "wb") as file:
-            file.write(self._get_thumbnail_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
+                    appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
+                )
+            )
 
-    def create_fileset_processed(self, buffer_in: bytes):
+    def _create_fileset_processed_jpg(self, buffer_in: bytes):
         ## full version
         with open(self.path_full, "wb") as file:
-            file.write(self._get_full_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.HIRES_STILL_QUALITY,
+                    appconfig.mediaprocessing.FULL_STILL_WIDTH,
+                )
+            )
 
         ## preview version
         with open(self.path_preview, "wb") as file:
-            file.write(self._get_preview_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
+                    appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
+                )
+            )
 
         ## thumbnail version
         with open(self.path_thumbnail, "wb") as file:
-            file.write(self._get_thumbnail_repr(buffer_in))
+            file.write(
+                self.resize_jpeg(
+                    buffer_in,
+                    appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
+                    appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
+                )
+            )
+
+    def _create_fileset_unprocessed_gif(self):
+        """create gif fileset in most efficient way."""
+        try:
+            gif_sequence = Image.open(self.path_original, formats=["gif"])
+        except (UnidentifiedImageError, Exception) as exc:
+            logger.error(f"loading gif failed: {exc}")
+            raise RuntimeError(f"filetype not supported, error: {exc}") from exc
+
+        self.resize_gif(
+            filename=self.path_full_unprocessed,
+            gif_image=gif_sequence,
+            scaled_min_width=appconfig.mediaprocessing.FULL_STILL_WIDTH,
+        )
+        self.resize_gif(
+            filename=self.path_preview_unprocessed,
+            gif_image=gif_sequence,
+            scaled_min_width=appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
+        )
+        self.resize_gif(
+            filename=self.path_thumbnail_unprocessed,
+            gif_image=gif_sequence,
+            scaled_min_width=appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
+        )
 
     def copy_fileset_processed(self):
         shutil.copy2(self.path_full_unprocessed, self.path_full)
         shutil.copy2(self.path_preview_unprocessed, self.path_preview)
         shutil.copy2(self.path_thumbnail_unprocessed, self.path_thumbnail)
-
-    def _read_original(self) -> bytes:
-        with open(self.path_original, "rb") as file:
-            buffer_in = file.read()
-
-        return buffer_in
-
-    def _get_full_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            appconfig.mediaprocessing.HIRES_STILL_QUALITY,
-            appconfig.mediaprocessing.FULL_STILL_WIDTH,
-        )
-
-    def _get_preview_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
-            appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
-        )
-
-    def _get_thumbnail_repr(self, buffer_in: bytes) -> bytes:
-        return self.resize_jpeg(
-            buffer_in,
-            appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
-            appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
-        )
 
     @staticmethod
     def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_width: int):
@@ -331,6 +407,47 @@ class MediaItem:
             quality=quality,
         )
         return buffer_out
+
+    @staticmethod
+    def resize_gif(filename: Path, gif_image: Image.Image, scaled_min_width: int):
+        """scale a gif image sequence to another buffer using PIL"""
+
+        # Wrap on-the-fly thumbnail generator
+        def thumbnails(frames: list[Image.Image]):
+            for frame in frames:
+                thumbnail = frame.copy()
+                thumbnail.thumbnail(size=target_size, resample=Image.Resampling.LANCZOS)
+                yield thumbnail
+
+        # to recover the original durations in scaled versions
+        durations = []
+        for i in range(gif_image.n_frames):
+            gif_image.seek(i)
+            duration = gif_image.info.get("duration", 1000)  # fallback 1sec if info not avail.
+            durations.append(duration)
+
+        # determine target size
+        scaling_factor = scaled_min_width / gif_image.width
+        target_size = tuple(int(dim * scaling_factor) for dim in gif_image.size)
+
+        # Get sequence iterator
+        frames = ImageSequence.Iterator(gif_image)
+        resized_frames = thumbnails(frames)
+
+        # Save output
+        om = next(resized_frames)  # Handle first frame separately
+        om.info = gif_image.info  # Copy original information (duration is only for first frame so on save handled separately)
+        om.save(
+            filename,
+            format="gif",
+            save_all=True,
+            append_images=list(resized_frames),
+            duration=durations,
+            optimize=True,
+            loop=0,  # loop forever
+        )
+
+        return om
 
     def asdict(self) -> dict:
         """

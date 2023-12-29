@@ -24,8 +24,6 @@ logger = logging.getLogger(name=None)
 def _container() -> Container:
     # setup
     container.start()
-    # create one image to ensure there is at least one
-    container.processing_service.start_job_1pic()
 
     # deliver
     yield container
@@ -42,12 +40,11 @@ def test_key_callback_takepic(_container: Container):
     container.stop()
     container.start()
 
-    if not _container.keyboard_service.is_started():
-        logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
-        pytest.skip("system does not allow access to input devices")
-
     # emulate key presses
-    _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="a", scan_code=None))
+    with patch.object(_container.processing_service, "start_job_1pic"):
+        # emulate action
+        _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="a", scan_code=None))
+        _container.processing_service.start_job_1pic.assert_called()
 
 
 def test_key_callback_takecollage(_container: Container):
@@ -60,12 +57,32 @@ def test_key_callback_takecollage(_container: Container):
     container.stop()
     container.start()
 
+    # emulate key presses
+    with patch.object(_container.processing_service, "start_job_collage"):
+        # emulate action
+        _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="c", scan_code=None))
+        _container.processing_service.start_job_collage.assert_called()
+
+
+def test_key_callback_takegif(_container: Container):
+    """try to emulate key presses as best as possible without actual hardware/user input"""
+
+    # modify config
+    appconfig.hardwareinputoutput.keyboard_input_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation = "g"
+
+    container.stop()
+    container.start()
+
     if not _container.keyboard_service.is_started():
         logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
-    _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="c", scan_code=None))
+    with patch.object(_container.processing_service, "start_job_gif"):
+        # emulate action
+        _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="g", scan_code=None))
+        _container.processing_service.start_job_animation.assert_called()
 
 
 @patch("subprocess.run")
@@ -79,6 +96,8 @@ def test_key_callback_print(mock_run, _container: Container):
 
     container.stop()
     container.start()
+
+    container.processing_service.start_job_1pic()
 
     if not _container.keyboard_service.is_started():
         logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
