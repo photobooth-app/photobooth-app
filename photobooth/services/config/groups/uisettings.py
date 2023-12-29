@@ -18,9 +18,13 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show link to capture single picture on frontpage.",
     )
-    show_collage_on_frontpage: bool = Field(
+    show_takecollage_on_frontpage: bool = Field(
         default=True,
         description="Show link to capture collage on frontpage.",
+    )
+    show_takeanimation_on_frontpage: bool = Field(
+        default=True,
+        description="Show link to capture animated GIF on frontpage.",
     )
     show_gallery_on_frontpage: bool = Field(
         default=True,
