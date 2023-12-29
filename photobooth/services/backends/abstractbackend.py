@@ -52,7 +52,7 @@ class AbstractBackend(ABC):
             backend_name=self.__class__.__name__,
         )
         self._fps = 0
-        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
+        self._stats_thread: StoppableThread = None
 
         super().__init__()
 
@@ -87,13 +87,15 @@ class AbstractBackend(ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
+        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-        self._stats_thread.stop()
-        self._stats_thread.join()
+        if self._stats_thread:
+            self._stats_thread.stop()
+            self._stats_thread.join()
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED
@@ -216,6 +218,9 @@ class AbstractBackend(ABC):
                     )
 
                 yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
+
+            # sleep otherwise 100% cpu even if no frame is asked for.
+            time.sleep(0.01)
 
 
 #
