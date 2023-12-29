@@ -10,7 +10,7 @@ updates:
     target-branch: "dev"
     schedule:
       interval: "daily"
-      time: "13:00"
+      time: "19:00"
     groups:
     python-packages:
       patterns:
