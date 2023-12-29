@@ -9,5 +9,9 @@ updates:
     directory: "/" # Location of package manifests
     target-branch: "dev"
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "daily"
+      time: "13:00"
+    groups:
+    python-packages:
+      patterns:
+        - "*"
