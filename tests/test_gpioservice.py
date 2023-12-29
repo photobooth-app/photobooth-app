@@ -90,11 +90,11 @@ def test_button_takecollage(_container: Container):
         _container.processing_service.start_job_collage.assert_called()
 
 
-def test_button_takegif(_container: Container):
+def test_button_takeanimation(_container: Container):
     # modify config
     # services.config().hardwareinputoutput.gpio_enabled = True
 
-    with patch.object(_container.processing_service, "start_job_gif"):
+    with patch.object(_container.processing_service, "start_job_animation"):
         # emulate gpio active low driven (simulates button press)
         _container.gpio_service.takeanimation_btn.pin.drive_low()
 
