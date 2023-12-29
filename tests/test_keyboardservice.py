@@ -64,7 +64,7 @@ def test_key_callback_takecollage(_container: Container):
         _container.processing_service.start_job_collage.assert_called()
 
 
-def test_key_callback_takegif(_container: Container):
+def test_key_callback_takeanimation(_container: Container):
     """try to emulate key presses as best as possible without actual hardware/user input"""
 
     # modify config
@@ -79,7 +79,7 @@ def test_key_callback_takegif(_container: Container):
         pytest.skip("system does not allow access to input devices")
 
     # emulate key presses
-    with patch.object(_container.processing_service, "start_job_gif"):
+    with patch.object(_container.processing_service, "start_job_animation"):
         # emulate action
         _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="g", scan_code=None))
         _container.processing_service.start_job_animation.assert_called()
