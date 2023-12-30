@@ -87,7 +87,7 @@ lint= [
 includes = ["./photobooth"]
 
 [tool.pdm.scripts]
-test = "pytest --benchmark-skip -v --cov-report=term --cov-report=xml:coverage.xml --cov ./"
+test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
 
 [build-system]
 requires = ["pdm-backend"]

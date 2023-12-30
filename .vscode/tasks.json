@@ -4,7 +4,7 @@
     {
       "label": "test",
       "type": "shell",
-      "command": "pdm run pytest -v --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov ./",
+      "command": "pdm run pytest -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov",
       "problemMatcher": [],
       "group": {
         "kind": "test",
