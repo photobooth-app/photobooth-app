@@ -132,3 +132,14 @@ def test_collage_manual_abort(_container: Container):
     # TODO: need to ensure database is updated properly!
 
     assert _container.processing_service.idle.is_active
+
+
+def test_animation(_container: Container):
+    _container.processing_service.start_job_animation()
+
+    assert _container.processing_service.idle.is_active is True
+
+    while not _container.processing_service.job_finished():
+        _container.processing_service.confirm_capture()
+
+    assert _container.processing_service.idle.is_active
