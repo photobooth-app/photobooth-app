@@ -91,7 +91,7 @@ jobs:
   tests-hardware-win:
     env:
       ## Sets environment variable
-      backends__MAIN_BACKEND: Digicamcontrol
+      backends__MAIN_BACKEND: VirtualCamera
       hardwareinputoutput__wled_enabled: False
       hardwareinputoutput__wled_serial_port: COM3
       common__countdown_capture_first: 0.2
