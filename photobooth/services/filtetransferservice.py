@@ -70,7 +70,7 @@ class FileTransferService(BaseService):
             if self.has_enough_space(device.mountpoint):
                 self.copy_folders_to_usb(device.mountpoint)
             else:
-                self._logger.warning(f"Not enough space on USB device at {device.mountpoint} to copy the folders.")
+                self._logger.warn(f"Not enough space on USB device at {device.mountpoint} to copy the folders.")
         else:
             self._logger.error(f"USB device not correctly mounted {device}.")
 
@@ -101,7 +101,7 @@ class FileTransferService(BaseService):
         try:
             os.makedirs(destination_path, exist_ok=True)
         except Exception as exc:
-            self._logger.warning(f"Error creating folder {destination_path} on usb drive: {exc}")
+            self._logger.warn(f"Error creating folder {destination_path} on usb drive: {exc}")
 
         self._logger.info(f"Start copying data to {destination_path}")
         for folder in LIST_FOLDERS_TO_COPY:
@@ -109,7 +109,7 @@ class FileTransferService(BaseService):
                 # TODO: improve to only copy modified files.
                 shutil.copytree(folder, Path(destination_path, folder), dirs_exist_ok=True)
             except Exception as exc:
-                self._logger.warning(f"Error copying files: {exc}")
+                self._logger.warn(f"Error copying files: {exc}")
                 return
 
         self._logger.info(f"Copy folders finished. Copied to {destination_path}")
