@@ -107,6 +107,17 @@ class DigicamcontrolBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
+        # when stopping the backend also stop the livestream by following command.
+        # if livestream is stopped, the camera is available to other processes again.
+        try:
+            session = requests.Session()
+            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+            if not r.ok:
+                logger.error(f"error stopping digicamcontrol liveview, error {r.text}")
+        except Exception as exc:
+            logger.error(f"error stopping digicamcontrol liveview {exc}")
+            # not reraise, because we ignore and want to continue stopping the backend
+
         if self._connect_thread and self._connect_thread.is_alive():
             self._connect_thread.stop()
 
