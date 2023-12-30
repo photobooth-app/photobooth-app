@@ -58,7 +58,7 @@ jobs:
           name: coverage
           path: coverage.xml
 
-  tests-hardware:
+  tests-hardware-rpi:
     env:
       ## Sets environment variable
       backends__MAIN_BACKEND: VirtualCamera
@@ -67,7 +67,7 @@ jobs:
       common__countdown_capture_first: 0.2
       common__countdown_capture_second_following: 0.2
 
-    runs-on: self-hosted
+    runs-on: [self-hosted, rpi]
     if: ${{ github.repository_owner == 'photobooth-app' }}
 
     steps:
@@ -85,11 +85,34 @@ jobs:
           pdm run test
       - uses: actions/upload-artifact@v3
         with:
-          name: coverage-hardware
+          name: coverage-hardware-rpi
+          path: ./coverage.xml
+
+  tests-hardware-win:
+    env:
+      ## Sets environment variable
+      backends__MAIN_BACKEND: Digicamcontrol
+      hardwareinputoutput__wled_enabled: False
+      hardwareinputoutput__wled_serial_port: COM3
+      common__countdown_capture_first: 0.2
+      common__countdown_capture_second_following: 0.2
+
+    runs-on: [self-hosted, Windows]
+    if: ${{ github.repository_owner == 'photobooth-app' }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: pdm install # install in-project env
+      - name: Test with pytest
+        run: |
+          pdm run test
+      - uses: actions/upload-artifact@v3
+        with:
+          name: coverage-hardware-win
           path: ./coverage.xml
 
   upload-to-codecov:
-    needs: [tests, tests-hardware]
+    needs: [tests, tests-hardware-rpi, tests-hardware-win]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'photobooth-app' }}
     steps:
