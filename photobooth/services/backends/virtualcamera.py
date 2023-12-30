@@ -65,7 +65,7 @@ class VirtualCameraBackend(AbstractBackend):
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         try:
-            self.wait_for_lores_image()
+            self.wait_for_lores_image(retries=20)
         except Exception as exc:
             raise RuntimeError("failed to start up backend") from exc
 
