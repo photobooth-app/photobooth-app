@@ -647,15 +647,15 @@ files = [
 
 [[package]]
 name = "pydantic-extra-types"
-version = "2.2.0"
+version = "2.3.0"
 requires_python = ">=3.7"
 summary = "Extra Pydantic types."
 dependencies = [
-    "pydantic>=2.0.3",
+    "pydantic>=2.5.2",
 ]
 files = [
-    {file = "pydantic_extra_types-2.2.0-py3-none-any.whl", hash = "sha256:d4c6bcab0ea4b5300075ae7a664c134d923ac35496ad8caa0feae30234f14756"},
-    {file = "pydantic_extra_types-2.2.0.tar.gz", hash = "sha256:7f2fdd5251729745983cf8cdc5e431ffee2362f283fff54f68122625cef82c11"},
+    {file = "pydantic_extra_types-2.3.0-py3-none-any.whl", hash = "sha256:899043975a7f17ec85dc75e3328b832e1ef9414e0a495a9f420850c4d9d85b5a"},
+    {file = "pydantic_extra_types-2.3.0.tar.gz", hash = "sha256:dcd4b215957d93fdd7c7fdb908444c0bad869a93b8e5625b07fd119bc1653322"},
 ]
 
 [[package]]
