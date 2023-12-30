@@ -226,15 +226,6 @@ class DigicamcontrolBackend(AbstractBackend):
             self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
 
-            # short sleep until backend started.
-            time.sleep(0.5)
-
-            # after connection set preview mode to enable liveview.
-            self._on_preview_mode()
-
-            # short sleep until backend incl liveview started.
-            time.sleep(1)
-
         # supervising connection thread was asked to stop - so we ask to stop worker fun also
         if self._worker_thread:
             self._worker_thread.stop()
@@ -242,6 +233,9 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _worker_fun(self):
         logger.debug("starting digicamcontrol worker function")
+
+        # switch back to preview mode
+        self._on_preview_mode()
 
         session = requests.Session()
         preview_failcounter = 0
@@ -286,18 +280,17 @@ class DigicamcontrolBackend(AbstractBackend):
                     with open(captured_filepath, "rb") as fh:
                         img_bytes = fh.read()
 
+                    # success
+                    with self._hires_data.condition:
+                        self._hires_data.data = img_bytes
+                        self._hires_data.condition.notify_all()
+
                 except Exception as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
 
-                    # try again in next loop
-                    continue
-
-                with self._hires_data.condition:
-                    self._hires_data.data = img_bytes
-                    self._hires_data.condition.notify_all()
-
-                # switch back to preview mode
-                self._on_preview_mode()
+                finally:
+                    # switch back to preview mode
+                    self._on_preview_mode()
 
             else:
                 if appconfig.backends.LIVEPREVIEW_ENABLED:
@@ -318,16 +311,16 @@ class DigicamcontrolBackend(AbstractBackend):
                     except Exception as exc:
                         preview_failcounter += 1
 
-                        if preview_failcounter <= 10:
+                        if preview_failcounter <= 20:
                             logger.warning(f"error capturing frame from DSLR: {exc}")
                             # abort this loop iteration and continue sleeping...
                             time.sleep(0.5)  # add another delay to avoid flooding logs
 
-                            continue
+                            continue  # continue and try in next run to get one...
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
                             self._camera_connected = False
-                            break
+                            break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
                     else:
                         preview_failcounter = 0
 
