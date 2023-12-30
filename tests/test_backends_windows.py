@@ -22,23 +22,20 @@ logger = logging.getLogger(name=None)
 
 ## check skip if wrong platform
 if not platform.system() == "Windows":
-    pytest.skip(
-        "tests are windows only platform, skipping test",
-        allow_module_level=True,
-    )
+    pytest.skip("tests are windows only platform, skipping test", allow_module_level=True)
+
+logger.info("probing for available cameras")
+_availableCameraIndexes = DigicamcontrolBackend.available_camera_indexes()
+if not _availableCameraIndexes:
+    pytest.skip("no camera found, skipping test", allow_module_level=True)
+
+logger.info(f"available camera indexes: {_availableCameraIndexes}")
 
 
 @pytest.fixture()
 def backend_digicamcontrol() -> DigicamcontrolBackend:
     # setup
     backend = DigicamcontrolBackend()
-
-    logger.info("probing for available cameras")
-    _availableCameraIndexes = backend.available_camera_indexes()
-    if not _availableCameraIndexes:
-        pytest.skip("no camera found, skipping test")
-
-    logger.info(f"available camera indexes: {_availableCameraIndexes}")
 
     # deliver
     backend.start()

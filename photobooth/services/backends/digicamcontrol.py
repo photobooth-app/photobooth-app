@@ -93,11 +93,12 @@ class DigicamcontrolBackend(AbstractBackend):
 
         # worker threads
         self._worker_thread: StoppableThread = None
-        self._connect_thread = StoppableThread(name="digicamcontrol_connect_thread", target=self._connect_fun, daemon=True)
+        self._connect_thread: StoppableThread = None
 
     def start(self):
         """To start the FrameServer, you will also need to start the Picamera2 object."""
 
+        self._connect_thread = StoppableThread(name="digicamcontrol_connect_thread", target=self._connect_fun, daemon=True)
         self._connect_thread.start()
 
         logger.debug(f"{self.__module__} started")
@@ -120,10 +121,15 @@ class DigicamcontrolBackend(AbstractBackend):
 
         if self._connect_thread and self._connect_thread.is_alive():
             self._connect_thread.stop()
-
             logger.debug(f"{self.__module__} waiting to join _connect_thread")
             self._connect_thread.join()
             logger.debug(f"{self.__module__} joined _connect_thread")
+
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            logger.debug(f"{self.__module__} waiting to join _worker_thread")
+            self._worker_thread.join()
+            logger.debug(f"{self.__module__} joined _worker_thread")
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -137,7 +143,7 @@ class DigicamcontrolBackend(AbstractBackend):
         with self._hires_data.condition:
             self._hires_data.request_ready.set()
 
-            if not self._hires_data.condition.wait(timeout=4):
+            if not self._hires_data.condition.wait(timeout=6):
                 raise TimeoutError("timeout receiving frames")
 
         self._hires_data.request_ready.clear()
@@ -146,15 +152,6 @@ class DigicamcontrolBackend(AbstractBackend):
     #
     # INTERNAL FUNCTIONS
     #
-
-    def _check_camera_preview_available(self):
-        """Test on init whether preview is available for this camera."""
-        try:
-            self._wait_for_lores_image()
-        except Exception as exc:
-            logger.info(f"gather preview failed. consider to disable permanently! {exc}")
-        else:
-            logger.info("preview is available")
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
@@ -226,9 +223,6 @@ class DigicamcontrolBackend(AbstractBackend):
                 self._camera_connected = True
                 logger.debug(f"{self.__module__} camera connected")
 
-            if appconfig.backends.LIVEPREVIEW_ENABLED:
-                self._check_camera_preview_available()
-
             self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
             self._worker_thread.start()
 
@@ -237,6 +231,9 @@ class DigicamcontrolBackend(AbstractBackend):
 
             # after connection set preview mode to enable liveview.
             self._on_preview_mode()
+
+            # short sleep until backend incl liveview started.
+            time.sleep(1)
 
         # supervising connection thread was asked to stop - so we ask to stop worker fun also
         if self._worker_thread:
@@ -274,7 +271,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
                     assert r.status_code == 200
                     if not r.text == "OK":
-                        raise RuntimeError(f"error capture {r.text}")
+                        raise RuntimeError(f"error capture, return from digicamcontrol: {r.text}")
 
                     r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
                     assert r.status_code == 200
@@ -346,7 +343,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
         logger.warning("_worker_fun exits")
 
-    def available_camera_indexes(self):
+    @staticmethod
+    def available_camera_indexes():
         """
         find available cameras, return valid indexes.
         """
