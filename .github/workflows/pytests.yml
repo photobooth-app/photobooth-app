@@ -112,9 +112,6 @@ jobs:
           # use IPv4 to force IPv4 use (digicamcontrol doesnt support IPv6)
           # info: get avail params: http://localhost:5513/?slc=list&param1=camera&param2=
           # info: get avail cmds:   http://localhost:5513/?slc=list&param1=cmds&param2=
-      - name: digicamcontrol camera mode change resonse
-        run: |
-          echo ${{ steps.requestDigicamChange.outputs.response }}
       - run: pdm install # install in-project env
       - name: Test with pytest
         run: |
