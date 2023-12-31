@@ -183,21 +183,11 @@ def img_aquisition(
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)
         font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 100), "virtual camera preview", fill=text_fill, font=font_large)
 
-        img_draw.text(
-            (25, 130),
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-            fill=text_fill,
-            font=font_large,
-        )
-        img_draw.text((25, 160), f"framerate: {fps}", fill=text_fill, font=font_small)
-        img_draw.text(
-            (25, 400),
-            "you see this, so installation was successful :)",
-            fill=text_fill,
-            font=font_small,
-        )
+        img_draw.text((25, 200), "virtual camera preview", fill=text_fill, font=font_large)
+        img_draw.text((25, 230), datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), fill=text_fill, font=font_large)
+        img_draw.text((25, 260), f"framerate: {fps}", fill=text_fill, font=font_small)
+        img_draw.text((25, 400), "you see this, so installation was successful :)", fill=text_fill, font=font_small)
 
         # flip if mirror effect is on because messages shall be readable on screen
         if _mirror:
