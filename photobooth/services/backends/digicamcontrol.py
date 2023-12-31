@@ -267,14 +267,31 @@ class DigicamcontrolBackend(AbstractBackend):
                     if not r.text == "OK":
                         raise RuntimeError(f"error capture, digicamcontrol exception: {r.text}")
 
-                    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
-                    assert r.status_code == 200
-                    if r.text in ("-", "?"):  # "-" means capture in progress, "?" means not yet an image captured
-                        error_translation = {"-": "capture still in process", "?": "not yet an image captured"}
-                        raise RuntimeError(f"error retrieving capture, {error_translation[r.text]}")
+                    for attempt in range(1, 5):
+                        try:
+                            # it could happen, that the http request finished, but the image is not yet fully processed. retry with little delay again
+                            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
+                            assert r.status_code == 200
 
-                    # at this point it's assumed that r.text holds the filename:
-                    captured_filepath = Path(tmp_dir, r.text)
+                            if r.text in ("-", "?"):  # "-" means capture in progress, "?" means not yet an image captured
+                                error_translation = {"-": "capture still in process", "?": "not yet an image captured"}
+                                raise RuntimeError(f"error retrieving capture, {error_translation[r.text]}")
+                            else:
+                                # at this point it's assumed that r.text holds the filename:
+                                captured_filepath = Path(tmp_dir, r.text)
+                                break  # no else below, its fine, proceed deliver image
+
+                        except Exception as exc:
+                            logger.error(exc)
+                            logger.error(f"still waiting for picture, {attempt=}, retrying")
+
+                            time.sleep(0.2)
+                            continue
+
+                    else:
+                        # we failed finally all the attempts - deal with the consequences.
+                        logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
+                        raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
 
                     logger.info(f"trying to open captured file {captured_filepath}")
                     with open(captured_filepath, "rb") as fh:
