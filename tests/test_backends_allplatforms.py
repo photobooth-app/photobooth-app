@@ -5,6 +5,7 @@ import logging
 
 import pytest
 
+from photobooth.services.backends.disabled import DisabledBackend
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.backends.webcamcv2 import WebcamCv2Backend
 from photobooth.services.backends.webcamcv2 import available_camera_indexes as cv2_avail
@@ -57,6 +58,17 @@ def backend_virtual() -> VirtualCameraBackend:
     backend.stop()
 
 
+@pytest.fixture()
+def backend_disabled() -> DisabledBackend:
+    # setup
+    backend = DisabledBackend()
+
+    # deliver
+    backend.start()
+    yield backend
+    backend.stop()
+
+
 def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
     get_images(backend_virtual)
@@ -65,3 +77,16 @@ def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
 def test_get_images_webcamcv2(backend_cv2: WebcamCv2Backend):
     """get lores and hires images from backend and assert"""
     get_images(backend_cv2)
+
+
+def test_get_images_disabled(backend_disabled: DisabledBackend):
+    """get lores and hires images from backend and assert"""
+
+    with pytest.raises(RuntimeError):
+        backend_disabled.wait_for_lores_image()
+
+    with pytest.raises(RuntimeError):
+        backend_disabled._wait_for_lores_image()
+
+    with pytest.raises(RuntimeError):
+        backend_disabled.wait_for_hq_image()

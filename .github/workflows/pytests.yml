@@ -102,6 +102,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Choose digicamcontrol camera mode
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'http://localhost:5513/?slc=set&param1=camera.compressionsetting&param2=640x360, 30 fps (30 max fps), 24 bpp'
+          method: 'GET'
+          # info: get avail params: http://localhost:5513/?slc=list&param1=camera&param2=
+          # info: get avail cmds:   http://localhost:5513/?slc=list&param1=cmds&param2=
       - run: pdm install # install in-project env
       - name: Test with pytest
         run: |
