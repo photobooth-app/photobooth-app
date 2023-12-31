@@ -143,7 +143,7 @@ class DigicamcontrolBackend(AbstractBackend):
         with self._hires_data.condition:
             self._hires_data.request_ready.set()
 
-            if not self._hires_data.condition.wait(timeout=6):
+            if not self._hires_data.condition.wait(timeout=4):
                 raise TimeoutError("timeout receiving frames")
 
         self._hires_data.request_ready.clear()
@@ -265,7 +265,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
                     assert r.status_code == 200
                     if not r.text == "OK":
-                        raise RuntimeError(f"error capture, return from digicamcontrol: {r.text}")
+                        raise RuntimeError(f"error capture, digicamcontrol exception: {r.text}")
 
                     r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
                     assert r.status_code == 200

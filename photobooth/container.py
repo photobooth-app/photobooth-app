@@ -26,15 +26,16 @@ class Container:
     logging_service: LoggingService = LoggingService(
         sse_service,
     )
+    wled_service: WledService = WledService(
+        sse_service,
+    )
     aquisition_service: AquisitionService = AquisitionService(
         sse_service,
+        wled_service,
     )
     information_service: InformationService = InformationService(
         sse_service,
         aquisition_service,
-    )
-    wled_service: WledService = WledService(
-        sse_service,
     )
     mediaprocessing_service: MediaprocessingService = MediaprocessingService(
         sse_service,

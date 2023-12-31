@@ -1,8 +1,10 @@
+import io
 import logging
 import platform
 
 import pytest
 import requests
+from PIL import Image
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 from photobooth.services.config import appconfig
@@ -49,7 +51,7 @@ def test_get_images_digicamcontrol(backend_digicamcontrol: DigicamcontrolBackend
     get_images(backend_digicamcontrol)
 
 
-def test_get_images_disable_liveview(backend_digicamcontrol: DigicamcontrolBackend):
+def test_get_images_disable_liveview_recovery(backend_digicamcontrol: DigicamcontrolBackend):
     # get one image to ensure it's working
     get_images(backend_digicamcontrol)
 
@@ -63,29 +65,20 @@ def test_get_images_disable_liveview(backend_digicamcontrol: DigicamcontrolBacke
     get_images(backend_digicamcontrol)
 
 
-def test_get_livestream(backend_digicamcontrol: DigicamcontrolBackend):
-    g_stream = backend_digicamcontrol.gen_stream()
-
-    i = 0
-    for frame in g_stream:  # frame is bytes
-        frame: bytes
-
-        # ensure we always receive a valid jpeg frame, nothing else.
-        # in case the backend failed, we receive a substitute image
-        assert frame.startswith(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n\xff\xd8\xff")
-
-        if i == 5:
-            logger.info("disable liveview to test exceptions and if it recovers properly")
-
-            session = requests.Session()
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
-            assert r.status_code == 200
-            if not r.ok:
-                raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
-
-        if i > 15:
-            g_stream.close()
-
-        i = i + 1
-
+def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol: DigicamcontrolBackend):
+    # ensure its working fine.
     get_images(backend_digicamcontrol)
+
+    # disable live view
+    session = requests.Session()
+    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+    assert r.status_code == 200
+    if not r.ok:
+        raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
+
+    # check if recovers, but with some more retries for slow test-computer
+    try:
+        with Image.open(io.BytesIO(backend_digicamcontrol.wait_for_lores_image(20))) as img:
+            img.verify()
+    except Exception as exc:
+        raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc

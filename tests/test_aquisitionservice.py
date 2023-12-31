@@ -14,6 +14,7 @@ from photobooth.services.config.groups.backends import (
     EnumImageBackendsMain,
 )
 from photobooth.services.sseservice import SseService
+from photobooth.services.wledservice import WledService
 
 logger = logging.getLogger(name=None)
 
@@ -124,7 +125,7 @@ def test_gen_stream_main_backend(_container: Container):
     _container.aquisition_service.start()
 
     assert _container.aquisition_service.gen_stream()
-    assert _container.aquisition_service._main_backend.gen_stream()
+
     assert not _container.aquisition_service._is_real_backend(_container.aquisition_service._live_backend)
 
 
@@ -138,7 +139,6 @@ def test_gen_stream_live_backend(_container: Container):
 
     assert _container.aquisition_service.gen_stream()
     assert not _container.aquisition_service._is_real_backend(_container.aquisition_service._main_backend)
-    assert _container.aquisition_service._live_backend.gen_stream()
 
 
 def test_get_stats(_container: Container):
@@ -161,7 +161,7 @@ def test_simulated_init_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "__init__", error_mock):
         try:
-            _: AquisitionService = AquisitionService(SseService())
+            _: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
 
@@ -175,7 +175,7 @@ def test_simulated_start_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "start", error_mock):
         try:
-            aq: AquisitionService = AquisitionService(SseService())
+            aq: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
             aq.start()
 
         except Exception as exc:
@@ -191,8 +191,29 @@ def test_simulated_stop_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "stop", error_mock):
         try:
-            aq: AquisitionService = AquisitionService(SseService())
+            aq: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
             aq.stop()
 
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
+
+
+def test_get_livestream_virtualcamera(_container: Container):
+    g_stream = _container.aquisition_service.gen_stream()
+
+    i = 0
+    for frame in g_stream:  # frame is bytes
+        frame: bytes
+
+        # ensure we always receive a valid jpeg frame, nothing else.
+        # in case the backend failed, we receive a substitute image
+        assert frame.startswith(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n\xff\xd8\xff")
+
+        if i == 5:
+            # we could add a way here to have virtualcamera failing to provide images (similar like for digicamcontrol)
+            pass
+
+        if i > 15:
+            g_stream.close()
+
+        i = i + 1
