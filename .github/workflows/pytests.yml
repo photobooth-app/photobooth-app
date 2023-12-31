@@ -108,6 +108,7 @@ jobs:
         with:
           url: 'http://127.0.0.1:5513/?slc=set&param1=camera.compressionsetting&param2=640x480,%2030%20fps%20(30%20max%20fps),%2024%20bpp'
           method: 'GET'
+          preventFailureOnNoResponse: 'true' # because digicamcontrol weird implementation result cannot be read properly by request-action lib
           # use IPv4 to force IPv4 use (digicamcontrol doesnt support IPv6)
           # info: get avail params: http://localhost:5513/?slc=list&param1=camera&param2=
           # info: get avail cmds:   http://localhost:5513/?slc=list&param1=cmds&param2=
