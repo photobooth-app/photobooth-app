@@ -5,16 +5,10 @@ import dataclasses
 import logging
 import time
 from abc import ABC, abstractmethod
-from functools import cache
-from io import BytesIO
 from multiprocessing import Condition, Lock, shared_memory
-from pathlib import Path
-
-from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
-from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 
@@ -115,40 +109,6 @@ class AbstractBackend(ABC):
     def _on_preview_mode(self):
         """called externally via events and used to change to a preview mode if necessary"""
 
-    @staticmethod
-    @cache
-    def _substitute_image(caption: str = "Error", message: str = "Something happened!", mirror: bool = False) -> bytes:
-        """Create a substitute image in case the stream fails.
-        The image shall clarify some error occured to the user while trying to recover.
-
-        Args:
-            caption (str, optional): Caption in first line. Defaults to "".
-            message (str, optional): Additional error message in second line. Defaults to "".
-            mirror (bool, optional): Flip left/right in case the stream has mirror effect applied. Defaults to False.
-
-        Returns:
-            bytes: _description_
-        """
-        path_font = Path(__file__).parent.joinpath("assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
-        text_fill = "#888"
-
-        img = Image.new("RGB", (400, 300), "#ddd")
-        img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(font=str(path_font), size=22)
-        font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 100), caption, fill=text_fill, font=font_large)
-        img_draw.text((25, 120), message, fill=text_fill, font=font_small)
-        img_draw.text((25, 140), "please check camera and logs", fill=text_fill, font=font_small)
-
-        # flip if mirror effect is on because messages shall be readable on screen
-        if mirror:
-            img = ImageOps.mirror(img)
-
-        # create jpeg
-        jpeg_buffer = BytesIO()
-        img.save(jpeg_buffer, format="jpeg", quality=95)
-        return jpeg_buffer.getvalue()
-
     def wait_for_lores_image(self, retries: int = 10):
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
@@ -178,49 +138,6 @@ class AbstractBackend(ABC):
                 logger.debug("waiting for backend provide low resolution image...")
 
                 continue
-
-    def gen_stream(self):
-        """
-        yield jpeg images to stream to client (if not created otherwise)
-        this function may be overriden by backends, but this is the default one
-        relies on the backends implementation of _wait_for_lores_image to return a buffer
-        """
-        logger.info(f"livestream started on backend {self=}")
-
-        last_time = time.time_ns()
-        while True:
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.LIVEPREVIEW_FRAMERATE):
-                last_time = now_time
-
-                try:
-                    output_jpeg_bytes = self.wait_for_lores_image()
-                except ShutdownInProcessError:
-                    logger.info("ShutdownInProcess, stopping stream")
-                    return
-                except TimeoutError:
-                    # this error could be recovered (example: DSLR turned off/on again)
-                    logger.error("error capture lores image for stream. timeout expired, retrying")
-                    # can we do additional error handling here?
-                    output_jpeg_bytes = self._substitute_image(
-                        "Oh no - stream error :(",
-                        "timeout, no preview from cam. retrying.",
-                        appconfig.uisettings.livestream_mirror_effect,
-                    )
-                except Exception as exc:
-                    # this error probably cannot recover.
-                    logger.exception(exc)
-                    logger.error(f"streaming exception: {exc}")
-                    output_jpeg_bytes = self._substitute_image(
-                        "Oh no - stream error :(",
-                        "exception, unknown error getting preview.",
-                        appconfig.uisettings.livestream_mirror_effect,
-                    )
-
-                yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
-
-            # sleep otherwise 100% cpu even if no frame is asked for.
-            time.sleep(0.01)
 
 
 #

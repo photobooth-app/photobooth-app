@@ -188,48 +188,27 @@ class ProcessingService(StateMachine):
         filepath_neworiginalfile = get_new_filename(type=_type)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
-        # at this point it's assumed, a HQ image was requested by statemachine.
-        # seems to not make sense now, maybe revert hat...
-        # waitforpic and store to disk
-        start_time_capture = time.time()
-        for attempt in range(1, appconfig.backends.retry_capture + 1):
-            try:
-                self._wled_service.preset_shoot()
+        try:
+            start_time_capture = time.time()
+            image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.
 
-                image_bytes = self._aquisition_service.wait_for_hq_image()
+            with open(filepath_neworiginalfile, "wb") as file:
+                file.write(image_bytes)
 
-                self._wled_service.preset_standby()
+            # populate image item for further processing:
+            mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+            self.model.set_last_capture(mediaitem)
 
-                with open(filepath_neworiginalfile, "wb") as file:
-                    file.write(image_bytes)
+            logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
-                # populate image item for further processing:
-                mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-                self.model.set_last_capture(mediaitem)
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"error capture image. {exc}")
+            # can we do additional error handling here?
 
-                logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
-
-            except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{appconfig.backends.retry_capture}, retrying")
-                # can we do additional error handling here?
-                continue
-
-            except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"error capture image. {exc}")
-                # can we do additional error handling here?
-
-                # reraise so http error can be sent
-                raise exc
-                # no retry for this type of error
-            else:
-                break
-        else:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
-            raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
-
-        self._wled_service.preset_standby()
+            # reraise so http error can be sent
+            raise exc
+            # no retry for this type of error
 
         # capture finished, go to next state
         self._captured()
