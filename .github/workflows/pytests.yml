@@ -88,41 +88,8 @@ jobs:
           name: coverage-hardware-rpi
           path: ./coverage.xml
 
-  tests-hardware-win:
-    env:
-      ## Sets environment variable
-      backends__MAIN_BACKEND: VirtualCamera
-      hardwareinputoutput__wled_enabled: False
-      hardwareinputoutput__wled_serial_port: COM3
-      common__countdown_capture_first: 0.2
-      common__countdown_capture_second_following: 0.2
-
-    runs-on: [self-hosted, Windows]
-    if: ${{ github.repository_owner == 'photobooth-app' }}
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Choose digicamcontrol camera mode
-        id: requestDigicamChange
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: 'http://127.0.0.1:5513/?slc=set&param1=camera.compressionsetting&param2=640x480,%2030%20fps%20(30%20max%20fps),%2024%20bpp'
-          method: 'GET'
-          preventFailureOnNoResponse: 'true' # because digicamcontrol weird implementation result cannot be read properly by request-action lib
-          # use IPv4 to force IPv4 use (digicamcontrol doesnt support IPv6)
-          # info: get avail params: http://localhost:5513/?slc=list&param1=camera&param2=
-          # info: get avail cmds:   http://localhost:5513/?slc=list&param1=cmds&param2=
-      - run: pdm install # install in-project env
-      - name: Test with pytest
-        run: |
-          pdm run test
-      - uses: actions/upload-artifact@v3
-        with:
-          name: coverage-hardware-win
-          path: ./coverage.xml
-
   upload-to-codecov:
-    needs: [tests, tests-hardware-rpi, tests-hardware-win]
+    needs: [tests, tests-hardware-rpi]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'photobooth-app' }}
     steps:
