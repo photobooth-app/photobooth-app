@@ -22,20 +22,18 @@ def run_around_tests():
 logger = logging.getLogger(name=None)
 
 
-## check skip if wrong platform
-if not platform.system() == "Windows":
-    pytest.skip("tests are windows only platform, skipping test", allow_module_level=True)
-
-logger.info("probing for available cameras")
-_availableCameraIndexes = DigicamcontrolBackend.available_camera_indexes()
-if not _availableCameraIndexes:
-    pytest.skip("no camera found, skipping test", allow_module_level=True)
-
-logger.info(f"available camera indexes: {_availableCameraIndexes}")
-
-
 @pytest.fixture()
-def backend_digicamcontrol() -> DigicamcontrolBackend:
+def backend_digicamcontrol_hardware() -> DigicamcontrolBackend:
+    ## check skip if wrong platform
+    if not platform.system() == "Windows":
+        pytest.skip("tests are windows only platform, skipping test", allow_module_level=True)
+
+    logger.info("probing for available cameras")
+    _availableCameraIndexes = DigicamcontrolBackend.available_camera_indexes()
+    if not _availableCameraIndexes:
+        pytest.skip("no camera found, skipping test", allow_module_level=True)
+
+    logger.info(f"available camera indexes: {_availableCameraIndexes}")
     # setup
     backend = DigicamcontrolBackend()
 
@@ -45,15 +43,15 @@ def backend_digicamcontrol() -> DigicamcontrolBackend:
     backend.stop()
 
 
-def test_get_images_digicamcontrol(backend_digicamcontrol: DigicamcontrolBackend):
+def test_get_images_digicamcontrol(backend_digicamcontrol_hardware: DigicamcontrolBackend):
     # get lores and hires images from backend and assert
 
-    get_images(backend_digicamcontrol)
+    get_images(backend_digicamcontrol_hardware)
 
 
-def test_get_images_disable_liveview_recovery(backend_digicamcontrol: DigicamcontrolBackend):
+def test_get_images_disable_liveview_recovery(backend_digicamcontrol_hardware: DigicamcontrolBackend):
     # get one image to ensure it's working
-    get_images(backend_digicamcontrol)
+    get_images(backend_digicamcontrol_hardware)
 
     # disable liveview to test exceptions and if it recovers properly
     session = requests.Session()
@@ -62,12 +60,12 @@ def test_get_images_disable_liveview_recovery(backend_digicamcontrol: Digicamcon
     if not r.ok:
         raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
 
-    get_images(backend_digicamcontrol)
+    get_images(backend_digicamcontrol_hardware)
 
 
-def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol: DigicamcontrolBackend):
+def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol_hardware: DigicamcontrolBackend):
     # ensure its working fine.
-    get_images(backend_digicamcontrol)
+    get_images(backend_digicamcontrol_hardware)
 
     # disable live view
     session = requests.Session()
@@ -78,7 +76,7 @@ def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontro
 
     # check if recovers, but with some more retries for slow test-computer
     try:
-        with Image.open(io.BytesIO(backend_digicamcontrol.wait_for_lores_image(20))) as img:
+        with Image.open(io.BytesIO(backend_digicamcontrol_hardware.wait_for_lores_image(20))) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
