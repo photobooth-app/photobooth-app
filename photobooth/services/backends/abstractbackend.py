@@ -47,6 +47,7 @@ class AbstractBackend(ABC):
         )
         self._fps = 0
         self._stats_thread: StoppableThread = None
+        self._camera_connected = None
 
         super().__init__()
 
@@ -90,6 +91,15 @@ class AbstractBackend(ABC):
         if self._stats_thread:
             self._stats_thread.stop()
             self._stats_thread.join()
+
+    def is_camera_connected(self):
+        print("getter of _camera_connected called")
+        return self._camera_connected
+
+    def camera_disconnect_detected(self):
+        self._camera_connected = False
+
+        # and continue inform the reconnect thread.
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED
