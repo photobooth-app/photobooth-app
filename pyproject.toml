@@ -35,7 +35,7 @@ dependencies = [
     "fastapi>=0.106.0",
     "opencv-python>=4.8.1",
     "numpy>=1.26.0",
-    "pillow>=10.1.0",
+    "pillow<10.2.0",
     "psutil>=5.9.0",
     "pydantic>=2.5.2",
     "pydantic-extra-types>=2.3.0",
@@ -65,29 +65,6 @@ photobooth = "photobooth.__main__:main"
 homepage = "https://github.com/photobooth-app/photobooth-app"
 repository = "https://github.com/photobooth-app/photobooth-app"
 documentation = "https://photobooth-app.org"
-
-[tool.pdm]
-version = { source = "file", path = "photobooth/__version__.py" }
-
-[tool.pdm.dev-dependencies]
-test = [
-  "pytest>=7.4.0",
-  "pytest-benchmark>=4.0.0",
-  "pytest-cov>=4.1.0",
-  "coverage[toml]>=7.4.0",
-  "simplejpeg>=1.7.0",
-  "httpx-sse>=0.4.0",
-  "httpx>=0.25.0",
-]
-lint= [
-  "ruff>=0.1.8",
-]
-
-[tool.pdm.build]
-includes = ["./photobooth"]
-
-[tool.pdm.scripts]
-test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
 
 [build-system]
 requires = ["pdm-backend"]
@@ -128,3 +105,28 @@ extend-exclude = ["vendor"]
 
 [tool.ruff.pydocstyle]
 convention = "google"
+
+[tool.pdm]
+version = { source = "file", path = "photobooth/__version__.py" }
+
+[tool.pdm.dev-dependencies]
+test = [
+  "pytest>=7.4.0",
+  "pytest-benchmark>=4.0.0",
+  "pytest-cov>=4.1.0",
+  "coverage[toml]>=7.4.0",
+  "simplejpeg>=1.7.0",
+  "httpx-sse>=0.4.0",
+  "httpx>=0.25.0",
+  "pytest-httpserver>=1.0.8",
+]
+lint= [
+  "ruff>=0.1.8",
+]
+
+[tool.pdm.build]
+includes = ["./photobooth"]
+
+[tool.pdm.scripts]
+test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
+
