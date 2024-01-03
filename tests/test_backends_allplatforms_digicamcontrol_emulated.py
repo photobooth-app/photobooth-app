@@ -36,7 +36,7 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
         try:
             output_bytes = handler_liveview_response.last_image  # local static var
             del handler_liveview_response.last_image
-        except:
+        except Exception:
             image = Image.new(mode="RGB", size=(20, 20), color=(randrange(255), randrange(255), randrange(255)))
             with io.BytesIO() as output:
                 image.save(output, format="jpeg")
