@@ -133,6 +133,8 @@ class AbstractBackend(ABC):
                         self.device_status = EnumDeviceStatus.fault
 
             time.sleep(1)
+            # next after wait is to check if connect_thread is stopped - in this case no further actions.
+            # means: sleep has to be last statement in while loop
 
         # supervising connection thread was asked to stop - so we ask device to do the sam
         logger.info("exit connection function, stopping device")
