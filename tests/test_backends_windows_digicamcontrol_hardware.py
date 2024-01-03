@@ -1,6 +1,7 @@
 import io
 import logging
 import platform
+import time
 
 import pytest
 import requests
@@ -75,9 +76,14 @@ def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontro
     if not r.ok:
         raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
 
+    # wait some time until the backend service can acutally detect the error and escalate
+    # after escalation it takes some time to reconnect to camera again.
+    time.sleep(8)  # escalation takes up to 0.5s*10 retries, see implementation!
+    backend_digicamcontrol_hardware.block_until_device_is_running()
+
     # check if recovers, but with some more retries for slow test-computer
     try:
-        with Image.open(io.BytesIO(backend_digicamcontrol_hardware.wait_for_lores_image(20))) as img:
+        with Image.open(io.BytesIO(backend_digicamcontrol_hardware.wait_for_lores_image(50))) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc

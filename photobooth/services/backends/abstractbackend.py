@@ -177,7 +177,7 @@ class AbstractBackend(ABC):
         """
 
     def _device_disconnected(self):
-        self._device_stop()
+        logger.info("device disconnect by backend detected, trying to start again")
         self._device_connected = False
 
     @abstractmethod

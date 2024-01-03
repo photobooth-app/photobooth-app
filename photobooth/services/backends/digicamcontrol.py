@@ -107,7 +107,7 @@ class DigicamcontrolBackend(AbstractBackend):
         try:
             session = requests.Session()
             _check_response(
-                session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show"),
+                session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide"),
                 "error stopping liveview",
             )
         except Exception:
@@ -281,7 +281,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     except Exception as exc:
                         preview_failcounter += 1
 
-                        if preview_failcounter <= 20:
+                        if preview_failcounter <= 10:
                             logger.warning(f"error capturing frame from DSLR: {exc}")
                             # abort this loop iteration and continue sleeping...
                             time.sleep(0.5)  # add another delay to avoid flooding logs
