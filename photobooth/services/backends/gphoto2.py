@@ -218,7 +218,7 @@ class Gphoto2Backend(AbstractBackend):
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? retry to connect {exc}")
                             self._camera.exit()
-                            self._device_disconnected()
+                            self._device_set_status_fault_flag()
                             break
                     else:
                         preview_failcounter = 0

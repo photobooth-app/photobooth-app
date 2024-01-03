@@ -289,7 +289,7 @@ class DigicamcontrolBackend(AbstractBackend):
                             continue  # continue and try in next run to get one...
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
-                            self._device_disconnected()
+                            self._device_set_status_fault_flag()
                             break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
                     else:
                         preview_failcounter = 0

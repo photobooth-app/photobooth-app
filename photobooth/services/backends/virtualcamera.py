@@ -14,11 +14,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ...utils.exceptions import ShutdownInProcessError
 from ..config import appconfig
-from .abstractbackend import (
-    AbstractBackend,
-    compile_buffer,
-    decompile_buffer,
-)
+from .abstractbackend import AbstractBackend, EnumDeviceStatus, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
 
@@ -36,7 +32,7 @@ class VirtualCameraBackend(AbstractBackend):
         self._img_buffer_lock = Lock()
         self._event_proc_shutdown: Event = Event()
 
-        self._p: Process = None
+        self._virtualcamera_process: Process = None
 
     def _device_start(self):
         """To start the image backend"""
@@ -48,7 +44,7 @@ class VirtualCameraBackend(AbstractBackend):
             size=SHARED_MEMORY_BUFFER_BYTES,
         )
 
-        self._p = Process(
+        self._virtualcamera_process = Process(
             target=img_aquisition,
             name="VirtualCameraAquisitionProcess",
             args=(
@@ -61,7 +57,7 @@ class VirtualCameraBackend(AbstractBackend):
             daemon=True,
         )
         # start process
-        self._p.start()
+        self._virtualcamera_process.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         try:
@@ -76,9 +72,9 @@ class VirtualCameraBackend(AbstractBackend):
         self._event_proc_shutdown.set()
 
         # wait until shutdown finished
-        if self._p and self._p.is_alive():
+        if self._virtualcamera_process:
             # self._p.close() not needed because process "closes" when shutdown and loop ends.
-            self._p.join()
+            self._virtualcamera_process.join()
 
         if self._img_buffer_shm:
             self._img_buffer_shm.close()
@@ -117,6 +113,9 @@ class VirtualCameraBackend(AbstractBackend):
 
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=0.2):
+                # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
+                if self._device_status is EnumDeviceStatus.running and not self._virtualcamera_process.is_alive():
+                    self._device_set_status_fault_flag()
                 if self._event_proc_shutdown.is_set():
                     raise ShutdownInProcessError("shutdown in progress")
                 else:

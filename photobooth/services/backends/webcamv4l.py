@@ -8,12 +8,7 @@ from v4l2py import Device, VideoCapture  # type: ignore
 
 from ...utils.exceptions import ShutdownInProcessError
 from ..config import AppConfig, appconfig
-from .abstractbackend import (
-    AbstractBackend,
-    SharedMemoryDataExch,
-    compile_buffer,
-    decompile_buffer,
-)
+from .abstractbackend import AbstractBackend, EnumDeviceStatus, SharedMemoryDataExch, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
 
@@ -124,8 +119,8 @@ class WebcamV4lBackend(AbstractBackend):
         with self._img_buffer.condition:
             if not self._img_buffer.condition.wait(timeout=0.2):
                 # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
-                if self._device_connected and not self._v4l_process.is_alive():
-                    self._device_disconnected()
+                if self._device_status is EnumDeviceStatus.running and not self._v4l_process.is_alive():
+                    self._device_set_status_fault_flag()
                 if self._event_proc_shutdown.is_set():
                     raise ShutdownInProcessError("shutdown in progress")
                 else:
