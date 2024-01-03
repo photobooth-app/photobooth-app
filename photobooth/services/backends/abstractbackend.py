@@ -116,6 +116,8 @@ class AbstractBackend(ABC):
             # if running, starting or stopping, busy waiting
             if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.starting, EnumDeviceStatus.stopping):
                 logger.info(f"connect_thread device status={self.device_status}, so no further processing.")
+                time.sleep(1)  # abort processing in these states, still need to delay
+                continue
 
             if self.device_status in (EnumDeviceStatus.initialized, EnumDeviceStatus.stopped, EnumDeviceStatus.fault):
                 logger.info(f"connect_thread device status={self.device_status}, so trying to start")
