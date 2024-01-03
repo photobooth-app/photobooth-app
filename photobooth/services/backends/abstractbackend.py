@@ -102,22 +102,20 @@ class AbstractBackend(ABC):
         self._device_status = value
 
     def _connect_fun(self):
-        while not self._connect_thread.stopped():  # repeat until stopped
-            # try to reconnect
-
-            if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
-                logger.info(
-                    "implementation signaled a fault while running!"
-                    f"device status is {self.device_status} currently, setting to fault and try to recover."
-                )
-                self._device_status_fault_flag = False  # clear the flag
-                self.device_status = EnumDeviceStatus.fault
-
-            # if running, starting or stopping, busy waiting
-            if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.starting, EnumDeviceStatus.stopping):
-                logger.info(f"connect_thread device status={self.device_status}, so no further processing.")
+        while not self._connect_thread.stopped():  # repeat until stopped # try to reconnect
+            # if running or stopping, busy waiting
+            if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.stopping):
                 time.sleep(1)  # abort processing in these states, still need to delay
                 continue
+
+            if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
+                logger.info("implementation signaled a fault during run! set status to fault and try to recover.")
+                self._device_status_fault_flag = False  # clear the flag
+                self.device_status = EnumDeviceStatus.fault
+                try:
+                    self._device_stop()
+                except Exception as exc:
+                    logger.error(f"error stopping faulty backend {exc}, still trying to recover")
 
             if self.device_status in (EnumDeviceStatus.initialized, EnumDeviceStatus.stopped, EnumDeviceStatus.fault):
                 logger.info(f"connect_thread device status={self.device_status}, so trying to start")
@@ -127,14 +125,19 @@ class AbstractBackend(ABC):
             if self.device_status is EnumDeviceStatus.starting:
                 try:
                     # device available, start the backends local functions
-                    if not self._device_available():
-                        logger.error("device not available to (re)connect to, retrying")
-                        # status remains starting, so in next loop it retries.
-                    else:
+                    if self._device_available():
                         self._device_start()
                         # when _device_start is finished, the device needs to be up and running, access allowed.
                         # signal that the device can be used externally in general.
                         self.device_status = EnumDeviceStatus.running
+                    else:
+                        logger.error("device not available to (re)connect to, retrying")
+                        # status remains starting, so in next loop it retries.
+                        try:
+                            self._device_stop()
+                        except Exception as exc:
+                            logger.error(f"error stopping faulty backend {exc}, still trying to recover")
+
                 except Exception as exc:
                     logger.exception(exc)
                     logger.critical("camera failed to initialize. no power? no connection?")
