@@ -76,7 +76,7 @@ class Picamera2Backend(AbstractBackend):
         self._current_config = None
         self._last_config = None
 
-    def _start_device(self):
+    def _device_start(self):
         """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
@@ -171,7 +171,7 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
-    def _stop_device(self):
+    def _device_stop(self):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""

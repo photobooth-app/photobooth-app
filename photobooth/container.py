@@ -92,7 +92,7 @@ class Container:
                 logger.exception(exc)
                 logger.critical("could not start service")
 
-        logger.info("started container, waiting for backends to get up running")
+        logger.info("started container")
 
     def stop(self):
         for service in reversed(self._service_list()):
