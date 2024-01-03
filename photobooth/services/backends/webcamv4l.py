@@ -118,16 +118,18 @@ class WebcamV4lBackend(AbstractBackend):
     #
     # INTERNAL FUNCTIONS
     #
-
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
 
-        if self._event_proc_shutdown.is_set():
-            raise ShutdownInProcessError("shutdown already in progress, abort early")
-
         with self._img_buffer.condition:
-            if not self._img_buffer.condition.wait(timeout=4):
-                raise TimeoutError("timeout receiving frames")
+            if not self._img_buffer.condition.wait(timeout=0.2):
+                # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
+                if self._device_connected and not self._v4l_process.is_alive():
+                    self._device_disconnected()
+                if self._event_proc_shutdown.is_set():
+                    raise ShutdownInProcessError("shutdown in progress")
+                else:
+                    raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer.lock:
                 img = decompile_buffer(self._img_buffer.sharedmemory)
