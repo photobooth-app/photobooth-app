@@ -171,13 +171,16 @@ class DigicamcontrolBackend(AbstractBackend):
         logger.debug("enable liveview and minimize windows")
         try:
             session = requests.Session()
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show")
-            if not r.ok:
-                raise RuntimeError(f"error starting liveview, status_code {r.status_code}, text: {r.text}")
 
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=All_Minimize")
-            if not r.ok:
-                raise RuntimeError(f"error minimize liveview, status_code {r.status_code}, text: {r.text}")
+            _check_response(
+                session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show"),
+                "error starting liveview",
+            )
+
+            _check_response(
+                session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=All_Minimize"),
+                "error minimize liveview",
+            )
 
         except Exception as exc:
             logger.exception(exc)
@@ -237,23 +240,24 @@ class DigicamcontrolBackend(AbstractBackend):
 
                     logger.info(f"requesting digicamcontrol to store files to {tmp_dir=}")
 
-                    r = session.get(
-                        f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
+                    _check_response(
+                        session.get(
+                            f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
+                        ),
+                        "error setting directory",
+                        True,
                     )
-                    if not r.text == "OK" and not r.status_code == 200:
-                        raise RuntimeError(f"error setting directory, status_code {r.status_code}, text: {r.text}")
 
-                    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
-                    if not r.text == "OK" and not r.status_code == 200:
-                        raise RuntimeError(f"error capture, digicamcontrol exception, status_code {r.status_code}, text: {r.text}")
+                    _check_response(
+                        session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2="),
+                        "error capture, digicamcontrol exception",
+                        True,
+                    )
 
                     for attempt in range(1, 5):
                         try:
                             # it could happen, that the http request finished, but the image is not yet fully processed. retry with little delay again
                             r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
-                            logger.warning(r.status_code)
-                            logger.warning(r.text)
-                            logger.warning(r.content)
                             if r.text in ("-", "?") or not r.status_code == 200:  # "-" means capture in progress, "?" means not yet an image captured
                                 error_translation = {"-": "capture still in process", "?": "not yet an image captured"}
                                 raise RuntimeError(f"error retrieving capture, status_code {r.status_code}, text: {error_translation[r.text]}")
@@ -293,11 +297,12 @@ class DigicamcontrolBackend(AbstractBackend):
             else:
                 if appconfig.backends.LIVEPREVIEW_ENABLED:
                     try:
-                        r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/liveview.jpg")
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
-                        if not r.status_code == 200:
-                            raise RuntimeError(f"error receiving jpg from digicamcontrol, status_code {r.status_code}, text: {r.text}")
-
+                        r = _check_response(
+                            session.get(f"{appconfig.backends.digicamcontrol_base_url}/liveview.jpg"),
+                            "error receiving jpg from digicamcontrol",
+                            False,
+                        )
                         if self._lores_data.data and (self._lores_data.data == r.content):
                             raise RuntimeError(
                                 "received same frame again - digicamcontrol liveview might be closed or delivers "
@@ -342,10 +347,10 @@ class DigicamcontrolBackend(AbstractBackend):
         session = requests.Session()
 
         try:
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}?slc=list&param1=cameras&param2=")
-
-            if not r.ok:
-                raise RuntimeError(f"error checking avail cameras, status_code {r.status_code}, text: {r.text}")
+            r = _check_response(
+                session.get(f"{appconfig.backends.digicamcontrol_base_url}?slc=list&param1=cameras&param2="),
+                "error checking available cameras",
+            )
 
             for line in r.iter_lines():
                 if line:
@@ -361,3 +366,11 @@ class DigicamcontrolBackend(AbstractBackend):
             logger.warning("no camera detected")
 
         return available_identifiers
+
+
+def _check_response(r: requests.Response, custom_error_message: str = "Error", check_response_test_is_OK: bool = False):
+    if not r.ok or (check_response_test_is_OK is True and r.text != "OK"):
+        text = r.text if (not r.headers.get("Content-Type") == "image/jpeg") else "IMAGE-data removed"
+        raise RuntimeError(f"{custom_error_message}, status_code {r.status_code}, text: {text}")
+    else:
+        return r

@@ -31,11 +31,20 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     # setup
 
     def handler_liveview_response(request: Request):
-        logger.warning("hit custom handler_liveview_response")
-        image = Image.new(mode="RGB", size=(20, 20), color=(randrange(255), randrange(255), randrange(255)))
-        with io.BytesIO() as output:
-            image.save(output, format="jpeg")
-            return Response(output.getvalue(), mimetype="image/jpeg")
+        # deliver some random images.
+        # every second frame is the last_image delivered to test the exception handling.
+
+        try:
+            output_bytes = handler_liveview_response.last_image  # local static var
+            del handler_liveview_response.last_image
+        except:
+            image = Image.new(mode="RGB", size=(20, 20), color=(randrange(255), randrange(255), randrange(255)))
+            with io.BytesIO() as output:
+                image.save(output, format="jpeg")
+                output_bytes = output.getvalue()
+                handler_liveview_response.last_image = output_bytes  # local static var
+
+        return Response(output_bytes, mimetype="image/jpeg")
 
     def handler_set_tempfolder_and_prepare_output_image(request: Request):
         logger.warning("hit custom handler_set_tempfolder_and_prepare_output_image")

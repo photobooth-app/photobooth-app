@@ -35,7 +35,7 @@ dependencies = [
     "fastapi>=0.106.0",
     "opencv-python>=4.8.1",
     "numpy>=1.26.0",
-    "pillow<10.2.0",
+    "pillow>=10.0.0",
     "psutil>=5.9.0",
     "pydantic>=2.5.2",
     "pydantic-extra-types>=2.3.0",
