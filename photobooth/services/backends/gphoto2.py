@@ -113,7 +113,7 @@ class Gphoto2Backend(AbstractBackend):
         For gphoto2 right now we just check if anything is there; if so we use that.
         Could add connect to specific device in future.
         """
-        return len(available_camera_indexes) > 0
+        return len(available_camera_indexes()) > 0
 
     def wait_for_hq_image(self):
         """

@@ -92,6 +92,13 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _device_start(self):
         # first start common tasks
+        if not self.available_camera_indexes():
+            raise RuntimeError("empty camera list")
+
+        self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
+
+        logger.debug(f"{self.__module__} camera found, starting to work")
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
@@ -99,11 +106,12 @@ class DigicamcontrolBackend(AbstractBackend):
         # if livestream is stopped, the camera is available to other processes again.
         try:
             session = requests.Session()
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
-            if not r.ok:
-                logger.error(f"error stopping digicamcontrol liveview, error {r.text}")
-        except Exception as exc:
-            logger.error(f"error stopping digicamcontrol liveview {exc}")
+            _check_response(
+                session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show"),
+                "error stopping liveview",
+            )
+        except Exception:
+            pass
             # not reraise, because we ignore and want to continue stopping the backend
 
         if self._worker_thread and self._worker_thread.is_alive():
@@ -117,7 +125,7 @@ class DigicamcontrolBackend(AbstractBackend):
         For digicamcontrol right now we just check if anything is there; if so we use that.
         Could add connect to specific device in future.
         """
-        return len(self.available_camera_indexes) > 0
+        return len(self.available_camera_indexes()) > 0
 
     def wait_for_hq_image(self):
         """

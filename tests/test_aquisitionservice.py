@@ -89,8 +89,7 @@ def test_getimages_change_backend_during_runtime(_container: Container):
         img.verify()
 
     # secondary fails, because disabled
-    with pytest.raises(RuntimeError):
-        _container.aquisition_service._live_backend.wait_for_hq_image()
+    assert _container.aquisition_service._live_backend is None
 
 
 def test_nobackend_available_for_hq(_container: Container):
@@ -100,8 +99,9 @@ def test_nobackend_available_for_hq(_container: Container):
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
-    with pytest.raises(RuntimeError):
-        _container.aquisition_service.wait_for_hq_image()
+    # secondary fails, because disabled
+    assert _container.aquisition_service._main_backend is None
+    assert _container.aquisition_service._live_backend is None
 
 
 def test_gen_stream(_container: Container):

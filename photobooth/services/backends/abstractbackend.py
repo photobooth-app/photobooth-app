@@ -69,7 +69,8 @@ class AbstractBackend(ABC):
             try:
                 self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
                 self._fps = 1.0 / (time.time() - last_calc_time)
-            except (TimeoutError, ZeroDivisionError, AttributeError, ValueError):  # AttributeError and ValueError for disabled backend
+            except Exception:
+                # suffer in silence. If any issue occured assume the FPS is 0
                 self._fps = 0
 
             # store last time
@@ -93,6 +94,8 @@ class AbstractBackend(ABC):
                 # device available, start the backends local functions
                 try:
                     self._device_start()
+                    # when _device_start is finished, the device needs to be up and running, access allowed.
+                    # signal that the device can be used externally in general.
                     self._device_connected = True
                 except Exception as exc:
                     logger.exception(exc)
@@ -131,7 +134,25 @@ class AbstractBackend(ABC):
             self._stats_thread.stop()
             self._stats_thread.join()
 
-        # and continue inform the reconnect thread.
+    def device_is_running(self):
+        """Use this function to check if it's safe to use
+
+        Returns:
+            _type_: _description_
+        """
+        return self._device_connected
+
+    def block_until_device_is_running(self):
+        """Mostly used for testing to ensure the device is up.
+
+        Returns:
+            _type_: _description_
+        """
+        while not self.device_is_running():
+            logger.info("waiting")
+            time.sleep(0.2)
+
+        logger.info("device up!")
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED

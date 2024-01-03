@@ -90,6 +90,7 @@ def backend_gphoto2():
     backend = Gphoto2Backend()
     # deliver
     backend.start()
+    backend.block_until_device_is_running()
     yield backend
     backend.stop()
 

@@ -8,6 +8,8 @@ import pytest
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.config import appconfig
 
+from .backends_utils import get_images
+
 logger = logging.getLogger(name=None)
 
 
@@ -25,5 +27,11 @@ def backend_virtual() -> VirtualCameraBackend:
 
     # deliver
     backend.start()
+    backend.block_until_device_is_running()
     yield backend
     backend.stop()
+
+
+def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
+    """get lores and hires images from backend and assert"""
+    get_images(backend_virtual)

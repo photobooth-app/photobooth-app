@@ -1,7 +1,6 @@
 import io
 import logging
 import shutil
-import time
 from pathlib import Path
 from random import randrange
 
@@ -76,9 +75,7 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
 
     # deliver
     backend.start()
-    while not backend.is_camera_connected():
-        time.sleep(1)
-
+    backend.block_until_device_is_running()
     yield backend
     backend.stop()
 

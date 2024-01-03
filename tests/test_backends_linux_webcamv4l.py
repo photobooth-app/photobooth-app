@@ -52,6 +52,7 @@ def backend_v4l():
 
     # deliver
     backend.start()
+    backend.block_until_device_is_running()
     yield backend
     backend.stop()
 

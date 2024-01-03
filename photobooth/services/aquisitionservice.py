@@ -14,8 +14,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ..utils.exceptions import ShutdownInProcessError
 from .backends.abstractbackend import AbstractBackend
-from .backends.disabled import DisabledBackend
-from .backends.notavailable import NotavailableBackend
 from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.backends import EnumImageBackendsLive, EnumImageBackendsMain
@@ -54,8 +52,16 @@ class AquisitionService(BaseService):
         # get backend obj and instanciate
 
         try:
-            self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
-            self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
+            if appconfig.backends.MAIN_BACKEND is not EnumImageBackendsLive.DISABLED:
+                self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
+            else:
+                self._main_backend: AbstractBackend = None
+
+            if appconfig.backends.LIVE_BACKEND is not EnumImageBackendsLive.DISABLED:
+                self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
+            else:
+                self._live_backend: AbstractBackend = None
+
         except Exception as exc:
             logger.exception(exc)
             logger.critical("error initializing the backends")
@@ -172,13 +178,17 @@ class AquisitionService(BaseService):
 
     def switch_backends_to_capture_mode(self):
         """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
-        self._main_backend._on_capture_mode()
-        self._live_backend._on_capture_mode()
+        if self._main_backend:
+            self._main_backend._on_capture_mode()
+        if self._live_backend:
+            self._live_backend._on_capture_mode()
 
     def switch_backends_to_preview_mode(self):
         """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
-        self._main_backend._on_preview_mode()
-        self._live_backend._on_preview_mode()
+        if self._main_backend:
+            self._main_backend._on_preview_mode()
+        if self._live_backend:
+            self._live_backend._on_preview_mode()
 
     @staticmethod
     def _import_backend(backend: Union[EnumImageBackendsMain, EnumImageBackendsLive]):
@@ -252,9 +262,9 @@ class AquisitionService(BaseService):
         Returns:
             bytes: _description_
         """
-        path_font = Path(__file__).parent.joinpath("assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
+        path_font = Path(__file__).parent.joinpath("backends", "assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
-
+        logger.warning(path_font)
         img = Image.new("RGB", (400, 300), "#ddd")
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)
@@ -274,4 +284,4 @@ class AquisitionService(BaseService):
 
     @staticmethod
     def _is_real_backend(backend):
-        return backend is not None and not isinstance(backend, (DisabledBackend, NotavailableBackend))
+        return backend is not None
