@@ -92,30 +92,6 @@ def test_getimages_change_backend_during_runtime(_container: Container):
     assert _container.aquisition_service._live_backend is None
 
 
-def test_nobackend_available_for_hq(_container: Container):
-    # now reconfigure
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
-
-    # secondary fails, because disabled
-    assert _container.aquisition_service._main_backend is None
-    assert _container.aquisition_service._live_backend is None
-
-
-def test_gen_stream(_container: Container):
-    # now reconfigure
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
-
-    with pytest.raises(RuntimeError):
-        _container.aquisition_service.gen_stream()
-
-
 def test_gen_stream_main_backend(_container: Container):
     # now reconfigure
     appconfig.backends.LIVEPREVIEW_ENABLED = True
@@ -125,20 +101,7 @@ def test_gen_stream_main_backend(_container: Container):
     _container.aquisition_service.start()
 
     assert _container.aquisition_service.gen_stream()
-
     assert not _container.aquisition_service._is_real_backend(_container.aquisition_service._live_backend)
-
-
-def test_gen_stream_live_backend(_container: Container):
-    # now reconfigure
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.DISABLED
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
-
-    assert _container.aquisition_service.gen_stream()
-    assert not _container.aquisition_service._is_real_backend(_container.aquisition_service._main_backend)
 
 
 def test_get_stats(_container: Container):

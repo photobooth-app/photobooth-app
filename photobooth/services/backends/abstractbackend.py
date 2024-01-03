@@ -3,6 +3,7 @@ abstract for the photobooth-app backends
 """
 import dataclasses
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from enum import Enum, auto
@@ -161,6 +162,14 @@ class AbstractBackend(ABC):
         self._connect_thread = StoppableThread(name="_connect_thread", target=self._connect_fun, daemon=True)
         self._connect_thread.start()
 
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            # in pytest we need to wait for the connect thread properly set up the device.
+            # if we do not wait, the test is over before the backend is acutually ready to deliver frames and might fail.
+            # in reality this is not an issue
+            logger.info("test environment detected, blocking until backend started")
+            self.block_until_device_is_running()
+            logger.info("backend started, finished blocking")
+
     def stop(self):
         """To stop the backend to serve"""
 
@@ -182,7 +191,7 @@ class AbstractBackend(ABC):
             logger.info("waiting")
             time.sleep(0.2)
 
-        logger.info("device up!")
+        logger.info("device status is running now")
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED

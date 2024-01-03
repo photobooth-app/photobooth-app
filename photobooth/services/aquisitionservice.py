@@ -52,10 +52,7 @@ class AquisitionService(BaseService):
         # get backend obj and instanciate
 
         try:
-            if appconfig.backends.MAIN_BACKEND is not EnumImageBackendsLive.DISABLED:
-                self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
-            else:
-                self._main_backend: AbstractBackend = None
+            self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
 
             if appconfig.backends.LIVE_BACKEND is not EnumImageBackendsLive.DISABLED:
                 self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
