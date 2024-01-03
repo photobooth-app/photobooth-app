@@ -69,14 +69,14 @@ class Picamera2Backend(AbstractBackend):
         self._hires_data: __class__.PicamHiresData = None
 
         # worker threads
-        self._generate_images_thread: StoppableThread = None
+        self._worker_thread: StoppableThread = None
 
         self._capture_config = None
         self._preview_config = None
         self._current_config = None
         self._last_config = None
 
-    def start(self):
+    def _start_device(self):
         """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
@@ -158,8 +158,8 @@ class Picamera2Backend(AbstractBackend):
         )
         self._picamera2.start()
 
-        self._generate_images_thread = StoppableThread(name="_generateImagesThread", target=self._generate_images_fun, daemon=True)
-        self._generate_images_thread.start()
+        self._worker_thread = StoppableThread(name="_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
 
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         try:
@@ -171,23 +171,28 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
-        super().start()
-
-    def stop(self):
-        super().stop()
+    def _stop_device(self):
         """To stop the FrameServer, first stop any client threads (that might be
         blocked in wait_for_frame), then call this stop method. Don't stop the
         Picamera2 object until the FrameServer has been stopped."""
+        if self._worker_thread and self._worker_thread.is_alive():
+            logger.debug("stopping")
+            self._worker_thread.stop()
+            logger.debug("stopped")
+            self._worker_thread.join()
+            logger.debug("joined")
 
-        self._generate_images_thread.stop()
-
-        self._generate_images_thread.join()
-
+        logger.debug("stop encoder")
         self._picamera2.stop_encoder()
         self._picamera2.stop()
         self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+        logger.debug("closed")
 
-        logger.debug(f"{self.__module__} stopped,  {self._generate_images_thread.is_alive()=}")
+        logger.debug(f"{self.__module__} stopped,  {self._worker_thread.is_alive()=}")
+
+    def _device_available(self) -> bool:
+        """picameras are assumed to be available always for now"""
+        return True
 
     def wait_for_hq_image(self):
         """
@@ -231,7 +236,7 @@ class Picamera2Backend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.2):
-                if self._generate_images_thread.stopped():
+                if self._worker_thread.stopped():
                     raise ShutdownInProcessError("shutdown in progress")
                 else:
                     raise TimeoutError("timeout receiving frames")
@@ -303,8 +308,8 @@ class Picamera2Backend(AbstractBackend):
     # INTERNAL IMAGE GENERATOR
     #
 
-    def _generate_images_fun(self):
-        while not self._generate_images_thread.stopped():  # repeat until stopped
+    def _worker_fun(self):
+        while not self._worker_thread.stopped():  # repeat until stopped
             if self._hires_data.request_ready.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
@@ -312,7 +317,7 @@ class Picamera2Backend(AbstractBackend):
                 self._on_capture_mode()
 
             if (not self._current_config == self._last_config) and self._last_config is not None:
-                if not self._generate_images_thread.stopped():
+                if not self._worker_thread.stopped():
                     self._switch_mode()
                 else:
                     logger.info("switch_mode ignored, because shutdown already requested")

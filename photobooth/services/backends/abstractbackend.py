@@ -42,12 +42,14 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def __init__(self):
-        self._backendstats: BackendStats = BackendStats(
-            backend_name=self.__class__.__name__,
-        )
+        # statisitics attributes
+        self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
         self._fps = 0
         self._stats_thread: StoppableThread = None
-        self._camera_connected = None
+
+        # (re)connect supervisor attributes
+        self._device_connected = None
+        self._connect_thread: StoppableThread = None
 
         super().__init__()
 
@@ -67,11 +69,40 @@ class AbstractBackend(ABC):
             try:
                 self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
                 self._fps = 1.0 / (time.time() - last_calc_time)
-            except (TimeoutError, ZeroDivisionError):
+            except (TimeoutError, ZeroDivisionError, AttributeError, ValueError):  # AttributeError and ValueError for disabled backend
                 self._fps = 0
 
             # store last time
             last_calc_time = time.time()
+
+    def _connect_fun(self):
+        self._device_connected = False
+
+        while not self._connect_thread.stopped():  # repeat until stopped
+            # try to reconnect
+
+            # if connected, busy waiting
+            if self._device_connected:
+                time.sleep(1)
+                continue
+
+            # if not connected, check for device availability
+            if not self._device_available():
+                logger.error("device not available to (re)connect to, retrying")
+            else:
+                # device available, start the backends local functions
+                try:
+                    self._device_start()
+                    self._device_connected = True
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.critical("camera failed to initialize. no power? no connection?")
+
+            time.sleep(1)
+
+        # supervising connection thread was asked to stop - so we ask device to do the sam
+        logger.info("exit connection function, stopping device")
+        self._device_stop()
 
     @abstractmethod
     def wait_for_hq_image(self):
@@ -79,31 +110,54 @@ class AbstractBackend(ABC):
         function blocks until high quality image is available
         """
 
-    @abstractmethod
     def start(self):
         """To start the backend to serve"""
+        # statistics
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
 
-    @abstractmethod
+        # (re)connect supervisor
+        self._connect_thread = StoppableThread(name="_connect_thread", target=self._connect_fun, daemon=True)
+        self._connect_thread.start()
+
     def stop(self):
         """To stop the backend to serve"""
-        if self._stats_thread:
+
+        if self._connect_thread and self._connect_thread.is_alive():
+            self._connect_thread.stop()
+            self._connect_thread.join()
+
+        if self._stats_thread and self._stats_thread.is_alive():
             self._stats_thread.stop()
             self._stats_thread.join()
-
-    def is_camera_connected(self):
-        print("getter of _camera_connected called")
-        return self._camera_connected
-
-    def camera_disconnect_detected(self):
-        self._camera_connected = False
 
         # and continue inform the reconnect thread.
 
     #
     # INTERNAL FUNCTIONS TO BE IMPLEMENTED
     #
+
+    @abstractmethod
+    def _device_start(self):
+        """
+        start the device ()
+        """
+
+    @abstractmethod
+    def _device_stop(self):
+        """
+        start the device ()
+        """
+
+    @abstractmethod
+    def _device_available(self) -> bool:
+        """
+        start the device ()
+        """
+
+    def _device_disconnected(self):
+        self._device_stop()
+        self._device_connected = False
 
     @abstractmethod
     def _wait_for_lores_image(self):

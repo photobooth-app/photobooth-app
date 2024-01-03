@@ -3,6 +3,7 @@ backend opencv2 for webcameras
 """
 import logging
 import platform
+import time
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
 import cv2
@@ -31,20 +32,6 @@ class WebcamCv2Backend(AbstractBackend):
     def __init__(self):
         super().__init__()
 
-        self._img_buffer_lores: SharedMemoryDataExch = None
-        self._img_buffer_hires: SharedMemoryDataExch = None
-        self._event_hq_capture: Event = Event()
-        self._event_proc_shutdown: Event = Event()
-
-        self._cv2_process: Process = None
-
-        self._on_preview_mode()
-
-    def start(self):
-        """To start the cv2 acquisition process"""
-
-        self._event_proc_shutdown.clear()
-
         self._img_buffer_lores = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
                 create=True,
@@ -53,6 +40,7 @@ class WebcamCv2Backend(AbstractBackend):
             condition=Condition(),
             lock=Lock(),
         )
+
         self._img_buffer_hires = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(
                 create=True,
@@ -61,6 +49,31 @@ class WebcamCv2Backend(AbstractBackend):
             condition=Condition(),
             lock=Lock(),
         )
+
+        self._event_hq_capture: Event = Event()
+        self._event_proc_shutdown: Event = Event()
+
+        self._cv2_process: Process = None
+
+        self._on_preview_mode()
+
+    def __del__(self):
+        try:
+            if self._img_buffer_lores:
+                self._img_buffer_lores.sharedmemory.close()
+                self._img_buffer_lores.sharedmemory.unlink()
+            if self._img_buffer_hires:
+                self._img_buffer_hires.sharedmemory.close()
+                self._img_buffer_hires.sharedmemory.unlink()
+        except Exception as exc:
+            # cant use logger any more, just to have some logs to debug if exception
+            print(exc)
+            print("error deconstructing shared memory")
+
+    def _device_start(self):
+        """To start the cv2 acquisition process"""
+
+        self._event_proc_shutdown.clear()
 
         self._cv2_process = Process(
             target=cv2_img_aquisition,
@@ -80,19 +93,17 @@ class WebcamCv2Backend(AbstractBackend):
         )
         self._cv2_process.start()
 
+        time.sleep(1)
+
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
         try:
-            self.wait_for_lores_image(50)  # needs quite long to come up.
+            self.wait_for_lores_image(60)  # needs quite long to come up.
         except Exception as exc:
             raise RuntimeError("failed to start up backend") from exc
 
         logger.debug(f"{self.__module__} started")
 
-        super().start()
-
-    def stop(self):
-        super().stop()
-
+    def _device_stop(self):
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
 
@@ -101,14 +112,18 @@ class WebcamCv2Backend(AbstractBackend):
             self._cv2_process.join()
             self._cv2_process.close()
 
-        if self._img_buffer_lores:
-            self._img_buffer_lores.sharedmemory.close()
-            self._img_buffer_lores.sharedmemory.unlink()
-        if self._img_buffer_hires:
-            self._img_buffer_hires.sharedmemory.close()
-            self._img_buffer_hires.sharedmemory.unlink()
-
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_available(self):
+        """
+        For cv2 we check to open device is possible
+        """
+        device = cv2.VideoCapture(appconfig.backends.cv2_device_index)
+        ret, array = device.read()  # ret True if connected properly, otherwise False
+        if ret:
+            device.release()
+
+        return ret
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""

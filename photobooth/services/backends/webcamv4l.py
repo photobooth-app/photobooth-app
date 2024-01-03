@@ -30,22 +30,30 @@ class WebcamV4lBackend(AbstractBackend):
     def __init__(self):
         super().__init__()
 
-        self._img_buffer: SharedMemoryDataExch = None
-        self._event_proc_shutdown: Event = Event()
-        self._v4l_process: Process = None
-
-        self._on_preview_mode()
-
-    def start(self):
-        """To start the v4l acquisition process"""
-        # start camera
-        self._event_proc_shutdown.clear()
-
         self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
             sharedmemory=shared_memory.SharedMemory(create=True, size=SHARED_MEMORY_BUFFER_BYTES),
             condition=Condition(),
             lock=Lock(),
         )
+        self._event_proc_shutdown: Event = Event()
+        self._v4l_process: Process = None
+
+        self._on_preview_mode()
+
+    def __del__(self):
+        try:
+            if self._img_buffer:
+                self._img_buffer.sharedmemory.close()
+                self._img_buffer.sharedmemory.unlink()
+        except Exception as exc:
+            # cant use logger any more, just to have some logs to debug if exception
+            print(exc)
+            print("error deconstructing shared memory")
+
+    def _device_start(self):
+        """To start the v4l acquisition process"""
+        # start camera
+        self._event_proc_shutdown.clear()
 
         logger.info(f"starting webcam process, {appconfig.backends.v4l_device_index=}")
 
@@ -74,10 +82,7 @@ class WebcamV4lBackend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
-        super().start()
-
-    def stop(self):
-        super().stop()
+    def _device_stop(self):
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
 
@@ -86,11 +91,13 @@ class WebcamV4lBackend(AbstractBackend):
             self._v4l_process.join()
             self._v4l_process.close()
 
-        if self._img_buffer:
-            self._img_buffer.sharedmemory.close()
-            self._img_buffer.sharedmemory.unlink()
-
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_available(self):
+        """
+        For v4l we check to open device is possible
+        """
+        return is_valid_camera_index(appconfig.backends.v4l_device_index)
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""

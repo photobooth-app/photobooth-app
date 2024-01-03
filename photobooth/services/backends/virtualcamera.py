@@ -38,7 +38,7 @@ class VirtualCameraBackend(AbstractBackend):
 
         self._p: Process = None
 
-    def start(self):
+    def _device_start(self):
         """To start the image backend"""
         # ensure shutdown event is cleared (needed for restart during testing)
         self._event_proc_shutdown.clear()
@@ -71,11 +71,7 @@ class VirtualCameraBackend(AbstractBackend):
 
         logger.debug(f"{self.__module__} started")
 
-        super().start()
-
-    def stop(self):
-        super().stop()
-        """To stop the image backend"""
+    def _device_stop(self):
         # signal process to shutdown properly
         self._event_proc_shutdown.set()
 
@@ -89,6 +85,10 @@ class VirtualCameraBackend(AbstractBackend):
             self._img_buffer_shm.unlink()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_available(self) -> bool:
+        """virtual camera to be available always"""
+        return True
 
     def wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""

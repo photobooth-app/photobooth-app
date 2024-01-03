@@ -53,11 +53,8 @@ class Gphoto2Backend(AbstractBackend):
             condition=Condition(),
         )
 
-        self._camera_connected = False
-
         # worker threads
         self._worker_thread: StoppableThread = None
-        self._connect_thread = StoppableThread(name="gphoto2_connect_thread", target=self._connect_fun, daemon=True)
 
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
@@ -80,28 +77,43 @@ class Gphoto2Backend(AbstractBackend):
             )
         )
 
-    def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
+    def _device_start(self):
+        # start camera
+        try:
+            self._camera = gp.Camera()  # better use fresh object.
+            self._camera.init()
+        except gp.GPhoto2Error as exc:
+            logger.exception(exc)
+            logger.critical("camera failed to initialize. no power? no connection?")
 
-        self._connect_thread.start()
+        if appconfig.backends.LIVEPREVIEW_ENABLED:
+            self._check_camera_preview_available()
+
+        self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
+
+        # short sleep until backend started.
+        time.sleep(0.5)
 
         logger.debug(f"{self.__module__} started")
 
-        super().start()
+    def _device_stop(self):
+        # supervising connection thread was asked to stop - so we ask to stop worker fun also
+        if self._worker_thread:
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
-    def stop(self):
-        super().stop()
-        """To stop the FrameServer, first stop any client threads (that might be
-        blocked in wait_for_frame), then call this stop method. Don't stop the
-        Picamera2 object until the FrameServer has been stopped."""
-        if self._connect_thread and self._connect_thread.is_alive():
-            self._connect_thread.stop()
-
-            logger.debug(f"{self.__module__} waiting to join _connect_thread")
-            self._connect_thread.join()
-            logger.debug(f"{self.__module__} joined _connect_thread")
+        if self._camera:
+            self._camera.exit()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_available(self):
+        """
+        For gphoto2 right now we just check if anything is there; if so we use that.
+        Could add connect to specific device in future.
+        """
+        return len(available_camera_indexes) > 0
 
     def wait_for_hq_image(self):
         """
@@ -184,51 +196,6 @@ class Gphoto2Backend(AbstractBackend):
     #
     # INTERNAL IMAGE GENERATOR
     #
-    def _connect_fun(self):
-        while not self._connect_thread.stopped():  # repeat until stopped
-            if self._camera_connected:
-                # if connected, just do nothing and continue with next loop some time later
-                time.sleep(1)
-                continue
-
-            # camera not yet connected or disconnected due to whatever reason.
-            # try to reconnect
-
-            # check for available devices
-            if not available_camera_indexes():
-                logger.critical("no camera detected. waiting until camera available")
-                time.sleep(5)  # wait additional time to not flood logs in seconds
-                continue
-
-            # at this point a camera was detected, try to connect.
-
-            # start camera
-            try:
-                self._camera = gp.Camera()  # better use fresh object.
-                self._camera.init()
-            except gp.GPhoto2Error as exc:
-                logger.critical("camera failed to initialize. no power? no connection?")
-                logger.exception(exc)
-            else:
-                self._camera_connected = True
-                logger.debug(f"{self.__module__} started")
-
-            if appconfig.backends.LIVEPREVIEW_ENABLED:
-                self._check_camera_preview_available()
-
-            self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
-            self._worker_thread.start()
-
-            # short sleep until backend started.
-            time.sleep(0.5)
-
-        # supervising connection thread was asked to stop - so we ask to stop worker fun also
-        if self._worker_thread:
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
-        if self._camera:
-            self._camera.exit()
 
     def _worker_fun(self):
         preview_failcounter = 0
@@ -251,7 +218,7 @@ class Gphoto2Backend(AbstractBackend):
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? retry to connect {exc}")
                             self._camera.exit()
-                            self._camera_connected = False
+                            self._device_disconnected()
                             break
                     else:
                         preview_failcounter = 0

@@ -77,10 +77,6 @@ class DigicamcontrolBackend(AbstractBackend):
     def __init__(self):
         super().__init__()
 
-        # self._camera = gp.Camera()
-        # self._camera_context = gp.Context()
-        self._camera_connected = False
-
         self._hires_data: __class__.DigicamcontrolDataBytes = __class__.DigicamcontrolDataBytes(
             data=None,
             request_ready=Event(),
@@ -93,21 +89,12 @@ class DigicamcontrolBackend(AbstractBackend):
 
         # worker threads
         self._worker_thread: StoppableThread = None
-        self._connect_thread: StoppableThread = None
 
-    def start(self):
-        """To start the FrameServer, you will also need to start the Picamera2 object."""
-
-        self._connect_thread = StoppableThread(name="digicamcontrol_connect_thread", target=self._connect_fun, daemon=True)
-        self._connect_thread.start()
-
+    def _device_start(self):
+        # first start common tasks
         logger.debug(f"{self.__module__} started")
 
-        super().start()
-
-    def stop(self):
-        super().stop()
-
+    def _device_stop(self):
         # when stopping the backend also stop the livestream by following command.
         # if livestream is stopped, the camera is available to other processes again.
         try:
@@ -119,19 +106,18 @@ class DigicamcontrolBackend(AbstractBackend):
             logger.error(f"error stopping digicamcontrol liveview {exc}")
             # not reraise, because we ignore and want to continue stopping the backend
 
-        if self._connect_thread and self._connect_thread.is_alive():
-            self._connect_thread.stop()
-            logger.debug(f"{self.__module__} waiting to join _connect_thread")
-            self._connect_thread.join()
-            logger.debug(f"{self.__module__} joined _connect_thread")
-
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
-            logger.debug(f"{self.__module__} waiting to join _worker_thread")
             self._worker_thread.join()
-            logger.debug(f"{self.__module__} joined _worker_thread")
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_available(self) -> bool:
+        """
+        For digicamcontrol right now we just check if anything is there; if so we use that.
+        Could add connect to specific device in future.
+        """
+        return len(self.available_camera_indexes) > 0
 
     def wait_for_hq_image(self):
         """
@@ -191,29 +177,6 @@ class DigicamcontrolBackend(AbstractBackend):
     #
     # INTERNAL IMAGE GENERATOR
     #
-    def _connect_fun(self):
-        while not self._connect_thread.stopped():  # repeat until stopped
-            # try to reconnect
-
-            try:
-                if not self.available_camera_indexes():
-                    raise RuntimeError("empty camera list")
-
-                self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
-                self._worker_thread.start()
-
-                logger.debug(f"{self.__module__} camera found, starting to work")
-            except Exception as exc:
-                logger.exception(exc)
-                logger.critical("camera failed to initialize. no power? no connection?")
-
-            time.sleep(1)
-
-        # supervising connection thread was asked to stop - so we ask to stop worker fun also
-        if self._worker_thread:
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
     def _worker_fun(self):
         logger.debug("starting digicamcontrol worker function")
 
@@ -222,8 +185,6 @@ class DigicamcontrolBackend(AbstractBackend):
 
         session = requests.Session()
         preview_failcounter = 0
-
-        self._camera_connected = True
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if self._hires_data.request_ready.is_set():
@@ -320,7 +281,7 @@ class DigicamcontrolBackend(AbstractBackend):
                             continue  # continue and try in next run to get one...
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
-                            self._camera_connected = False
+                            self._device_disconnected()
                             break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
                     else:
                         preview_failcounter = 0
