@@ -104,8 +104,11 @@ class AbstractBackend(ABC):
         while not self._connect_thread.stopped():  # repeat until stopped
             # try to reconnect
 
-            if self._device_status_fault_flag is True:
-                logger.info(f"implementation signaled a fault! device status is {self.device_status} currently, setting to fault and try to recover.")
+            if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
+                logger.info(
+                    "implementation signaled a fault while running!"
+                    f"device status is {self.device_status} currently, setting to fault and try to recover."
+                )
                 self._device_status_fault_flag = False  # clear the flag
                 self.device_status = EnumDeviceStatus.fault
 
@@ -114,23 +117,25 @@ class AbstractBackend(ABC):
                 logger.info(f"connect_thread device status={self.device_status}, so no further processing.")
 
             if self.device_status in (EnumDeviceStatus.initialized, EnumDeviceStatus.stopped, EnumDeviceStatus.fault):
+                logger.info(f"connect_thread device status={self.device_status}, so trying to start")
                 self.device_status = EnumDeviceStatus.starting
-                logger.info(f"connect_thread device status={self.device_status}, so no further processing.")
 
-                # if not connected, check for device availability
-                if not self._device_available():
-                    logger.error("device not available to (re)connect to, retrying")
-                else:
+            # if not connected, check for device availability
+            if self.device_status is EnumDeviceStatus.starting:
+                try:
                     # device available, start the backends local functions
-                    try:
+                    if not self._device_available():
+                        logger.error("device not available to (re)connect to, retrying")
+                        # status remains starting, so in next loop it retries.
+                    else:
                         self._device_start()
                         # when _device_start is finished, the device needs to be up and running, access allowed.
                         # signal that the device can be used externally in general.
                         self.device_status = EnumDeviceStatus.running
-                    except Exception as exc:
-                        logger.exception(exc)
-                        logger.critical("camera failed to initialize. no power? no connection?")
-                        self.device_status = EnumDeviceStatus.fault
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.critical("camera failed to initialize. no power? no connection?")
+                    self.device_status = EnumDeviceStatus.fault
 
             time.sleep(1)
             # next after wait is to check if connect_thread is stopped - in this case no further actions.
