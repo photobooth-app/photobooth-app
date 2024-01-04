@@ -37,6 +37,8 @@ def backend_cv2() -> WebcamCv2Backend:
     logger.info(f"using first camera index to test: {cameraIndex}")
 
     appconfig.backends.cv2_device_index = cameraIndex
+    appconfig.backends.cv2_CAMERA_TRANSFORM_HFLIP = True
+    appconfig.backends.cv2_CAMERA_TRANSFORM_VFLIP = True
 
     # deliver
     backend.start()

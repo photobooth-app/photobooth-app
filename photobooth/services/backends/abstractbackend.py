@@ -103,11 +103,7 @@ class AbstractBackend(ABC):
 
     def _connect_fun(self):
         while not self._connect_thread.stopped():  # repeat until stopped # try to reconnect
-            # if running or stopping, busy waiting
-            if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.stopping):
-                time.sleep(1)  # abort processing in these states, still need to delay
-                continue
-
+            # is running but problem detected!
             if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
                 logger.info("implementation signaled a fault during run! set status to fault and try to recover.")
                 self._device_status_fault_flag = False  # clear the flag
@@ -116,6 +112,11 @@ class AbstractBackend(ABC):
                     self._device_stop()
                 except Exception as exc:
                     logger.error(f"error stopping faulty backend {exc}, still trying to recover")
+
+            # if running or stopping, busy waiting
+            if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.stopping):
+                time.sleep(1)  # abort processing in these states, still need to delay
+                continue
 
             if self.device_status in (EnumDeviceStatus.initialized, EnumDeviceStatus.stopped, EnumDeviceStatus.fault):
                 logger.info(f"connect_thread device status={self.device_status}, so trying to start")
@@ -224,7 +225,7 @@ class AbstractBackend(ABC):
         """
 
     def _device_set_status_fault_flag(self):
-        logger.info("device set to faulty by backend")
+        logger.info("set _device_status_fault_flag to True to signal the device needs to be recovered.")
         self._device_status_fault_flag = True
 
     @abstractmethod

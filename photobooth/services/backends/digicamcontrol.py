@@ -98,6 +98,9 @@ class DigicamcontrolBackend(AbstractBackend):
         self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
+        # short sleep until backend started.
+        time.sleep(0.5)
+
         logger.debug(f"{self.__module__} camera found, starting to work")
         logger.debug(f"{self.__module__} started")
 

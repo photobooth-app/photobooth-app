@@ -67,13 +67,6 @@ class AquisitionService(BaseService):
 
             return
 
-        if not self._is_real_backend(self._main_backend) and not self._is_real_backend(self._live_backend):
-            logger.critical("configuration error, no backends available!")
-
-            self.set_status_fault()
-
-            return
-
         logger.info(f"aquisition main backend: {self._main_backend}")
         logger.info(f"aquisition live backend: {self._live_backend}")
 
@@ -261,7 +254,6 @@ class AquisitionService(BaseService):
         """
         path_font = Path(__file__).parent.joinpath("backends", "assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
         text_fill = "#888"
-        logger.warning(path_font)
         img = Image.new("RGB", (400, 300), "#ddd")
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)

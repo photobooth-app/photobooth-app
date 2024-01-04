@@ -73,8 +73,9 @@ class VirtualCameraBackend(AbstractBackend):
 
         # wait until shutdown finished
         if self._virtualcamera_process:
-            # self._p.close() not needed because process "closes" when shutdown and loop ends.
+            # https://stackoverflow.com/a/58866932
             self._virtualcamera_process.join()
+            self._virtualcamera_process.close()  # close to allow garbage collection
 
         if self._img_buffer_shm:
             self._img_buffer_shm.close()
@@ -114,7 +115,7 @@ class VirtualCameraBackend(AbstractBackend):
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=0.2):
                 # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
-                if self._device_status is EnumDeviceStatus.running and not self._virtualcamera_process.is_alive():
+                if self.device_status is EnumDeviceStatus.running and not self._virtualcamera_process.is_alive():
                     self._device_set_status_fault_flag()
                 if self._event_proc_shutdown.is_set():
                     raise ShutdownInProcessError("shutdown in progress")
@@ -199,8 +200,7 @@ def img_aquisition(
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:
             jpeg_bytes = jpeg_buffer.getvalue()
-            if len(jpeg_bytes) >= SHARED_MEMORY_BUFFER_BYTES:
-                raise RuntimeError("shared memory too small!")
+            assert len(jpeg_bytes) < SHARED_MEMORY_BUFFER_BYTES
 
             compile_buffer(shm, jpeg_bytes)
 

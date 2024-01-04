@@ -109,6 +109,11 @@ def test_get_images_gphoto2(backend_gphoto2):
         img.verify()
 
 
+def test_get_gphoto2_info(backend_gphoto2):
+    backend_gphoto2._on_capture_mode()
+    backend_gphoto2._on_preview_mode()
+
+
 def test_get_gphoto2_info():
     import gphoto2 as gp
 

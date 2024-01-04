@@ -60,10 +60,6 @@ class Gphoto2Backend(AbstractBackend):
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
         logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
 
-        # initialize the correct iso val
-        self._iso(appconfig.backends.gphoto2_iso_liveview)
-        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
-
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
         self._logger_callback = gp.check_result(
@@ -156,15 +152,16 @@ class Gphoto2Backend(AbstractBackend):
             return self._lores_data.data
 
     def _on_capture_mode(self):
-        # nothing to do for this backend
-        pass
+        self._iso(appconfig.backends.gphoto2_iso_capture)
+        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
 
     def _on_preview_mode(self):
-        # nothing to do for this backend
-        pass
+        self._iso(appconfig.backends.gphoto2_iso_liveview)
+        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
-    def _iso(self, val):
-        if val == "":
+    def _iso(self, val: str = ""):
+        if not val:
+            logger.info("iso empty, ignore")
             return
         try:
             logger.info(f"setting custom iso value: {val}")
@@ -172,8 +169,9 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.warning(f"cannot set iso, command ignored {exc}")
 
-    def _shutter_speed(self, val):
-        if val == "":
+    def _shutter_speed(self, val: str = ""):
+        if not val:
+            logger.info("shutter speed empty, ignore")
             return
         try:
             logger.info(f"setting custom shutter speed: {val}")
@@ -181,17 +179,17 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.warning(f"cannot set shutter speed, command ignored {exc}")
 
-    def _gp_set_config(self, name, val):
-        config = self._camera.get_config(self._camera_context)
-        node = config.get_child_by_name(name)
-        node.set_value(val)
-        self._camera.set_config(config, self._camera_context)
-
     def _viewfinder(self, val=0):
         try:
             self._gp_set_config("viewfinder", val)
         except gp.GPhoto2Error as exc:
             logger.warning(f"cannot set viewfinder, command ignored {exc}")
+
+    def _gp_set_config(self, name, val):
+        config = self._camera.get_config(self._camera_context)
+        node = config.get_child_by_name(name)
+        node.set_value(val)
+        self._camera.set_config(config, self._camera_context)
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -237,8 +235,6 @@ class Gphoto2Backend(AbstractBackend):
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
                 if appconfig.backends.gphoto2_disable_viewfinder_before_capture:
-                    self._iso(appconfig.backends.gphoto2_iso_capture)
-                    self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
