@@ -123,13 +123,16 @@ class AbstractBackend(ABC):
 
             # if not connected, check for device availability
             if self.device_status is EnumDeviceStatus.starting:
+                logger.info("trying to start backend")
                 try:
                     # device available, start the backends local functions
                     if self._device_available():
+                        logger.info("device is available")
                         self._device_start()
                         # when _device_start is finished, the device needs to be up and running, access allowed.
                         # signal that the device can be used externally in general.
                         self.device_status = EnumDeviceStatus.running
+                        logger.info("device started, set status running")
                     else:
                         logger.error("device not available to (re)connect to, retrying")
                         # status remains starting, so in next loop it retries.
