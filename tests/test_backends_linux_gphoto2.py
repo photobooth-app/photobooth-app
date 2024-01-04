@@ -109,6 +109,18 @@ def test_get_images_gphoto2(backend_gphoto2):
         img.verify()
 
 
+def test_get_images_gphoto2_wait_event(backend_gphoto2):
+    # get lores and hires images from backend and assert
+    appconfig.backends.gphoto2_wait_event_after_capture_trigger = True
+
+    with pytest.raises(TimeoutError):
+        with Image.open(io.BytesIO(backend_gphoto2.wait_for_lores_image())) as img:
+            img.verify()
+
+    with Image.open(io.BytesIO(backend_gphoto2.wait_for_hq_image())) as img:
+        img.verify()
+
+
 def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_capture_mode()
     backend_gphoto2._on_preview_mode()
@@ -126,8 +138,12 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     appconfig.backends.gphoto2_iso_liveview = "illegal"
     appconfig.backends.gphoto2_shutter_speed_capture = "illegal"
     appconfig.backends.gphoto2_shutter_speed_liveview = "illegal"
-    backend_gphoto2._on_capture_mode()  # should log an error, ignore and continue
-    backend_gphoto2._on_preview_mode()  # should log an error, ignore and continue
+    backend_gphoto2._on_capture_mode()  # should log an error but ignore and continue
+    backend_gphoto2._on_preview_mode()  # should log an error but ignore and continue
+
+
+def test_get_gphoto2_camera_info():
+    logger.info(backend_gphoto2._camera.get_summary())
 
 
 def test_get_gphoto2_info():
