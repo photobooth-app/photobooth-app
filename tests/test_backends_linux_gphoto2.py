@@ -109,9 +109,25 @@ def test_get_images_gphoto2(backend_gphoto2):
         img.verify()
 
 
-def test_get_gphoto2_info(backend_gphoto2):
+def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_capture_mode()
     backend_gphoto2._on_preview_mode()
+
+    # change some values
+    appconfig.backends.gphoto2_iso_capture = "Auto"
+    appconfig.backends.gphoto2_iso_liveview = "200"
+    appconfig.backends.gphoto2_shutter_speed_capture = "1/20"
+    appconfig.backends.gphoto2_shutter_speed_liveview = "1/30"
+    backend_gphoto2._on_capture_mode()
+    backend_gphoto2._on_preview_mode()
+
+    # and try illegal values that raise exception
+    appconfig.backends.gphoto2_iso_capture = "illegal"
+    appconfig.backends.gphoto2_iso_liveview = "illegal"
+    appconfig.backends.gphoto2_shutter_speed_capture = "illegal"
+    appconfig.backends.gphoto2_shutter_speed_liveview = "illegal"
+    backend_gphoto2._on_capture_mode()  # should log an error, ignore and continue
+    backend_gphoto2._on_preview_mode()  # should log an error, ignore and continue
 
 
 def test_get_gphoto2_info():
