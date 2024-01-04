@@ -1,7 +1,6 @@
 """Application module."""
 
 import logging
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -41,21 +40,8 @@ Following api is provided by the app.
 """
 
 
-def _create_basic_folders():
-    os.makedirs("media", exist_ok=True)
-    os.makedirs("userdata", exist_ok=True)
-    os.makedirs("log", exist_ok=True)
-    os.makedirs("config", exist_ok=True)
-
-
 def _create_app() -> FastAPI:
     container.logging_service.start()
-
-    try:
-        _create_basic_folders()
-    except Exception as exc:
-        logger.critical(f"cannot create data folders, error: {exc}")
-        raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
 
     _app = FastAPI(
         title="Photobooth App API",
