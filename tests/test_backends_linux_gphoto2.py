@@ -126,7 +126,7 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_preview_mode()
 
     # change some values
-    appconfig.backends.gphoto2_iso_capture = "Auto"
+    appconfig.backends.gphoto2_iso_capture = "auto"
     appconfig.backends.gphoto2_iso_liveview = "200"
     appconfig.backends.gphoto2_shutter_speed_capture = "1/20"
     appconfig.backends.gphoto2_shutter_speed_liveview = "1/30"
@@ -142,8 +142,12 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_preview_mode()  # should log an error but ignore and continue
 
 
-def test_get_gphoto2_camera_info():
+def test_get_gphoto2_camera_info(backend_gphoto2):
     logger.info(backend_gphoto2._camera.get_summary())
+
+    config = backend_gphoto2._camera.list_config()
+    for n in range(len(config)):
+        logger.info(f"{config.get_name(n)}, {config.get_value(n)}")
 
 
 def test_get_gphoto2_info():

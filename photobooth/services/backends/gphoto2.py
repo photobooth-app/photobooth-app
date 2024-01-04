@@ -162,7 +162,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _iso(self, val: str = ""):
         if not val:
-            logger.info("iso empty, ignore")
+            logger.debug("iso empty, ignore")
             return
         try:
             logger.info(f"setting custom iso value: {val}")
@@ -172,7 +172,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _shutter_speed(self, val: str = ""):
         if not val:
-            logger.info("shutter speed empty, ignore")
+            logger.debug("shutter speed empty, ignore")
             return
         try:
             logger.info(f"setting custom shutter speed: {val}")
