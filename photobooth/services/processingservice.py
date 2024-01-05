@@ -10,7 +10,6 @@ from statemachine import State, StateMachine
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .config import appconfig
-from .config.appconfig import GroupMediaprocessingPipelineSingleImage
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
     MediacollectionService,
@@ -239,44 +238,7 @@ class ProcessingService(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        if self.model._typ == JobModel.Typ.image:
-            self._mediaprocessing_service.process_singleimage(mediaitem, appconfig.mediaprocessing_pipeline_singleimage)
-        elif self.model._typ == JobModel.Typ.collage:
-            # the captures in the context of a collage job can be processed differently:
-            cfg_collage = appconfig.mediaprocessing_pipeline_collage
-
-            # list only captured_images from merge_definition (excludes predefined)
-            captured_images = [item for item in cfg_collage.canvas_merge_definition if not item.predefined_image]
-
-            config_singleimage_captures_for_collage = GroupMediaprocessingPipelineSingleImage(
-                pipeline_enable=True,  # for convenience this is always true now
-                fill_background_enable=cfg_collage.capture_fill_background_enable,
-                fill_background_color=cfg_collage.capture_fill_background_color,
-                img_background_enable=cfg_collage.capture_img_background_enable,
-                img_background_file=cfg_collage.capture_img_background_file,
-                texts_enable=False,
-                img_frame_enable=False,
-                filter=captured_images[self.model.number_captures_taken()].filter.value,
-            )
-
-            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_collage)
-        elif self.model._typ == JobModel.Typ.animation:
-            # the captures in the context of a animation job can be processed differently:
-            cfg_animation = appconfig.mediaprocessing_pipeline_animation
-
-            # list only captured_images from merge_definition (excludes predefined)
-            captured_images = [item for item in cfg_animation.sequence_merge_definition if not item.predefined_image]
-
-            config_singleimage_captures_for_animation = GroupMediaprocessingPipelineSingleImage(
-                pipeline_enable=True,  # for convenience this is always true now
-                # TODO: maybe add further options later?
-                texts_enable=False,
-                img_frame_enable=False,
-                filter=captured_images[self.model.number_captures_taken()].filter.value,
-            )
-
-            self._mediaprocessing_service.process_singleimage(mediaitem, config_singleimage_captures_for_animation)
-
+        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem, self.model.number_captures_taken())
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         if not mediaitem.fileset_valid():
@@ -321,7 +283,7 @@ class ProcessingService(StateMachine):
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.process_collage(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 
@@ -334,7 +296,7 @@ class ProcessingService(StateMachine):
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.process_animation(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy())
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
 

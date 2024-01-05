@@ -158,11 +158,6 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
 
     model_config = ConfigDict(title="Postprocess single captures")
 
-    pipeline_enable: bool = Field(
-        default=True,
-        description="Enable/Disable processing pipeline completely",
-    )
-
     filter: EnumPilgramFilter = Field(
         title="Pic1 Filter",
         default=EnumPilgramFilter.original,
@@ -253,8 +248,8 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
                 width=660,
                 height=660,
                 rotate=-3,
-                filter=EnumPilgramFilter.mayfair,
-                predefined_image="predefined_images/pexels-marcelo-miranda-7708722.jpg",
+                filter=EnumPilgramFilter.original,
+                predefined_image="predefined_images/photobooth-collage-predefined-image.png",
             ),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
