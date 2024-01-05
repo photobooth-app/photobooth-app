@@ -319,10 +319,11 @@ class GroupMediaprocessingPipelineAnimation(BaseModel):
     sequence_merge_definition: list[AnimationMergeDefinition] = Field(
         default=[
             AnimationMergeDefinition(filter=EnumPilgramFilter.crema),
+            AnimationMergeDefinition(filter=EnumPilgramFilter.inkwell),
             AnimationMergeDefinition(
                 duration=4000,
-                filter=EnumPilgramFilter.helena,
-                predefined_image="predefined_images/pexels-marcelo-miranda-7708722.jpg",
+                filter=EnumPilgramFilter.original,
+                predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
             ),
         ],
         description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
