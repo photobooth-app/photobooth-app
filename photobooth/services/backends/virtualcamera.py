@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ...utils.exceptions import ShutdownInProcessError
 from ..config import appconfig
-from .abstractbackend import AbstractBackend, EnumDeviceStatus, compile_buffer, decompile_buffer
+from .abstractbackend import AbstractBackend, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
 
@@ -26,6 +26,7 @@ class VirtualCameraBackend(AbstractBackend):
 
     def __init__(self):
         super().__init__()
+        self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
         self._img_buffer_shm: shared_memory.SharedMemory = None
         self._condition_img_buffer_ready = Condition()
@@ -37,6 +38,7 @@ class VirtualCameraBackend(AbstractBackend):
     def _device_start(self):
         """To start the image backend"""
         # ensure shutdown event is cleared (needed for restart during testing)
+
         self._event_proc_shutdown.clear()
 
         self._img_buffer_shm = shared_memory.SharedMemory(
@@ -111,9 +113,6 @@ class VirtualCameraBackend(AbstractBackend):
 
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=0.2):
-                # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
-                if self.device_status is EnumDeviceStatus.running and not self._virtualcamera_process.is_alive():
-                    self._device_set_status_fault_flag()
                 if self._event_proc_shutdown.is_set():
                     raise ShutdownInProcessError("shutdown in progress")
                 else:

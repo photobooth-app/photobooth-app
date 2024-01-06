@@ -60,6 +60,7 @@ class Picamera2Backend(AbstractBackend):
     def __init__(self):
         super().__init__()
         # public props (defined in abstract class also)
+        self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
         # private props
         self._picamera2: Picamera2 = None

@@ -65,6 +65,8 @@ class AbstractBackend(ABC):
         self._device_status: EnumDeviceStatus = EnumDeviceStatus.initialized
         # concrete backend implementation can signal using this flag there is an error and it needs restart.
         self._device_status_fault_flag: bool = False
+        # only for (webcam, picam and virtualcamera) error can detected by missing lores img
+        self._failing_wait_for_lores_image_is_error: bool = False
         self._connect_thread: StoppableThread = None
 
         super().__init__()
@@ -122,8 +124,8 @@ class AbstractBackend(ABC):
                 logger.info(f"connect_thread device status={self.device_status}, so trying to start")
                 self.device_status = EnumDeviceStatus.starting
 
-            # if not connected, check for device availability
-            if self.device_status is EnumDeviceStatus.starting:
+            # if not connected, check for device availability as long as not requested to shut down.
+            if self.device_status is EnumDeviceStatus.starting and not self._connect_thread.stopped():
                 logger.info("trying to start backend")
                 try:
                     # device available, start the backends local functions
@@ -265,6 +267,11 @@ class AbstractBackend(ABC):
                 raise exc
             except Exception as exc:
                 if remaining_retries < 0:
+                    # device cannot deliver images after several retries, assume device got a problem, set flag to recover by restarting the device
+                    if self._failing_wait_for_lores_image_is_error:
+                        logger.error("failing to get lores images from backend, considered as error, set fault flag to recover.")
+                        self._device_set_status_fault_flag()
+
                     raise exc
 
                 remaining_retries -= 1
