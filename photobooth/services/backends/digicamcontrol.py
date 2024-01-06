@@ -130,7 +130,7 @@ class DigicamcontrolBackend(AbstractBackend):
         """
         return len(self.available_camera_indexes()) > 0
 
-    def wait_for_hq_image(self):
+    def _wait_for_hq_image(self):
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
@@ -292,7 +292,7 @@ class DigicamcontrolBackend(AbstractBackend):
                             continue  # continue and try in next run to get one...
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
-                            self._device_set_status_fault_flag()
+                            self.device_set_status_fault_flag()
                             break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
                     else:
                         preview_failcounter = 0

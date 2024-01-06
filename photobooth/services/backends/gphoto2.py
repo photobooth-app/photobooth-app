@@ -112,7 +112,7 @@ class Gphoto2Backend(AbstractBackend):
         """
         return len(available_camera_indexes()) > 0
 
-    def wait_for_hq_image(self):
+    def _wait_for_hq_image(self):
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
@@ -217,7 +217,7 @@ class Gphoto2Backend(AbstractBackend):
                         else:
                             logger.critical(f"aborting capturing frame, camera disconnected? retry to connect {exc}")
                             self._camera.exit()
-                            self._device_set_status_fault_flag()
+                            self.device_set_status_fault_flag()
                             break
                     else:
                         preview_failcounter = 0

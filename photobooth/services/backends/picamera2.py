@@ -195,7 +195,7 @@ class Picamera2Backend(AbstractBackend):
         """picameras are assumed to be available always for now"""
         return True
 
-    def wait_for_hq_image(self):
+    def _wait_for_hq_image(self):
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary

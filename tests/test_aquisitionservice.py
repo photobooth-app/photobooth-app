@@ -199,8 +199,8 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            logger.info("setting _device_set_status_fault_flag True")
-            _container.aquisition_service._main_backend._device_set_status_fault_flag()
+            logger.info("setting device_set_status_fault_flag True")
+            _container.aquisition_service._main_backend.device_set_status_fault_flag()
 
         if i == 10:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver

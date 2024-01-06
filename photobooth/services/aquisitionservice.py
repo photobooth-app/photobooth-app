@@ -141,30 +141,13 @@ class AquisitionService(BaseService):
             logger.critical("no backend available to capture hq image")
             raise RuntimeError("no backend available to capture hq image")
 
-        for attempt in range(1, appconfig.backends.retry_capture + 1):
-            try:
-                self._wled_service.preset_shoot()
+        self._wled_service.preset_shoot()
 
-                image_bytes = self._main_backend.wait_for_hq_image()
+        image_bytes = self._main_backend.wait_for_hq_image(appconfig.backends.retry_capture)
 
-                self._wled_service.preset_standby()
+        self._wled_service.preset_standby()
 
-                return image_bytes
-
-            except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{appconfig.backends.retry_capture}, retrying")
-                continue
-
-            except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"error capture image. {attempt=}/{appconfig.backends.retry_capture}, retrying")
-
-                continue
-
-        else:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
-            raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
+        return image_bytes
 
     def switch_backends_to_capture_mode(self):
         """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""

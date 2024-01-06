@@ -216,7 +216,7 @@ def image_frame_stage(image: Image.Image, frame_file: Union[Path, str]) -> Image
         image_frame = Image.open(frame_path)
     except FileNotFoundError as exc:
         logger.exception(exc)
-        raise PipelineError(f"frame {str(frame_path)} not found!") from exc
+        raise PipelineError(f"frame {str(frame_file)} not found!") from exc
 
     logger.info(f"loaded {frame_path=}")
 

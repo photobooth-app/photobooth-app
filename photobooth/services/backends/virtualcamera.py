@@ -86,7 +86,7 @@ class VirtualCameraBackend(AbstractBackend):
         """virtual camera to be available always"""
         return True
 
-    def wait_for_hq_image(self):
+    def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
 
         hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "hq_img").resolve()}/*.jpg')
@@ -95,9 +95,6 @@ class VirtualCameraBackend(AbstractBackend):
         # get img off the producing queue
         logger.info(f"provide {hq_images[current_hq_image_index]} as hq_image")
         img = open(hq_images[current_hq_image_index], "rb").read()
-
-        # virtual delay for camera to create picture
-        time.sleep(0.1)
 
         # return to previewmode
         self._on_preview_mode()

@@ -157,12 +157,6 @@ class AbstractBackend(ABC):
         logger.info("exit connection function, stopping device")
         self._device_stop()
 
-    @abstractmethod
-    def wait_for_hq_image(self):
-        """
-        function blocks until high quality image is available
-        """
-
     def start(self):
         """To start the backend to serve"""
         # statistics
@@ -204,45 +198,34 @@ class AbstractBackend(ABC):
 
         logger.info("device status is running now")
 
-    #
-    # INTERNAL FUNCTIONS TO BE IMPLEMENTED
-    #
-
-    @abstractmethod
-    def _device_start(self):
-        """
-        start the device ()
-        """
-
-    @abstractmethod
-    def _device_stop(self):
-        """
-        start the device ()
-        """
-
-    @abstractmethod
-    def _device_available(self) -> bool:
-        """
-        start the device ()
-        """
-
-    def _device_set_status_fault_flag(self):
+    def device_set_status_fault_flag(self):
         logger.info("set _device_status_fault_flag to True to signal the device needs to be recovered.")
         self._device_status_fault_flag = True
 
-    @abstractmethod
-    def _wait_for_lores_image(self):
+    def wait_for_hq_image(self, retries: int = 3) -> bytes:
         """
-        function blocks until frame is available for preview stream
+        function blocks until high quality image is available
         """
 
-    @abstractmethod
-    def _on_capture_mode(self):
-        """called externally via events and used to change to a capture mode if necessary"""
+        for attempt in range(1, retries + 1):
+            try:
+                return self._wait_for_hq_image()
 
-    @abstractmethod
-    def _on_preview_mode(self):
-        """called externally via events and used to change to a preview mode if necessary"""
+            except TimeoutError:
+                logger.error(f"error capture image. timeout expired {attempt=}/{retries}, retrying")
+                continue
+
+            except Exception as exc:
+                logger.exception(exc)
+                logger.error(f"error capture image. {attempt=}/{retries}, retrying")
+
+                continue
+
+        else:
+            # we failed finally all the attempts - deal with the consequences.
+            self.device_set_status_fault_flag()
+            logger.critical(f"finally failed after {retries} attempts to capture image!")
+            raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
     def wait_for_lores_image(self, retries: int = 10):
         """Function called externally to receivea low resolution image.
@@ -270,7 +253,7 @@ class AbstractBackend(ABC):
                     # device cannot deliver images after several retries, assume device got a problem, set flag to recover by restarting the device
                     if self._failing_wait_for_lores_image_is_error:
                         logger.error("failing to get lores images from backend, considered as error, set fault flag to recover.")
-                        self._device_set_status_fault_flag()
+                        self.device_set_status_fault_flag()
 
                     raise exc
 
@@ -278,6 +261,48 @@ class AbstractBackend(ABC):
                 logger.debug("waiting for backend provide low resolution image...")
 
                 continue
+
+    #
+    # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
+    #
+
+    @abstractmethod
+    def _device_start(self):
+        """
+        start the device ()
+        """
+
+    @abstractmethod
+    def _device_stop(self):
+        """
+        start the device ()
+        """
+
+    @abstractmethod
+    def _device_available(self) -> bool:
+        """
+        start the device ()
+        """
+
+    @abstractmethod
+    def _wait_for_hq_image(self):
+        """
+        function blocks until image still is available
+        """
+
+    @abstractmethod
+    def _wait_for_lores_image(self):
+        """
+        function blocks until frame is available for preview stream
+        """
+
+    @abstractmethod
+    def _on_capture_mode(self):
+        """called externally via events and used to change to a capture mode if necessary"""
+
+    @abstractmethod
+    def _on_preview_mode(self):
+        """called externally via events and used to change to a preview mode if necessary"""
 
 
 #

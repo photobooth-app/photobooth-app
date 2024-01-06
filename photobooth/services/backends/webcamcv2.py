@@ -121,7 +121,7 @@ class WebcamCv2Backend(AbstractBackend):
 
         return ret
 
-    def wait_for_hq_image(self):
+    def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
 
         # get img off the producing queue
