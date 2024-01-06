@@ -36,10 +36,9 @@ class FileTransferService(BaseService):
         self._logger.info("FileTransferService started.")
 
     def stop(self):
-        if self._worker_thread:
+        if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
-            if self._worker_thread.is_alive():
-                self._worker_thread.join()
+            self._worker_thread.join()
 
         self._logger.info("FileTransferService stopped.")
 

@@ -246,8 +246,13 @@ class AbstractBackend(ABC):
             try:
                 return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
             except ShutdownInProcessError as exc:
-                logger.info("ShutdownInProcess, stopping aquisition")
-                raise exc
+                logger.warning("device raised shutdowninprocesserror (maybe to recover from lost connection?)")
+                if not self._connect_thread.stopped():
+                    # not stopped, keep stream upright by not sending the exception
+                    raise TimeoutError("actual backend not stopped, so shutdown is covered to keep the stream running.") from exc
+                else:
+                    # if stopped forward shutdown to stop stream.
+                    raise exc
             except Exception as exc:
                 if remaining_retries < 0:
                     # device cannot deliver images after several retries, assume device got a problem, set flag to recover by restarting the device
