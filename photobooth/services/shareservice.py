@@ -47,7 +47,6 @@ class ShareService(BaseService):
                 self._logger.error("api endpoint check failed")
 
     def start(self):
-        """_summary_"""
         if not appconfig.sharing.shareservice_enabled:
             self._logger.info("shareservice disabled, start aborted.")
             return
@@ -64,13 +63,9 @@ class ShareService(BaseService):
             self._logger.error("shareservice init was not successful. start service aborted.")
 
     def stop(self):
-        """_summary_"""
-        self._logger.debug(f"{self.__module__} stop called")
-
-        if self._worker_thread:
+        if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
-            if self._worker_thread.is_alive():
-                self._worker_thread.join()
+            self._worker_thread.join()
 
     def _worker_fun(self):
         # init
