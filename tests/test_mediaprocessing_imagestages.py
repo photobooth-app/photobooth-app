@@ -208,7 +208,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
     assert pil_image.mode == "RGBA"  # before process it's RGBA
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./frames/polaroid-6125402_1920.png", reverse=True)
+    stage_output = image_stages.image_img_background_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic.png", reverse=True)
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -216,7 +216,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
 
 def test_img_frame_stage(pil_image: Image.Image):
-    stage_output = image_stages.image_frame_stage(pil_image, "./frames/polaroid-6125402_1pic.png")
+    stage_output = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic-transparency.png")
     # stage_output.show()
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
@@ -226,7 +226,7 @@ def test_img_frame_stage(pil_image: Image.Image):
 
 def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
     with pytest.raises(PipelineError):
-        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic.png")
+        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic-notransparency.png")
 
 
 def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
