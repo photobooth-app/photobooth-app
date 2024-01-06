@@ -184,7 +184,7 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
         description="Mount captured image to frame.",
     )
     img_frame_file: str = Field(
-        default="frames/polaroid-6125402_1pic.png",
+        default="frames/pixabay-holidays-1798208_1920.png",
         description="Image file to which the captured image is mounted to. Frame determines the output image size! Photos are visible through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
     )
     texts_enable: bool = Field(
@@ -194,11 +194,11 @@ class GroupMediaprocessingPipelineSingleImage(BaseModel):
     texts: list[TextsConfig] = Field(
         default=[
             TextsConfig(
-                text="Some Text!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
-                pos_x=300,
-                pos_y=900,
-                rotate=-3,
-                color=Color("black"),
+                text="Made with the python photobooth-app",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
+                pos_x=100,
+                pos_y=1300,
+                rotate=0,
+                color=Color("#ccc"),
             ),
         ],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
@@ -236,20 +236,35 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Width (X) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     canvas_height: int = Field(
-        default=1080,
+        default=1280,
         description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     canvas_merge_definition: list[CollageMergeDefinition] = Field(
         default=[
-            CollageMergeDefinition(pos_x=215, pos_y=122, width=660, height=660, rotate=-2, filter=EnumPilgramFilter.earlybird),
             CollageMergeDefinition(
-                pos_x=1072,
-                pos_y=122,
-                width=660,
-                height=660,
-                rotate=-3,
-                filter=EnumPilgramFilter.original,
+                pos_x=160,
+                pos_y=220,
+                width=510,
+                height=725,
+                rotate=0,
+                filter=EnumPilgramFilter.earlybird,
+            ),
+            CollageMergeDefinition(
+                pos_x=705,
+                pos_y=66,
+                width=510,
+                height=725,
+                rotate=0,
                 predefined_image="predefined_images/photobooth-collage-predefined-image.png",
+                filter=EnumPilgramFilter.original,
+            ),
+            CollageMergeDefinition(
+                pos_x=1245,
+                pos_y=220,
+                width=510,
+                height=725,
+                rotate=0,
+                filter=EnumPilgramFilter.reyes,
             ),
         ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
@@ -275,7 +290,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Overlay image on canvas image.",
     )
     canvas_img_front_file: str = Field(
-        default="frames/polaroid-6125402_1920.png",
+        default="frames/pixabay-poster-2871536_1920.png",
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
     )
     canvas_texts_enable: bool = Field(
@@ -285,11 +300,11 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     canvas_texts: list[TextsConfig] = Field(
         default=[
             TextsConfig(
-                text="Nice Collage Text!",
-                pos_x=300,
-                pos_y=800,
-                rotate=-3,
-                color=Color("black"),
+                text="Have a nice day :)",
+                pos_x=200,
+                pos_y=1100,
+                rotate=1,
+                color=Color("#333"),
             ),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
