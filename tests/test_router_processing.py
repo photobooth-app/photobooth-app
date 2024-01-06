@@ -63,12 +63,16 @@ def test_confirm_reject_in_collage(client: TestClient):
     appconfig.common.collage_automatic_capture_continue = False
 
     # statemachine in idle
+    assert container.processing_service.idle.is_active
     response = client.get("/processing/chose/collage")
     assert response.status_code == 200  # one captured
     response = client.get("/processing/cmd/confirm")
-    assert response.status_code == 200  # confirmed, done, because 1 capture in collage default only
+    assert response.status_code == 200  # confirmed, capture next, because 2 captures in collage default only
+    response = client.get("/processing/cmd/confirm")
+    assert response.status_code == 200  # confirmed, done
 
     # statemachine in idle
+    assert container.processing_service.idle.is_active
     response = client.get("/processing/chose/collage")
     assert response.status_code == 200  # one captured
     response = client.get("/processing/cmd/reject")
@@ -76,19 +80,27 @@ def test_confirm_reject_in_collage(client: TestClient):
     response = client.get("/processing/cmd/reject")
     assert response.status_code == 200  # rejected, next is captured now
     response = client.get("/processing/cmd/confirm")
-    assert response.status_code == 200  # confirmed, done, because 1 capture in collage default only
+    assert response.status_code == 200  # confirmed, capture next, because 2 captures in collage default only
+    response = client.get("/processing/cmd/confirm")
+    assert response.status_code == 200  # confirmed, done
 
     # statemachine in idle
+    assert container.processing_service.idle.is_active
     response = client.get("/processing/chose/collage")
     assert response.status_code == 200  # one captured
     response = client.get("/processing/cmd/reject")
     assert response.status_code == 200  # rejected, next is captured now
+    response = client.get("/processing/cmd/confirm")
+    assert response.status_code == 200  # confirmed, capture next, because 2 captures in collage default only
     response = client.get("/processing/cmd/abort")
     assert response.status_code == 200  # still not satisfied, abort
+
+    assert container.processing_service.idle.is_active
 
 
 def test_chose_collage(client: TestClient):
     # default config: config.common.collage_automatic_capture_continue = True
+    assert container.processing_service.idle.is_active
     response = client.get("/processing/chose/collage")
     assert response.status_code == 200
 
@@ -98,4 +110,9 @@ def test_chose_1pic_with_capturemode(client: TestClient):
     assert response.status_code == 202
 
     response = client.get("/aquisition/still")
+    assert response.status_code == 200
+
+
+def test_chose_animation(client: TestClient):
+    response = client.get("/processing/chose/animation")
     assert response.status_code == 200
