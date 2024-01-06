@@ -21,7 +21,8 @@ def run_around_tests():
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test") as client:
         container.start()
-        container.processing_service.start_job_1pic()
+        if container.mediacollection_service.number_of_images == 0:
+            container.processing_service.start_job_1pic()
         yield client
         container.stop()
 
