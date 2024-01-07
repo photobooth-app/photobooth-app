@@ -79,7 +79,7 @@ class Gphoto2Backend(AbstractBackend):
             self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
         except gp.GPhoto2Error as exc:
             logger.exception(exc)
-            logger.critical("camera failed to initialize. no power? no connection?")
+            logger.critical("camera failed to initialize. no power? no connection? cam on standby?")
             raise RuntimeError("failed to start up backend") from exc
 
         if appconfig.backends.LIVEPREVIEW_ENABLED:

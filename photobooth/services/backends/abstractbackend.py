@@ -145,7 +145,7 @@ class AbstractBackend(ABC):
 
                 except Exception as exc:
                     logger.exception(exc)
-                    logger.critical("camera failed to initialize. no power? no connection?")
+                    logger.critical("device failed to initialize!")
                     self.device_status = EnumDeviceStatus.fault
 
             time.sleep(1)
