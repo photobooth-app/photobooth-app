@@ -101,7 +101,7 @@ def backend_gphoto2():
 def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(RuntimeError):
         with Image.open(io.BytesIO(backend_gphoto2.wait_for_lores_image())) as img:
             img.verify()
 
@@ -113,7 +113,7 @@ def test_get_images_gphoto2_wait_event(backend_gphoto2):
     # get lores and hires images from backend and assert
     appconfig.backends.gphoto2_wait_event_after_capture_trigger = True
 
-    with pytest.raises(TimeoutError):
+    with pytest.raises(RuntimeError):
         with Image.open(io.BytesIO(backend_gphoto2.wait_for_lores_image())) as img:
             img.verify()
 
