@@ -5,7 +5,7 @@
 // configuration options
 $APIKEY = "changedefault!";                 // set apikey to a random value, of at least 8 chars. The same apikey needs to be set in photobooth app to pair both systems
 $WORK_DIRECTORY = __DIR__ . "/uploads";     // __DIR__ is the directory of the current PHP file
-$ALLOWED_UPLOAD_MAX_SIZE = 15 * 2 ** 20;    // 15MB max file size to upload
+$ALLOWED_UPLOAD_MAX_SIZE = 25 * 2 ** 20;    // 25MB max file size to upload
 $TIMEOUT_DOWNLOAD = 15;                     // if photobooth-app upload is not completed within this timeout, it's considered as an error and error is displayed instead image
 
 
