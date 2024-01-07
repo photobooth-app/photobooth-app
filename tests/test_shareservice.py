@@ -12,12 +12,15 @@ from photobooth.services.mediacollection.mediaitem import MediaItem
 logger = logging.getLogger(name=None)
 
 r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
-if not (r.status_code == 200 and "version" in r.text):
+is_valid_service = False
+try:
+    is_valid_service = "version" in list(r.json().keys())
+except Exception:
+    is_valid_service = False
+
+if not is_valid_service:
     logger.warning(f"no webservice found, skipping tests {appconfig.sharing.shareservice_url}")
-    pytest.skip(
-        "no webservice found, skipping tests",
-        allow_module_level=True,
-    )
+    pytest.skip("no webservice found, skipping tests", allow_module_level=True)
 
 
 @pytest.fixture(autouse=True)
