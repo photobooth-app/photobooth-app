@@ -46,7 +46,6 @@ from threading import Condition, Event
 
 import requests
 
-from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
 from .abstractbackend import AbstractBackend
@@ -154,10 +153,7 @@ class DigicamcontrolBackend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.2):
-                if self._worker_thread and self._worker_thread.stopped():
-                    raise ShutdownInProcessError("shutdown in progress")
-                else:
-                    raise TimeoutError("timeout receiving frames")
+                raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.data
 

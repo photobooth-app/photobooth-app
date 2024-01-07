@@ -9,7 +9,6 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 import cv2
 from turbojpeg import TurboJPEG
 
-from ...utils.exceptions import ShutdownInProcessError
 from ..config import AppConfig, appconfig
 from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer
 
@@ -148,11 +147,7 @@ class WebcamCv2Backend(AbstractBackend):
 
         with self._img_buffer_lores.condition:
             if not self._img_buffer_lores.condition.wait(timeout=0.2):
-                # if device status var reflects connected, but process is not alive, it is assumed it died and needs restart.
-                if self._event_proc_shutdown.is_set():
-                    raise ShutdownInProcessError("shutdown in progress")
-                else:
-                    raise TimeoutError("timeout receiving frames")
+                raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer_lores.lock:
                 img = decompile_buffer(self._img_buffer_lores.sharedmemory)

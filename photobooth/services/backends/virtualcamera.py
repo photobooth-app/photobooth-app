@@ -12,7 +12,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ...utils.exceptions import ShutdownInProcessError
 from ..config import appconfig
 from .abstractbackend import AbstractBackend, compile_buffer, decompile_buffer
 
@@ -110,10 +109,7 @@ class VirtualCameraBackend(AbstractBackend):
 
         with self._condition_img_buffer_ready:
             if not self._condition_img_buffer_ready.wait(timeout=0.2):
-                if self._event_proc_shutdown.is_set():
-                    raise ShutdownInProcessError("shutdown in progress")
-                else:
-                    raise TimeoutError("timeout receiving frames")
+                raise TimeoutError("timeout receiving frames")
 
         with self._img_buffer_lock:
             img = decompile_buffer(self._img_buffer_shm)

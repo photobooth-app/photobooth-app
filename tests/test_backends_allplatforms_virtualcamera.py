@@ -48,7 +48,7 @@ def test_get_images_virtualcamera_force_processexit_ensure_recovery(backend_virt
     backend_virtual._virtualcamera_process.terminate()
 
     logger.info("trying to get images again, fails if not restarted by supervisor")
-    with pytest.raises(TimeoutError):
+    with pytest.raises(RuntimeError):
         # lores stream is used to detect if a backend failed.
         backend_virtual.wait_for_lores_image(2)
 

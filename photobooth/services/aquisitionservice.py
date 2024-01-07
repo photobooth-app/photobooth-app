@@ -12,7 +12,6 @@ from typing import Union
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from ..utils.exceptions import ShutdownInProcessError
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
 from .config import appconfig
@@ -39,6 +38,7 @@ class AquisitionService(BaseService):
     ):
         super().__init__(sse_service=sse_service)
         self._wled_service: WledService = wled_service
+        self._running: bool = None
 
         # public
         self._main_backend: AbstractBackend = None
@@ -47,25 +47,16 @@ class AquisitionService(BaseService):
     def start(self):
         """start backends"""
 
-        # self.stop()
+        self._running = True
 
         # get backend obj and instanciate
 
-        try:
-            self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
+        self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
 
-            if appconfig.backends.LIVE_BACKEND is not EnumImageBackendsLive.DISABLED:
-                self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
-            else:
-                self._live_backend: AbstractBackend = None
-
-        except Exception as exc:
-            logger.exception(exc)
-            logger.critical("error initializing the backends")
-
-            self.set_status_fault()
-
-            return
+        if appconfig.backends.LIVE_BACKEND is not EnumImageBackendsLive.DISABLED:
+            self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
+        else:
+            self._live_backend: AbstractBackend = None
 
         logger.info(f"aquisition main backend: {self._main_backend}")
         logger.info(f"aquisition live backend: {self._live_backend}")
@@ -87,16 +78,13 @@ class AquisitionService(BaseService):
 
     def stop(self):
         """stop backends"""
-        # backends stop on their own now using DI framework
 
-        try:
-            if self._main_backend:
-                self._main_backend.stop()
-            if self._live_backend:
-                self._live_backend.stop()
-        except Exception as exc:
-            logger.exception(exc)
-            logger.critical("could not stop backend")
+        self._running = False
+
+        if self._main_backend:
+            self._main_backend.stop()
+        if self._live_backend:
+            self._live_backend.stop()
 
         super().set_status_stopped()
 
@@ -124,12 +112,9 @@ class AquisitionService(BaseService):
             if self._is_real_backend(self._live_backend):
                 logger.info("livestream requested from dedicated live backend")
                 return self._get_stream_from_backend(self._live_backend)
-            elif self._is_real_backend(self._main_backend):
+            else:
                 logger.info("livestream requested from main backend")
                 return self._get_stream_from_backend(self._main_backend)
-            else:
-                logger.error("no backend available to livestream")
-                raise RuntimeError("no backend available to livestream")
 
         raise ConnectionRefusedError("livepreview not enabled")
 
@@ -137,9 +122,6 @@ class AquisitionService(BaseService):
         """
         function blocks until high quality image is available
         """
-        if not self._main_backend:
-            logger.critical("no backend available to capture hq image")
-            raise RuntimeError("no backend available to capture hq image")
 
         self._wled_service.preset_shoot()
 
@@ -171,14 +153,10 @@ class AquisitionService(BaseService):
         class_name = f"{backend.value}Backend"
         pkg = ".".join(__name__.split(".")[:-1])  # to allow relative imports
 
-        try:
-            module = import_module(module_path, package=pkg)
-            return getattr(module, class_name)
-        except (ImportError, AttributeError) as exc:
-            raise ImportError(class_name) from exc
+        module = import_module(module_path, package=pkg)
+        return getattr(module, class_name)
 
-    @staticmethod
-    def _get_stream_from_backend(backend_to_stream_from: AbstractBackend):
+    def _get_stream_from_backend(self, backend_to_stream_from: AbstractBackend):
         """
         yield jpeg images to stream to client (if not created otherwise)
         this function may be overriden by backends, but this is the default one
@@ -187,32 +165,23 @@ class AquisitionService(BaseService):
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
 
         last_time = time.time_ns()
-        while True:
+        while self._running:
             now_time = time.time_ns()
             if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.LIVEPREVIEW_FRAMERATE):
                 last_time = now_time
 
                 try:
                     output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
-                except ShutdownInProcessError:
-                    logger.info("ShutdownInProcess, stopping stream")
+                except StopIteration:
+                    logger.info("stream ends due to shutdown aquisitionservice")
                     return
-                except TimeoutError:
-                    # this error could be recovered (example: DSLR turned off/on again)
-                    logger.error("error capture lores image for stream. timeout expired, retrying")
-                    # can we do additional error handling here?
-                    output_jpeg_bytes = __class__._substitute_image(
-                        "Oh no - stream error :(",
-                        "timeout, no preview from cam. retrying.",
-                        appconfig.uisettings.livestream_mirror_effect,
-                    )
                 except Exception as exc:
                     # this error probably cannot recover.
                     logger.exception(exc)
                     logger.error(f"streaming exception: {exc}")
                     output_jpeg_bytes = __class__._substitute_image(
                         "Oh no - stream error :(",
-                        "exception, unknown error getting preview.",
+                        f"{type(exc).__name__}, no preview from cam. retrying.",
                         appconfig.uisettings.livestream_mirror_effect,
                     )
 

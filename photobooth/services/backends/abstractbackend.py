@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from multiprocessing import Condition, Lock, shared_memory
 
-from ...utils.exceptions import ShutdownInProcessError
 from ...utils.stoppablethread import StoppableThread
 
 logger = logging.getLogger(__name__)
@@ -210,15 +209,9 @@ class AbstractBackend(ABC):
         for attempt in range(1, retries + 1):
             try:
                 return self._wait_for_hq_image()
-
-            except TimeoutError:
-                logger.error(f"error capture image. timeout expired {attempt=}/{retries}, retrying")
-                continue
-
             except Exception as exc:
                 logger.exception(exc)
                 logger.error(f"error capture image. {attempt=}/{retries}, retrying")
-
                 continue
 
         else:
@@ -241,31 +234,35 @@ class AbstractBackend(ABC):
         Returns:
             _type_: _description_
         """
-        remaining_retries = retries
-        while True:
+
+        for attempt in range(1, retries):
             try:
                 return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
-            except ShutdownInProcessError as exc:
-                logger.warning("device raised shutdowninprocesserror (maybe to recover from lost connection?)")
-                if not self._connect_thread.stopped():
-                    # not stopped, keep stream upright by not sending the exception
-                    raise TimeoutError("actual backend not stopped, so shutdown is covered to keep the stream running.") from exc
+            except TimeoutError:
+                # if timeout occured it will retry several attempts more before finally fail (else of for below)
+                logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")
+                if self._connect_thread.stopped():
+                    raise StopIteration("backend is shutting down") from None  # allows calling function to stop requesting images if app shuts down
                 else:
-                    # if stopped forward shutdown to stop stream.
-                    raise exc
+                    continue
             except Exception as exc:
-                if remaining_retries < 0:
-                    # device cannot deliver images after several retries, assume device got a problem, set flag to recover by restarting the device
-                    if self._failing_wait_for_lores_image_is_error:
-                        logger.error("failing to get lores images from backend, considered as error, set fault flag to recover.")
-                        self.device_set_status_fault_flag()
+                # other exceptions fail immediately
+                logger.warning("device raised exception (maybe lost connection to device?)")
+                raise RuntimeError("device raised exception (maybe lost connection to device?)") from exc
 
-                    raise exc
+        # final call
+        try:
+            return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
+        except Exception as exc:
+            # we failed finally all the attempts - deal with the consequences.
+            logger.exception(exc)
+            logger.critical(f"finally failed after {retries} attempts to capture lores image!")
 
-                remaining_retries -= 1
-                logger.debug("waiting for backend provide low resolution image...")
+            if self._failing_wait_for_lores_image_is_error:
+                logger.error("failing to get lores images from device is considered as error, set fault flag to recover.")
+                self.device_set_status_fault_flag()
 
-                continue
+            raise RuntimeError("device raised exception") from exc
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
