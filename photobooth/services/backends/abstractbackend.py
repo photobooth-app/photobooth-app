@@ -107,7 +107,6 @@ class AbstractBackend(ABC):
             # is running but problem detected!
             if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
                 logger.info("implementation signaled a fault during run! set status to fault and try to recover.")
-                self._device_status_fault_flag = False  # clear the flag
                 self.device_status = EnumDeviceStatus.fault
                 try:
                     self._device_stop()
@@ -131,6 +130,12 @@ class AbstractBackend(ABC):
                     if self._device_available():
                         logger.info("device is available")
                         self._device_start()
+
+                        # clear the flag at this point
+                        # if backend needs longer than the amount of time until wait_for_lores_image finally fails (example after 20 retries)
+                        # the device could have set the flag in the meantime again during startup.
+                        self._device_status_fault_flag = False
+
                         # when _device_start is finished, the device needs to be up and running, access allowed.
                         # signal that the device can be used externally in general.
                         self.device_status = EnumDeviceStatus.running
@@ -198,8 +203,11 @@ class AbstractBackend(ABC):
         logger.info("device status is running now")
 
     def device_set_status_fault_flag(self):
-        logger.info("set _device_status_fault_flag to True to signal the device needs to be recovered.")
-        self._device_status_fault_flag = True
+        if self.device_status is EnumDeviceStatus.running:
+            logger.info("set flag to indicate fault in device despite backend shall be in running mode")
+            self._device_status_fault_flag = True
+        else:
+            logger.info("ignored to flag device as faulty because not in running mode")
 
     def wait_for_hq_image(self, retries: int = 3) -> bytes:
         """
@@ -235,12 +243,12 @@ class AbstractBackend(ABC):
             _type_: _description_
         """
 
-        for attempt in range(1, retries):
+        for _ in range(1, retries):
             try:
                 return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail (else of for below)
-                logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")
+                # logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")  # removed to avoid too many log entries.
                 if self._connect_thread.stopped():
                     raise StopIteration("backend is shutting down") from None  # allows calling function to stop requesting images if app shuts down
                 else:
@@ -249,6 +257,8 @@ class AbstractBackend(ABC):
                 # other exceptions fail immediately
                 logger.warning("device raised exception (maybe lost connection to device?)")
                 raise RuntimeError("device raised exception (maybe lost connection to device?)") from exc
+
+        logger.debug(f"device timed out deliver lores image in {retries-1} attempts. One last try now or raise exception.")
 
         # final call
         try:
