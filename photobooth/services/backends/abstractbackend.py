@@ -220,7 +220,7 @@ class AbstractBackend(ABC):
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
-    def wait_for_lores_image(self, retries: int = 10):
+    def wait_for_lores_image(self, retries: int = 20):
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
 
@@ -237,7 +237,7 @@ class AbstractBackend(ABC):
 
         for attempt in range(1, retries):
             try:
-                return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
+                return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail (else of for below)
                 logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")
