@@ -113,8 +113,14 @@ try {
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
             throw new RuntimeException("There is no file uploaded ($file_identifier)");
         }
+
         $filepath = $_FILES['upload_file']['tmp_name'];
-        $mimetype = mime_content_type($filepath);
+
+        try {
+            $mimetype = mime_content_type($filepath);
+        } catch (Exception $e) {
+            throw new RuntimeException("Mimetype of file could not be detected. Aborting.");
+        }
 
         if (filesize($filepath) === 0) {
             throw new RuntimeException("The file is empty.");
