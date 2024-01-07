@@ -14,7 +14,8 @@ $VERSION = 1;
 $DB_FILENAME = "jobs.sqlite3";
 $ALLOWED_UPLOAD_TYPES = [
     'image/png' => 'png',
-    'image/jpeg' => 'jpg'
+    'image/jpeg' => 'jpg',
+    'image/gif' => 'gif',
 ];
 
 // setup php ini
@@ -113,24 +114,21 @@ try {
             throw new RuntimeException("There is no file uploaded ($file_identifier)");
         }
         $filepath = $_FILES['upload_file']['tmp_name'];
-        $fileinfo = finfo_open(FILEINFO_MIME_TYPE);
-        $filetype = finfo_file(
-            $fileinfo,
-            $filepath
-        );
+        $mimetype = mime_content_type($filepath);
+
         if (filesize($filepath) === 0) {
             throw new RuntimeException("The file is empty.");
         }
         if (filesize($filepath) > $ALLOWED_UPLOAD_MAX_SIZE) {
             throw new RuntimeException("The file is too large");
         }
-        if (!in_array($filetype, array_keys($ALLOWED_UPLOAD_TYPES))) {
+        if (!in_array($mimetype, array_keys($ALLOWED_UPLOAD_TYPES))) {
             throw new RuntimeException("File not allowed.");
         }
 
         // filename to store the uploaded file to in work directory
         $filename = basename($filepath);
-        $extension = $ALLOWED_UPLOAD_TYPES[$filetype];
+        $extension = $ALLOWED_UPLOAD_TYPES[$mimetype];
 
         // query entry for id to double-check that currently uploaded file was actually requested and job assigned
         $results = $db->querySingle("SELECT * FROM upload_requests WHERE file_identifier='" . $file_identifier . "' AND status='job_assigned'", true);

@@ -7,8 +7,17 @@ from PIL import Image
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
+from photobooth.services.mediacollection.mediaitem import MediaItem
 
 logger = logging.getLogger(name=None)
+
+r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
+if not (r.status_code == 200 and "version" in r.text):
+    logger.warning(f"no webservice found, skipping tests {appconfig.sharing.shareservice_url}")
+    pytest.skip(
+        "no webservice found, skipping tests",
+        allow_module_level=True,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -18,13 +27,31 @@ def run_around_tests():
     yield
 
 
-r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, allow_redirects=False)
-if not (r.status_code == 200 and "version" in r.text):
-    logger.warning(f"no webservice found, skipping tests {appconfig.sharing.shareservice_url}")
-    pytest.skip(
-        "no webservice found, skipping tests",
-        allow_module_level=True,
-    )
+@pytest.fixture(scope="module")
+def _container() -> Container:
+    appconfig.sharing.shareservice_enabled = True
+
+    container.start()
+
+    # check that share_service was initialized properly, otherwise fail
+    assert container.share_service._initialized
+
+    yield container
+    container.stop()
+
+
+# @pytest.fixture()
+@pytest.fixture(params=["start_job_1pic", "start_job_collage", "start_job_animation"])
+def _mediaitem(request, _container: Container) -> MediaItem:
+    job = getattr(_container.processing_service, request.param)
+    job()
+    yield _container.mediacollection_service.db_get_most_recent_mediaitem()
+
+
+def test_shareservice_landingpage_valid():
+    # ensure that the landingpage is available - this is a default configured address and helps the user during setup of a booth
+    r = requests.get("https://photobooth-app.org/extras/shareservice-landing/")
+    assert r.ok
 
 
 def test_shareservice_urls_valid():
@@ -63,35 +90,13 @@ def test_shareservice_urls_valid():
     assert r.status_code == 500
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
-@pytest.fixture(scope="module")
-def _container() -> Container:
-    appconfig.sharing.shareservice_enabled = True
-
-    # setup
-    container.start()
-    # create one image to ensure there is at least one
-    if container.mediacollection_service.number_of_images == 0:
-        container.processing_service.start_job_1pic()
-
-    # deliver
-    yield container
-    container.stop()
-
-
-def test_shareservice_download_image(_container: Container):
+def test_shareservice_download_all_mediaitem_types(_mediaitem: MediaItem):
     """start service and try to download an image"""
 
-    # check that share_service was initialized properly, otherwise fail
-    assert _container.share_service._initialized
-
-    # get the newest image id
-    mediaitem_id = _container.mediacollection_service.db_get_most_recent_mediaitem().id
-
-    logger.info(f"check to download {mediaitem_id=}")
+    logger.info(f"check to download {_mediaitem.id=}, {_mediaitem.media_type=}")
     r = requests.get(
         appconfig.sharing.shareservice_url,
-        params={"action": "download", "id": mediaitem_id},
+        params={"action": "download", "id": _mediaitem.id},
     )
 
     # valid status code
