@@ -29,6 +29,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
+          ini-values: upload_max_filesize=50M, post_max_size=51M, memory_limit=200MB, max_execution_time=180
       - name: start php built-in server to allow testing shareservice
         run: |
           sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php

@@ -10,7 +10,7 @@ $TIMEOUT_DOWNLOAD = 15;                     // if photobooth-app upload is not c
 
 
 // internal constants - do not change below this!
-$VERSION = 1;
+$VERSION = 2;
 $DB_FILENAME = "jobs.sqlite3";
 $ALLOWED_UPLOAD_TYPES = [
     'image/png' => 'png',
@@ -113,9 +113,15 @@ try {
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
             throw new RuntimeException("There is no file uploaded ($file_identifier)");
         }
+        if ($_FILES['upload_file']['error'] != UPLOAD_ERR_OK) {
+            throw new RuntimeException("Error processing uploaded file! Errorcode=" . $_FILES['upload_file']['error']);
+        }
 
         $filepath = $_FILES['upload_file']['tmp_name'];
 
+        if (empty($filepath)) {
+            throw new RuntimeException("tmp_name is empty, pls check php settings (upload size, ...)!");
+        }
         try {
             $mimetype = mime_content_type($filepath);
         } catch (ValueError $e) {
