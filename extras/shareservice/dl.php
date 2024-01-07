@@ -118,7 +118,7 @@ try {
 
         try {
             $mimetype = mime_content_type($filepath);
-        } catch (Exception $e) {
+        } catch (ValueError $e) {
             throw new RuntimeException("Mimetype of file could not be detected. Aborting.");
         }
 
