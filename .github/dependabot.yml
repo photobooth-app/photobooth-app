@@ -10,5 +10,5 @@ updates:
     target-branch: "dev"
     schedule:
       interval: "daily"
-      time: "19:00"
+      time: "17:00"
 
