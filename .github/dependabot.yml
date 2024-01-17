@@ -11,7 +11,4 @@ updates:
     schedule:
       interval: "daily"
       time: "19:00"
-    groups:
-      python-packages:
-        patterns:
-          - "*"
+
