@@ -8,17 +8,8 @@ import pyvips
 from PIL import Image
 from turbojpeg import TurboJPEG
 
-from photobooth.services.config import appconfig
-
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 def pyvips_scale(jpeg_bytes):
@@ -112,7 +103,7 @@ def image_hires() -> bytes:
 
 # needs pip install pytest-benchmark
 @pytest.mark.benchmark(
-    group="scale_lores",
+    group="scalejpeg_lores",
 )
 def test_libraries_encode_lores(library, image_lores, benchmark):
     benchmark(eval(library), jpeg_bytes=image_lores)
@@ -121,7 +112,7 @@ def test_libraries_encode_lores(library, image_lores, benchmark):
 
 # needs pip install pytest-benchmark
 @pytest.mark.benchmark(
-    group="scale_hires",
+    group="scalejpeg_hires",
 )
 def test_libraries_encode_hires(library, image_hires, benchmark):
     benchmark(eval(library), jpeg_bytes=image_hires)

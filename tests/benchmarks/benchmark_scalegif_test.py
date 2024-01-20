@@ -6,17 +6,8 @@ import pyvips
 from PIL import Image, ImageSequence
 from turbojpeg import TurboJPEG
 
-from photobooth.services.config import appconfig
-
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 def pyvips_scale(gif_bytes):
@@ -85,7 +76,9 @@ def image(file) -> bytes:
     return in_file_read
 
 
-@pytest.mark.benchmark()
+@pytest.mark.benchmark(
+    group="scalegif",
+)
 def test_libraries_scalegif(library, benchmark):
     benchmark(eval(library), gif_bytes=image("tests/assets/animation.gif"))
     assert True
