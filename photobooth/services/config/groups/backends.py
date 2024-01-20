@@ -210,7 +210,3 @@ class GroupBackends(BaseModel):
         default=EnumPicamStreamQuality.MEDIUM,
         description="Lower quality results in less data to be transferred and may reduce load on display device.",
     )
-    picamera2_hwacceleration: bool = Field(
-        default=True,
-        description="Enable hardware acceleration to encode livestream jpeg images on Pi GPU where available. Disable if problems occur, livestream quality could be slightly better if disabled. Check CPU load during operation.",
-    )

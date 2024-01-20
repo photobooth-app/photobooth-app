@@ -152,7 +152,7 @@ class DigicamcontrolBackend(AbstractBackend):
             return self._lores_data.data
 
     def _on_capture_mode(self):
-        logger.debug("change to capture mode - nothing needs to be done actually")
+        pass
 
     def _on_preview_mode(self):
         logger.debug("enable liveview and minimize windows")
@@ -186,8 +186,6 @@ class DigicamcontrolBackend(AbstractBackend):
                 self._hires_data.request_ready.clear()
 
                 logger.debug("triggered capture")
-
-                self._on_capture_mode()
 
                 try:
                     # capture request, afterwards read file to buffer

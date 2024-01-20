@@ -126,6 +126,9 @@ class ProcessingService(StateMachine):
         """_summary_"""
         logger.info("state idle entered.")
 
+        # switch backend to preview mode always when returning to idle.
+        self._aquisition_service.switch_backends_to_preview_mode()
+
     def on_enter_counting(self):
         """_summary_"""
         # wled signaling
@@ -214,9 +217,6 @@ class ProcessingService(StateMachine):
 
     def on_exit_capture(self):
         """_summary_"""
-
-        # TODO: check if switch back here or somewhere else.
-        self._aquisition_service.switch_backends_to_preview_mode()
 
         if not self.model.last_capture_successful():
             logger.critical("on_exit_capture no valid image taken! abort processing")
