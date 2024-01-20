@@ -386,13 +386,15 @@ class MediaprocessingService(BaseService):
             logger.error(f"error saving animation, reason: {exc}.")
             raise RuntimeError("abort processing due to pipelineerror") from exc
 
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create original")
+
         # instanciate mediaitem with new original file
         mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
 
         # create scaled versions (unprocessed and processed are same here for now
+        tms = time.time()
         mediaitem.create_fileset_unprocessed()
         mediaitem.copy_fileset_processed()
-
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
 
         return mediaitem
