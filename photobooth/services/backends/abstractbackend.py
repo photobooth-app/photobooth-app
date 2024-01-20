@@ -158,7 +158,7 @@ class AbstractBackend(ABC):
             # means: sleep has to be last statement in while loop
 
         # supervising connection thread was asked to stop - so we ask device to do the sam
-        logger.info("exit connection function, stopping device")
+        logger.info("exit connection supervisor function, stopping device")
         self._device_stop()
 
     def start(self):
