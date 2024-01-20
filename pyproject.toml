@@ -116,7 +116,6 @@ test = [
   "pytest-benchmark>=4.0.0",
   "pytest-cov>=4.1.0",
   "coverage[toml]>=7.4.0",
-  "simplejpeg>=1.7.0",
   "httpx-sse>=0.4.0",
   "httpx>=0.25.0",
   "pytest-httpserver>=1.0.8",
@@ -129,6 +128,6 @@ lint= [
 includes = ["./photobooth"]
 
 [tool.pdm.scripts]
-test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
-benchmark = "pytest --benchmark-only -v ./"
+test = "pytest -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
+benchmark = "pytest -v ./tests/benchmarks"
 
