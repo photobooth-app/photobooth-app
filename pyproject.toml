@@ -53,7 +53,6 @@ dependencies = [
     "gphoto2~=2.5.0; platform_system == 'Linux'",
     "python-statemachine>=2.1",
     "python-multipart>=0.0.6",
-    "pyvips>=2.2.2",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -119,6 +118,7 @@ test = [
   "httpx-sse>=0.4.0",
   "httpx>=0.25.0",
   "pytest-httpserver>=1.0.8",
+  "pyvips>=2.2.2",
 ]
 lint= [
   "ruff>=0.1.8",
