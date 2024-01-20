@@ -52,7 +52,8 @@ dependencies = [
     "gpiozero>=2.0.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
     "python-statemachine>=2.1",
-    "python-multipart>=0.0.6"
+    "python-multipart>=0.0.6",
+    "pyvips>=2.2.2",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -129,4 +130,5 @@ includes = ["./photobooth"]
 
 [tool.pdm.scripts]
 test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
+benchmark = "pytest --benchmark-only -v ./"
 

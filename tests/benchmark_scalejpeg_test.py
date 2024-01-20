@@ -4,10 +4,14 @@ import logging
 import cv2
 import numpy
 import pytest
+import pyvips
 from PIL import Image
 from turbojpeg import TurboJPEG
 
 from photobooth.services.config import appconfig
+
+turbojpeg = TurboJPEG()
+logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(autouse=True)
@@ -17,11 +21,21 @@ def run_around_tests():
     yield
 
 
-turbojpeg = TurboJPEG()
-logger = logging.getLogger(name=None)
+def pyvips_scale(jpeg_bytes):
+    # mute some other logger, by raising their debug level to INFO
+    lgr = logging.getLogger(name="pyvips")
+    lgr.setLevel(logging.WARNING)
+    lgr.propagate = True
 
+    out: pyvips.Image = pyvips.Image.thumbnail_buffer(
+        jpeg_bytes,
+        500,  # width
+    )
+    bytes = out.jpegsave_buffer(Q=85)
+    # im = Image.open(io.BytesIO(bytes))
+    # im.show()
 
-## scale jpeg by 0.5 comparison
+    return bytes
 
 
 def turbojpeg_scale(jpeg_bytes):
@@ -73,7 +87,7 @@ def cv2_scale(jpeg_bytes):
     return encimg
 
 
-@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale"])
+@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
