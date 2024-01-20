@@ -350,12 +350,9 @@ class MediaItem:
             raise RuntimeError(f"filetype not supported, error: {exc}") from exc
 
         tms = time.time()
-        self.resize_gif(
-            filename=self.path_full_unprocessed,
-            gif_image=gif_sequence,
-            scaled_min_width=appconfig.mediaprocessing.FULL_STILL_WIDTH,
-        )
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale full_unprocessed")
+        # to save some processing time the full version and original are same for gif
+        shutil.copy2(self.path_original, self.path_full_unprocessed)
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy original to full_unprocessed")
 
         tms = time.time()
         self.resize_gif(
