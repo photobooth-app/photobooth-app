@@ -47,7 +47,7 @@ def backend_gphoto2():
         logger.info(f"python-gphoto2: {gp.__version__}")
 
         # virtual camera delivers images from following path:
-        os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "assets")
+        os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "../assets")
         # switch to virtual camera from normal drivers
         # IOLIBS is set on import of gphoto2:
         # https://github.com/jim-easterbrook/python-gphoto2/blob/510149d454c9fa1bd03a43f098eea3c52d2e0675/src/swig-gp2_5_31/__init__.py#L15C32-L15C32
