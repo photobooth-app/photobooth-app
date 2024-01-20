@@ -1,4 +1,4 @@
-name: pytest
+name: benchmarks
 
 # coverage is made up by multiple runs on different hosts
 # self-hosted is a RPI and has hardware attached to test and gain high coverage
