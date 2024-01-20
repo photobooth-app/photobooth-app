@@ -95,9 +95,6 @@ class VirtualCameraBackend(AbstractBackend):
         logger.info(f"provide {hq_images[current_hq_image_index]} as hq_image")
         img = open(hq_images[current_hq_image_index], "rb").read()
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -117,10 +114,10 @@ class VirtualCameraBackend(AbstractBackend):
         return img
 
     def _on_capture_mode(self):
-        logger.debug("change to capture mode - means doing nothing in simulate")
+        pass
 
     def _on_preview_mode(self):
-        logger.debug("change to preview mode - means doing nothing in simulate")
+        pass
 
     #
     # INTERNAL IMAGE GENERATOR

@@ -33,8 +33,6 @@ class WebcamV4lBackend(AbstractBackend):
         self._event_proc_shutdown: Event = Event()
         self._v4l_process: Process = None
 
-        self._on_preview_mode()
-
     def __del__(self):
         try:
             if self._img_buffer:
@@ -105,9 +103,6 @@ class WebcamV4lBackend(AbstractBackend):
             with self._img_buffer.lock:
                 img = decompile_buffer(self._img_buffer.sharedmemory)
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -125,10 +120,10 @@ class WebcamV4lBackend(AbstractBackend):
             return img
 
     def _on_capture_mode(self):
-        logger.debug("change to capture mode requested - ignored on this backend")
+        pass
 
     def _on_preview_mode(self):
-        logger.debug("change to preview mode requested - ignored on this backend")
+        pass
 
     #
     # INTERNAL IMAGE GENERATOR

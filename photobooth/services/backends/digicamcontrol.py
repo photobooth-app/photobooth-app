@@ -174,7 +174,7 @@ class DigicamcontrolBackend(AbstractBackend):
     def _worker_fun(self):
         logger.debug("starting digicamcontrol worker function")
 
-        # switch back to preview mode
+        # start in preview mode
         self._on_preview_mode()
 
         session = requests.Session()
@@ -248,7 +248,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
                 finally:
                     # switch back to preview mode
-                    self._on_preview_mode()
+                    # self._on_preview_mode()   # modes shall be controlled from external.
+                    pass
 
             else:
                 if appconfig.backends.LIVEPREVIEW_ENABLED:

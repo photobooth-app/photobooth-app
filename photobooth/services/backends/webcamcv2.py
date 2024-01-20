@@ -50,8 +50,6 @@ class WebcamCv2Backend(AbstractBackend):
 
         self._cv2_process: Process = None
 
-        self._on_preview_mode()
-
     def __del__(self):
         try:
             if self._img_buffer_lores:
@@ -133,9 +131,6 @@ class WebcamCv2Backend(AbstractBackend):
             with self._img_buffer_hires.lock:
                 img = decompile_buffer(self._img_buffer_hires.sharedmemory)
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -154,10 +149,10 @@ class WebcamCv2Backend(AbstractBackend):
             return img
 
     def _on_capture_mode(self):
-        logger.debug("change to capture mode requested - ignored for cv2 backend")
+        pass
 
     def _on_preview_mode(self):
-        logger.debug("change to preview mode requested - ignored for cv2 backend")
+        pass
 
 
 #

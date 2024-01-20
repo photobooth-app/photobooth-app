@@ -327,9 +327,6 @@ class Picamera2Backend(AbstractBackend):
                 with self._hires_data.condition:
                     self._hires_data.condition.notify_all()
 
-                # switch back to preview mode
-                self._on_preview_mode()
-
             # capture metadata blocks until new metadata is avail
             _metadata = self._picamera2.capture_metadata()
 
