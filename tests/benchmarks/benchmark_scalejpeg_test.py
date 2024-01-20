@@ -18,10 +18,23 @@ def pyvips_scale(jpeg_bytes):
     lgr.setLevel(logging.WARNING)
     lgr.propagate = True
 
-    out: pyvips.Image = pyvips.Image.thumbnail_buffer(
-        jpeg_bytes,
-        500,  # width
+    image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
+    out: pyvips.Image = image.thumbnail_image(
+        int(image.width / 2),  # width
     )
+    bytes = out.jpegsave_buffer(Q=85)
+
+    return bytes
+
+
+def pyvips_resize_scale(jpeg_bytes):
+    # mute some other logger, by raising their debug level to INFO
+    lgr = logging.getLogger(name="pyvips")
+    lgr.setLevel(logging.WARNING)
+    lgr.propagate = True
+
+    image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
+    out: pyvips.Image = image.resize(0.5)
     bytes = out.jpegsave_buffer(Q=85)
     # im = Image.open(io.BytesIO(bytes))
     # im.show()
@@ -78,7 +91,7 @@ def cv2_scale(jpeg_bytes):
     return encimg
 
 
-@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale"])
+@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale", "pyvips_resize_scale"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
