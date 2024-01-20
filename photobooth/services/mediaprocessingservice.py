@@ -395,7 +395,7 @@ class MediaprocessingService(BaseService):
         tms = time.time()
         mediaitem.create_fileset_unprocessed()
         mediaitem.copy_fileset_processed()
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
 
         return mediaitem
 

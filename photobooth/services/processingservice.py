@@ -285,7 +285,7 @@ class ProcessingService(StateMachine):
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
 
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
 
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)
@@ -298,7 +298,7 @@ class ProcessingService(StateMachine):
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy())
 
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
 
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)
