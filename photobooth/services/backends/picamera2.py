@@ -9,7 +9,7 @@ from threading import Condition, Event
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
-from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
+from picamera2.encoders import JpegEncoder, MJPEGEncoder, Quality  # type: ignore
 from picamera2.outputs import FileOutput  # type: ignore
 
 from ...utils.stoppablethread import StoppableThread
@@ -104,7 +104,7 @@ class Picamera2Backend(AbstractBackend):
                 )
             },
             encode="lores",
-            buffer_count=2,
+            buffer_count=3,
             display="lores",
             transform=Transform(
                 hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
@@ -127,7 +127,7 @@ class Picamera2Backend(AbstractBackend):
                 )
             },
             encode="lores",
-            buffer_count=2,
+            buffer_count=3,
             display="lores",
             transform=Transform(
                 hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
@@ -144,18 +144,29 @@ class Picamera2Backend(AbstractBackend):
         # capture_file image quality
         self._picamera2.options["quality"] = appconfig.mediaprocessing.HIRES_STILL_QUALITY
 
+        if appconfig.backends.picamera2_hwacceleration:
+            # <=PI4 hw accelerated, PI5 has no hw accelration but sufficient CPU.
+            # attention: GPU won't digest images wider than 4096 on a Pi 4.
+            self._encoder = MJPEGEncoder()
+        else:
+            # not accelerated, and might provide better quality at same bitrate level
+            self._encoder = JpegEncoder()
+
         logger.info(f"camera_config: {self._picamera2.camera_config}")
         logger.info(f"camera_controls: {self._picamera2.camera_controls}")
         logger.info(f"controls: {self._picamera2.controls}")
 
         self.set_ae_exposure(appconfig.backends.picamera2_AE_EXPOSURE_MODE)
         logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality.name]=}")
-        # start camera
+
+        # start encoder
         self._picamera2.start_encoder(
-            MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
+            self._encoder,
             FileOutput(self._lores_data),
             quality=Quality[appconfig.backends.picamera2_stream_quality.name],
         )
+
+        # start camera
         self._picamera2.start()
 
         self._worker_thread = StoppableThread(name="_worker_thread", target=self._worker_fun, daemon=True)
@@ -277,7 +288,7 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2.switch_mode(self._current_config)
 
         self._picamera2.start_encoder(
-            MJPEGEncoder(),
+            self._encoder,
             FileOutput(self._lores_data),
             quality=Quality[appconfig.backends.picamera2_stream_quality.name],
         )
