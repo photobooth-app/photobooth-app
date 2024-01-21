@@ -136,7 +136,7 @@ class Picamera2Backend(AbstractBackend):
         )
 
         # select preview mode on init
-        self._on_preview_mode()
+        self._on_configure_optimized_for_idle()
 
         # configure; camera needs to be stopped before
         self._picamera2.configure(self._current_config)
@@ -239,12 +239,12 @@ class Picamera2Backend(AbstractBackend):
 
             return self._lores_data.frame
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         logger.debug("change to capture mode requested")
         self._last_config = self._current_config
         self._current_config = self._capture_config
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         logger.debug("change to preview mode requested")
         self._last_config = self._current_config
         self._current_config = self._preview_config
@@ -307,7 +307,7 @@ class Picamera2Backend(AbstractBackend):
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
                 logger.warning("force switchmode to capture config right before taking picture")
-                self._on_capture_mode()
+                self._on_configure_optimized_for_hq_capture()
 
             if (not self._current_config == self._last_config) and self._last_config is not None:
                 if not self._worker_thread.stopped():

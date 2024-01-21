@@ -309,11 +309,11 @@ class AbstractBackend(ABC):
         """
 
     @abstractmethod
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         """called externally via events and used to change to a capture mode if necessary"""
 
     @abstractmethod
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         """called externally via events and used to change to a preview mode if necessary"""
 
 

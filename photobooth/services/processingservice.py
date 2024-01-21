@@ -127,7 +127,7 @@ class ProcessingService(StateMachine):
         logger.info("state idle entered.")
 
         # switch backend to preview mode always when returning to idle.
-        self._aquisition_service.switch_backends_to_preview_mode()
+        self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
     def on_enter_counting(self):
         """_summary_"""
@@ -135,7 +135,7 @@ class ProcessingService(StateMachine):
         self._wled_service.preset_thrill()
 
         # set backends to capture mode; backends take their own actions if needed.
-        self._aquisition_service.switch_backends_to_capture_mode()
+        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         # determine countdown time, first and following could have different times
         duration = (

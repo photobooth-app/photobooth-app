@@ -148,10 +148,10 @@ class WebcamCv2Backend(AbstractBackend):
                 img = decompile_buffer(self._img_buffer_lores.sharedmemory)
             return img
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         pass
 
 

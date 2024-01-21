@@ -148,11 +148,11 @@ class Gphoto2Backend(AbstractBackend):
 
             return self._lores_data.data
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         self._iso(appconfig.backends.gphoto2_iso_capture)
         self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         self._iso(appconfig.backends.gphoto2_iso_liveview)
         self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 

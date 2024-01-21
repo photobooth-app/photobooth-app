@@ -129,8 +129,8 @@ def test_switch_modes(_container: Container):
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
-    _container.aquisition_service.switch_backends_to_capture_mode()
-    _container.aquisition_service.switch_backends_to_preview_mode()
+    _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+    _container.aquisition_service.signalbackend_configure_optimized_for_idle()
 
 
 def test_simulated_init_exceptions(_container: Container):

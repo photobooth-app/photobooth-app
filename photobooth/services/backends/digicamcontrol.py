@@ -151,10 +151,10 @@ class DigicamcontrolBackend(AbstractBackend):
 
             return self._lores_data.data
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         logger.debug("enable liveview and minimize windows")
         try:
             session = requests.Session()
@@ -175,7 +175,7 @@ class DigicamcontrolBackend(AbstractBackend):
         logger.debug("starting digicamcontrol worker function")
 
         # start in preview mode
-        self._on_preview_mode()
+        self._on_configure_optimized_for_idle()
 
         session = requests.Session()
         preview_failcounter = 0
@@ -246,7 +246,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
                 finally:
                     # switch back to preview mode
-                    # self._on_preview_mode()   # modes shall be controlled from external.
+                    # self._on_configure_optimized_for_idle()   # modes shall be controlled from external.
                     pass
 
             else:
