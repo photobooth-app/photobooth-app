@@ -103,18 +103,21 @@ class AquisitionService(BaseService):
 
         return aquisition_stats
 
+    def _get_video_backend(self) -> AbstractBackend:
+        if self._is_real_backend(self._live_backend):
+            logger.info("video requested from dedicated live backend")
+            return self._live_backend
+        else:
+            logger.info("video requested from main backend")
+            return self._main_backend
+
     def gen_stream(self):
         """
         assigns a backend to generate a stream
         """
 
         if appconfig.backends.LIVEPREVIEW_ENABLED:
-            if self._is_real_backend(self._live_backend):
-                logger.info("livestream requested from dedicated live backend")
-                return self._get_stream_from_backend(self._live_backend)
-            else:
-                logger.info("livestream requested from main backend")
-                return self._get_stream_from_backend(self._main_backend)
+            return self._get_stream_from_backend(self._get_video_backend())
 
         raise ConnectionRefusedError("livepreview not enabled")
 
@@ -130,6 +133,15 @@ class AquisitionService(BaseService):
         self._wled_service.preset_standby()
 
         return image_bytes
+
+    def start_recording(self):
+        self._get_video_backend().start_recording()
+
+    def stop_recording(self):
+        self._get_video_backend().stop_recording()
+
+    def get_recorded_video(self):
+        return self._get_video_backend().get_recorded_video()
 
     def signalbackend_configure_optimized_for_hq_capture(self):
         """set backends to capture mode (usually automatically switched as needed by processingservice)"""

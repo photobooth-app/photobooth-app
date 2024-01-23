@@ -48,6 +48,11 @@ def api_chose_animation_get():
     return _capture(container.processing_service.start_job_animation)
 
 
+@processing_router.get("/chose/video")
+def api_chose_video_get():
+    return _capture(container.processing_service.start_job_video)
+
+
 @processing_router.get("/cmd/confirm")
 def api_cmd_confirm_get():
     try:

@@ -5,11 +5,15 @@ import dataclasses
 import logging
 import os
 import time
+import uuid
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from multiprocessing import Condition, Lock, shared_memory
+from pathlib import Path
+from subprocess import PIPE, Popen
 
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +71,10 @@ class AbstractBackend(ABC):
         # only for (webcam, picam and virtualcamera) error can detected by missing lores img
         self._failing_wait_for_lores_image_is_error: bool = False
         self._connect_thread: StoppableThread = None
+
+        # video feature
+        self._video_worker_thread: StoppableThread = None
+        self._video_recorded_videofilepath: Path = None
 
         super().__init__()
 
@@ -273,6 +281,78 @@ class AbstractBackend(ABC):
                 self.device_set_status_fault_flag()
 
             raise RuntimeError("device raised exception") from exc
+
+    def start_recording(self):
+        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
+        self._video_worker_thread.start()
+
+    def stop_recording(self):
+        if self._video_worker_thread:
+            self._video_worker_thread.stop()
+            self._video_worker_thread.join()
+
+    def get_recorded_video(self) -> Path:
+        return self._video_recorded_videofilepath
+
+    def _videoworker_fun(self):
+        # init worker, set output to None which indicates there is no current video available to get
+        self._video_recorded_videofilepath = None
+
+        # generate temp filename to record to
+        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}.mp4")
+
+        # basic idea from https://stackoverflow.com/a/42602576
+        ffmpeg_subprocess = Popen(
+            [
+                "ffmpeg",
+                "-y",  # overwrite with no questions
+                "-f",  # force input or output format
+                "image2pipe",
+                "-vcodec",
+                "mjpeg",
+                "-framerate",
+                "15",
+                "-i",
+                "-",
+                "-vcodec",
+                "libx264",  # warning! image height must be divisible by 2!
+                "-preset",
+                "veryfast",
+                "-maxrate",
+                "10M",
+                "-bufsize",
+                "20M",
+                "-qp",
+                str(appconfig.misc.video_quality),  # 0 better quality, 10 most compression (windows native playback fails for 0)
+                "-movflags",
+                "+faststart",
+                "-framerate",
+                "15",
+                str(filepath),
+            ],
+            stdin=PIPE,
+        )
+
+        # start time of video
+        time_start_recording = time.time()
+
+        while not self._video_worker_thread.stopped():
+            ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+
+            if (time.time() - time_start_recording) >= appconfig.misc.video_duration:
+                # after max video time stop capture by calling stop recording.
+                logger.info("stopped video capture after max capture time")
+                self._video_worker_thread.stop()
+
+        # release video
+        ffmpeg_subprocess.stdin.close()
+        code = ffmpeg_subprocess.wait()
+        if code != 0:
+            # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
+            # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
+            raise RuntimeError(f"error creating videofile, ffmpeg exit code ({code}).")
+
+        self._video_recorded_videofilepath = filepath
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)

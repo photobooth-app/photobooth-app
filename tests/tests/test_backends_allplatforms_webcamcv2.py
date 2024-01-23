@@ -2,6 +2,7 @@
 Testing VIRTUALCAMERA Backend
 """
 import logging
+import time
 
 import pytest
 
@@ -50,3 +51,14 @@ def backend_cv2() -> WebcamCv2Backend:
 def test_get_images_webcamcv2(backend_cv2: WebcamCv2Backend):
     """get lores and hires images from backend and assert"""
     get_images(backend_cv2)
+
+
+def test_get_video_webcamcv2(backend_cv2: WebcamCv2Backend):
+    """get lores and hires images from backend and assert"""
+    backend_cv2.start_recording()
+    time.sleep(2)
+    backend_cv2.stop_recording()
+
+    videopath = backend_cv2.get_recorded_video()
+    logger.info(f"video stored to file {videopath}")
+    assert videopath and videopath.is_file()
