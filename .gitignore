@@ -1,11 +1,12 @@
 
-# ignore userdata folders
+# ignore user folders
 /config
 /data
 /media
 /log
 log/*.log*
 /userdata
+/tmp
 
 # python files
 __pycache__
