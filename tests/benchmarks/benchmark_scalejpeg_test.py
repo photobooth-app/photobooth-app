@@ -21,7 +21,7 @@ def ffmpeg_scale(jpeg_bytes):
             "-i",
             "tests/assets/input.jpg",
             "-vf",
-            "scale='iw/2:ih/2'",
+            "scale='iw/2:ih/2'",  # bicubic
             "tmpOut.jpg",
         ]
     )
@@ -79,7 +79,7 @@ def pillow_scale(jpeg_bytes):
     height = int(image.height * scale_percent / 100)
     dim = (width, height)
     # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
-    image.thumbnail(dim, Image.Resampling.LANCZOS)
+    image.thumbnail(dim, Image.Resampling.BICUBIC)  # bicubic for comparison
 
     # encode to jpeg again
     byte_io = io.BytesIO()
