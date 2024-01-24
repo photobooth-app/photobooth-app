@@ -1,5 +1,6 @@
 import io
 import logging
+from subprocess import Popen
 
 import cv2
 import numpy
@@ -10,6 +11,23 @@ from turbojpeg import TurboJPEG
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
+
+
+def ffmpeg_scale(jpeg_bytes):
+    ffmpeg_subprocess = Popen(
+        [
+            "ffmpeg",
+            "-y",  # overwrite with no questions
+            "-i",
+            "tests/assets/input.jpg",
+            "-vf",
+            "scale='iw/2:ih/2'",
+            "tmpOut.jpg",
+        ]
+    )
+    code = ffmpeg_subprocess.wait()
+    if code != 0:
+        raise AssertionError("process fail")
 
 
 def pyvips_scale(jpeg_bytes):
@@ -91,7 +109,7 @@ def cv2_scale(jpeg_bytes):
     return encimg
 
 
-@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale", "pyvips_resize_scale"])
+@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale", "pyvips_resize_scale", "ffmpeg_scale"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
@@ -105,22 +123,8 @@ def image(file) -> bytes:
 
 
 @pytest.fixture()
-def image_lores() -> bytes:
-    yield image("tests/assets/input_lores.jpg")
-
-
-@pytest.fixture()
 def image_hires() -> bytes:
     yield image("tests/assets/input.jpg")
-
-
-# needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="scalejpeg_lores",
-)
-def test_libraries_encode_lores(library, image_lores, benchmark):
-    benchmark(eval(library), jpeg_bytes=image_lores)
-    assert True
 
 
 # needs pip install pytest-benchmark

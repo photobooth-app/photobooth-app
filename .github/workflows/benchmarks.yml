@@ -24,6 +24,7 @@ jobs:
           sudo apt update
           sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
           sudo apt -y install libvips-dev --no-install-recommends
+          sudo apt -y install ffmpeg
       - name: install pdm
         run: |
           pipx install pdm # on hosted pipx is installed
@@ -44,6 +45,7 @@ jobs:
           sudo apt update
           sudo apt -y install libturbojpeg0 python3-pip libgl1 libgphoto2-dev pipx
           sudo apt -y install libvips-dev --no-install-recommends
+          sudo apt -y install ffmpeg
       - run: pipx install pdm
       - run: pipx ensurepath
       - run: pdm venv create --force 3.11 --system-site-packages # incl system site to allow for picamera2 to import

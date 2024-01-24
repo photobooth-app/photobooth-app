@@ -1,5 +1,6 @@
 import io
 import logging
+from subprocess import PIPE, Popen
 
 import pytest
 import pyvips
@@ -8,6 +9,64 @@ from turbojpeg import TurboJPEG
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
+
+
+def ffmpeg_hq_optimizedquality_scale(gif_bytes):
+    # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
+    ffmpeg_subprocess = Popen(
+        [
+            "ffmpeg",
+            "-y",  # overwrite with no questions
+            "-i",
+            "tests/assets/animation.gif",
+            "-vf",
+            "scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            "tmpOut1.gif",
+        ]
+    )
+    code = ffmpeg_subprocess.wait()
+    if code != 0:
+        raise AssertionError("process fail")
+
+
+def ffmpeg_hq_optimizedspeed_scale(gif_bytes):
+    # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
+    ffmpeg_subprocess = Popen(
+        [
+            "ffmpeg",
+            "-y",  # overwrite with no questions
+            "-i",
+            "tests/assets/animation.gif",
+            "-vf",
+            "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            "tmpOut2.gif",
+        ]
+    )
+    code = ffmpeg_subprocess.wait()
+    if code != 0:
+        raise AssertionError("process fail")
+
+
+def ffmpeg_stdin_scale(gif_bytes):
+    ffmpeg_subprocess = Popen(
+        [
+            "ffmpeg",
+            "-y",  # overwrite with no questions
+            "-f",  # force input or output format
+            "image2pipe",
+            "-i",
+            "-",
+            "-vf",
+            "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            "tmpOut3.gif",
+        ],
+        stdin=PIPE,
+    )
+    ffmpeg_subprocess.stdin.write(gif_bytes)
+    ffmpeg_subprocess.stdin.close()
+    code = ffmpeg_subprocess.wait()
+    if code != 0:
+        raise AssertionError("process fail")
 
 
 def pyvips_scale(gif_bytes):
@@ -29,7 +88,7 @@ def pil_scale(gif_bytes):
     def thumbnails(frames: list[Image.Image]):
         for frame in frames:
             thumbnail = frame.copy()
-            thumbnail.thumbnail(size=target_size, resample=Image.Resampling.LANCZOS)
+            thumbnail.thumbnail(size=target_size, resample=Image.Resampling.BICUBIC)
             yield thumbnail
 
     # to recover the original durations in scaled versions
@@ -63,7 +122,15 @@ def pil_scale(gif_bytes):
     return out.getvalue()
 
 
-@pytest.fixture(params=["pyvips_scale", "pil_scale"])
+@pytest.fixture(
+    params=[
+        "pyvips_scale",
+        "pil_scale",
+        "ffmpeg_stdin_scale",
+        "ffmpeg_hq_optimizedquality_scale",
+        "ffmpeg_hq_optimizedspeed_scale",
+    ]
+)
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
