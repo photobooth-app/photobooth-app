@@ -11,7 +11,7 @@ turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
-def ffmpeg_hq_optimizedquality_scale(gif_bytes):
+def ffmpeg_hq_optimizedquality_scale(gif_bytes, tmp_path):
     # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
     ffmpeg_subprocess = Popen(
         [
@@ -21,7 +21,7 @@ def ffmpeg_hq_optimizedquality_scale(gif_bytes):
             "tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            "tmpOut1.gif",
+            str(tmp_path / "tmpOut1.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ]
     )
     code = ffmpeg_subprocess.wait()
@@ -29,7 +29,7 @@ def ffmpeg_hq_optimizedquality_scale(gif_bytes):
         raise AssertionError("process fail")
 
 
-def ffmpeg_hq_optimizedspeed_scale(gif_bytes):
+def ffmpeg_hq_optimizedspeed_scale(gif_bytes, tmp_path):
     # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
     ffmpeg_subprocess = Popen(
         [
@@ -39,7 +39,7 @@ def ffmpeg_hq_optimizedspeed_scale(gif_bytes):
             "tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            "tmpOut2.gif",
+            str(tmp_path / "tmpOut2.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ]
     )
     code = ffmpeg_subprocess.wait()
@@ -47,7 +47,7 @@ def ffmpeg_hq_optimizedspeed_scale(gif_bytes):
         raise AssertionError("process fail")
 
 
-def ffmpeg_stdin_scale(gif_bytes):
+def ffmpeg_stdin_scale(gif_bytes, tmp_path):
     ffmpeg_subprocess = Popen(
         [
             "ffmpeg",
@@ -58,7 +58,7 @@ def ffmpeg_stdin_scale(gif_bytes):
             "-",
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            "tmpOut3.gif",
+            str(tmp_path / "tmpOut3.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ],
         stdin=PIPE,
     )
@@ -69,7 +69,7 @@ def ffmpeg_stdin_scale(gif_bytes):
         raise AssertionError("process fail")
 
 
-def pyvips_scale(gif_bytes):
+def pyvips_scale(gif_bytes, tmp_path):
     # mute some other logger, by raising their debug level to INFO
     lgr = logging.getLogger(name="pyvips")
     lgr.setLevel(logging.WARNING)
@@ -81,7 +81,7 @@ def pyvips_scale(gif_bytes):
     return bytes
 
 
-def pil_scale(gif_bytes):
+def pil_scale(gif_bytes, tmp_path):
     gif_image = Image.open(io.BytesIO(gif_bytes), formats=["gif"])
 
     # Wrap on-the-fly thumbnail generator
@@ -146,6 +146,6 @@ def image(file) -> bytes:
 @pytest.mark.benchmark(
     group="scalegif",
 )
-def test_libraries_scalegif(library, benchmark):
-    benchmark(eval(library), gif_bytes=image("tests/assets/animation.gif"))
+def test_libraries_scalegif(library, benchmark, tmp_path):
+    benchmark(eval(library), gif_bytes=image("tests/assets/animation.gif"), tmp_path=tmp_path)
     assert True
