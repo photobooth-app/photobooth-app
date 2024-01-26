@@ -24,7 +24,7 @@ def ffmpeg_scale(jpeg_bytes, tmp_path):
             "-",
             "-vf",
             "scale='iw/2:ih/2'",  # bicubic
-            str(tmp_path / "tmpOut.jpg"),  # https://docs.python.org/3/library/pathlib.html#operators
+            str(tmp_path / "ffmpeg_scale.jpg"),  # https://docs.python.org/3/library/pathlib.html#operators
         ],
         stdin=PIPE,
     )
@@ -137,19 +137,13 @@ def image_lores() -> bytes:
     yield image("tests/assets/input_lores.jpg")
 
 
-# needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="scalejpeg_hires",
-)
+@pytest.mark.benchmark(group="scalejpeg_hires")
 def test_libraries_encode_hires(library, image_hires, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_hires, tmp_path=tmp_path)
     assert True
 
 
-# needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="scalejpeg_lores",
-)
+@pytest.mark.benchmark(group="scalejpeg_lores")
 def test_libraries_encode_lores(library, image_lores, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_lores, tmp_path=tmp_path)
     assert True

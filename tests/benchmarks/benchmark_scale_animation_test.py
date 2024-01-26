@@ -21,7 +21,7 @@ def ffmpeg_hq_optimizedquality_scale(gif_bytes, tmp_path):
             "tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            str(tmp_path / "tmpOut1.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
+            str(tmp_path / "ffmpeg_hq_optimizedquality_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ]
     )
     code = ffmpeg_subprocess.wait()
@@ -39,7 +39,7 @@ def ffmpeg_hq_optimizedspeed_scale(gif_bytes, tmp_path):
             "tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            str(tmp_path / "tmpOut2.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
+            str(tmp_path / "ffmpeg_hq_optimizedspeed_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ]
     )
     code = ffmpeg_subprocess.wait()
@@ -58,7 +58,7 @@ def ffmpeg_stdin_scale(gif_bytes, tmp_path):
             "-",
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            str(tmp_path / "tmpOut3.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
+            str(tmp_path / "ffmpeg_stdin_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
         ],
         stdin=PIPE,
     )
