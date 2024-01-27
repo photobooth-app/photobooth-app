@@ -104,7 +104,7 @@ class Picamera2Backend(AbstractBackend):
                 )
             },
             encode="lores",
-            buffer_count=2,
+            buffer_count=3,
             display="lores",
             transform=Transform(
                 hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
@@ -127,7 +127,7 @@ class Picamera2Backend(AbstractBackend):
                 )
             },
             encode="lores",
-            buffer_count=2,
+            buffer_count=3,
             display="lores",
             transform=Transform(
                 hflip=appconfig.backends.picamera2_CAMERA_TRANSFORM_HFLIP,
@@ -136,7 +136,7 @@ class Picamera2Backend(AbstractBackend):
         )
 
         # select preview mode on init
-        self._on_preview_mode()
+        self._on_configure_optimized_for_idle()
 
         # configure; camera needs to be stopped before
         self._picamera2.configure(self._current_config)
@@ -150,22 +150,18 @@ class Picamera2Backend(AbstractBackend):
 
         self.set_ae_exposure(appconfig.backends.picamera2_AE_EXPOSURE_MODE)
         logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality.name]=}")
+
+        # start encoder
+        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality.name])
+
         # start camera
-        self._picamera2.start_encoder(
-            MJPEGEncoder(),  # attention: GPU won't digest images wider than 4096 on a Pi 4.
-            FileOutput(self._lores_data),
-            quality=Quality[appconfig.backends.picamera2_stream_quality.name],
-        )
         self._picamera2.start()
 
         self._worker_thread = StoppableThread(name="_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        try:
-            self.wait_for_lores_image()
-        except Exception as exc:
-            raise RuntimeError("failed to start up backend") from exc
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         self._init_autofocus()
 
@@ -240,12 +236,12 @@ class Picamera2Backend(AbstractBackend):
 
             return self._lores_data.frame
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         logger.debug("change to capture mode requested")
         self._last_config = self._current_config
         self._current_config = self._capture_config
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         logger.debug("change to preview mode requested")
         self._last_config = self._current_config
         self._current_config = self._preview_config
@@ -276,11 +272,8 @@ class Picamera2Backend(AbstractBackend):
 
         self._picamera2.switch_mode(self._current_config)
 
-        self._picamera2.start_encoder(
-            MJPEGEncoder(),
-            FileOutput(self._lores_data),
-            quality=Quality[appconfig.backends.picamera2_stream_quality.name],
-        )
+        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality.name])
+
         logger.info("switchmode finished successfully")
 
     def _init_autofocus(self):
@@ -311,7 +304,7 @@ class Picamera2Backend(AbstractBackend):
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
                 logger.warning("force switchmode to capture config right before taking picture")
-                self._on_capture_mode()
+                self._on_configure_optimized_for_hq_capture()
 
             if (not self._current_config == self._last_config) and self._last_config is not None:
                 if not self._worker_thread.stopped():
@@ -330,9 +323,6 @@ class Picamera2Backend(AbstractBackend):
 
                 with self._hires_data.condition:
                     self._hires_data.condition.notify_all()
-
-                # switch back to preview mode
-                self._on_preview_mode()
 
             # capture metadata blocks until new metadata is avail
             _metadata = self._picamera2.capture_metadata()

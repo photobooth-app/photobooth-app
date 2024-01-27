@@ -25,7 +25,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
@@ -35,7 +35,7 @@ jobs:
           sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php
           nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install system apt dependencies
@@ -72,7 +72,7 @@ jobs:
     if: ${{ github.repository_owner == 'photobooth-app' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install apt dependencies
         run: |
           sudo apt update
@@ -95,7 +95,7 @@ jobs:
     if: ${{ github.repository_owner == 'photobooth-app' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v3
       - name: Upload to Codecov

@@ -44,15 +44,15 @@ dependencies = [
     "requests>=2.31.0",
     "sse-starlette>=1.8.0",
     "uvicorn>=0.24",
-    "python-dotenv~=1.0.0",
+    "python-dotenv>=1.0.0",
     "pyserial~=3.5",
-    "jsonref~=1.1.0",
+    "jsonref>=1.1.0",
     "pilgram2>=2.0.2",
     "v4l2py>=2.3.0; platform_system == 'Linux'",
     "gpiozero>=2.0.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
     "python-statemachine>=2.1",
-    "python-multipart>=0.0.6"
+    "python-multipart>=0.0.6",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -115,10 +115,10 @@ test = [
   "pytest-benchmark>=4.0.0",
   "pytest-cov>=4.1.0",
   "coverage[toml]>=7.4.0",
-  "simplejpeg>=1.7.0",
   "httpx-sse>=0.4.0",
   "httpx>=0.25.0",
   "pytest-httpserver>=1.0.8",
+  "pyvips>=2.2.2",
 ]
 lint= [
   "ruff>=0.1.8",
@@ -128,5 +128,6 @@ lint= [
 includes = ["./photobooth"]
 
 [tool.pdm.scripts]
-test = "pytest --benchmark-skip -v ./ --cov-report=term --cov-report=xml:coverage.xml --cov"
+test = "pytest --basetemp=./tests_tmp/ -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
+benchmark = "pytest --basetemp=./tests_tmp/ -v ./tests/benchmarks"
 

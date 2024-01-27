@@ -3,18 +3,9 @@ import logging
 import cv2
 import numpy
 import pytest
+import pyvips
 from PIL import Image, ImageOps
 from turbojpeg import TurboJPEG
-
-from photobooth.services.config import appconfig
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
@@ -25,6 +16,17 @@ logger = logging.getLogger(name=None)
 # numpy
 # cv2
 # pil
+
+
+def pyvips_flip(pil_image):
+    lgr = logging.getLogger(name="pyvips")
+    lgr.setLevel(logging.WARNING)
+    lgr.propagate = True
+
+    image = pyvips.Image.new_from_array(pil_image)
+    image.fliphor()
+
+    return Image.fromarray(image.numpy())
 
 
 def numpy_flip(pil_image):
@@ -44,7 +46,7 @@ def cv2_flip(pil_image):
     return flipped_pil
 
 
-@pytest.fixture(params=["numpy_flip", "pillow_flip", "cv2_flip"])
+@pytest.fixture(params=["numpy_flip", "pillow_flip", "cv2_flip", "pyvips_flip"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param

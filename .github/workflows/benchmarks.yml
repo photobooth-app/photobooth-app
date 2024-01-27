@@ -1,0 +1,56 @@
+name: benchmarks
+
+# coverage is made up by multiple runs on different hosts
+# self-hosted is a RPI and has hardware attached to test and gain high coverage
+# after all jobs finished, coverage is uploaded as described here
+# https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install system apt dependencies
+        run: |
+          sudo apt update
+          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
+          sudo apt -y install libvips-dev --no-install-recommends
+          sudo apt -y install ffmpeg
+      - name: install pdm
+        run: |
+          pipx install pdm # on hosted pipx is installed
+          PDM_PREFER_BINARY=gphoto2 pdm install
+      - name: Run pytest
+        run: |
+          pdm run benchmark
+      
+
+  tests-hardware-rpi:
+    runs-on: [self-hosted, rpi]
+    if: ${{ github.repository_owner == 'photobooth-app' }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install apt dependencies
+        run: |
+          sudo apt update
+          sudo apt -y install libturbojpeg0 python3-pip libgl1 libgphoto2-dev pipx
+          sudo apt -y install libvips-dev --no-install-recommends
+          sudo apt -y install ffmpeg
+      - run: pipx install pdm
+      - run: pipx ensurepath
+      - run: pdm venv create --force 3.11 --system-site-packages # incl system site to allow for picamera2 to import
+      - run: pdm install # install in-project env
+      - name: Test with pytest
+        run: |
+          pdm run benchmark
+      

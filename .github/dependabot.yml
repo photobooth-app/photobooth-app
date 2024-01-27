@@ -10,5 +10,20 @@ updates:
     target-branch: "dev"
     schedule:
       interval: "daily"
-      time: "17:00"
+      time: "19:00"
+    groups:
+    python-packages:
+      patterns:
+        - "*"
+    labels:
+      - 'dependencies'
 
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    target-branch: "dev"
+    schedule:
+      interval: 'daily'
+      time: "19:00"
+    labels:
+      - 'actions'
+      - 'dependencies'

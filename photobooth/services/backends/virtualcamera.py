@@ -60,8 +60,8 @@ class VirtualCameraBackend(AbstractBackend):
         # start process
         self._virtualcamera_process.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        self.wait_for_lores_image(retries=20)
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 
@@ -95,9 +95,6 @@ class VirtualCameraBackend(AbstractBackend):
         logger.info(f"provide {hq_images[current_hq_image_index]} as hq_image")
         img = open(hq_images[current_hq_image_index], "rb").read()
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -116,11 +113,11 @@ class VirtualCameraBackend(AbstractBackend):
 
         return img
 
-    def _on_capture_mode(self):
-        logger.debug("change to capture mode - means doing nothing in simulate")
+    def _on_configure_optimized_for_hq_capture(self):
+        pass
 
-    def _on_preview_mode(self):
-        logger.debug("change to preview mode - means doing nothing in simulate")
+    def _on_configure_optimized_for_idle(self):
+        pass
 
     #
     # INTERNAL IMAGE GENERATOR

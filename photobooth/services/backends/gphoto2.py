@@ -72,6 +72,10 @@ class Gphoto2Backend(AbstractBackend):
             )
         )
 
+    def _block_until_delivers_lores_images(self):
+        # backend doesn't support reliable preview delivery (depends on dslr), so this check is removed by overriding the parent class function
+        pass
+
     def _device_start(self):
         # start camera
         try:
@@ -82,14 +86,23 @@ class Gphoto2Backend(AbstractBackend):
             logger.critical("camera failed to initialize. no power? no connection? cam on standby?")
             raise RuntimeError("failed to start up backend") from exc
 
-        if appconfig.backends.LIVEPREVIEW_ENABLED:
-            self._check_camera_preview_available()
+        try:
+            logger.info(str(self._camera.get_summary()))
+            config = self._camera.list_config()
+            for n in range(len(config)):
+                logger.debug(f"{config.get_name(n)}={config.get_value(n)}")
+        except gp.Gphoto2Error as exc:
+            logger.error(f"could not get camera information, error {exc}")
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
         # short sleep until backend started.
         time.sleep(0.5)
+
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        # this backend doesn't support this, the function is overridden in this class and does just nothing
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 
@@ -131,15 +144,6 @@ class Gphoto2Backend(AbstractBackend):
     # INTERNAL FUNCTIONS
     #
 
-    def _check_camera_preview_available(self):
-        """Test on init whether preview is available for this camera."""
-        try:
-            self._camera.capture_preview()
-        except Exception as exc:
-            logger.info(f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}")
-        else:
-            logger.info("preview is available")
-
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
@@ -148,11 +152,11 @@ class Gphoto2Backend(AbstractBackend):
 
             return self._lores_data.data
 
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         self._iso(appconfig.backends.gphoto2_iso_capture)
         self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
 
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         self._iso(appconfig.backends.gphoto2_iso_liveview)
         self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
@@ -197,7 +201,7 @@ class Gphoto2Backend(AbstractBackend):
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if appconfig.backends.LIVEPREVIEW_ENABLED:
+                if self.device_enable_lores_stream:
                     try:
                         capture = self._camera.capture_preview()
 

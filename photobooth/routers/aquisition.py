@@ -68,8 +68,8 @@ def api_cmd_aquisition_capturemode_get(
 ):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        container.aquisition_service.switch_backends_to_capture_mode()
+        container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
     elif mode == "preview":
-        container.aquisition_service.switch_backends_to_preview_mode()
+        container.aquisition_service.signalbackend_configure_optimized_for_idle()
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="illegal mode")

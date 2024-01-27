@@ -126,13 +126,16 @@ class ProcessingService(StateMachine):
         """_summary_"""
         logger.info("state idle entered.")
 
+        # switch backend to preview mode always when returning to idle.
+        self._aquisition_service.signalbackend_configure_optimized_for_idle()
+
     def on_enter_counting(self):
         """_summary_"""
         # wled signaling
         self._wled_service.preset_thrill()
 
         # set backends to capture mode; backends take their own actions if needed.
-        self._aquisition_service.switch_backends_to_capture_mode()
+        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         # determine countdown time, first and following could have different times
         duration = (
@@ -215,9 +218,6 @@ class ProcessingService(StateMachine):
     def on_exit_capture(self):
         """_summary_"""
 
-        # TODO: check if switch back here or somewhere else.
-        self._aquisition_service.switch_backends_to_preview_mode()
-
         if not self.model.last_capture_successful():
             logger.critical("on_exit_capture no valid image taken! abort processing")
             self._reset()
@@ -285,7 +285,7 @@ class ProcessingService(StateMachine):
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
 
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
 
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)
@@ -298,7 +298,7 @@ class ProcessingService(StateMachine):
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
             mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy())
 
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to apply pipeline")
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
 
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)

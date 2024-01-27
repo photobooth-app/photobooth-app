@@ -3,25 +3,29 @@ import logging
 
 import cv2
 import pytest
-import simplejpeg
+import pyvips
 from PIL import Image
 from turbojpeg import TurboJPEG
-
-from photobooth.services.config import appconfig
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
 ## encode frame to jpeg comparison
+
+
+def pyvips_encode(frame_from_camera):
+    # mute some other logger, by raising their debug level to INFO
+    lgr = logging.getLogger(name="pyvips")
+    lgr.setLevel(logging.WARNING)
+    lgr.propagate = True
+    # frame_from_camera = cv2.cvtColor(frame_from_camera, cv2.COLOR_BGR2RGB)
+    out = pyvips.Image.new_from_array(frame_from_camera)
+    bytes = out.write_to_buffer(".jpg[Q=85]")
+    # im = Image.open(io.BytesIO(bytes))
+    # im.show()
+
+    return bytes
 
 
 def turbojpeg_encode(frame_from_camera):
@@ -48,16 +52,7 @@ def cv2_encode(frame_from_camera):
     return encimg
 
 
-def simplejpeg_encode(frame_from_camera):
-    # encoding BGR array to output.jpg with default settings.
-    # 85=default quality
-    # simplejpeg uses turbojpeg as lib, but pyturbojpeg also has scaling
-    bytes = simplejpeg.encode_jpeg(frame_from_camera, quality=85, fastdct=True)
-
-    return bytes
-
-
-@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode"])
+@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "pyvips_encode"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param

@@ -64,6 +64,10 @@ class AbstractBackend(ABC):
         self._device_status: EnumDeviceStatus = EnumDeviceStatus.initialized
         # concrete backend implementation can signal using this flag there is an error and it needs restart.
         self._device_status_fault_flag: bool = False
+        # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
+        # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
+        # the backend-implementation has to decide how to handle this once True.
+        self._device_enable_lores_flag: bool = False
         # only for (webcam, picam and virtualcamera) error can detected by missing lores img
         self._failing_wait_for_lores_image_is_error: bool = False
         self._connect_thread: StoppableThread = None
@@ -101,6 +105,15 @@ class AbstractBackend(ABC):
     def device_status(self, value: EnumDeviceStatus):
         logger.info(f"setting device status from {self._device_status.name} to {value.name}")
         self._device_status = value
+
+    @property
+    def device_enable_lores_stream(self) -> bool:
+        return self._device_enable_lores_flag
+
+    @device_enable_lores_stream.setter
+    def device_enable_lores_stream(self, value: bool):
+        logger.info(f"setting device enable_lores_flag from {self._device_enable_lores_flag} to {value} on backend {self.__class__.__name__}")
+        self._device_enable_lores_flag = value
 
     def _connect_fun(self):
         while not self._connect_thread.stopped():  # repeat until stopped # try to reconnect
@@ -158,11 +171,30 @@ class AbstractBackend(ABC):
             # means: sleep has to be last statement in while loop
 
         # supervising connection thread was asked to stop - so we ask device to do the sam
-        logger.info("exit connection function, stopping device")
+        logger.info("exit connection supervisor function, stopping device")
         self._device_stop()
+
+    def _block_until_delivers_lores_images(self):
+        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
+        for _ in range(1, 60):
+            try:
+                self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                break  # stop trying we got an image can leave without hitting else.
+            except TimeoutError:
+                # if timeout occured it will retry several attempts more before finally fail
+                continue
+            except Exception as exc:
+                raise RuntimeError("failed to start up backend due to error") from exc
+        else:
+            # didn't make it within (, xx) retries
+            raise RuntimeError("giving up waiting for backend to start")
 
     def start(self):
         """To start the backend to serve"""
+
+        # reset the request for this backend to deliver lores frames
+        self.device_enable_lores_stream = False
+
         # statistics
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
@@ -309,11 +341,11 @@ class AbstractBackend(ABC):
         """
 
     @abstractmethod
-    def _on_capture_mode(self):
+    def _on_configure_optimized_for_hq_capture(self):
         """called externally via events and used to change to a capture mode if necessary"""
 
     @abstractmethod
-    def _on_preview_mode(self):
+    def _on_configure_optimized_for_idle(self):
         """called externally via events and used to change to a preview mode if necessary"""
 
 

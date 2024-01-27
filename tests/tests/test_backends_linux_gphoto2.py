@@ -47,7 +47,7 @@ def backend_gphoto2():
         logger.info(f"python-gphoto2: {gp.__version__}")
 
         # virtual camera delivers images from following path:
-        os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "assets")
+        os.environ["VCAMERADIR"] = os.path.join(os.path.dirname(__file__), "../assets")
         # switch to virtual camera from normal drivers
         # IOLIBS is set on import of gphoto2:
         # https://github.com/jim-easterbrook/python-gphoto2/blob/510149d454c9fa1bd03a43f098eea3c52d2e0675/src/swig-gp2_5_31/__init__.py#L15C32-L15C32
@@ -122,24 +122,24 @@ def test_get_images_gphoto2_wait_event(backend_gphoto2):
 
 
 def test_get_gphoto2_switch_modes(backend_gphoto2):
-    backend_gphoto2._on_capture_mode()
-    backend_gphoto2._on_preview_mode()
+    backend_gphoto2._on_configure_optimized_for_hq_capture()
+    backend_gphoto2._on_configure_optimized_for_idle()
 
     # change some values
     appconfig.backends.gphoto2_iso_capture = "auto"
     appconfig.backends.gphoto2_iso_liveview = "200"
     appconfig.backends.gphoto2_shutter_speed_capture = "1/20"
     appconfig.backends.gphoto2_shutter_speed_liveview = "1/30"
-    backend_gphoto2._on_capture_mode()
-    backend_gphoto2._on_preview_mode()
+    backend_gphoto2._on_configure_optimized_for_hq_capture()
+    backend_gphoto2._on_configure_optimized_for_idle()
 
     # and try illegal values that raise exception
     appconfig.backends.gphoto2_iso_capture = "illegal"
     appconfig.backends.gphoto2_iso_liveview = "illegal"
     appconfig.backends.gphoto2_shutter_speed_capture = "illegal"
     appconfig.backends.gphoto2_shutter_speed_liveview = "illegal"
-    backend_gphoto2._on_capture_mode()  # should log an error but ignore and continue
-    backend_gphoto2._on_preview_mode()  # should log an error but ignore and continue
+    backend_gphoto2._on_configure_optimized_for_hq_capture()  # should log an error but ignore and continue
+    backend_gphoto2._on_configure_optimized_for_idle()  # should log an error but ignore and continue
 
 
 def test_get_gphoto2_camera_info(backend_gphoto2):

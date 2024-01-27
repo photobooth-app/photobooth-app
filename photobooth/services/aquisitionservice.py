@@ -131,19 +131,23 @@ class AquisitionService(BaseService):
 
         return image_bytes
 
-    def switch_backends_to_capture_mode(self):
-        """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
+    def signalbackend_configure_optimized_for_hq_capture(self):
+        """set backends to capture mode (usually automatically switched as needed by processingservice)"""
         if self._main_backend:
-            self._main_backend._on_capture_mode()
+            self._main_backend._on_configure_optimized_for_hq_capture()
         if self._live_backend:
-            self._live_backend._on_capture_mode()
+            self._live_backend._on_configure_optimized_for_hq_capture()
 
-    def switch_backends_to_preview_mode(self):
-        """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
+    def signalbackend_configure_optimized_for_idle(self):
+        """set backends to preview mode (usually automatically switched as needed by processingservice)"""
         if self._main_backend:
-            self._main_backend._on_preview_mode()
+            self._main_backend._on_configure_optimized_for_idle()
         if self._live_backend:
-            self._live_backend._on_preview_mode()
+            self._live_backend._on_configure_optimized_for_idle()
+
+    def signalbackend__configure_optimized_for_video(self):
+        """set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already."""
+        self.signalbackend_configure_optimized_for_idle()
 
     @staticmethod
     def _import_backend(backend: Union[EnumImageBackendsMain, EnumImageBackendsLive]):
@@ -163,6 +167,7 @@ class AquisitionService(BaseService):
         relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
+        backend_to_stream_from.device_enable_lores_stream = True
 
         last_time = time.time_ns()
         while self._running:

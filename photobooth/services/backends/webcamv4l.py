@@ -33,8 +33,6 @@ class WebcamV4lBackend(AbstractBackend):
         self._event_proc_shutdown: Event = Event()
         self._v4l_process: Process = None
 
-        self._on_preview_mode()
-
     def __del__(self):
         try:
             if self._img_buffer:
@@ -69,11 +67,8 @@ class WebcamV4lBackend(AbstractBackend):
 
         self._v4l_process.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        try:
-            self.wait_for_lores_image(60)
-        except Exception as exc:
-            raise RuntimeError("failed to start up backend") from exc
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 
@@ -105,9 +100,6 @@ class WebcamV4lBackend(AbstractBackend):
             with self._img_buffer.lock:
                 img = decompile_buffer(self._img_buffer.sharedmemory)
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -124,11 +116,11 @@ class WebcamV4lBackend(AbstractBackend):
                 img = decompile_buffer(self._img_buffer.sharedmemory)
             return img
 
-    def _on_capture_mode(self):
-        logger.debug("change to capture mode requested - ignored on this backend")
+    def _on_configure_optimized_for_hq_capture(self):
+        pass
 
-    def _on_preview_mode(self):
-        logger.debug("change to preview mode requested - ignored on this backend")
+    def _on_configure_optimized_for_idle(self):
+        pass
 
     #
     # INTERNAL IMAGE GENERATOR

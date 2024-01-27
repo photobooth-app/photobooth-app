@@ -50,8 +50,6 @@ class WebcamCv2Backend(AbstractBackend):
 
         self._cv2_process: Process = None
 
-        self._on_preview_mode()
-
     def __del__(self):
         try:
             if self._img_buffer_lores:
@@ -90,11 +88,8 @@ class WebcamCv2Backend(AbstractBackend):
 
         time.sleep(1)
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        try:
-            self.wait_for_lores_image(60)  # needs quite long to come up.
-        except Exception as exc:
-            raise RuntimeError("failed to start up backend") from exc
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 
@@ -133,9 +128,6 @@ class WebcamCv2Backend(AbstractBackend):
             with self._img_buffer_hires.lock:
                 img = decompile_buffer(self._img_buffer_hires.sharedmemory)
 
-        # return to previewmode
-        self._on_preview_mode()
-
         return img
 
     #
@@ -153,11 +145,11 @@ class WebcamCv2Backend(AbstractBackend):
                 img = decompile_buffer(self._img_buffer_lores.sharedmemory)
             return img
 
-    def _on_capture_mode(self):
-        logger.debug("change to capture mode requested - ignored for cv2 backend")
+    def _on_configure_optimized_for_hq_capture(self):
+        pass
 
-    def _on_preview_mode(self):
-        logger.debug("change to preview mode requested - ignored for cv2 backend")
+    def _on_configure_optimized_for_idle(self):
+        pass
 
 
 #
