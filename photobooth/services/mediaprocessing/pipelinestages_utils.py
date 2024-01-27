@@ -3,7 +3,8 @@ from PIL import Image, ImageDraw
 
 def rotate(image: Image.Image, angle: int = 0, expand: bool = True) -> (Image.Image, int, int):
     if angle == 0:
-        return image, 0, 0
+        # quick return, but also convert to RGBA for consistency reason in following processing
+        return image.convert("RGBA"), 0, 0
 
     _rotated_image = image.convert("RGBA").rotate(
         angle=angle,

@@ -21,13 +21,11 @@ def merge_collage_stage(
     for index, _definition in enumerate(collage_merge_definition):
         logger.debug(_definition)
         _image = collage_images[index]
-        _image = ImageOps.fit(
-            _image,
-            (_definition.width, _definition.height),
-            method=Image.Resampling.LANCZOS,
-        )  # or contain?
+        _image = ImageOps.fit(_image, (_definition.width, _definition.height), method=Image.Resampling.LANCZOS)  # or contain?
         _image, offset_x, offset_y = rotate(_image, _definition.rotate)
 
-        canvas.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y))
+        # _image needs to have an alpha channel, otherwise paste with mask=_image fails.
+        # above rotate always converts to RGBA consistently now to ensure paste nevers fails.
+        canvas.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y), _image)
 
     return canvas
