@@ -361,7 +361,7 @@ class MediaprocessingService(BaseService):
         try:
             animation_images_resized = align_sizes_stage(canvas_size, animation_images)
         except PipelineError as exc:
-            logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
+            logger.error(f"apply align_sizes_stage failed, reason: {exc}. stage not applied, abort")
             raise RuntimeError("abort processing due to pipelineerror") from exc
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process animation pipeline")
