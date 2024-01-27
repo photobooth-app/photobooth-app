@@ -258,7 +258,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     pass
 
             else:
-                if appconfig.backends.LIVEPREVIEW_ENABLED:
+                if self.device_enable_lores_stream:
                     try:
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
                         r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/liveview.jpg")

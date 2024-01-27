@@ -205,7 +205,7 @@ class Gphoto2Backend(AbstractBackend):
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_ready.is_set():
-                if appconfig.backends.LIVEPREVIEW_ENABLED:
+                if self.device_enable_lores_stream:
                     try:
                         capture = self._camera.capture_preview()
 
