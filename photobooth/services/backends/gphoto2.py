@@ -90,7 +90,7 @@ class Gphoto2Backend(AbstractBackend):
             logger.info(str(self._camera.get_summary()))
             config = self._camera.list_config()
             for n in range(len(config)):
-                print(config.get_name(n), config.get_value(n))
+                logger.debug(f"{config.get_name(n)}={config.get_value(n)}")
         except gp.Gphoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
