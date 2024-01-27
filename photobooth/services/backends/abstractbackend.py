@@ -161,6 +161,21 @@ class AbstractBackend(ABC):
         logger.info("exit connection supervisor function, stopping device")
         self._device_stop()
 
+    def _block_until_delivers_lores_images(self):
+        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
+        for _ in range(1, 60):
+            try:
+                self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                break  # stop trying we got an image can leave without hitting else.
+            except TimeoutError:
+                # if timeout occured it will retry several attempts more before finally fail
+                continue
+            except Exception as exc:
+                raise RuntimeError("failed to start up backend due to error") from exc
+        else:
+            # didn't make it within (, xx) retries
+            raise RuntimeError("giving up waiting for backend to start")
+
     def start(self):
         """To start the backend to serve"""
         # statistics

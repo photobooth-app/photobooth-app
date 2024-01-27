@@ -60,8 +60,8 @@ class VirtualCameraBackend(AbstractBackend):
         # start process
         self._virtualcamera_process.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        self.wait_for_lores_image(retries=20)
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 

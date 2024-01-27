@@ -89,6 +89,10 @@ class DigicamcontrolBackend(AbstractBackend):
         # worker threads
         self._worker_thread: StoppableThread = None
 
+    def _block_until_delivers_lores_images(self):
+        # backend doesn't support reliable preview delivery (depends on dslr), so this check is removed by overriding the parent class function
+        pass
+
     def _device_start(self):
         # first start common tasks
         if not self.available_camera_indexes():
@@ -99,6 +103,10 @@ class DigicamcontrolBackend(AbstractBackend):
 
         # short sleep until backend started.
         time.sleep(0.5)
+
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        # this backend doesn't support this, the function is overridden in this class and does just nothing
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} camera found, starting to work")
         logger.debug(f"{self.__module__} started")

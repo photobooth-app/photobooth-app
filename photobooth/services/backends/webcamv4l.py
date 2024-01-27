@@ -67,11 +67,8 @@ class WebcamV4lBackend(AbstractBackend):
 
         self._v4l_process.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        try:
-            self.wait_for_lores_image(60)
-        except Exception as exc:
-            raise RuntimeError("failed to start up backend") from exc
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 

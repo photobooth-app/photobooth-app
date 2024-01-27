@@ -160,11 +160,8 @@ class Picamera2Backend(AbstractBackend):
         self._worker_thread = StoppableThread(name="_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        try:
-            self.wait_for_lores_image()
-        except Exception as exc:
-            raise RuntimeError("failed to start up backend") from exc
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        self._block_until_delivers_lores_images()
 
         self._init_autofocus()
 

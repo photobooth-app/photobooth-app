@@ -72,6 +72,10 @@ class Gphoto2Backend(AbstractBackend):
             )
         )
 
+    def _block_until_delivers_lores_images(self):
+        # backend doesn't support reliable preview delivery (depends on dslr), so this check is removed by overriding the parent class function
+        pass
+
     def _device_start(self):
         # start camera
         try:
@@ -90,6 +94,10 @@ class Gphoto2Backend(AbstractBackend):
 
         # short sleep until backend started.
         time.sleep(0.5)
+
+        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
+        # this backend doesn't support this, the function is overridden in this class and does just nothing
+        self._block_until_delivers_lores_images()
 
         logger.debug(f"{self.__module__} started")
 
