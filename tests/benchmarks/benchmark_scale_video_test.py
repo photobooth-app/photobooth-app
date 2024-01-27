@@ -134,6 +134,25 @@ def ffmpeg_convertwebm_vp8_scale(tmp_path):
         raise AssertionError("process fail")
 
 
+def ffmpeg_convertavif_scale(tmp_path):
+    ffmpeg_subprocess = Popen(
+        [
+            "ffmpeg",
+            "-y",  # overwrite with no questions
+            "-i",
+            "tests/assets/video.mp4",
+            "-c:v",
+            "libaom-av1",
+            "-crf",
+            "30",
+            str(tmp_path / "ffmpeg_convertavif_scale.mkv"),  # https://docs.python.org/3/library/pathlib.html#operators
+        ]
+    )
+    code = ffmpeg_subprocess.wait()
+    if code != 0:
+        raise AssertionError("process fail")
+
+
 @pytest.mark.benchmark(group="scalevideo")
 def test_ffmpeg_h264_scale(benchmark, tmp_path):
     benchmark(ffmpeg_h264_scale, tmp_path=tmp_path)
@@ -164,3 +183,9 @@ def test_ffmpeg_convertwebm_vp9_scale(benchmark, tmp_path):
 def test_ffmpeg_convertwebm_vp8_scale(benchmark, tmp_path):
     pytest.skip("this one is so slow, we do not even benchmark")
     benchmark(ffmpeg_convertwebm_vp8_scale, tmp_path=tmp_path)
+
+
+@pytest.mark.benchmark(group="scalevideo")
+def test_ffmpeg_convertavif_scale(benchmark, tmp_path):
+    pytest.skip("this one is so slow, we do not even benchmark")
+    benchmark(ffmpeg_convertavif_scale, tmp_path=tmp_path)
