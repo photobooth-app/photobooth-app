@@ -86,8 +86,13 @@ class Gphoto2Backend(AbstractBackend):
             logger.critical("camera failed to initialize. no power? no connection? cam on standby?")
             raise RuntimeError("failed to start up backend") from exc
 
-        if appconfig.backends.LIVEPREVIEW_ENABLED:
-            self._check_camera_preview_available()
+        try:
+            logger.info(str(self._camera.get_summary()))
+            config = self._camera.list_config()
+            for n in range(len(config)):
+                print(config.get_name(n), config.get_value(n))
+        except gp.Gphoto2Error as exc:
+            logger.error(f"could not get camera information, error {exc}")
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -138,15 +143,6 @@ class Gphoto2Backend(AbstractBackend):
     #
     # INTERNAL FUNCTIONS
     #
-
-    def _check_camera_preview_available(self):
-        """Test on init whether preview is available for this camera."""
-        try:
-            self._camera.capture_preview()
-        except Exception as exc:
-            logger.info(f"gather preview failed; disabling preview in this session. consider to disable permanently! {exc}")
-        else:
-            logger.info("preview is available")
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
