@@ -127,6 +127,8 @@ class ProcessingService(StateMachine):
         """_summary_"""
         logger.info("state idle entered.")
 
+        self._wled_service.preset_standby()
+
         # switch backend to preview mode always when returning to idle.
         self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
@@ -281,8 +283,11 @@ class ProcessingService(StateMachine):
     def on_enter_record(self):
         """_summary_"""
 
+        self._wled_service.preset_record()
+
         try:
             self._aquisition_service.start_recording()
+
         except Exception as exc:
             logger.exception(exc)
             logger.error(f"error start recording! {exc}")
@@ -298,6 +303,8 @@ class ProcessingService(StateMachine):
 
     def on_exit_record(self):
         """_summary_"""
+
+        self._wled_service.preset_standby()
 
         try:
             self._aquisition_service.stop_recording()
