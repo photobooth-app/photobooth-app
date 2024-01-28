@@ -179,6 +179,7 @@ class AquisitionService(BaseService):
         relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
+        backend_to_stream_from.device_enable_lores_stream = True
 
         last_time = time.time_ns()
         while self._running:

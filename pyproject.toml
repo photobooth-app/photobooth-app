@@ -44,9 +44,9 @@ dependencies = [
     "requests>=2.31.0",
     "sse-starlette>=1.8.0",
     "uvicorn>=0.24",
-    "python-dotenv~=1.0.0",
+    "python-dotenv>=1.0.0",
     "pyserial~=3.5",
-    "jsonref~=1.1.0",
+    "jsonref>=1.1.0",
     "pilgram2>=2.0.2",
     "v4l2py>=2.3.0; platform_system == 'Linux'",
     "gpiozero>=2.0.0",
@@ -129,6 +129,6 @@ lint= [
 includes = ["./photobooth"]
 
 [tool.pdm.scripts]
-test = "pytest -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
-benchmark = "pytest -v ./tests/benchmarks"
+test = "pytest --basetemp=./tests_tmp/ -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
+benchmark = "pytest --basetemp=./tests_tmp/ -v ./tests/benchmarks"
 

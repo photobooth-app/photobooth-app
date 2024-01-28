@@ -19,6 +19,7 @@ __pycache__
 .coverage*
 coverage.xml
 junit/*
+/tests_tmp
 
 # build backends
 poetry.toml

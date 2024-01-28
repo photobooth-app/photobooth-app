@@ -40,6 +40,7 @@ def backend_digicamcontrol_hardware() -> DigicamcontrolBackend:
 
     # deliver
     backend.start()
+    backend.device_enable_lores_stream = True
     backend.block_until_device_is_running()
     yield backend
     backend.stop()
