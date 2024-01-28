@@ -26,7 +26,7 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to capture animated GIF on frontpage.",
     )
-    show_takevideo_on_frontpage: bool = Field(  # TODO: implement in frontend
+    show_takevideo_on_frontpage: bool = Field(
         default=True,
         description="Show button to capture video on frontpage.",
     )
