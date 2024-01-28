@@ -4,6 +4,7 @@ abstract for the photobooth-app backends
 import dataclasses
 import logging
 import os
+import struct
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -324,57 +325,44 @@ class AbstractBackend(ABC):
             self._video_worker_thread.join()
 
     def get_recorded_video(self) -> Path:
-        return self._video_recorded_videofilepath
-
-    def _videoworker_fun(self):
-        # init worker, set output to None which indicates there is no current video available to get
-        self._video_recorded_videofilepath = None
-
-        # generate temp filename to record to
-        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}.mp4")
-
         # basic idea from https://stackoverflow.com/a/42602576
         ffmpeg_subprocess = Popen(
             [
                 "ffmpeg",
                 "-y",  # overwrite with no questions
+                "-loglevel",
+                "info",
                 "-f",  # force input or output format
                 "image2pipe",
                 "-vcodec",
                 "mjpeg",
                 "-framerate",
-                "15",
+                str(self._fps),
                 "-i",
                 "-",
                 "-vcodec",
-                "libx264",  # warning! image height must be divisible by 2!
+                "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
                 "-preset",
                 "veryfast",
-                "-maxrate",
-                "10M",
-                "-bufsize",
-                "20M",
-                "-qp",
-                str(appconfig.misc.video_quality),  # 0 better quality, 10 most compression (windows native playback fails for 0)
+                "-b:v",  # bitrate
+                f"{appconfig.misc.video_bitrate}k",
                 "-movflags",
                 "+faststart",
-                "-framerate",
-                "15",
-                str(filepath),
+                self._video_recorded_videofilepath.with_suffix(".mp4"),
             ],
             stdin=PIPE,
         )
 
-        # start time of video
-        time_start_recording = time.time()
+        with open(self._video_recorded_videofilepath.with_suffix(".jpg_packed"), "rb") as input_data:
+            while True:
+                # Unpack the size of the next file
+                size_data = input_data.read(4)  # I is 4 bytes long
+                if not size_data:
+                    break  # No more data to read
 
-        while not self._video_worker_thread.stopped():
-            ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+                file_data = input_data.read(struct.unpack("I", size_data)[0])
 
-            if (time.time() - time_start_recording) >= appconfig.misc.video_duration:
-                # after max video time stop capture by calling stop recording.
-                logger.info("stopped video capture after max capture time")
-                self._video_worker_thread.stop()
+                ffmpeg_subprocess.stdin.write(file_data)
 
         # release video
         ffmpeg_subprocess.stdin.close()
@@ -383,6 +371,40 @@ class AbstractBackend(ABC):
             # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
             # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
             raise RuntimeError(f"error creating videofile, ffmpeg exit code ({code}).")
+
+        return self._video_recorded_videofilepath.with_suffix(".mp4")
+
+    def _videoworker_fun(self):
+        # init worker, set output to None which indicates there is no current video available to get
+        self._video_recorded_videofilepath = None
+
+        # generate temp filename to record to
+        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}")
+
+        # ffmpeg_subprocess = Popen(
+        #     [
+        #         "ffmpeg",
+        #         "-y",
+        #         "-f",
+        #         "image2pipe",
+        #         "-framerate",
+        #         "15",
+        #         "-i",
+        #         "-",
+        #         "-codec",
+        #         "copy",
+        #         str(filepath),
+        #     ],
+        #     stdin=PIPE,
+        # )
+
+        with open(filepath.with_suffix(".jpg_packed"), "wb") as output:
+            while not self._video_worker_thread.stopped():
+                image = self._wait_for_lores_image()
+
+                # pack data
+                file_size = len(image)
+                output.write(struct.pack(f"I{file_size}s", file_size, image))
 
         self._video_recorded_videofilepath = filepath
 
