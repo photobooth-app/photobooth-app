@@ -292,7 +292,7 @@ class ProcessingService(StateMachine):
             # no retry for this type of error
 
         # capture finished, go to next state
-        time.sleep(3)
+        time.sleep(appconfig.misc.video_duration)
 
         self._captured()
 
@@ -308,15 +308,6 @@ class ProcessingService(StateMachine):
             # reraise so http error can be sent
             raise exc
             # no retry for this type of error
-
-        # populate image item for further processing:
-        temp_videofilepath = self._aquisition_service.get_recorded_video()
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.video)
-        os.rename(temp_videofilepath, filepath_neworiginalfile)
-        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-        self.model.set_last_capture(mediaitem)
-
-        logger.debug(f"recording to {filepath_neworiginalfile=}")
 
     def on_enter_captures_completed(self):
         ## PHASE 2:
@@ -353,7 +344,17 @@ class ProcessingService(StateMachine):
             # apply video phase2 pipeline:
             tms = time.time()
 
-            mediaitem = self.model.get_last_capture()
+            # get video in h264 format for further processing.
+            temp_videofilepath = self._aquisition_service.get_recorded_video()
+
+            # populate image item for further processing:
+            filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.video)
+            logger.debug(f"record to {filepath_neworiginalfile=}")
+
+            os.rename(temp_videofilepath, filepath_neworiginalfile)
+            mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+            self.model.set_last_capture(mediaitem)
+
             mediaitem.create_fileset_unprocessed()
             mediaitem.copy_fileset_processed()
 
