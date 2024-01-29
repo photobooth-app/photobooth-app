@@ -316,7 +316,7 @@ class AbstractBackend(ABC):
             raise RuntimeError("device raised exception") from exc
 
     def start_recording(self):
-        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
+        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=False)
         self._video_worker_thread.start()
 
     def stop_recording(self):
@@ -406,6 +406,7 @@ class AbstractBackend(ABC):
                 file_size = len(image)
                 output.write(struct.pack(f"I{file_size}s", file_size, image))
 
+        logger.info(f"record written to {filepath}")
         self._video_recorded_videofilepath = filepath
 
     #
