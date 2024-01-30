@@ -82,3 +82,33 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show print button for items in gallery.",
     )
+
+    TAKEPIC_BUTTON_TEXT: str = Field(
+        default="Take a photo",
+        description="Text on the 'take a photo' button.",
+    )
+
+    TAKECOLLAGE_BUTTON_TEXT: str = Field(
+        default="Create a collage",
+        description="Text on the 'create a collage' button.",
+    )
+
+    TAKEANIMATION_BUTTON_TEXT: str = Field(
+        default="Create an animation",
+        description="Text on the 'create an animation' button.",
+    )
+
+    TAKEVIDEO_BUTTON_TEXT: str = Field(
+        default="Create a video",
+        description="Text on the 'create a video' button.",
+    )
+
+    PRIMARY_COLOR: str = Field(
+        default="#123456",
+        description="Primary color (e.g. buttons, title bar). Use hex encoding as in CSS.",
+    )
+
+    SECONDARY_COLOR: str = Field(
+        default="#123456",
+        description="Secondary color (admin interface, accents). Use hex encoding as in CSS.",
+    )
