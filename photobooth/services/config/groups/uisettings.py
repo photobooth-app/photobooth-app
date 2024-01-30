@@ -83,6 +83,8 @@ class GroupUiSettings(BaseModel):
         description="Show print button for items in gallery.",
     )
 
+    TAKEPIC_MSG_TEXT: str = Field(default="😃", description="Message to display at the end of the capture countdown.")
+
     TAKEPIC_BUTTON_TEXT: str = Field(
         default="Take a photo",
         description="Text on the 'take a photo' button.",
@@ -101,6 +103,36 @@ class GroupUiSettings(BaseModel):
     TAKEVIDEO_BUTTON_TEXT: str = Field(
         default="Create a video",
         description="Text on the 'create a video' button.",
+    )
+
+    GALLERY_BUTTON_TEXT: str = Field(
+        default="Gallery",
+        description="Text on the 'gallery' button.",
+    )
+
+    PRINT_BUTTON_TEXT: str = Field(
+        default="Print",
+        description="Text on the 'print' button.",
+    )
+
+    DELETE_BUTTON_TEXT: str = Field(
+        default="Delete",
+        description="Text on the 'delete' button.",
+    )
+
+    FILTER_BUTTON_TEXT: str = Field(
+        default="Filter",
+        description="Text on the 'filter' button.",
+    )
+
+    DOWNLOAD_BUTTON_TEXT: str = Field(
+        default="Download",
+        description="Text on the 'download' button in the gallery.",
+    )
+
+    BACK_BUTTON_TEXT: str = Field(
+        default="Start",
+        description="Text on the button to get back the the main page.",
     )
 
     PRIMARY_COLOR: str = Field(
