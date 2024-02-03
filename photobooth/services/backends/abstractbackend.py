@@ -333,7 +333,7 @@ class AbstractBackend(ABC):
         if self._video_recorded_videofilepath is not None:
             return self._video_recorded_videofilepath
         else:
-            raise FileNotFoundError("no recorded video available currently! call start_recording first.")
+            raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
 
     def _videoworker_fun(self):
         # init worker, set output to None which indicates there is no current video available to get
