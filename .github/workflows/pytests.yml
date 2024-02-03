@@ -55,7 +55,7 @@ jobs:
         run: |
           cat phpd.log
           cat extras/shareservice/php-error.log
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage.xml
@@ -86,7 +86,7 @@ jobs:
       - name: Test with pytest
         run: |
           pdm run test
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-hardware-rpi
           path: ./coverage.xml
@@ -99,6 +99,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
