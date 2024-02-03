@@ -14,6 +14,7 @@ from .sseservice import SseService
 PRESET_ID_STANDBY = 1
 PRESET_ID_COUNTDOWN = 2
 PRESET_ID_SHOOT = 3
+PRESET_ID_RECORD = 4
 
 RECONNECT_INTERVAL_TIMER = 10
 
@@ -140,6 +141,11 @@ class WledService(BaseService):
         """_summary_"""
         self._logger.info("WledService preset_shoot triggered")
         self._write_request(self._request_preset(PRESET_ID_SHOOT))
+
+    def preset_record(self):
+        """_summary_"""
+        self._logger.info("WledService preset_record triggered")
+        self._write_request(self._request_preset(PRESET_ID_RECORD))
 
     def _write_request(self, request):
         # _serial is None if not initialized -> return

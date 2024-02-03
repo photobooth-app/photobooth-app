@@ -16,23 +16,27 @@ class GroupUiSettings(BaseModel):
 
     show_takepic_on_frontpage: bool = Field(
         default=True,
-        description="Show link to capture single picture on frontpage.",
+        description="Show button to capture single picture on frontpage.",
     )
     show_takecollage_on_frontpage: bool = Field(
         default=True,
-        description="Show link to capture collage on frontpage.",
+        description="Show button to capture collage on frontpage.",
     )
     show_takeanimation_on_frontpage: bool = Field(
         default=True,
-        description="Show link to capture animated GIF on frontpage.",
+        description="Show button to capture animated GIF on frontpage.",
+    )
+    show_takevideo_on_frontpage: bool = Field(
+        default=True,
+        description="Show button to capture video on frontpage.",
     )
     show_gallery_on_frontpage: bool = Field(
         default=True,
-        description="Show link to gallery on frontpage.",
+        description="Show button to gallery on frontpage.",
     )
     show_admin_on_frontpage: bool = Field(
         default=True,
-        description="Show link to admin center, usually only during setup.",
+        description="Show button to admin center, usually only during setup.",
     )
 
     livestream_mirror_effect: bool = Field(

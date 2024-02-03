@@ -34,20 +34,21 @@ class ProcessingService(StateMachine):
     idle = State(initial=True)
     counting = State()  # countdown before capture
     capture = State()  # capture from camera include postprocess single img postproc
+    record = State()  # record from camera
     approve_capture = State()  # waiting state to approve. transition by confirm,reject or autoconfirm
-    captures_completed = State()  # final postproc (mostly to create collage)
+    captures_completed = State()  # final postproc (mostly to create collage/gif)
     present_capture = State()  # final presentation of mediaitem
 
     ## TRANSITIONS
 
     start = idle.to(counting)
-    _counted = counting.to(capture)
-    _captured = capture.to(approve_capture)
+    _counted = counting.to(capture, unless="jobtype_recording") | counting.to(record, cond="jobtype_recording")
+    _captured = capture.to(approve_capture) | record.to(captures_completed)
     confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
     reject = approve_capture.to(counting)
     _present = captures_completed.to(present_capture)
     _finalize = present_capture.to(idle)
-    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, present_capture, approve_capture, captures_completed)
+    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, record, present_capture, approve_capture, captures_completed)
 
     def __init__(
         self,
@@ -126,6 +127,8 @@ class ProcessingService(StateMachine):
         """_summary_"""
         logger.info("state idle entered.")
 
+        self._wled_service.preset_standby()
+
         # switch backend to preview mode always when returning to idle.
         self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
@@ -135,7 +138,9 @@ class ProcessingService(StateMachine):
         self._wled_service.preset_thrill()
 
         # set backends to capture mode; backends take their own actions if needed.
-        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+        if self.model._typ is not JobModel.Typ.video:
+            # signal the backend we need hq still in every case, except video.
+            self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         # determine countdown time, first and following could have different times
         duration = (
@@ -186,6 +191,8 @@ class ProcessingService(StateMachine):
             _type = MediaItemTypes.collageimage  # 1st phase collage image
         if self.model._typ is JobModel.Typ.animation:
             _type = MediaItemTypes.animationimage  # 1st phase collage image
+        if self.model._typ is JobModel.Typ.video:
+            raise RuntimeError("videos are not processed in capture state")
 
         filepath_neworiginalfile = get_new_filename(type=_type)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
@@ -273,9 +280,45 @@ class ProcessingService(StateMachine):
             logger.info(f"rejected: {delete_mediaitem=}")
             self._mediacollection_service.delete_mediaitem_files(delete_mediaitem)
 
+    def on_enter_record(self):
+        """_summary_"""
+
+        self._wled_service.preset_record()
+
+        try:
+            self._aquisition_service.start_recording()
+
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"error start recording! {exc}")
+
+            # reraise so http error can be sent
+            raise exc
+            # no retry for this type of error
+
+        # capture finished, go to next state
+        time.sleep(appconfig.misc.video_duration)
+
+        self._captured()
+
+    def on_exit_record(self):
+        """_summary_"""
+
+        self._wled_service.preset_standby()
+
+        try:
+            self._aquisition_service.stop_recording()
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"error stop recording! {exc}")
+
+            # reraise so http error can be sent
+            raise exc
+            # no retry for this type of error
+
     def on_enter_captures_completed(self):
         ## PHASE 2:
-        # postprocess job as whole, create collage of single images, ...
+        # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
         if self.model._typ is JobModel.Typ.collage:
@@ -303,6 +346,29 @@ class ProcessingService(StateMachine):
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)
             self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
+
+        elif self.model._typ is JobModel.Typ.video:
+            # apply video phase2 pipeline:
+            tms = time.time()
+
+            # get video in h264 format for further processing.
+            temp_videofilepath = self._aquisition_service.get_recorded_video()
+
+            # populate image item for further processing:
+            filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.video)
+            logger.debug(f"record to {filepath_neworiginalfile=}")
+
+            os.rename(temp_videofilepath, filepath_neworiginalfile)
+            mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+            self.model.set_last_capture(mediaitem)
+
+            mediaitem.create_fileset_unprocessed()
+            mediaitem.copy_fileset_processed()
+
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
+
+            # resulting collage mediaitem will be added to the collection as most recent item
+            self.model.add_confirmed_capture_to_collection(mediaitem)
 
         else:
             pass
@@ -359,7 +425,13 @@ class ProcessingService(StateMachine):
             raise RuntimeError(f"error processing the job :| {exc}") from exc
 
     def start_job_video(self):
-        raise NotImplementedError
+        self._check_occupied()
+        try:
+            self.start(JobModel.Typ.video, 1)
+        except Exception as exc:
+            logger.error(exc)
+            self._reset()
+            raise RuntimeError(f"error processing the job :| {exc}") from exc
 
     def start_job_animation(self):
         self._check_occupied()
@@ -381,3 +453,6 @@ class ProcessingService(StateMachine):
 
     def abort_process(self):
         self._reset()
+
+    def stop_recording(self):
+        self._captured()

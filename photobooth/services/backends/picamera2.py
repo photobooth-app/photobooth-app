@@ -5,12 +5,14 @@ Picamera2 backend implementation
 import dataclasses
 import io
 import logging
+import uuid
+from pathlib import Path
 from threading import Condition, Event
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
-from picamera2.encoders import MJPEGEncoder, Quality  # type: ignore
-from picamera2.outputs import FileOutput  # type: ignore
+from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
+from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
@@ -67,6 +69,11 @@ class Picamera2Backend(AbstractBackend):
         # lores and hires data output
         self._lores_data: __class__.PicamLoresData = None
         self._hires_data: __class__.PicamHiresData = None
+
+        # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
+        self._video_recorded_videofilepath = None
+        self._video_encoder = None
+        self._video_output = None
 
         # worker threads
         self._worker_thread: StoppableThread = None
@@ -235,6 +242,31 @@ class Picamera2Backend(AbstractBackend):
                 raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame
+
+    def start_recording(self):
+        self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
+        self._video_encoder = H264Encoder(appconfig.misc.video_bitrate * 1000)  # bitrate in k in appconfig, so *1000
+        self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
+
+        self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")
+
+        logger.info("picamera2 video encoder started")
+
+    def stop_recording(self):
+        if self._video_encoder and self._video_encoder.running:
+            self._picamera2.stop_encoder(self._video_encoder)
+            logger.info("picamera2 video encoder stopped")
+        else:
+            logger.info("no picamera2 video encoder active that could be stopped")
+
+    def get_recorded_video(self) -> Path:
+        if self._video_recorded_videofilepath is not None:
+            out = self._video_recorded_videofilepath
+            self._video_recorded_videofilepath = None
+
+            return out
+        else:
+            raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
 
     def _on_configure_optimized_for_hq_capture(self):
         logger.debug("change to capture mode requested")

@@ -44,7 +44,7 @@ class MediaItemTypes(str, Enum):
     collageimage = "collageimage"  # captured image that is part of a collage (so it can be treated differently in UI than other images)
     animation = "animation"  # canvas image that was made out of several animation_image
     animationimage = "animationimage"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
-    video = "video"  # captured video - not yet implemented
+    video = "video"  # captured video - h264, mp4 is currently well supported in browsers it seems
 
 
 class MediaItemAllowedFileendings(str, Enum):
@@ -55,6 +55,7 @@ class MediaItemAllowedFileendings(str, Enum):
 
     jpg = "jpg"  # images
     gif = "gif"  # animated gifs
+    mp4 = "mp4"  # video/h264/mp4
 
 
 def get_new_filename(type: MediaItemTypes = MediaItemTypes.image, visibility: bool = True) -> Path:
@@ -63,8 +64,8 @@ def get_new_filename(type: MediaItemTypes = MediaItemTypes.image, visibility: bo
         # only result of animation is gif, other can be jpg because more efficient and better quality.
         filename_ending = MediaItemAllowedFileendings.gif.value
     if type is MediaItemTypes.video:
-        # not yet implemented.
-        filename_ending = "mjpg"
+        # video is mp4/h264. not yet clear if thumbnail is also mp4 or a still preview(?)
+        filename_ending = MediaItemAllowedFileendings.mp4.value
 
     return Path(
         PATH_ORIGINAL,
@@ -258,6 +259,8 @@ class MediaItem:
             self._create_fileset_unprocessed_jpg()
         elif suffix.lower() == ".gif":
             self._create_fileset_unprocessed_gif()
+        elif suffix.lower() == ".mp4":
+            self._create_fileset_unprocessed_mp4()
         else:
             raise RuntimeError(f"filetype not supported {suffix}")
 
@@ -369,6 +372,13 @@ class MediaItem:
             scaled_min_width=appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
         )
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale thumbnail_unprocessed")
+
+    def _create_fileset_unprocessed_mp4(self):
+        """create mp4 fileset in most efficient way."""
+        # TODO: actually implement resizer
+        shutil.copy2(self.path_original, self.path_full_unprocessed)
+        shutil.copy2(self.path_original, self.path_preview_unprocessed)
+        shutil.copy2(self.path_original, self.path_thumbnail_unprocessed)
 
     def copy_fileset_processed(self):
         shutil.copy2(self.path_full_unprocessed, self.path_full)

@@ -75,5 +75,7 @@ def test_change_presets(_container: Container):
     time.sleep(0.5)
     _container.wled_service.preset_shoot()
     time.sleep(0.5)
+    _container.wled_service.preset_record()
+    time.sleep(0.5)
     _container.wled_service.preset_standby()
     time.sleep(0.1)

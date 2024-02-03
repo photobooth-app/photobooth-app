@@ -5,11 +5,15 @@ import dataclasses
 import logging
 import os
 import time
+import uuid
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from multiprocessing import Condition, Lock, shared_memory
+from pathlib import Path
+from subprocess import PIPE, Popen
 
 from ...utils.stoppablethread import StoppableThread
+from ..config import appconfig
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +75,13 @@ class AbstractBackend(ABC):
         # only for (webcam, picam and virtualcamera) error can detected by missing lores img
         self._failing_wait_for_lores_image_is_error: bool = False
         self._connect_thread: StoppableThread = None
+
+        # video feature
+        self._video_worker_thread: StoppableThread = None
+        self._video_recorded_videofilepath: Path = None
+
+        # services are responsible to create their folders needed for proper processing:
+        os.makedirs("tmp", exist_ok=True)
 
         super().__init__()
 
@@ -305,6 +316,104 @@ class AbstractBackend(ABC):
                 self.device_set_status_fault_flag()
 
             raise RuntimeError("device raised exception") from exc
+
+    def start_recording(self):
+        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=False)
+        self._video_worker_thread.start()
+        logger.info("_video_worker_thread started")
+
+    def stop_recording(self):
+        if self._video_worker_thread:
+            self._video_worker_thread.stop()
+            self._video_worker_thread.join()
+            logger.info("_video_worker_thread stopped and joined")
+
+        else:
+            logger.info("no _video_worker_thread active that could be stopped")
+
+    def get_recorded_video(self) -> Path:
+        # basic idea from https://stackoverflow.com/a/42602576
+        if self._video_recorded_videofilepath is not None:
+            return self._video_recorded_videofilepath
+        else:
+            raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
+
+    def _videoworker_fun(self):
+        # init worker, set output to None which indicates there is no current video available to get
+        self._video_recorded_videofilepath = None
+
+        # generate temp filename to record to
+        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
+
+        ffmpeg_subprocess = Popen(
+            [
+                "ffmpeg",
+                "-use_wallclock_as_timestamps",
+                "1",
+                "-loglevel",
+                "info",
+                "-y",
+                "-f",
+                "image2pipe",
+                "-vcodec",
+                "mjpeg",
+                "-i",
+                "-",
+                "-vcodec",
+                "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
+                "-preset",
+                "veryfast",
+                "-b:v",  # bitrate
+                f"{appconfig.misc.video_bitrate}k",
+                "-movflags",
+                "+faststart",
+                str(mp4_output_filepath),
+            ],
+            stdin=PIPE,
+            stderr=PIPE,
+        )
+
+        logger.info("writing to ffmpeg stdin")
+        tms = time.time()
+
+        while not self._video_worker_thread.stopped():
+            try:
+                ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+                ffmpeg_subprocess.stdin.flush()  # forces every frame to get timestamped individually
+            except Exception as exc:  # presumably a BrokenPipeError? should we check explicitly?
+                ffmpeg_subprocess = None
+                logger.exception(exc)
+                logger.error(f"Failed to create video! Error: {exc}")
+
+                self._video_worker_thread.stop()
+                break
+
+        if ffmpeg_subprocess is not None:
+            logger.info("writing to ffmpeg stdin finished")
+            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
+
+            # release final video processing
+            tms = time.time()
+
+            _, ffmpeg_stderr = ffmpeg_subprocess.communicate()  # send empty to stdin, indicates close and gets stderr/stdout; shut down tidily
+            code = ffmpeg_subprocess.wait()  # Give it a moment to flush out video frames, but after that make sure we terminate it.
+
+            if code != 0:
+                logger.error(ffmpeg_stderr)  # can help to track down errors for non-zero exitcodes.
+
+                # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
+                # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
+                logger.error(f"error creating videofile, ffmpeg exit code ({code}).")
+
+            ffmpeg_subprocess = None
+
+            logger.info("ffmpeg finished")
+            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
+
+            self._video_recorded_videofilepath = mp4_output_filepath
+            logger.info(f"record written to {self._video_recorded_videofilepath}")
+
+        logger.info("leaving _videoworker_fun")
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
