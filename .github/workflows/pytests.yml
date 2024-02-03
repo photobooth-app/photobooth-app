@@ -57,7 +57,7 @@ jobs:
           cat extras/shareservice/php-error.log
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-${{ matrix.python-version }}
           path: coverage.xml
 
   tests-hardware-rpi:
