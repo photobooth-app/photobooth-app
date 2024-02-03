@@ -317,11 +317,16 @@ class AbstractBackend(ABC):
     def start_recording(self):
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=False)
         self._video_worker_thread.start()
+        logger.info("_video_worker_thread started")
 
     def stop_recording(self):
         if self._video_worker_thread:
             self._video_worker_thread.stop()
             self._video_worker_thread.join()
+            logger.info("_video_worker_thread stopped and joined")
+
+        else:
+            logger.info("no _video_worker_thread active that could be stopped")
 
     def get_recorded_video(self) -> Path:
         # basic idea from https://stackoverflow.com/a/42602576
