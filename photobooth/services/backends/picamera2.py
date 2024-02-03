@@ -240,8 +240,8 @@ class Picamera2Backend(AbstractBackend):
 
     def start_recording(self):
         self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
-        self._video_encoder = H264Encoder(10000000)
-        self._video_output = FfmpegOutput(self._video_recorded_videofilepath)
+        self._video_encoder = H264Encoder(appconfig.misc.video_bitrate)
+        self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")
 
@@ -251,14 +251,16 @@ class Picamera2Backend(AbstractBackend):
         if self._video_encoder and self._video_encoder.running:
             self._picamera2.stop_encoder(self._video_encoder)
             logger.info("picamera2 video encoder stopped")
-
         else:
             logger.info("no picamera2 video encoder active that could be stopped")
 
     def get_recorded_video(self) -> Path:
         # basic idea from https://stackoverflow.com/a/42602576
         if self._video_recorded_videofilepath is not None:
-            return self._video_recorded_videofilepath
+            out = self._video_recorded_videofilepath
+            self._video_recorded_videofilepath = None
+
+            return out
         else:
             raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
 
