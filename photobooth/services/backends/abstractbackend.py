@@ -80,6 +80,9 @@ class AbstractBackend(ABC):
         self._video_worker_thread: StoppableThread = None
         self._video_recorded_videofilepath: Path = None
 
+        # services are responsible to create their folders needed for proper processing:
+        os.makedirs("tmp", exist_ok=True)
+
         super().__init__()
 
     def __repr__(self):
@@ -340,7 +343,7 @@ class AbstractBackend(ABC):
         self._video_recorded_videofilepath = None
 
         # generate temp filename to record to
-        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4").absolute()
+        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
 
         ffmpeg_subprocess = Popen(
             [
