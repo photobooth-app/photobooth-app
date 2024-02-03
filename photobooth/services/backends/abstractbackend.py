@@ -331,7 +331,7 @@ class AbstractBackend(ABC):
     def get_recorded_video(self) -> Path:
         # basic idea from https://stackoverflow.com/a/42602576
         if self._video_recorded_videofilepath is not None:
-            return self._video_recorded_videofilepath.with_suffix(".mp4")
+            return self._video_recorded_videofilepath
         else:
             raise FileNotFoundError("no recorded video available currently! call start_recording first.")
 
@@ -340,7 +340,7 @@ class AbstractBackend(ABC):
         self._video_recorded_videofilepath = None
 
         # generate temp filename to record to
-        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}")
+        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4").absolute()
 
         ffmpeg_subprocess = Popen(
             [
@@ -364,7 +364,7 @@ class AbstractBackend(ABC):
                 f"{appconfig.misc.video_bitrate}k",
                 "-movflags",
                 "+faststart",
-                str(filepath.with_suffix(".mp4")),
+                str(mp4_output_filepath),
             ],
             stdin=PIPE,
         )
@@ -404,7 +404,7 @@ class AbstractBackend(ABC):
             logger.info("ffmpeg finished")
             logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
-            self._video_recorded_videofilepath = filepath
+            self._video_recorded_videofilepath = mp4_output_filepath
             logger.info(f"record written to {self._video_recorded_videofilepath}")
 
         logger.info("leaving _videoworker_fun")
