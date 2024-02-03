@@ -10,6 +10,9 @@ If you find an issue, please post it in the [photobooth app issue tracker](https
 
 If you find an issue in the documentation, [modify the documentation](https://github.com/photobooth-app/photobooth-docs) or open a [discussion](https://github.com/photobooth-app/photobooth-app/discussions).
 
+### Translate the app
+To add a new language, add a new language folder in [the frontend](https://github.com/photobooth-app/photobooth-frontend) reposity at `src/i18n`. Copy `index.js` from `src/i18n/en-US` into your folder and edit the strings accorindgly. To make your translation available in the frontend, add it in `src/i18n/index.js`.
+
 ### Send Patches via Pull Request
 
 Feel free to [fork the app](https://github.com/photobooth-app/photobooth-app), improve the software and send a pull request.
