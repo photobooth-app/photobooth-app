@@ -353,7 +353,7 @@ class AbstractBackend(ABC):
             stdin=PIPE,
         )
 
-        with open(self._video_recorded_videofilepath.with_suffix(".jpg_packed"), "rb") as input_data:
+        with open(self._video_recorded_videofilepath.with_suffix(".mjpeg"), "rb") as input_data:
             while True:
                 # Unpack the size of the next file
                 size_data = input_data.read(4)  # I is 4 bytes long
@@ -363,6 +363,7 @@ class AbstractBackend(ABC):
                 file_data = input_data.read(struct.unpack("I", size_data)[0])
 
                 ffmpeg_subprocess.stdin.write(file_data)
+                ffmpeg_subprocess.stdin.flush()
 
         # release video
         ffmpeg_subprocess.stdin.close()
@@ -398,13 +399,17 @@ class AbstractBackend(ABC):
         #     stdin=PIPE,
         # )
 
-        with open(filepath.with_suffix(".jpg_packed"), "wb") as output:
+        with open(filepath.with_suffix(".mjpeg"), "wb") as output:
+            output.write(b"Content-Type:multipart/x-mixed-replace; boundary=frame\r\n")
             while not self._video_worker_thread.stopped():
                 image = self._wait_for_lores_image()
 
                 # pack data
-                file_size = len(image)
-                output.write(struct.pack(f"I{file_size}s", file_size, image))
+                write_out = (
+                    b"--frame\r\n" b"X-Timestamp: " + bytes(str(time.time()), "utf-8") + b"\r\nContent-Type: image/jpeg\r\n\r\n" + image + b"\r\n\r\n"
+                )
+                file_size = len(write_out)
+                output.write(struct.pack(f"{file_size}s", write_out))
 
         logger.info(f"record written to {filepath}")
         self._video_recorded_videofilepath = filepath
