@@ -348,7 +348,7 @@ class AbstractBackend(ABC):
                 "-use_wallclock_as_timestamps",
                 "1",
                 "-loglevel",
-                "warning",
+                "info",
                 "-y",
                 "-f",
                 "image2pipe",
@@ -367,6 +367,7 @@ class AbstractBackend(ABC):
                 str(mp4_output_filepath),
             ],
             stdin=PIPE,
+            stderr=PIPE,
         )
 
         logger.info("writing to ffmpeg stdin")
@@ -391,10 +392,12 @@ class AbstractBackend(ABC):
             # release final video processing
             tms = time.time()
 
-            ffmpeg_subprocess.stdin.close()  # FFmpeg needs this to shut down tidily
+            _, ffmpeg_stderr = ffmpeg_subprocess.communicate()  # send empty to stdin, indicates close and gets stderr/stdout; shut down tidily
             code = ffmpeg_subprocess.wait()  # Give it a moment to flush out video frames, but after that make sure we terminate it.
 
             if code != 0:
+                logger.error(ffmpeg_stderr)  # can help to track down errors for non-zero exitcodes.
+
                 # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
                 # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
                 logger.error(f"error creating videofile, ffmpeg exit code ({code}).")
