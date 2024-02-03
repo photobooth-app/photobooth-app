@@ -70,6 +70,11 @@ class Picamera2Backend(AbstractBackend):
         self._lores_data: __class__.PicamLoresData = None
         self._hires_data: __class__.PicamHiresData = None
 
+        # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
+        self._video_recorded_videofilepath = None
+        self._video_encoder = None
+        self._video_output = None
+
         # worker threads
         self._worker_thread: StoppableThread = None
 
@@ -240,7 +245,7 @@ class Picamera2Backend(AbstractBackend):
 
     def start_recording(self):
         self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
-        self._video_encoder = H264Encoder(appconfig.misc.video_bitrate)
+        self._video_encoder = H264Encoder(appconfig.misc.video_bitrate * 1000)  # bitrate in k in appconfig, so *1000
         self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")
@@ -255,7 +260,6 @@ class Picamera2Backend(AbstractBackend):
             logger.info("no picamera2 video encoder active that could be stopped")
 
     def get_recorded_video(self) -> Path:
-        # basic idea from https://stackoverflow.com/a/42602576
         if self._video_recorded_videofilepath is not None:
             out = self._video_recorded_videofilepath
             self._video_recorded_videofilepath = None
