@@ -4,7 +4,6 @@ abstract for the photobooth-app backends
 import dataclasses
 import logging
 import os
-import struct
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -326,18 +325,30 @@ class AbstractBackend(ABC):
 
     def get_recorded_video(self) -> Path:
         # basic idea from https://stackoverflow.com/a/42602576
+        if self._video_recorded_videofilepath is not None:
+            return self._video_recorded_videofilepath.with_suffix(".mp4")
+        else:
+            raise FileNotFoundError("no recorded video available currently! call start_recording first.")
+
+    def _videoworker_fun(self):
+        # init worker, set output to None which indicates there is no current video available to get
+        self._video_recorded_videofilepath = None
+
+        # generate temp filename to record to
+        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}")
+
         ffmpeg_subprocess = Popen(
             [
                 "ffmpeg",
-                "-y",  # overwrite with no questions
+                "-use_wallclock_as_timestamps",
+                "1",
                 "-loglevel",
-                "info",
-                "-f",  # force input or output format
+                "warning",
+                "-y",
+                "-f",
                 "image2pipe",
                 "-vcodec",
                 "mjpeg",
-                "-framerate",
-                str(self._fps),
                 "-i",
                 "-",
                 "-vcodec",
@@ -348,71 +359,50 @@ class AbstractBackend(ABC):
                 f"{appconfig.misc.video_bitrate}k",
                 "-movflags",
                 "+faststart",
-                self._video_recorded_videofilepath.with_suffix(".mp4"),
+                str(filepath.with_suffix(".mp4")),
             ],
             stdin=PIPE,
         )
 
-        with open(self._video_recorded_videofilepath.with_suffix(".mjpeg"), "rb") as input_data:
-            while True:
-                # Unpack the size of the next file
-                size_data = input_data.read(4)  # I is 4 bytes long
-                if not size_data:
-                    break  # No more data to read
+        logger.info("writing to ffmpeg stdin")
+        tms = time.time()
 
-                file_data = input_data.read(struct.unpack("I", size_data)[0])
+        while not self._video_worker_thread.stopped():
+            try:
+                ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+                ffmpeg_subprocess.stdin.flush()  # forces every frame to get timestamped individually
+            except Exception as exc:  # presumably a BrokenPipeError? should we check explicitly?
+                ffmpeg_subprocess = None
+                logger.exception(exc)
+                logger.error(f"Failed to create video! Error: {exc}")
 
-                ffmpeg_subprocess.stdin.write(file_data)
-                ffmpeg_subprocess.stdin.flush()
+                self._video_worker_thread.stop()
+                break
 
-        # release video
-        ffmpeg_subprocess.stdin.close()
-        code = ffmpeg_subprocess.wait()
-        if code != 0:
-            # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
-            # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
-            raise RuntimeError(f"error creating videofile, ffmpeg exit code ({code}).")
+        if ffmpeg_subprocess is not None:
+            logger.info("writing to ffmpeg stdin finished")
+            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
-        return self._video_recorded_videofilepath.with_suffix(".mp4")
+            # release final video processing
+            tms = time.time()
 
-    def _videoworker_fun(self):
-        # init worker, set output to None which indicates there is no current video available to get
-        self._video_recorded_videofilepath = None
+            ffmpeg_subprocess.stdin.close()  # FFmpeg needs this to shut down tidily
+            code = ffmpeg_subprocess.wait()  # Give it a moment to flush out video frames, but after that make sure we terminate it.
 
-        # generate temp filename to record to
-        filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}")
+            if code != 0:
+                # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
+                # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
+                logger.error(f"error creating videofile, ffmpeg exit code ({code}).")
 
-        # ffmpeg_subprocess = Popen(
-        #     [
-        #         "ffmpeg",
-        #         "-y",
-        #         "-f",
-        #         "image2pipe",
-        #         "-framerate",
-        #         "15",
-        #         "-i",
-        #         "-",
-        #         "-codec",
-        #         "copy",
-        #         str(filepath),
-        #     ],
-        #     stdin=PIPE,
-        # )
+            ffmpeg_subprocess = None
 
-        with open(filepath.with_suffix(".mjpeg"), "wb") as output:
-            output.write(b"Content-Type:multipart/x-mixed-replace; boundary=frame\r\n")
-            while not self._video_worker_thread.stopped():
-                image = self._wait_for_lores_image()
+            logger.info("ffmpeg finished")
+            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
-                # pack data
-                write_out = (
-                    b"--frame\r\n" b"X-Timestamp: " + bytes(str(time.time()), "utf-8") + b"\r\nContent-Type: image/jpeg\r\n\r\n" + image + b"\r\n\r\n"
-                )
-                file_size = len(write_out)
-                output.write(struct.pack(f"{file_size}s", write_out))
+            self._video_recorded_videofilepath = filepath
+            logger.info(f"record written to {self._video_recorded_videofilepath}")
 
-        logger.info(f"record written to {filepath}")
-        self._video_recorded_videofilepath = filepath
+        logger.info("leaving _videoworker_fun")
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
