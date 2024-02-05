@@ -35,7 +35,7 @@ from .mediaprocessing.image_pipelinestages import (
 )
 from .sseservice import SseService
 
-turbojpeg = TurboJPEG("C:/libjpeg-turbo-gcc64/bin/libturbojpeg.dll")
+turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 
