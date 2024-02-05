@@ -86,11 +86,13 @@ class GroupUiSettings(BaseModel):
     TAKEPIC_MSG_TEXT: str = Field(default="😃", description="Message to display at the end of the capture countdown.")
 
     PRIMARY_COLOR: str = Field(
-        default="#123456",
-        description="Primary color (e.g. buttons, title bar). Use hex encoding as in CSS.",
+        default="#196cb0",
+        description="Primary color (e.g. buttons, title bar).",
+        json_schema_extra={"ui_component": "ColorPicker"},
     )
 
     SECONDARY_COLOR: str = Field(
-        default="#123456",
-        description="Secondary color (admin interface, accents). Use hex encoding as in CSS.",
+        default="#b8124f",
+        description="Secondary color (admin interface, accents).",
+        json_schema_extra={"ui_component": "ColorPicker"},
     )
