@@ -47,6 +47,16 @@ class GroupCommon(BaseModel):
         description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
     )
 
+    collage_hide_individual_pictures: bool = Field(
+        default=True,
+        description="Hide the individual pictures of a collage. They will still be accessibly in the unprocessed images folder.",
+    )
+
+    collage_delete_individual_pictures: bool = Field(
+        default=False,
+        description="Delete the individual pictures of a collage. They will not be accessibly in the unprocessed images folder.",
+    )
+
     DEBUG_LEVEL: EnumDebugLevel = Field(
         title="Debug Level",
         default=EnumDebugLevel.DEBUG,

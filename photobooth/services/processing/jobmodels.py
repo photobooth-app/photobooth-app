@@ -84,6 +84,8 @@ class JobModel:  # TODO: derive from model class?
 
         # job metadata processing ui interaction
         self._collage_automatic_capture_continue = False
+        self._collage_delete_individual_pictures = False
+        self._collage_hide_individual_pictures = False
 
         # job model timer
         self._duration_user: float = 0
@@ -181,14 +183,37 @@ class JobModel:  # TODO: derive from model class?
         else:
             return False
 
+    def hide_individual_images(self) -> bool:
+        # hide individual images of a collage (inherintly true when deleting them)
+        if self._typ is JobModel.Typ.collage and (self._collage_hide_individual_pictures | self._collage_delete_individual_pictures):
+            return True
+        else:
+            return False
+
+    def delete_individual_images(self) -> bool:
+        # delete individual images of a collage after processing
+        if self._typ is JobModel.Typ.collage and self._collage_delete_individual_pictures:
+            return True
+        else:
+            return False
+
     # external model start/stop controls
-    def start_model(self, typ: Typ, total_captures_to_take: int, collage_automatic_capture_continue: bool = False):
+    def start_model(
+        self,
+        typ: Typ,
+        total_captures_to_take: int,
+        collage_automatic_capture_continue: bool = False,
+        collage_hide_individual_pictures: bool = False,
+        collage_delete_individual_pictures: bool = False,
+    ):
         self.reset_job()
         self._typ = typ
         self._total_captures_to_take = total_captures_to_take
         self._last_captured_mediaitem = None
         self._confirmed_captures_collection = []
         self._collage_automatic_capture_continue = collage_automatic_capture_continue
+        self._collage_hide_individual_pictures = collage_hide_individual_pictures
+        self._collage_delete_individual_pictures = collage_delete_individual_pictures
 
         self._validate_job()
 
