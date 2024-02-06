@@ -16,6 +16,7 @@ from ..config import appconfig
 from .abstractbackend import AbstractBackend, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
+FPS_TARGET = 15
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ class VirtualCameraBackend(AbstractBackend):
                 self._img_buffer_lock,
                 self._event_proc_shutdown,
                 appconfig.uisettings.livestream_mirror_effect,
+                FPS_TARGET,
             ),
             daemon=True,
         )
@@ -130,6 +132,7 @@ def img_aquisition(
     _img_buffer_lock: Lock,
     _event_proc_shutdown: Event,
     _mirror: bool,
+    _fps_target: int,
 ):
     """function started in separate process to deliver images"""
 
@@ -141,7 +144,6 @@ def img_aquisition(
 
     logger.info("img_aquisition process started")
 
-    target_fps = 15
     last_time = time.time_ns()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
@@ -154,7 +156,7 @@ def img_aquisition(
 
     while not _event_proc_shutdown.is_set():
         now_time = time.time_ns()
-        if (now_time - last_time) / 1000**3 <= (1 / target_fps):
+        if (now_time - last_time) / 1000**3 <= (1 / _fps_target):
             # limit max framerate to every ~2ms
             time.sleep(2 / 1000.0)
             continue

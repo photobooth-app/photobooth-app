@@ -23,6 +23,7 @@ def main(run_server: bool = True):
         os.makedirs("userdata", exist_ok=True)
         os.makedirs("log", exist_ok=True)
         os.makedirs("config", exist_ok=True)
+        os.makedirs("tmp", exist_ok=True)
 
     # guard to start only one instance at a time.
     try:

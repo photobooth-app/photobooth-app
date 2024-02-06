@@ -1,4 +1,5 @@
 import logging
+import time
 
 import pytest
 
@@ -48,3 +49,14 @@ def backend_picamera2():
 
 def test_getImages(backend_picamera2):
     get_images(backend_picamera2)
+
+
+def test_get_video_picamera2(backend_picamera2):
+    """get lores and hires images from backend and assert"""
+    backend_picamera2.start_recording()
+    time.sleep(6)
+    backend_picamera2.stop_recording()
+
+    videopath = backend_picamera2.get_recorded_video()
+    logger.info(f"video stored to file {videopath}")
+    assert videopath and videopath.is_file()

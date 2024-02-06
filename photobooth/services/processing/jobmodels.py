@@ -174,6 +174,13 @@ class JobModel:  # TODO: derive from model class?
         else:
             return False
 
+    def jobtype_recording(self) -> bool:
+        # to check if mode is video or HQ captures request
+        if self._typ is JobModel.Typ.video:
+            return True
+        else:
+            return False
+
     # external model start/stop controls
     def start_model(self, typ: Typ, total_captures_to_take: int, collage_automatic_capture_continue: bool = False):
         self.reset_job()
