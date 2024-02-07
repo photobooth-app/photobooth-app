@@ -1,10 +1,10 @@
 import logging
 
 import pytest
-import statemachine.exceptions
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
+from photobooth.services.processingservice import ProcessingService
 
 logger = logging.getLogger(name=None)
 
@@ -30,13 +30,43 @@ def _container() -> Container:
     container.stop()
 
 
+class ConfirmRejectUserinputObserver:
+    def __init__(self, processing_service: ProcessingService, abortjob: bool = False):
+        self.processing_service: ProcessingService = processing_service
+        self.abortjob: bool = abortjob  # if true, the job is aborted instead confirmed/rejected by simulated user.
+        # internal flags
+        self.rejected_once: bool = False  # reject once to test reject, then confirm
+
+    def after_transition(self, event, source, target):
+        logger.info(f"transition after: {source.id}--({event})-->{target.id}")
+
+    def on_enter_state(self, target, event):
+        logger.info(f"enter: {target.id} from {event}")
+
+        if target.id == "approve_capture":
+            if self.abortjob:
+                logger.info("simulate user aborting job")
+                self.processing_service.abort_process()
+            elif not self.rejected_once:
+                self.rejected_once = True
+                logger.info("simulate user rejecting capture")
+                self.processing_service.reject_capture()
+            else:
+                logger.info("simulate user confirming capture")
+                self.processing_service.confirm_capture()
+
+
 def test_capture(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
     appconfig.common.collage_automatic_capture_continue = False
 
     _container.processing_service.start_job_1pic()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is not None
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
 
 
 def test_capture_autoconfirm(_container: Container):
@@ -45,7 +75,11 @@ def test_capture_autoconfirm(_container: Container):
 
     _container.processing_service.start_job_1pic()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is not None
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
 
 
 def test_capture_zero_countdown(_container: Container):
@@ -54,7 +88,11 @@ def test_capture_zero_countdown(_container: Container):
 
     _container.processing_service.start_job_1pic()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is not None
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
 
 
 def test_capture_manual_confirm(_container: Container):
@@ -62,85 +100,52 @@ def test_capture_manual_confirm(_container: Container):
     pass
 
 
-def test_simple_capture_illegal_jobs(_container: Container):
-    """this function processes single images (in contrast to collages or videos)"""
-
-    _container.processing_service.start_job_1pic()
-    with pytest.raises(statemachine.exceptions.TransitionNotAllowed):
-        _container.processing_service.confirm_capture()
-
-    assert _container.processing_service.idle.is_active
-
-
-def test_collage(_container: Container):
-    appconfig.common.collage_automatic_capture_continue = False
-
-    _container.processing_service.start_job_collage()
-
-    assert _container.processing_service.idle.is_active is False
-
-    while not _container.processing_service.job_finished():
-        _container.processing_service.confirm_capture()
-
-    assert _container.processing_service.idle.is_active
-
-
-def test_collage_autoconfirm(_container: Container):
+def test_collage_auto_approval(_container: Container):
     appconfig.common.collage_automatic_capture_continue = True
 
     _container.processing_service.start_job_collage()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is not None
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
 
 
-def test_collage_manual_confirm(_container: Container):
+def test_collage_manual_approval(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
+    # starts in separate thread
     _container.processing_service.start_job_collage()
 
-    assert not _container.processing_service.idle.is_active
+    # observer that is used to confirm the captures.
+    _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service))
 
-    while not _container.processing_service.job_finished():
-        _container.processing_service.confirm_capture()
+    assert _container.processing_service._state_machine is not None
 
-    assert _container.processing_service.idle.is_active
+    _container.processing_service.wait_until_job_finished()
 
-
-def test_collage_manual_reject(_container: Container):
-    appconfig.common.collage_automatic_capture_continue = False
-
-    _container.processing_service.start_job_collage()
-
-    assert not _container.processing_service.idle.is_active
-
-    _container.processing_service.reject_capture()
-    # TODO: need to ensure database is updated properly!
-
-    while not _container.processing_service.job_finished():
-        _container.processing_service.confirm_capture()
-
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is None
 
 
 def test_collage_manual_abort(_container: Container):
     appconfig.common.collage_automatic_capture_continue = False
 
     _container.processing_service.start_job_collage()
+    _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
 
-    assert not _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is not None
 
-    _container.processing_service.abort_process()
-    # TODO: need to ensure database is updated properly!
+    _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is None
 
 
 def test_animation(_container: Container):
     _container.processing_service.start_job_animation()
 
-    assert _container.processing_service.idle.is_active is True
+    assert _container.processing_service._state_machine is not None
 
-    while not _container.processing_service.job_finished():
-        _container.processing_service.confirm_capture()
+    _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service.idle.is_active
+    assert _container.processing_service._state_machine is None

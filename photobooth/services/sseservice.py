@@ -34,7 +34,6 @@ class SseEventBase:
 class SseEventFrontendNotification(SseEventBase):
     """some visible message in frontend"""
 
-    # TODO: implement in frontend
     caption: str = ""
     message: str = ""
     color: str = None  # could a color or "positive", "negative", "warning", "info" or None, the UI default
@@ -67,7 +66,10 @@ class SseEventProcessStateinfo(SseEventBase):
     @property
     def data(self) -> str:
         # logger.debug(self.jobmodel.export()
-        return json.dumps(self.jobmodel.export())
+        if self.jobmodel:
+            return json.dumps(self.jobmodel.export())
+        else:
+            return json.dumps({})
 
 
 @dataclass
