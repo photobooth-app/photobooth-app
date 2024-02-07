@@ -33,6 +33,9 @@ def test_sse_stream(client: TestClient):
     informationrecord_counter = 0
     ping_counter = 0
 
+    # start a job so there will be some Process StateInfo
+    container.processing_service.start_job_1pic()
+
     with connect_sse(client, "GET", "/sse") as event_source:
         for sse in event_source.iter_sse():
             if sse.event == "ProcessStateinfo":
