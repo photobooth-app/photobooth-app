@@ -26,3 +26,5 @@ poetry.toml
 dist/*
 .pdm-python
 
+# ignore .DS_Store files in macos
+.DS_Store
