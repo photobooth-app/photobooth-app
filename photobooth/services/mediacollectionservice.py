@@ -123,8 +123,7 @@ class MediacollectionService(BaseService):
         Returns:
             list: _description_
         """
-        out = [item for item in self._db if item.visible]
-        return out
+        return [item for item in self._db if item.visible]
 
     def db_get_most_recent_mediaitem(self):
         # get most recent item
