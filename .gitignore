@@ -26,3 +26,4 @@ poetry.toml
 dist/*
 .pdm-python
 
+diagram_ProcessingPicture.png
