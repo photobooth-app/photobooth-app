@@ -105,3 +105,8 @@ class GroupUiSettings(BaseModel):
         default=False,
         description="Show individual images of collages/animations in the gallery (Note: changing this setting will not change visibility of already captured images).",
     )
+
+    gallery_button_style: str = Field(
+        default="left: 5vw",
+        description="Gallery buttons additional CSS to reposition, theme, etc..",
+    )
