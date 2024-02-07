@@ -4,11 +4,13 @@ _summary_
 import logging
 import os
 import time
+from threading import Thread
 
 from statemachine import State, StateMachine
 
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
+from .baseservice import BaseService
 from .config import appconfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import (
@@ -16,18 +18,156 @@ from .mediacollectionservice import (
 )
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModel
-from .sseservice import SseEventProcessStateinfo, SseService
+from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
 
 logger = logging.getLogger(__name__)
 
 
-class ProcessingService(StateMachine):
-    """
-    use it:
-        machine.thrill()
-        machine.shoot()
-    """
+class ProcessingService(BaseService):
+    """_summary_"""
+
+    def __init__(
+        self,
+        sse_service: SseService,
+        aquisition_service: AquisitionService,
+        mediacollection_service: MediacollectionService,
+        mediaprocessing_service: MediaprocessingService,
+        wled_service: WledService,
+    ):
+        super().__init__(sse_service)
+        self._aquisition_service: AquisitionService = aquisition_service
+        self._mediacollection_service: MediacollectionService = mediacollection_service
+        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
+        self._wled_service: WledService = wled_service
+
+        # objects
+        self._state_machine: ProcessingMachine = None
+        self._process_thread: Thread = None
+
+    def _check_occupied(self):
+        if self._state_machine is not None:
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message="There is already a job running. Please wait until it finished.",
+                    caption="Job in process ⌛",
+                )
+            )
+            raise ProcessMachineOccupiedError("bad request, only one request at a time!")
+
+    def _process_fun(self):
+        try:
+            logger.info("starting job")
+            self._state_machine.start()
+            logger.debug("job finished")
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"the job failed, error: {exc}")
+
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="negative",
+                    message="Please try again. Check the logs if the error is permanent!",
+                    caption="Error processing the job 😔",
+                )
+            )
+            raise exc
+
+            # TODO: handle rollback self._reset()
+
+        finally:
+            self._state_machine = None
+            # send empty response to ui so it knows it's in idle again.
+            self._sse_service.dispatch_event(SseEventProcessStateinfo(None))
+
+        logger.debug("_process_fun left")
+
+    ### external functions to start processes
+
+    def start_job(self, jobmodel_typ, number_of_captures_to_take):
+        ## preflight checks
+        self._check_occupied()
+
+        ## setup job
+        job_model = JobModel()
+        logger.info(f"set up job to start: {jobmodel_typ=}, {number_of_captures_to_take=}")
+
+        job_model.start_model(
+            jobmodel_typ,
+            number_of_captures_to_take,
+            collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
+        )
+
+        ## init statemachine
+        self._state_machine = ProcessingMachine(
+            self._sse_service,
+            self._aquisition_service,
+            self._mediacollection_service,
+            self._mediaprocessing_service,
+            self._wled_service,
+            job_model,
+        )
+
+        logger.info(f"start job {job_model}")
+
+        ## run in separate thread
+        logger.debug("starting _process_thread")
+        self._process_thread = Thread(name="_process_thread", target=self._process_fun, args=(), daemon=False)
+        self._process_thread.start()
+
+    ##
+    def initial_emit(self):
+        # on init if never a job ran, model could not be avail.
+        # if a job is currently running and during that a client connects, if will receive the self.model
+        if self._state_machine:
+            self._state_machine._emit_model_state_update()
+
+    def start_job_1pic(self):
+        self.start_job(JobModel.Typ.image, 1)
+
+    def start_job_collage(self):
+        self.start_job(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
+
+    def start_job_animation(self):
+        self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
+
+    def start_job_video(self):
+        self.start_job(JobModel.Typ.video, 1)
+
+    def wait_until_job_finished(self):
+        if self._process_thread is None:
+            raise RuntimeError("no job running currently to wait for")
+
+        self._process_thread.join()
+
+    def send_event(self, event: str):
+        if not self._state_machine:
+            raise RuntimeError("no job ongoing, cannot send event!")
+
+        try:
+            self._state_machine.send(event)
+        except Exception as exc:
+            logger.exception(exc)
+            logger.warning(f"cannot confirm, error: {exc}")
+            raise exc
+
+    def confirm_capture(self):
+        self.send_event("confirm")
+
+    def reject_capture(self):
+        self.send_event("reject")
+
+    def abort_process(self):
+        self.send_event("reject")
+
+    def stop_recording(self):
+        pass
+        # TODO: implement
+
+
+class ProcessingMachine(StateMachine):
+    """ """
 
     ## STATES
 
@@ -38,7 +178,7 @@ class ProcessingService(StateMachine):
     approve_capture = State()  # waiting state to approve. transition by confirm,reject or autoconfirm
     captures_completed = State()  # final postproc (mostly to create collage/gif)
     present_capture = State()  # final presentation of mediaitem
-
+    finished = State(final=True)  # final state
     ## TRANSITIONS
 
     start = idle.to(counting)
@@ -46,52 +186,29 @@ class ProcessingService(StateMachine):
     _captured = capture.to(approve_capture) | record.to(captures_completed)
     confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
     reject = approve_capture.to(counting)
+    abort = approve_capture.to(finished)
     _present = captures_completed.to(present_capture)
-    _finalize = present_capture.to(idle)
-    _reset = idle.to.itself(internal=True) | idle.from_(counting, capture, record, present_capture, approve_capture, captures_completed)
+    _finish = present_capture.to(finished)
 
     def __init__(
         self,
-        _sse_service: SseService,
+        sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
+        jobmodel: JobModel,
     ):
-        self._sse_service: SseService = _sse_service
+        self._sse_service: SseService = sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
         self._wled_service: WledService = wled_service
 
-        super().__init__(model=JobModel())
+        self.model: JobModel  # for linting, initialized in super-class actually below
 
-        # for proper linting
-        self.model: JobModel
-
-    ##
-    def initial_emit(self):
-        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
-
-    ## transition actions
-
-    def before_start(self, typ: JobModel.Typ, total_captures_to_take: int):
-        assert isinstance(typ, JobModel.Typ)
-        assert isinstance(total_captures_to_take, int)
-
-        # reset old job data
-        # job is reset on start only, not on enter_idle because the UI relies on the last model-data to present last item.
-        self.model.reset_job()
-
-        logger.info(f"set up job to start: {typ=}, {total_captures_to_take=}")
-
-        self.model.start_model(
-            typ,
-            total_captures_to_take,
-            collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
-        )
-
-        logger.info(f"start job {self.model}")
+        # # call StateMachine init fun
+        super().__init__(model=jobmodel)
 
     ## state actions
 
@@ -99,22 +216,19 @@ class ProcessingService(StateMachine):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
-    def on_enter_state(self, event, state):
+    def after_transition(self, event, source, target):
+        logger.info(f"transition after: {source.id}--({event})-->{target.id}")
+
+    def on_enter_state(self, event, target):
         """_summary_"""
-        # logger.info(f"Entering '{state.id}' state from '{event}' event.")
-        logger.info(f"on_enter_state {self.current_state.id=} ")
+        logger.info(f"enter: {target.id} from {event}")
 
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._emit_model_state_update()
 
     def on_exit_state(self, event, state):
         """_summary_"""
-        # logger.info(f"Entering '{state.id}' state from '{event}' event.")
-        logger.info(f"on_exit_state {self.current_state.id=} ")
-
-        # don't emit on exit state again because UI would display approval twice. UI needs to know when next state is entered,
-        # not leaving a state usually, if needed, on_exit_SPECIFIC-STATE would need to be created and emit model.
-        # self._emit_model_state_update()
+        logger.info(f"exit: {state.id} from {event}")
 
     def on_exit_idle(self):
         # when idle left, check that all is properly set up!
@@ -197,27 +311,17 @@ class ProcessingService(StateMachine):
         filepath_neworiginalfile = get_new_filename(type=_type)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
-        try:
-            start_time_capture = time.time()
-            image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.
+        start_time_capture = time.time()
+        image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.
 
-            with open(filepath_neworiginalfile, "wb") as file:
-                file.write(image_bytes)
+        with open(filepath_neworiginalfile, "wb") as file:
+            file.write(image_bytes)
 
-            # populate image item for further processing:
-            mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-            self.model.set_last_capture(mediaitem)
+        # populate image item for further processing:
+        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
+        self.model.set_last_capture(mediaitem)
 
-            logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
-
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"error capture image. {exc}")
-            # can we do additional error handling here?
-
-            # reraise so http error can be sent
-            raise exc
-            # no retry for this type of error
+        logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 
         # capture finished, go to next state
         self._captured()
@@ -227,7 +331,7 @@ class ProcessingService(StateMachine):
 
         if not self.model.last_capture_successful():
             logger.critical("on_exit_capture no valid image taken! abort processing")
-            self._reset()
+            # TODO:self._reset()
             return
 
         ## PHASE 1:
@@ -264,14 +368,12 @@ class ProcessingService(StateMachine):
         else:
             # auto continue
             logger.info("finished capture, automatic confirm enabled")
-            self.confirm_capture()
+            self.confirm()
 
     def on_exit_approve_capture(self, event):
         if event == self.confirm.name:
             # nothing to do
             pass
-            # add result to temporary confirmed collection
-            # self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
 
         if event == self.reject.name:
             # remove rejected image
@@ -280,21 +382,19 @@ class ProcessingService(StateMachine):
             logger.info(f"rejected: {delete_mediaitem=}")
             self._mediacollection_service.delete_mediaitem_files(delete_mediaitem)
 
+        if event == self.abort.name:
+            # remove all images captured until now
+            logger.info("aborting job, deleting captured items")
+            for item in self.model._confirmed_captures_collection:
+                logger.debug(f"delete item {item}")
+                self._mediacollection_service.delete_mediaitem_files(mediaitem=item)
+
     def on_enter_record(self):
         """_summary_"""
 
         self._wled_service.preset_record()
 
-        try:
-            self._aquisition_service.start_recording()
-
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"error start recording! {exc}")
-
-            # reraise so http error can be sent
-            raise exc
-            # no retry for this type of error
+        self._aquisition_service.start_recording()
 
         # capture finished, go to next state
         time.sleep(appconfig.misc.video_duration)
@@ -306,15 +406,7 @@ class ProcessingService(StateMachine):
 
         self._wled_service.preset_standby()
 
-        try:
-            self._aquisition_service.stop_recording()
-        except Exception as exc:
-            logger.exception(exc)
-            logger.error(f"error stop recording! {exc}")
-
-            # reraise so http error can be sent
-            raise exc
-            # no retry for this type of error
+        self._aquisition_service.stop_recording()
 
     def on_enter_captures_completed(self):
         ## PHASE 2:
@@ -378,81 +470,19 @@ class ProcessingService(StateMachine):
         # to inform frontend about new image to display
         logger.info("finished postprocessing")
 
-        # send machine to idle again
-        self._present()
-
-    def on_exit_captures_completed(self):
-        ## finish and add items to collection:
-        #
-        logger.info("exit job postprocess, adding items to db")
+        ## add items to collection:
+        logger.info("adding items to db")
 
         for item in self.model._confirmed_captures_collection:
             logger.debug(f"adding {item} to collection")
             _ = self._mediacollection_service.db_add_item(item)
 
+        # present to ui
+        self._present()
+
     def on_enter_present_capture(self):
-        self._finalize()
+        self._finish()
 
-    def on__reset(self):
-        logger.info("job reset, rollback captures during job")
-
-        for item in self.model._confirmed_captures_collection:
-            logger.debug(f"delete item {item}")
-            self._mediacollection_service.delete_mediaitem_files(mediaitem=item)
-
-    def _check_occupied(self):
-        if not self.idle.is_active:
-            raise ProcessMachineOccupiedError("bad request, only one request at a time!")
-
-    ### external functions to start processes
-
-    def start_job_1pic(self):
-        self._check_occupied()
-        try:
-            self.start(JobModel.Typ.image, 1)
-        except Exception as exc:
-            logger.error(exc)
-            self._reset()
-            raise RuntimeError(f"error processing the job :| {exc}") from exc
-
-    def start_job_collage(self):
-        self._check_occupied()
-        try:
-            self.start(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
-        except Exception as exc:
-            logger.error(exc)
-            self._reset()
-            raise RuntimeError(f"error processing the job :| {exc}") from exc
-
-    def start_job_video(self):
-        self._check_occupied()
-        try:
-            self.start(JobModel.Typ.video, 1)
-        except Exception as exc:
-            logger.error(exc)
-            self._reset()
-            raise RuntimeError(f"error processing the job :| {exc}") from exc
-
-    def start_job_animation(self):
-        self._check_occupied()
-        try:
-            self.start(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
-        except Exception as exc:
-            logger.error(exc)
-            self._reset()
-            raise RuntimeError(f"error processing the job :| {exc}") from exc
-
-    def job_finished(self):
-        return self.idle.is_active
-
-    def confirm_capture(self):
-        self.confirm()
-
-    def reject_capture(self):
-        self.reject()
-
-    def abort_process(self):
-        self._reset()
-
-    def stop_recording(self):
-        self._captured()
+    def on_enter_finished(self):
+        # final state, nothing to do. just for UI to have a dedicated state.
+        pass
