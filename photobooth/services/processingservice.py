@@ -89,8 +89,6 @@ class ProcessingService(StateMachine):
             typ,
             total_captures_to_take,
             collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
-            collage_hide_individual_pictures=appconfig.common.collage_hide_individual_pictures,
-            collage_delete_individual_pictures=appconfig.common.collage_delete_individual_pictures,
         )
 
         logger.info(f"start job {self.model}")
@@ -334,14 +332,6 @@ class ProcessingService(StateMachine):
             mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
-
-            # (optionally) hide individual images from gallery
-            if self.model.hide_individual_images():
-                while len(self.model._confirmed_captures_collection) > 0:
-                    delete_mediaitem = self.model._confirmed_captures_collection.pop()
-                    # (optionally) delete individual images
-                    if self.model.delete_individual_images():
-                        self._mediacollection_service.delete_mediaitem_files(delete_mediaitem)
 
             # resulting collage mediaitem will be added to the collection as most recent item
             self.model.add_confirmed_capture_to_collection(mediaitem)
