@@ -24,6 +24,7 @@ def _container() -> Container:
     # create one image to ensure there is at least one
     if container.mediacollection_service.number_of_images == 0:
         container.processing_service.start_job_1pic()
+        container.processing_service.wait_until_job_finished()
 
     # deliver
     yield container

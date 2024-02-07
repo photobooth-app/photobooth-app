@@ -48,6 +48,7 @@ def _container() -> Container:
 def _mediaitem(request, _container: Container) -> MediaItem:
     job = getattr(_container.processing_service, request.param)
     job()
+    container.processing_service.wait_until_job_finished()
     yield _container.mediacollection_service.db_get_most_recent_mediaitem()
 
 
