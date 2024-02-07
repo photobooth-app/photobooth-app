@@ -1,5 +1,8 @@
 """
-AppConfig class providing central config
+AppConfig class providing central config for ui
+
+These settings are 1:1 sent to the vue frontend.
+Remember to keep the settings in sync! Fields added here need to be added to the frontend also.
 
 """
 
@@ -85,8 +88,4 @@ class GroupUiSettings(BaseModel):
     gallery_show_print: bool = Field(
         default=True,
         description="Show print button for items in gallery.",
-    )
-    gallery_show_individual_images: bool = Field(
-        default=False,
-        description="Show individual images of collages/animations in the gallery (Note: changing this setting will not change visibility of already captured images).",
     )

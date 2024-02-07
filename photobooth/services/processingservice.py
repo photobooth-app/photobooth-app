@@ -190,10 +190,10 @@ class ProcessingService(StateMachine):
         _visibility = True
         if self.model._typ is JobModel.Typ.collage:
             _type = MediaItemTypes.collageimage  # 1st phase collage image
-            _visibility = appconfig.uisettings.gallery_show_individual_images
+            _visibility = appconfig.common.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.animation:
             _type = MediaItemTypes.animationimage  # 1st phase animation image
-            _visibility = appconfig.uisettings.gallery_show_individual_images
+            _visibility = appconfig.common.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.video:
             raise RuntimeError("videos are not processed in capture state")
 
@@ -390,9 +390,8 @@ class ProcessingService(StateMachine):
         logger.info("exit job postprocess, adding items to db")
 
         for item in self.model._confirmed_captures_collection:
-            if item.visible:
-                logger.debug(f"adding {item} to collection")
-                _ = self._mediacollection_service.db_add_item(item)
+            logger.debug(f"adding {item} to collection")
+            _ = self._mediacollection_service.db_add_item(item)
 
     def on_enter_present_capture(self):
         self._finalize()

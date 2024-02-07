@@ -41,10 +41,14 @@ class GroupCommon(BaseModel):
         le=20,
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
     )
-
     collage_automatic_capture_continue: bool = Field(
         default=True,
         description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
+    )
+
+    gallery_show_individual_images: bool = Field(
+        default=False,
+        description="Show individual images of collages/animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
     DEBUG_LEVEL: EnumDebugLevel = Field(
