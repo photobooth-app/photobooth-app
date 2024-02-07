@@ -39,7 +39,7 @@ class InformationService(BaseService):
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
-        if platform.system() == "Linux":
+        if platform.system() in ["Linux", "Darwin"]:
             self._logger.info(f"{psutil.disk_usage('/')=}")
         elif platform.system() == "Windows":
             self._logger.info(f"{psutil.disk_usage('C:')=}")
@@ -130,9 +130,7 @@ class InformationService(BaseService):
         return self._aquisition_service.stats()
 
     def _gather_disk(self):
-        if platform.system() == "Linux":
-            disk = psutil.disk_usage("/")._asdict()
-        elif platform.system() == "Darwin":
+        if platform.system() in ["Linux", "Darwin"]:
             disk = psutil.disk_usage("/")._asdict()
         elif platform.system() == "Windows":
             disk = psutil.disk_usage("C:")._asdict()
