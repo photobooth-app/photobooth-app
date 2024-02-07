@@ -132,6 +132,8 @@ class InformationService(BaseService):
     def _gather_disk(self):
         if platform.system() == "Linux":
             disk = psutil.disk_usage("/")._asdict()
+        elif platform.system() == "Darwin":
+            disk = psutil.disk_usage("/")._asdict()
         elif platform.system() == "Windows":
             disk = psutil.disk_usage("C:")._asdict()
         else:
