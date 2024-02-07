@@ -301,14 +301,17 @@ class ProcessingMachine(StateMachine):
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
         _type = MediaItemTypes.image
+        _visibility = True
         if self.model._typ is JobModel.Typ.collage:
             _type = MediaItemTypes.collageimage  # 1st phase collage image
+            _visibility = appconfig.common.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.animation:
-            _type = MediaItemTypes.animationimage  # 1st phase collage image
+            _type = MediaItemTypes.animationimage  # 1st phase animation image
+            _visibility = appconfig.common.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.video:
             raise RuntimeError("videos are not processed in capture state")
 
-        filepath_neworiginalfile = get_new_filename(type=_type)
+        filepath_neworiginalfile = get_new_filename(type=_type, visibility=_visibility)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         start_time_capture = time.time()

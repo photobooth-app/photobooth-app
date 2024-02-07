@@ -1,5 +1,8 @@
 """
-AppConfig class providing central config
+AppConfig class providing central config for ui
+
+These settings are 1:1 sent to the vue frontend.
+Remember to keep the settings in sync! Fields added here need to be added to the frontend also.
 
 """
 
