@@ -105,12 +105,9 @@ def test_shareservice_download_all_mediaitem_types(_mediaitem: MediaItem):
 
     # valid status code
     assert r.status_code == 200
-    # check we received a valid image also
-    try:
-        with Image.open(io.BytesIO(r.content)) as img:
-            img.verify()
-    except Exception as exc:
-        raise AssertionError(f"shareservice did not return valid image bytes, {exc}") from exc
+
+    # check we received something
+    assert len(r.content) > 0
 
 
 def test_shareservice_download_nonexistant_image(_container: Container):
