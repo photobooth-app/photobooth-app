@@ -82,7 +82,8 @@ class MediacollectionService(BaseService):
         self._db.insert(0, item)  # insert at first position (prepend)
 
         # and insert in client db collection so gallery is up to date.
-        self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=item))
+        if item.visible:
+            self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=item))
 
         return item.id
 
@@ -90,7 +91,8 @@ class MediacollectionService(BaseService):
         self._db.remove(item)
 
         # and remove from client db collection so gallery is up to date.
-        self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=item))
+        if item.visible:
+            self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=item))
 
     def _db_delete_items(self):
         self._db.clear()
