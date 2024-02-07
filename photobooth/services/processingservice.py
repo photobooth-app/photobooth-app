@@ -187,14 +187,16 @@ class ProcessingService(StateMachine):
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
         _type = MediaItemTypes.image
+        _visibility = True
         if self.model._typ is JobModel.Typ.collage:
             _type = MediaItemTypes.collageimage  # 1st phase collage image
+            _visibility = appconfig.uisettings.gallery_show_collage_images
         if self.model._typ is JobModel.Typ.animation:
             _type = MediaItemTypes.animationimage  # 1st phase collage image
         if self.model._typ is JobModel.Typ.video:
             raise RuntimeError("videos are not processed in capture state")
 
-        filepath_neworiginalfile = get_new_filename(type=_type)
+        filepath_neworiginalfile = get_new_filename(type=_type, visibility=_visibility)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
 
         try:
@@ -387,8 +389,9 @@ class ProcessingService(StateMachine):
         logger.info("exit job postprocess, adding items to db")
 
         for item in self.model._confirmed_captures_collection:
-            logger.debug(f"adding {item} to collection")
-            _ = self._mediacollection_service.db_add_item(item)
+            if item.visible:
+                logger.debug(f"adding {item} to collection")
+                _ = self._mediacollection_service.db_add_item(item)
 
     def on_enter_present_capture(self):
         self._finalize()
