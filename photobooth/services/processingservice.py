@@ -190,9 +190,10 @@ class ProcessingService(StateMachine):
         _visibility = True
         if self.model._typ is JobModel.Typ.collage:
             _type = MediaItemTypes.collageimage  # 1st phase collage image
-            _visibility = appconfig.uisettings.gallery_show_collage_images
+            _visibility = appconfig.uisettings.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.animation:
-            _type = MediaItemTypes.animationimage  # 1st phase collage image
+            _type = MediaItemTypes.animationimage  # 1st phase animation image
+            _visibility = appconfig.uisettings.gallery_show_individual_images
         if self.model._typ is JobModel.Typ.video:
             raise RuntimeError("videos are not processed in capture state")
 

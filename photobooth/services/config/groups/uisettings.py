@@ -86,7 +86,7 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show print button for items in gallery.",
     )
-    gallery_show_collage_images: bool = Field(
+    gallery_show_individual_images: bool = Field(
         default=False,
-        description="Show images used for the collage in the gallery.",
+        description="Show individual images of collages/animations in the gallery (Note: changing this setting will not change visibility of already captured images).",
     )
