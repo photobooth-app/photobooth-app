@@ -113,7 +113,7 @@ class ProcessingService(BaseService):
 
         ## run in separate thread
         logger.debug("starting _process_thread")
-        self._process_thread = Thread(name="_process_thread", target=self._process_fun, args=(), daemon=False)
+        self._process_thread = Thread(name="_process_thread", target=self._process_fun, args=(), daemon=True)
         self._process_thread.start()
 
     ##
