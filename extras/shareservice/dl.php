@@ -16,6 +16,7 @@ $ALLOWED_UPLOAD_TYPES = [
     'image/png' => 'png',
     'image/jpeg' => 'jpg',
     'image/gif' => 'gif',
+    'video/mp4' => 'mp4',
 ];
 
 // setup php ini

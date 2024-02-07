@@ -44,7 +44,7 @@ def _container() -> Container:
 
 
 # @pytest.fixture()
-@pytest.fixture(params=["start_job_1pic", "start_job_collage", "start_job_animation"])
+@pytest.fixture(params=["start_job_1pic", "start_job_collage", "start_job_animation", "start_job_video"])
 def _mediaitem(request, _container: Container) -> MediaItem:
     job = getattr(_container.processing_service, request.param)
     job()
