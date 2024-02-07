@@ -159,7 +159,7 @@ class ProcessingService(BaseService):
         self.send_event("reject")
 
     def abort_process(self):
-        self.send_event("reject")
+        self.send_event("abort")
 
     def stop_recording(self):
         pass
