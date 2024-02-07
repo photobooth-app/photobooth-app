@@ -100,3 +100,8 @@ class GroupUiSettings(BaseModel):
         description="Secondary color (admin interface, accents).",
         json_schema_extra={"ui_component": "ColorPicker"},
     )
+
+    gallery_show_individual_images: bool = Field(
+        default=False,
+        description="Show individual images of collages/animations in the gallery (Note: changing this setting will not change visibility of already captured images).",
+    )
