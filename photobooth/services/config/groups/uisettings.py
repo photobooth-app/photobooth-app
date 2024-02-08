@@ -17,6 +17,18 @@ class GroupUiSettings(BaseModel):
 
     model_config = ConfigDict(title="Personalize the User Interface")
 
+    PRIMARY_COLOR: str = Field(
+        default="#196cb0",
+        description="Primary color (e.g. buttons, title bar).",
+        json_schema_extra={"ui_component": "ColorPicker"},
+    )
+
+    SECONDARY_COLOR: str = Field(
+        default="#b8124f",
+        description="Secondary color (admin interface, accents).",
+        json_schema_extra={"ui_component": "ColorPicker"},
+    )
+
     show_takepic_on_frontpage: bool = Field(
         default=True,
         description="Show button to capture single picture on frontpage.",
@@ -55,6 +67,11 @@ class GroupUiSettings(BaseModel):
         default=0.5,
         description="Offset in seconds, the smile-icon shall be shown.",
     )
+    TAKEPIC_MSG_TEXT: str = Field(
+        default="😃",
+        description="Message to display at the end of the capture countdown.",
+    )
+
     AUTOCLOSE_NEW_ITEM_ARRIVED: int = Field(
         default=30,
         description="Timeout in seconds a new item popup closes automatically.",
