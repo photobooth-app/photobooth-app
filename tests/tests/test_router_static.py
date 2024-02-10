@@ -39,7 +39,12 @@ def test_read_log(client: TestClient):
 
 def test_private_css_nonexisting_placeholder(client: TestClient):
     private_css_file = Path("userdata", "private.css")
-    os.remove(private_css_file)
+    try:
+        os.remove(private_css_file)
+    except Exception:
+        # ignore if file not exists
+        pass
+
     assert not private_css_file.exists()
 
     response = client.get("/private.css")

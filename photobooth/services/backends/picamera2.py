@@ -37,7 +37,7 @@ class Picamera2Backend(AbstractBackend):
         # jpeg data as bytes
         data: bytes = None
         # signal to producer that requesting thread is ready to be notified
-        request_ready: Event = None
+        request_hires_still: Event = None
         # condition when frame is avail
         condition: Condition = None
 
@@ -87,7 +87,7 @@ class Picamera2Backend(AbstractBackend):
         """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
 
-        self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(data=None, request_ready=Event(), condition=Condition())
+        self._hires_data: __class__.PicamHiresData = __class__.PicamHiresData(data=None, request_hires_still=Event(), condition=Condition())
 
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
@@ -205,13 +205,13 @@ class Picamera2Backend(AbstractBackend):
         raise TimeoutError if no frame was received
         """
         with self._hires_data.condition:
-            self._hires_data.request_ready.set()
+            self._hires_data.request_hires_still.set()
 
             if not self._hires_data.condition.wait(timeout=4):
                 # wait returns true if timeout expired
                 raise TimeoutError("timeout receiving frames")
 
-        self._hires_data.request_ready.clear()
+        self._hires_data.request_hires_still.clear()
         return self._hires_data.data
 
     #
@@ -332,7 +332,7 @@ class Picamera2Backend(AbstractBackend):
 
     def _worker_fun(self):
         while not self._worker_thread.stopped():  # repeat until stopped
-            if self._hires_data.request_ready.is_set() is True and self._current_config != self._capture_config:
+            if self._hires_data.request_hires_still.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
                 logger.warning("force switchmode to capture config right before taking picture")
@@ -344,10 +344,9 @@ class Picamera2Backend(AbstractBackend):
                 else:
                     logger.info("switch_mode ignored, because shutdown already requested")
 
-            if self._hires_data.request_ready.is_set():
+            if self._hires_data.request_hires_still.is_set():
                 # only capture one pic and return to lores streaming afterwards
-                self._hires_data.request_ready.clear()
-
+                self._hires_data.request_hires_still.clear()
                 # capture hq picture
                 data = io.BytesIO()
                 self._picamera2.capture_file(data, format="jpeg")
