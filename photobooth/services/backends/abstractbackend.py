@@ -240,7 +240,7 @@ class AbstractBackend(ABC):
             _type_: _description_
         """
         while self.device_status is not EnumDeviceStatus.running:
-            logger.info("waiting")
+            logger.debug("waiting")
             time.sleep(0.2)
 
         logger.info("device status is running now")
@@ -305,7 +305,7 @@ class AbstractBackend(ABC):
 
         # final call
         try:
-            return self._wait_for_lores_image()  # blocks 0.2s usually. 10 retries default wait time=2s
+            return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
         except Exception as exc:
             # we failed finally all the attempts - deal with the consequences.
             logger.exception(exc)

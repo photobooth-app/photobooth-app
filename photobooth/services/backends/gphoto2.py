@@ -32,7 +32,7 @@ class Gphoto2Backend(AbstractBackend):
         # jpeg data as bytes
         data: bytes = None
         # signal to producer that requesting thread is ready to be notified
-        request_ready: Event = None
+        request_hires_still: Event = None
         # condition when frame is avail
         condition: Condition = None
 
@@ -44,7 +44,7 @@ class Gphoto2Backend(AbstractBackend):
 
         self._hires_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
             data=None,
-            request_ready=Event(),
+            request_hires_still=Event(),
             condition=Condition(),
         )
         self._lores_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
@@ -132,12 +132,12 @@ class Gphoto2Backend(AbstractBackend):
         raise TimeoutError if no frame was received
         """
         with self._hires_data.condition:
-            self._hires_data.request_ready.set()
+            self._hires_data.request_hires_still.set()
 
-            if not self._hires_data.condition.wait(timeout=4):
+            if not self._hires_data.condition.wait(timeout=8):
+                self._hires_data.request_hires_still.clear()  # clear hq request even if failed, parent class might retry again
                 raise TimeoutError("timeout receiving frames")
 
-        self._hires_data.request_ready.clear()
         return self._hires_data.data
 
     #
@@ -146,6 +146,10 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        while self._hires_data.request_hires_still.is_set():
+            logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
+            time.sleep(0.2)
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.2):
                 raise TimeoutError("timeout receiving frames")
@@ -200,7 +204,7 @@ class Gphoto2Backend(AbstractBackend):
         preview_failcounter = 0
 
         while not self._worker_thread.stopped():  # repeat until stopped
-            if not self._hires_data.request_ready.is_set():
+            if not self._hires_data.request_hires_still.is_set():
                 if self.device_enable_lores_stream:
                     try:
                         capture = self._camera.capture_preview()
@@ -230,9 +234,6 @@ class Gphoto2Backend(AbstractBackend):
                 else:
                     time.sleep(0.05)
             else:
-                # only capture one pic and return to lores streaming afterwards
-                self._hires_data.request_ready.clear()
-
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
                 if appconfig.backends.gphoto2_disable_viewfinder_before_capture:
@@ -273,6 +274,9 @@ class Gphoto2Backend(AbstractBackend):
 
                     # try again in next loop
                     continue
+
+                # only capture one pic and return to lores streaming afterwards
+                self._hires_data.request_hires_still.clear()
 
                 with self._hires_data.condition:
                     self._hires_data.data = img_bytes
