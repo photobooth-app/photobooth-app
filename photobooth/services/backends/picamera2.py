@@ -205,13 +205,13 @@ class Picamera2Backend(AbstractBackend):
         raise TimeoutError if no frame was received
         """
         with self._hires_data.condition:
-            self._hires_data.request_ready.set()
+            self._hires_data.request_hires_still.set()
 
             if not self._hires_data.condition.wait(timeout=4):
                 # wait returns true if timeout expired
                 raise TimeoutError("timeout receiving frames")
 
-        self._hires_data.request_ready.clear()
+        self._hires_data.request_hires_still.clear()
         return self._hires_data.data
 
     #
