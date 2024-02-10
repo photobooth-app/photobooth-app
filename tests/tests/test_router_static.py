@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -34,12 +37,25 @@ def test_read_log(client: TestClient):
     assert response.status_code == 200
 
 
-"""
-def test_read_services_status(client: TestClient):
-    response = client.get("/debug/service/status")
-    assert response.status_code == 200
+def test_private_css_nonexisting_placeholder(client: TestClient):
+    private_css_file = Path("userdata", "private.css")
+    os.remove(private_css_file)
+    assert not private_css_file.exists()
 
-    # add shutdown_resources here, since appcontainer is fully initialized when getting this URI
-    # failing to do so leaves threads running infinite.
-    client.app.container.shutdown_resources()   # this mutes logging during pytest. remove test for now, check later.
-"""
+    response = client.get("/private.css")
+    assert response.status_code == 200
+    assert response.text.strip().startswith("/*")
+    assert response.text.strip().endswith("*/")
+
+
+def test_private_css(client: TestClient):
+    TEST_STRING = "/*css-test-content*/"
+    os.makedirs("userdata", exist_ok=True)
+    with open(Path("userdata", "private.css"), "w") as private_css_file:
+        private_css_file.write(TEST_STRING)
+        private_css_file.flush()
+
+    response = client.get("/private.css")
+    assert Path("userdata", "private.css").exists()
+    assert response.status_code == 200
+    assert response.text.strip() == TEST_STRING

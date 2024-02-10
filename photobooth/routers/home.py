@@ -2,19 +2,12 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 logger = logging.getLogger(__name__)
 home_router = APIRouter(
     tags=["home"],
 )
-
-"""
-@home_router.get("/")
-async def redirect_web():
-    response = RedirectResponse(url="/web/")
-    return response
-"""
 
 
 @home_router.get("/")
@@ -24,3 +17,16 @@ def index():
     """
     headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
     return FileResponse(path=Path(__file__).parent.parent.joinpath("web_spa", "index.html").resolve(), headers=headers)
+
+
+@home_router.get("/private.css")
+def ui_private_css():
+    """
+    if private.css exists return the file content, otherwise send empty response to avoid 404
+    """
+    path = Path("userdata", "private.css")
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
+    if not path.is_file():
+        return Response("/* placeholder. create private.css in userdata folder to customize css */", headers=headers)
+    else:
+        return FileResponse(path=path, headers=headers)
