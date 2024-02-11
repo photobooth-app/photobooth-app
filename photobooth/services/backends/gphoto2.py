@@ -4,6 +4,7 @@ Gphoto2 backend implementation
 """
 import dataclasses
 import logging
+import os
 import time
 from threading import Condition, Event
 
@@ -41,6 +42,19 @@ class Gphoto2Backend(AbstractBackend):
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
+
+        # generate dict for clear events clear text names
+        # defined events http://www.gphoto.org/doc/api/gphoto2-camera_8h.html#a438ab2ac60ad5d5ced30e4201476800b
+        self.event_texts = {}
+        for name in (
+            "GP_EVENT_UNKNOWN",
+            "GP_EVENT_TIMEOUT",
+            "GP_EVENT_FILE_ADDED",
+            "GP_EVENT_FOLDER_ADDED",
+            "GP_EVENT_CAPTURE_COMPLETE",
+            "GP_EVENT_FILE_CHANGED",
+        ):
+            self.event_texts[getattr(gp, name)] = name
 
         self._hires_data: __class__.Gphoto2DataBytes = __class__.Gphoto2DataBytes(
             data=None,
@@ -93,6 +107,8 @@ class Gphoto2Backend(AbstractBackend):
                 logger.debug(f"{config.get_name(n)}={config.get_value(n)}")
         except gp.Gphoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
+
+        self._capturetarget(appconfig.backends.gphoto2_capture_target)
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -164,6 +180,16 @@ class Gphoto2Backend(AbstractBackend):
         self._iso(appconfig.backends.gphoto2_iso_liveview)
         self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
+    def _capturetarget(self, val: str = ""):
+        if not val:
+            logger.debug("capturetarget empty, ignore")
+            return
+        try:
+            logger.info(f"setting capturetarget value: {val}")
+            self._gp_set_config("capturetarget", val)
+        except gp.GPhoto2Error as exc:
+            logger.warning(f"cannot set capturetarget, command ignored {exc}")
+
     def _iso(self, val: str = ""):
         if not val:
             logger.debug("iso empty, ignore")
@@ -234,6 +260,11 @@ class Gphoto2Backend(AbstractBackend):
                 else:
                     time.sleep(0.05)
             else:
+                # hold a list of captured files during capture. this is needed if JPG+RAW is shot.
+                # there is no guarantee that the first is the JPG and second the RAW image. Also depending on the capturetarget
+                # the sequence the images appear can be different. gp.GP_CAPTURE_IMAGE vs gp.GP_CAPTURE_RAW seems not reliable to rely on
+                captured_files: list[tuple[str:str]] = []
+
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
                 if appconfig.backends.gphoto2_disable_viewfinder_before_capture:
@@ -244,9 +275,7 @@ class Gphoto2Backend(AbstractBackend):
                 logger.info("taking hq picture")
                 try:
                     file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
-
-                    logger.info(f"Camera file path: {file_path.folder}/{file_path.name}")
-
+                    captured_files.append((file_path.folder, file_path.name))
                 except gp.GPhoto2Error as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
 
@@ -256,17 +285,43 @@ class Gphoto2Backend(AbstractBackend):
                 self._iso(appconfig.backends.gphoto2_iso_liveview)
                 self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
+                # empty the event queue, needed in case of RAW+JPG shooting usually.
+                # used usually only if capture JPG+RAW enabled (2 files added in one capture)
+                # if not cleared, the second capture might fail due to pending events in libgphoto2
+                # also if raw, we might have the JPG added later in these events, not received from .capture above
+                # https://github.com/jim-easterbrook/python-gphoto2/issues/65#issuecomment-433615025
+                evt_typ, evt_data = self._camera.wait_for_event(200)
+                while evt_typ != gp.GP_EVENT_TIMEOUT:
+                    logger.debug(f"Event: {self.event_texts.get(evt_typ,f'unknown event index: {evt_typ}')}, data: {evt_data}")
+
+                    if evt_typ == gp.GP_EVENT_FILE_ADDED:
+                        captured_files.append((evt_data.folder, evt_data.name))
+
+                    # try to grab another event
+                    evt_typ, evt_data = self._camera.wait_for_event(10)  # timeout in ms
+
+                logger.info(f"got {captured_files=}")
+
+                # now decide which file to download, we watch out for the jpg
+                file_to_download = None
+                for captured_file in captured_files:
+                    _, file_extension = os.path.splitext(captured_file[1])  # get file extension (including .)
+                    if str(file_extension).lower() in (".jpg", ".jpeg"):
+                        file_to_download = captured_file
+
+                        logger.info(f"determined {file_to_download=}")
+                        break
+
+                # check if a file was found. if no, maybe capture failed or
+                if file_to_download is None:
+                    logger.critical("no capture or no jpeg captured! shooting in raw-only mode?")
+
+                    # try again in next loop
+                    continue
+
                 # read from camera
                 try:
-                    if appconfig.backends.gphoto2_wait_event_after_capture_trigger:
-                        self._camera.wait_for_event(1000)
-
-                    camera_file = self._camera.file_get(
-                        file_path.folder,
-                        file_path.name,
-                        gp.GP_FILE_TYPE_NORMAL,
-                    )
-
+                    camera_file = self._camera.file_get(captured_file[0], captured_file[1], gp.GP_FILE_TYPE_NORMAL)
                     file_data = camera_file.get_data_and_size()
                     img_bytes = memoryview(file_data).tobytes()
                 except gp.GPhoto2Error as exc:

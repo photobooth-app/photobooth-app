@@ -90,21 +90,26 @@ class GroupBackends(BaseModel):
         description="Number of attempts to gather a picture from backend.",
     )
 
+    gphoto2_capture_target: str = Field(
+        default="",
+        description="Set capture target (examples: 'Internal RAM', 'Memory card'). To keep images, capture to a disk target. Empty means default of camera (mostly RAM).",
+    )
+    gphoto2_disable_viewfinder_before_capture: bool = Field(
+        default=True,
+        description="Disable viewfinder before capture might speed up following capture autofocus. Might not work with every camera.",
+    )
     gphoto2_iso_liveview: str = Field(
         default="",
         description="Sets the ISO for when the photobooth is in live preview modus. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
     )
-
     gphoto2_iso_capture: str = Field(
         default="",
         description="Sets the ISO for when the photobooth captures a photo. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
     )
-
     gphoto2_shutter_speed_liveview: str = Field(
         default="",
         description="Sets the shutter speed for the camera during the photobooth's live preview mode. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. This setting is effective only when the camera is in manual mode. (Example Values: 1, 1/5, 1/20, 1/30, 1/60, 1/1000, 1/4000, ...) Choose a very high default shutter speed in combination with Auto iso to emulate auto exposure. ",
     )
-
     gphoto2_shutter_speed_capture: str = Field(
         default="",
         description="Configures the shutter speed for the camera at the time of capturing a photo in the photobooth. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Operational only in manual mode. (Example Values: 1/60, 1/320, 1/1000, 1/2000, 1/4000, ...)",
@@ -142,16 +147,6 @@ class GroupBackends(BaseModel):
     v4l_device_index: int = Field(
         default=0,
         description="Device index of webcam opened in v4l backend",
-    )
-
-    gphoto2_disable_viewfinder_before_capture: bool = Field(
-        default=True,
-        description="Disable viewfinder before capture might speed up following capture autofocus. Might not work with every camera.",
-    )
-
-    gphoto2_wait_event_after_capture_trigger: bool = Field(
-        default=False,
-        description="Usually wait_for_event not necessary before downloading the file from camera. Adjust if necessary.",
     )
 
     digicamcontrol_base_url: str = Field(
