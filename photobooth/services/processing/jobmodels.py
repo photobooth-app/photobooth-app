@@ -13,6 +13,7 @@ class CountdownTimer:
     def __init__(self):
         self._duration: float = 0
         self._countdown: float = 0
+        self._remaining_record_time: float = 0
 
         self._ticker_thread: Thread = None
         self._finished_condition: Condition = Condition()
@@ -27,6 +28,7 @@ class CountdownTimer:
     def reset(self):
         self._duration = 0
         self._countdown = 0
+        self._remaining_record_time = 0
 
     def wait_countdown_finished(self, timeout: float = (TIMER_MAX_DURATION + 1)):
         # TODO: timeout needs to be higher than max possible value to avoid any deadlocks

@@ -85,6 +85,27 @@ def test_key_callback_takeanimation(_container: Container):
         _container.processing_service.start_job_animation.assert_called()
 
 
+def test_key_callback_takevideo(_container: Container):
+    """try to emulate key presses as best as possible without actual hardware/user input"""
+
+    # modify config
+    appconfig.hardwareinputoutput.keyboard_input_enabled = True
+    appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation = "v"
+
+    container.stop()
+    container.start()
+
+    if not _container.keyboard_service.is_started():
+        logger.info("error setup keyboard service, ignore because it's due to permission on hosted system")
+        pytest.skip("system does not allow access to input devices")
+
+    # emulate key presses
+    with patch.object(_container.processing_service, "start_or_stop_job_video"):
+        # emulate action
+        _container.keyboard_service._on_key_callback(KeyboardEvent(event_type=KEY_DOWN, name="v", scan_code=None))
+        _container.processing_service.start_or_stop_job_video.assert_called()
+
+
 @patch("subprocess.run")
 def test_key_callback_print(mock_run, _container: Container):
     """try to emulate key presses as best as possible without actual hardware/user input"""

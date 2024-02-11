@@ -79,23 +79,23 @@ class KeyboardService(BaseService):
         self._logger.debug(f"key '{key.name}' triggered.")
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takepic:
-            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takepic}")
-            self._logger.info(f"trigger {__name__}")
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takepic=}")
             self._startjob(self._processing_service.start_job_1pic)
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage:
-            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage}")
-            self._logger.info(f"trigger {__name__}")
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takecollage=}")
             self._startjob(self._processing_service.start_job_collage)
 
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation:
-            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation}")
-            self._logger.info(f"trigger {__name__}")
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation=}")
             self._startjob(self._processing_service.start_job_animation)
 
+        if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_takevideo:
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_takevideo=}")
+            self._startjob(self._processing_service.start_or_stop_job_video)
+
         if key.name == appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item:
-            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item}")
-            self._logger.info("trigger _print_recent_item")
+            self._logger.info(f"got key.name={appconfig.hardwareinputoutput.keyboard_input_keycode_print_recent_item=}")
 
             try:
                 mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()

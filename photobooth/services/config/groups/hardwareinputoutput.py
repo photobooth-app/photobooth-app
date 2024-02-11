@@ -31,6 +31,10 @@ class GroupHardwareInputOutput(BaseModel):
         default="g",
         description="Keycode triggers capture of animation (GIF)",
     )
+    keyboard_input_keycode_takevideo: str = Field(
+        default="v",
+        description="Keycode triggers start and stop of video (MP4)",
+    )
     keyboard_input_keycode_print_recent_item: str = Field(
         default="p",
         description="Keycode triggers printing most recent image captured",
@@ -70,6 +74,10 @@ class GroupHardwareInputOutput(BaseModel):
     gpio_pin_animation: int = Field(
         default=24,
         description="GPIO pin to take an animation (GIF).",
+    )
+    gpio_pin_video: int = Field(
+        default=26,
+        description="GPIO pin to start recording / stop recording a video (MP4).",
     )
     gpio_pin_print_recent_item: int = Field(
         default=23,

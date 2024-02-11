@@ -45,6 +45,8 @@ class GpioService(BaseService):
         self.take1pic_btn: Button = None
         self.takecollage_btn: Button = None
         self.takeanimation_btn: Button = None
+        self.takevideo_btn: Button = None
+        self.print_recent_item_btn: Button = None
 
         # output signals
         # none yet
@@ -80,6 +82,10 @@ class GpioService(BaseService):
         )
         self.takeanimation_btn: Button = Button(
             appconfig.hardwareinputoutput.gpio_pin_animation,
+            bounce_time=DEBOUNCE_TIME,
+        )
+        self.takevideo_btn: Button = Button(
+            appconfig.hardwareinputoutput.gpio_pin_video,
             bounce_time=DEBOUNCE_TIME,
         )
         self.print_recent_item_btn: Button = Button(
@@ -126,6 +132,10 @@ class GpioService(BaseService):
         self._logger.info(f"trigger {__name__}")
         self._startjob(self._processing_service.start_job_animation)
 
+    def _takevideo(self):
+        self._logger.info(f"trigger {__name__}")
+        self._startjob(self._processing_service.start_or_stop_job_video)
+
     def _print_recent_item(self):
         self._logger.info("trigger _print_recent_item")
 
@@ -147,12 +157,14 @@ class GpioService(BaseService):
         self.shutdown_btn.when_held = self._shutdown
         # reboot
         self.reboot_btn.when_held = self._reboot
-        # takepic single
+        # take single
         self.take1pic_btn.when_pressed = self._take1pic
-        # takepic collage
+        # take collage
         self.takecollage_btn.when_pressed = self._takecollage
-        # takepic animation
+        # take animation
         self.takeanimation_btn.when_pressed = self._takeanimation
+        # take video
+        self.takevideo_btn.when_pressed = self._takevideo
         # print
         self.print_recent_item_btn.when_pressed = self._print_recent_item
 

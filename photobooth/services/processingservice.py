@@ -72,14 +72,13 @@ class ProcessingService(BaseService):
                     caption="Error processing the job 😔",
                 )
             )
-            raise exc
+            self._sse_service.dispatch_event(SseEventProcessStateinfo(None))
 
-            # TODO: handle rollback self._reset()
+            raise exc
 
         finally:
             self._state_machine = None
             # send empty response to ui so it knows it's in idle again.
-            self._sse_service.dispatch_event(SseEventProcessStateinfo(None))
 
         logger.debug("_process_fun left")
 
@@ -132,8 +131,13 @@ class ProcessingService(BaseService):
     def start_job_animation(self):
         self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
 
-    def start_job_video(self):
-        self.start_job(JobModel.Typ.video, 1)
+    def start_or_stop_job_video(self):
+        if self._state_machine is not None:
+            # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
+            logger.info("running job, sending stop recording info")
+            self.stop_recording()
+        else:
+            self.start_job(JobModel.Typ.video, 1)
 
     def wait_until_job_finished(self):
         if self._process_thread is None:
@@ -162,8 +166,7 @@ class ProcessingService(BaseService):
         self.send_event("abort")
 
     def stop_recording(self):
-        pass
-        # TODO: implement
+        self._state_machine.stop_recording()
 
 
 class ProcessingMachine(StateMachine):
@@ -400,9 +403,15 @@ class ProcessingMachine(StateMachine):
         self._aquisition_service.start_recording()
 
         # capture finished, go to next state
-        time.sleep(appconfig.misc.video_duration)
+        self.model._remaining_record_time = float(appconfig.misc.video_duration)
+        while self.model._remaining_record_time > 0:
+            self.model._remaining_record_time -= 0.1
+            time.sleep(0.1)
 
         self._captured()
+
+    def stop_recording(self):
+        self.model._remaining_record_time = 0
 
     def on_exit_record(self):
         """_summary_"""
