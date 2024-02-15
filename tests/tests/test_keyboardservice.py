@@ -90,7 +90,7 @@ def test_key_callback_takevideo(_container: Container):
 
     # modify config
     appconfig.hardwareinputoutput.keyboard_input_enabled = True
-    appconfig.hardwareinputoutput.keyboard_input_keycode_takeanimation = "v"
+    appconfig.hardwareinputoutput.keyboard_input_keycode_takevideo = "v"
 
     container.stop()
     container.start()
