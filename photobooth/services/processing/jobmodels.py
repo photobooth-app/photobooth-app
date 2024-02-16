@@ -195,9 +195,6 @@ class JobModel:  # TODO: derive from model class?
         self._confirmed_captures_collection = []
         self._collage_automatic_capture_continue = collage_automatic_capture_continue
         self._config_id = config_id
-
-        print("########### STARTED MODEL WITH CONFIG ID ", config_id)
-
         self._validate_job()
 
     def reset_job(self):
