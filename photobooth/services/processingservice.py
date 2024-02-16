@@ -123,7 +123,7 @@ class ProcessingService(BaseService):
         if self._state_machine:
             self._state_machine._emit_model_state_update()
 
-    def start_job_1pic(self):
+    def start_job_1pic(self, _):
         self.start_job(JobModel.Typ.image, 1)
 
     def start_job_collage(self, config_id):
@@ -132,7 +132,7 @@ class ProcessingService(BaseService):
     def start_job_animation(self, config_id):
         self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation(config_id), config_id)
 
-    def start_or_stop_job_video(self):
+    def start_or_stop_job_video(self, _):
         if self._state_machine is not None:
             # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
             logger.info("running job, sending stop recording info")
