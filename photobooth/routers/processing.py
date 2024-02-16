@@ -12,9 +12,9 @@ processing_router = APIRouter(
 )
 
 
-def _capture(job):
+def _capture(job, arg=None):
     try:
-        job()
+        job(arg)
 
         return "OK"
     except ProcessMachineOccupiedError as exc:
@@ -38,14 +38,14 @@ def api_chose_1pic_get():
     return _capture(container.processing_service.start_job_1pic)
 
 
-@processing_router.get("/chose/collage")
-def api_chose_collage_get():
-    return _capture(container.processing_service.start_job_collage)
+@processing_router.get("/chose/collage/{config_id:int}")
+def api_chose_collage_get(config_id: int):
+    return _capture(container.processing_service.start_job_collage, config_id - 1)  # convert to zero-indexed
 
 
-@processing_router.get("/chose/animation")
-def api_chose_animation_get():
-    return _capture(container.processing_service.start_job_animation)
+@processing_router.get("/chose/animation/{config_id:int}")
+def api_chose_animation_get(config_id: int):
+    return _capture(container.processing_service.start_job_animation, config_id - 1)
 
 
 @processing_router.get("/chose/video")
