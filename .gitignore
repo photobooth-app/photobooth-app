@@ -32,5 +32,3 @@ dist/*
 
 # ignore drawing of statemachine
 diagram_ProcessingPicture.png
-
-node_modules
