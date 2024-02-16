@@ -5,7 +5,7 @@ AppConfig class providing central config
 
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt, PositiveInt, RootModel
 from pydantic_extra_types.color import Color
 
 
@@ -210,6 +210,16 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
 
     model_config = ConfigDict(title="Process collage after capture")
 
+    configuration_name: str = Field(
+        default="",
+        description="Name of this configuration",
+    )
+
+    display_on_frontpage: bool = Field(
+        default=True,
+        description="Whether to show this configuration on the frontpage",
+    )
+
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
     capture_fill_background_enable: bool = Field(
@@ -311,10 +321,33 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
     )
 
 
+class GroupMediaprocessingPipelinesCollage(RootModel):
+    """Configure stages how to process collage after capture."""
+
+    model_config = ConfigDict(title="Collage configuration")
+    root: list[GroupMediaprocessingPipelineCollage]
+
+    def __iter__(self):
+        return iter(self.root)
+
+    def __getitem__(self, item):
+        return self.root[item]
+
+
 class GroupMediaprocessingPipelineAnimation(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Process Animation (GIF) after capture")
+    model_config = ConfigDict(title="Animation (GIF) configuration")
+
+    configuration_name: str = Field(
+        default="",
+        description="Name of this configuration",
+    )
+
+    display_on_frontpage: bool = Field(
+        default=True,
+        description="Whether to show this configuration on the frontpage",
+    )
 
     ## phase 2 per collage settings.
 
@@ -338,6 +371,19 @@ class GroupMediaprocessingPipelineAnimation(BaseModel):
         ],
         description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
+
+
+class GroupMediaprocessingPipelinesAnimation(RootModel):
+    """Configure stages how to process animations after capture."""
+
+    model_config = ConfigDict(title="Animation configuration")
+    root: list[GroupMediaprocessingPipelineAnimation]
+
+    def __iter__(self):
+        return iter(self.root)
+
+    def __getitem__(self, item):
+        return self.root[item]
 
 
 class GroupMediaprocessingPipelinePrint(BaseModel):

@@ -5,17 +5,60 @@ These settings are 1:1 sent to the vue frontend.
 Remember to keep the settings in sync! Fields added here need to be added to the frontend also.
 
 """
+import json
+from pathlib import Path
+from typing import Any
 
-
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from .mediaprocessing import EnumPilgramFilter
 
+SETTING_FIELDNAME = "uisettings"
+CONFIG_FILENAME = "./config/config.json"  # can't import from appsettings during initilization
 
-class GroupUiSettings(BaseModel):
+
+class JsonConfigSubSettingsSource(PydanticBaseSettingsSource):
+    """
+    A simple settings source class that loads variables from a JSON file
+    at the project's root.
+
+    Here we happen to choose to use the `env_file_encoding` from Config
+    when reading `config.json`
+    """
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        encoding = self.config.get("env_file_encoding")
+        field_value = None
+        try:
+            file_content_json = json.loads(Path(CONFIG_FILENAME).read_text(encoding))
+            subSetting_json = file_content_json.get(SETTING_FIELDNAME)
+            field_value = subSetting_json.get(field_name)
+        except FileNotFoundError:
+            # ignore file not found, because it could have been deleted or not yet initialized
+            # using defaults
+            pass
+
+        return field_value, field_name, False
+
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+        return value
+
+    def __call__(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+
+        for field_name, field in self.settings_cls.model_fields.items():
+            field_value, field_key, value_is_complex = self.get_field_value(field, field_name)
+            field_value = self.prepare_field_value(field_name, field, field_value, value_is_complex)
+            if field_value is not None:
+                d[field_key] = field_value
+
+        return d
+
+
+class GroupUiSettings(BaseSettings):
     """Personalize the booth's UI."""
-
-    model_config = ConfigDict(title="Personalize the User Interface")
 
     PRIMARY_COLOR: str = Field(
         default="#196cb0",
@@ -33,13 +76,15 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to capture single picture on frontpage.",
     )
-    show_takecollage_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture collage on frontpage.",
+    number_of_collage_configurations: int = Field(
+        default=1,
+        ge=1,
+        description="How many collage configurations to show on frontpage.",
     )
-    show_takeanimation_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture animated GIF on frontpage.",
+    number_of_animation_configurations: int = Field(
+        default=1,
+        ge=1,
+        description="How many GIF configuration to show on frontpage.",
     )
     show_takevideo_on_frontpage: bool = Field(
         default=True,
@@ -106,3 +151,31 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show print button for items in gallery.",
     )
+
+    model_config = SettingsConfigDict(
+        env_file_encoding="utf-8",
+        # first in following list is least important; last .env file overwrites the other.
+        env_file=[".env.installer", ".env.dev", ".env.test", ".env.prod"],
+        env_nested_delimiter="__",
+        case_sensitive=True,
+        extra="ignore",
+        title="User Interface",
+    )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """customize sources"""
+        return (
+            init_settings,
+            JsonConfigSubSettingsSource(settings_cls),
+            dotenv_settings,
+            env_settings,
+            file_secret_settings,
+        )

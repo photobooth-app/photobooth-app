@@ -28,6 +28,8 @@ from .groups.mediaprocessing import (
     GroupMediaprocessingPipelineAnimation,
     GroupMediaprocessingPipelineCollage,
     GroupMediaprocessingPipelinePrint,
+    GroupMediaprocessingPipelinesAnimation,
+    GroupMediaprocessingPipelinesCollage,
     GroupMediaprocessingPipelineSingleImage,
 )
 from .groups.misc import GroupMisc
@@ -94,14 +96,21 @@ class AppConfig(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    uisettings: GroupUiSettings = GroupUiSettings()
     sharing: GroupSharing = GroupSharing()
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
-    mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()
-    mediaprocessing_pipeline_animation: GroupMediaprocessingPipelineAnimation = GroupMediaprocessingPipelineAnimation()
+    mediaprocessing_pipelines_collage: GroupMediaprocessingPipelinesCollage = GroupMediaprocessingPipelinesCollage(
+        # TODO: when using more than previously configured, the list values will be read from the json config.
+        # Hence, additional instances will have empty settings
+        [GroupMediaprocessingPipelineCollage() for _ in range(uisettings.number_of_collage_configurations)]
+    )
+    mediaprocessing_pipelines_animation: GroupMediaprocessingPipelinesAnimation = GroupMediaprocessingPipelinesAnimation(
+        [GroupMediaprocessingPipelineAnimation() for _ in range(uisettings.number_of_animation_configurations)]
+    )
     mediaprocessing_pipeline_printing: GroupMediaprocessingPipelinePrint = GroupMediaprocessingPipelinePrint()
-    uisettings: GroupUiSettings = GroupUiSettings()
+
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
     misc: GroupMisc = GroupMisc()

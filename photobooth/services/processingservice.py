@@ -84,17 +84,18 @@ class ProcessingService(BaseService):
 
     ### external functions to start processes
 
-    def start_job(self, jobmodel_typ, number_of_captures_to_take):
+    def start_job(self, jobmodel_typ, number_of_captures_to_take, config_id=0):
         ## preflight checks
         self._check_occupied()
 
         ## setup job
         job_model = JobModel()
-        logger.info(f"set up job to start: {jobmodel_typ=}, {number_of_captures_to_take=}")
+        logger.info(f"set up job to start: {jobmodel_typ=}, {number_of_captures_to_take=}, {config_id}")
 
         job_model.start_model(
             jobmodel_typ,
             number_of_captures_to_take,
+            config_id,
             collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
         )
 
@@ -125,11 +126,11 @@ class ProcessingService(BaseService):
     def start_job_1pic(self):
         self.start_job(JobModel.Typ.image, 1)
 
-    def start_job_collage(self):
-        self.start_job(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
+    def start_job_collage(self, config_id):
+        self.start_job(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage(config_id), config_id)
 
-    def start_job_animation(self):
-        self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
+    def start_job_animation(self, config_id):
+        self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation(config_id), config_id)
 
     def start_or_stop_job_video(self):
         if self._state_machine is not None:
@@ -355,7 +356,7 @@ class ProcessingMachine(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem, self.model.number_captures_taken())
+        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem, self.model._config_id)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         if not mediaitem.fileset_valid():
@@ -430,7 +431,7 @@ class ProcessingMachine(StateMachine):
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy(), self.model._config_id)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
 
@@ -443,7 +444,7 @@ class ProcessingMachine(StateMachine):
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy(), self.model._config_id)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
 

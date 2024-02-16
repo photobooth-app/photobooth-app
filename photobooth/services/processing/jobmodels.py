@@ -91,6 +91,9 @@ class JobModel:  # TODO: derive from model class?
         self._duration_user: float = 0
         self._countdown_timer: CountdownTimer = CountdownTimer()
 
+        # job config
+        self._config_id: int = 0
+
     def export(self) -> dict:
         """Export model as dict for UI (needds to be jsonserializable)
 
@@ -184,13 +187,16 @@ class JobModel:  # TODO: derive from model class?
             return False
 
     # external model start/stop controls
-    def start_model(self, typ: Typ, total_captures_to_take: int, collage_automatic_capture_continue: bool = False):
+    def start_model(self, typ: Typ, total_captures_to_take: int, config_id: int, collage_automatic_capture_continue: bool = False):
         self.reset_job()
         self._typ = typ
         self._total_captures_to_take = total_captures_to_take
         self._last_captured_mediaitem = None
         self._confirmed_captures_collection = []
         self._collage_automatic_capture_continue = collage_automatic_capture_continue
+        self._config_id = config_id
+
+        print("########### STARTED MODEL WITH CONFIG ID ", config_id)
 
         self._validate_job()
 
