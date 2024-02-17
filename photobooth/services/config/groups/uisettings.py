@@ -79,12 +79,12 @@ class GroupUiSettings(BaseSettings):
     number_of_collage_configurations: int = Field(
         default=1,
         ge=1,
-        description="How many collage configurations to show on frontpage.",
+        description="How many collages configurations to provide.",
     )
     number_of_animation_configurations: int = Field(
         default=1,
         ge=1,
-        description="How many GIF configuration to show on frontpage.",
+        description="How many GIF configuration to provide.",
     )
     show_takevideo_on_frontpage: bool = Field(
         default=True,

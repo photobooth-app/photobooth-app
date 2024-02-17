@@ -220,6 +220,11 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Whether to show this configuration on the frontpage",
     )
 
+    icon_name: str = Field(
+        default="o_auto_awesome_mosaic",
+        description="Name of this configurations icon on the button",
+    )
+
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
     capture_fill_background_enable: bool = Field(
@@ -347,6 +352,11 @@ class GroupMediaprocessingPipelineAnimation(BaseModel):
     display_on_frontpage: bool = Field(
         default=True,
         description="Whether to show this configuration on the frontpage",
+    )
+
+    icon_name: str = Field(
+        default="o_gif_box",
+        description="Name of this configurations icon on the button",
     )
 
     ## phase 2 per collage settings.
