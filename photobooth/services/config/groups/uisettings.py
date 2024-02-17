@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
@@ -98,6 +98,18 @@ class GroupUiSettings(BaseSettings):
         default=True,
         description="Show button to admin center, usually only during setup.",
     )
+
+    show_automatic_slideshow_timeout: int = Field(
+        default=300, description="Timeout (seconds) after which a random order slideshow of all images is started. Set to 0 to disable."
+    )
+
+    @validator("show_automatic_slideshow_timeout")
+    def allow_zero_or_large(cls, v):
+        if v < 0:
+            raise ValueError("ensure this value is not negative")
+        if v > 0 and v < 30:
+            raise ValueError("ensure this value is at least 30")
+        return v
 
     livestream_mirror_effect: bool = Field(
         default=True,
