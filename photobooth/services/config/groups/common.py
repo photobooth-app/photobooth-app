@@ -45,6 +45,10 @@ class GroupCommon(BaseModel):
         default=True,
         description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
     )
+    collage_approve_autoconfirm_timeout: float = Field(
+        default=15.0,
+        description="If user is required to approve collage captures, after this timeout, the job continues and user confirmation is assumed.",
+    )
 
     gallery_show_individual_images: bool = Field(
         default=False,

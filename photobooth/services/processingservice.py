@@ -4,6 +4,7 @@ _summary_
 import logging
 import os
 import time
+from queue import Empty, Queue
 from threading import Thread
 
 from statemachine import State, StateMachine
@@ -44,6 +45,7 @@ class ProcessingService(BaseService):
         # objects
         self._state_machine: ProcessingMachine = None
         self._process_thread: Thread = None
+        self._external_cmd_queue: Queue = None
 
     def _check_occupied(self):
         if self._state_machine is not None:
@@ -88,6 +90,9 @@ class ProcessingService(BaseService):
         ## preflight checks
         self._check_occupied()
 
+        # start with clear queue
+        self._external_cmd_queue = Queue()
+
         ## setup job
         job_model = JobModel()
         logger.info(f"set up job to start: {jobmodel_typ=}, {number_of_captures_to_take=}")
@@ -105,6 +110,7 @@ class ProcessingService(BaseService):
             self._mediacollection_service,
             self._mediaprocessing_service,
             self._wled_service,
+            self._external_cmd_queue,
             job_model,
         )
 
@@ -149,12 +155,7 @@ class ProcessingService(BaseService):
         if not self._state_machine:
             raise RuntimeError("no job ongoing, cannot send event!")
 
-        try:
-            self._state_machine.send(event)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.warning(f"cannot confirm, error: {exc}")
-            raise exc
+        self._external_cmd_queue.put(event)
 
     def confirm_capture(self):
         self.send_event("confirm")
@@ -166,7 +167,7 @@ class ProcessingService(BaseService):
         self.send_event("abort")
 
     def stop_recording(self):
-        self._state_machine.stop_recording()
+        self.send_event("stop_recording")
 
 
 class ProcessingMachine(StateMachine):
@@ -186,10 +187,11 @@ class ProcessingMachine(StateMachine):
 
     start = idle.to(counting)
     _counted = counting.to(capture, unless="jobtype_recording") | counting.to(record, cond="jobtype_recording")
-    _captured = capture.to(approve_capture) | record.to(captures_completed)
+    _captured = capture.to(approve_capture)
     confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
     reject = approve_capture.to(counting)
     abort = approve_capture.to(finished)
+    stop_recording = record.to(captures_completed)
     _present = captures_completed.to(present_capture)
     _finish = present_capture.to(finished)
 
@@ -200,6 +202,7 @@ class ProcessingMachine(StateMachine):
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
+        _external_cmd_queue: Queue,
         jobmodel: JobModel,
     ):
         self._sse_service: SseService = sse_service
@@ -207,6 +210,7 @@ class ProcessingMachine(StateMachine):
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
         self._wled_service: WledService = wled_service
+        self._external_cmd_queue: Queue = _external_cmd_queue
 
         self.model: JobModel  # for linting, initialized in super-class actually below
 
@@ -370,7 +374,18 @@ class ProcessingMachine(StateMachine):
         # if job is collage, each single capture could be confirmed or not:
         if self.model.ask_user_for_approval():
             # present capture with buttons to approve.
-            logger.info("finished capture, present to user to confirm, reject or abort")
+            logger.info(f"finished capture, waiting {appconfig.common.collage_approve_autoconfirm_timeout}s for user to confirm, reject or abort")
+
+            try:
+                event = self._external_cmd_queue.get(block=True, timeout=appconfig.common.collage_approve_autoconfirm_timeout)
+                logger.debug(f"user chose {event}")
+            except Empty:
+                logger.info(f"no user input within {appconfig.common.collage_approve_autoconfirm_timeout}s so assume to confirm")
+
+                event = "confirm"
+
+            self.send(event)
+
         else:
             # auto continue
             logger.info("finished capture, automatic confirm enabled")
@@ -402,16 +417,15 @@ class ProcessingMachine(StateMachine):
 
         self._aquisition_service.start_recording()
 
-        # capture finished, go to next state
-        self.model._remaining_record_time = float(appconfig.misc.video_duration)
-        while self.model._remaining_record_time > 0:
-            self.model._remaining_record_time -= 0.1
-            time.sleep(0.1)
+        try:
+            event = self._external_cmd_queue.get(block=True, timeout=float(appconfig.misc.video_duration))
+            logger.debug(f"user chose {event}")
+            # continue if external_cmd_queue has an event
+        except Empty:
+            # after timeout
+            logger.info(f"no user input within {appconfig.misc.video_duration}s so stopping video")
 
-        self._captured()
-
-    def stop_recording(self):
-        self.model._remaining_record_time = 0
+        self.stop_recording()
 
     def on_exit_record(self):
         """_summary_"""
