@@ -2,18 +2,18 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Response, status
 
-from ..container import container
-from ..services.config.groups.mediaprocessing import EnumPilgramFilter
-from ..utils.exceptions import PipelineError
+from ...container import container
+from ...services.config.groups.mediaprocessing import EnumPilgramFilter
+from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
-mediaprocessing_router = APIRouter(
+router = APIRouter(
     prefix="/mediaprocessing",
     tags=["mediaprocessing"],
 )
 
 
-@mediaprocessing_router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
+@router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
 def api_get_preview_image_filtered(mediaitem_id, filter=None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
@@ -39,7 +39,7 @@ def api_get_preview_image_filtered(mediaitem_id, filter=None):
         ) from exc
 
 
-@mediaprocessing_router.get("/applyfilter/{mediaitem_id}/{filter}")
+@router.get("/applyfilter/{mediaitem_id}/{filter}")
 def api_get_applyfilter(mediaitem_id, filter: str = None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)

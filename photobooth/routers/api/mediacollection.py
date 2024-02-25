@@ -2,16 +2,16 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 
-from ..container import container
+from ...container import container
 
 logger = logging.getLogger(__name__)
-mediacollection_router = APIRouter(
+router = APIRouter(
     prefix="/mediacollection",
     tags=["mediacollection"],
 )
 
 
-@mediacollection_router.get("/getitems")
+@router.get("/getitems")
 def api_getitems():
     try:
         return container.mediacollection_service.db_get_images_as_dict()
@@ -20,7 +20,7 @@ def api_getitems():
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
-@mediacollection_router.get("/delete", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/delete", status_code=status.HTTP_204_NO_CONTENT)
 def api_gallery_delete(image_id: str):
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
@@ -30,7 +30,7 @@ def api_gallery_delete(image_id: str):
         raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
-@mediacollection_router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
 def api_gallery_delete_all():
     """Warning: deletes all files permanently without any further confirmation
 

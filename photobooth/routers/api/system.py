@@ -3,16 +3,16 @@ import os
 
 from fastapi import APIRouter, HTTPException
 
-from ..container import container
+from ...container import container
 
 logger = logging.getLogger(__name__)
-system_router = APIRouter(
+router = APIRouter(
     prefix="/system",
     tags=["system"],
 )
 
 
-@system_router.get("/{action}/{param}")
+@router.get("/{action}/{param}")
 def api_cmd(
     action,
     param,

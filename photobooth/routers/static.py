@@ -5,12 +5,12 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse, Response
 
 logger = logging.getLogger(__name__)
-home_router = APIRouter(
-    tags=["home"],
+static_router = APIRouter(
+    tags=["static"],
 )
 
 
-@home_router.get("/")
+@static_router.get("/")
 def index():
     """
     return homepage of booth
@@ -19,7 +19,7 @@ def index():
     return FileResponse(path=Path(__file__).parent.parent.joinpath("web_spa", "index.html").resolve(), headers=headers)
 
 
-@home_router.get("/private.css")
+@static_router.get("/private.css")
 def ui_private_css():
     """
     if private.css exists return the file content, otherwise send empty response to avoid 404

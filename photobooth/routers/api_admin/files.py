@@ -16,8 +16,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
-admin_files_router = APIRouter(
-    prefix="/admin/files",
+router = APIRouter(
+    prefix="/files",
     tags=["admin", "files"],
 )
 
@@ -64,7 +64,7 @@ def zipfiles(paths: list[Path]):
     )
 
 
-@admin_files_router.get("/list/{dir:path}")
+@router.get("/list/{dir:path}")
 async def get_list(dir: str = "/"):
     """ """
     try:
@@ -87,7 +87,7 @@ async def get_list(dir: str = "/"):
     return output
 
 
-@admin_files_router.get("/file/{file:path}")
+@router.get("/file/{file:path}")
 async def get_file(file: str = ""):
     """ """
     try:
@@ -102,7 +102,7 @@ async def get_file(file: str = ""):
     return FileResponse(path)
 
 
-@admin_files_router.post("/file/upload", status_code=status.HTTP_201_CREATED)
+@router.post("/file/upload", status_code=status.HTTP_201_CREATED)
 def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_files: list[UploadFile]):
     logger.info(f"file upload started, upload to folder '{upload_target_folder}'")
 
@@ -134,7 +134,7 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
     return {"uploaded_files": [file.filename for file in uploaded_files]}
 
 
-@admin_files_router.post("/folder/new", status_code=status.HTTP_201_CREATED)
+@router.post("/folder/new", status_code=status.HTTP_201_CREATED)
 async def post_folder_new(new_folder_name: Annotated[str, Body()]):
     """need to provide full path starting from CWD."""
 
@@ -156,7 +156,7 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
         raise HTTPException(500, f"folder creation failed: {exc}") from exc
 
 
-@admin_files_router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
 async def post_delete(selected_paths: list[PathListItem] = None):
     """ """
     filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]
@@ -190,7 +190,7 @@ async def post_delete(selected_paths: list[PathListItem] = None):
         raise HTTPException(500, f"deleting failed: {exc}") from exc
 
 
-@admin_files_router.post("/zip")
+@router.post("/zip")
 def post_zip(selected_paths: list[PathListItem] = None):
     try:
         filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]

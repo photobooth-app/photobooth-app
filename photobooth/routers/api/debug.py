@@ -5,16 +5,16 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import Response
 
-from ..services.loggingservice import LOG_DIR
+from ...services.loggingservice import LOG_DIR
 
 logger = logging.getLogger(__name__)
-debug_router = APIRouter(
+router = APIRouter(
     prefix="/debug",
     tags=["logs"],
 )
 
 
-@debug_router.get("/log/latest")
+@router.get("/log/latest")
 async def get_log_latest():
     """provide latest logfile to download
     TODO Handle exception if file not exists

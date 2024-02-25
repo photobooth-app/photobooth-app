@@ -5,16 +5,16 @@ from datetime import datetime
 from fastapi import APIRouter, Request
 from sse_starlette import EventSourceResponse, ServerSentEvent
 
-from ..container import container
-from ..services.sseservice import Client, SseEventFrontendNotification
+from ...container import container
+from ...services.sseservice import Client, SseEventFrontendNotification
 
 logger = logging.getLogger(__name__)
-sse_router = APIRouter(
+router = APIRouter(
     tags=["home"],
 )
 
 
-@sse_router.get("/sse")
+@router.get("/sse")
 async def subscribe(request: Request):
     """
     Eventstream to feed clients with server generated events and data

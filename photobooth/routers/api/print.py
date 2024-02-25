@@ -2,11 +2,11 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 
-from ..container import container
-from ..services.mediacollection.mediaitem import MediaItem
+from ...container import container
+from ...services.mediacollection.mediaitem import MediaItem
 
 logger = logging.getLogger(__name__)
-print_router = APIRouter(
+router = APIRouter(
     prefix="/print",
     tags=["print"],
 )
@@ -33,13 +33,13 @@ def _print(mediaitem):
         ) from exc
 
 
-@print_router.get("/latest")
+@router.get("/latest")
 def api_print_latest():
     latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
     _print(mediaitem=latest_mediaitem)
 
 
-@print_router.get("/item/{id}")
+@router.get("/item/{id}")
 def api_print_item_id(id: str):
     requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
     _print(mediaitem=requested_mediaitem)

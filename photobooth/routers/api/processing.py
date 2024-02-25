@@ -2,11 +2,11 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from ..container import container
-from ..utils.exceptions import ProcessMachineOccupiedError
+from ...container import container
+from ...utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(__name__)
-processing_router = APIRouter(
+router = APIRouter(
     prefix="/processing",
     tags=["processing"],
 )
@@ -33,27 +33,27 @@ def _capture(job):
         ) from exc
 
 
-@processing_router.get("/chose/1pic")
+@router.get("/chose/1pic")
 def api_chose_1pic_get():
     return _capture(container.processing_service.start_job_1pic)
 
 
-@processing_router.get("/chose/collage")
+@router.get("/chose/collage")
 def api_chose_collage_get():
     return _capture(container.processing_service.start_job_collage)
 
 
-@processing_router.get("/chose/animation")
+@router.get("/chose/animation")
 def api_chose_animation_get():
     return _capture(container.processing_service.start_job_animation)
 
 
-@processing_router.get("/chose/video")
+@router.get("/chose/video")
 def api_chose_video_get():
     return _capture(container.processing_service.start_or_stop_job_video)
 
 
-@processing_router.get("/cmd/confirm")
+@router.get("/cmd/confirm")
 def api_cmd_confirm_get():
     try:
         container.processing_service.confirm_capture()
@@ -67,7 +67,7 @@ def api_cmd_confirm_get():
         ) from exc
 
 
-@processing_router.get("/cmd/reject")
+@router.get("/cmd/reject")
 def api_cmd_reject_get():
     try:
         container.processing_service.reject_capture()
@@ -81,7 +81,7 @@ def api_cmd_reject_get():
         ) from exc
 
 
-@processing_router.get("/cmd/stop")
+@router.get("/cmd/stop")
 def api_cmd_stop_get():
     try:
         container.processing_service.stop_recording()
@@ -95,7 +95,7 @@ def api_cmd_stop_get():
         ) from exc
 
 
-@processing_router.get("/cmd/abort")
+@router.get("/cmd/abort")
 def api_cmd_abort_get():
     try:
         container.processing_service.abort_process()

@@ -13,18 +13,8 @@ from fastapi.staticfiles import StaticFiles
 
 from .__version__ import __version__
 from .container import container
-from .routers.admin.config import admin_config_router
-from .routers.admin.files import admin_files_router
-from .routers.aquisition import aquisition_router
-from .routers.config import config_router
-from .routers.debug import debug_router
-from .routers.home import home_router
-from .routers.mediacollection import mediacollection_router
-from .routers.mediaprocessing import mediaprocessing_router
-from .routers.print import print_router
-from .routers.processing import processing_router
-from .routers.sse import sse_router
-from .routers.system import system_router
+from .routers import api, api_admin
+from .routers.static import static_router
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -48,7 +38,7 @@ def _create_app() -> FastAPI:
         description=FASTAPI_DECRIPTION,
         version=__version__,
         contact={
-            "name": "mgrl",
+            "name": "mgineer85",
             "url": "https://github.com/photobooth-app/photobooth-app",
             "email": "me@mgrl.de",
         },
@@ -61,19 +51,9 @@ def _create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
         dependencies=[],
     )
-
-    _app.include_router(admin_config_router)
-    _app.include_router(admin_files_router)
-    _app.include_router(config_router)
-    _app.include_router(home_router)
-    _app.include_router(aquisition_router)
-    _app.include_router(debug_router)
-    _app.include_router(mediacollection_router)
-    _app.include_router(mediaprocessing_router)
-    _app.include_router(print_router)
-    _app.include_router(sse_router)
-    _app.include_router(system_router)
-    _app.include_router(processing_router)
+    _app.include_router(api.router)
+    _app.include_router(api_admin.router)
+    _app.include_router(static_router)
     # serve data directory holding images, thumbnails, ...
     _app.mount("/media", StaticFiles(directory="media"), name="media")
     # if not match anything above, default to deliver static files from web directory

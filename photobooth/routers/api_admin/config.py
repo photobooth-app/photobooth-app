@@ -5,13 +5,13 @@ from fastapi import APIRouter
 from ...services.config import AppConfig, appconfig
 
 logger = logging.getLogger(__name__)
-admin_config_router = APIRouter(
-    prefix="/admin/config",
+router = APIRouter(
+    prefix="/config",
     tags=["admin", "config"],
 )
 
 
-@admin_config_router.get("/schema")
+@router.get("/schema")
 def api_get_config_schema(schema_type: str = "default"):
     """
     Get schema to build the client UI
@@ -20,7 +20,7 @@ def api_get_config_schema(schema_type: str = "default"):
     return appconfig.get_schema(schema_type=schema_type)
 
 
-@admin_config_router.get("/reset")
+@router.get("/reset")
 def api_reset_config():
     """
     Reset config, deleting config.json file
@@ -29,19 +29,19 @@ def api_reset_config():
     appconfig.deleteconfig()  #  delete file
 
 
-@admin_config_router.get("/currentActive")
+@router.get("/currentActive")
 def api_get_config_current_active():
     """returns currently cached and active settings"""
     return appconfig
 
 
-@admin_config_router.get("/current")
+@router.get("/current")
 def api_get_config_current():
     """read settings from drive and return"""
     return AppConfig()
 
 
-@admin_config_router.post("/current")
+@router.post("/current")
 def api_post_config_current(
     updated_config: AppConfig,
 ):
