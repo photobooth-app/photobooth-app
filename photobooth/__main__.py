@@ -84,8 +84,6 @@ def main(run_server: bool = True):
     # close single instance port
     s.close()
 
-    container.stop()
-
 
 if __name__ == "__main__":
     main()

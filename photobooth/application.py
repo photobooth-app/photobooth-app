@@ -1,7 +1,10 @@
 """Application module."""
 
 import logging
+import signal
+from contextlib import asynccontextmanager
 from pathlib import Path
+from types import FrameType
 
 from fastapi import FastAPI
 from fastapi.exception_handlers import (
@@ -30,6 +33,28 @@ Following api is provided by the app.
 """
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # workaround to free resources on shutdown and prevent stalling
+    # https://github.com/encode/uvicorn/issues/1579#issuecomment-1419635974
+
+    # start app
+    default_sigint_handler = signal.getsignal(signal.SIGINT)
+
+    def terminate_now(signum: int, frame: FrameType = None):
+        logger.info("shutting down app")
+
+        container.stop()
+
+        default_sigint_handler(signum, frame)
+
+    signal.signal(signal.SIGINT, terminate_now)
+
+    # deliver app
+    yield
+    # Clean up
+
+
 def _create_app() -> FastAPI:
     container.logging_service.start()
 
@@ -50,6 +75,7 @@ def _create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json",
         dependencies=[],
+        lifespan=lifespan,
     )
     _app.include_router(api.router)
     _app.include_router(api_admin.router)
@@ -69,8 +95,6 @@ def _create_app() -> FastAPI:
 
     _app.add_exception_handler(HTTPException, custom_http_exception_handler)
     _app.add_exception_handler(RequestValidationError, validation_exception_handler)
-
-    # store container here and wire routers, to inject providers
 
     return _app
 

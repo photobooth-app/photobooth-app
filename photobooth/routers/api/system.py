@@ -1,5 +1,6 @@
 import logging
 import os
+import signal
 
 from fastapi import APIRouter, HTTPException
 
@@ -23,6 +24,8 @@ def api_cmd(
         os.system("reboot")
     elif action == "server" and param == "shutdown":
         os.system("shutdown now")
+    elif action =="app" and param=="stop":
+        signal.raise_signal(signal.SIGINT)
     elif action == "service" and param == "reload":
         container.stop()
         container.start()
