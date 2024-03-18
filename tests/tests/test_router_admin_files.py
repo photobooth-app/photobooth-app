@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.routers.admin.files import PathListItem
+from photobooth.routers.api_admin.files import PathListItem
 from photobooth.services.config import appconfig
 
 
