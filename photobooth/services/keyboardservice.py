@@ -42,10 +42,11 @@ class KeyboardService(BaseService):
 
     def start(self):
         if appconfig.hardwareinputoutput.keyboard_input_enabled:
-            self._logger.info("keyboardservice enabled - listeners installed")
             try:
                 keyboard.on_press(self._on_key_callback)
                 self._started = True
+
+                self._logger.info("keyboardservice enabled - listeners installed")
             except Exception as exc:
                 self._logger.exception(exc)
                 self._logger.error("error registering callbacks, check system config")
