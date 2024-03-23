@@ -33,11 +33,11 @@ class GenericListener:
                 self.init()
 
                 self.listening = True
-                self.listening_thread = Thread(target=self.listen)
+                self.listening_thread = Thread(name="keyboard-listener_thread",target=self.listen)
                 self.listening_thread.daemon = True
                 self.listening_thread.start()
 
-                self.processing_thread = Thread(target=self.process)
+                self.processing_thread = Thread(name="keyboard-processing_thread",target=self.process)
                 self.processing_thread.daemon = True
                 self.processing_thread.start()
         finally:

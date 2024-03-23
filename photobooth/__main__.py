@@ -2,6 +2,7 @@
 """
 Photobooth Application start script
 """
+
 import logging
 import os
 import socket

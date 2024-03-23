@@ -2,6 +2,7 @@
 Gphoto2 backend implementation
 
 """
+
 import dataclasses
 import logging
 import os

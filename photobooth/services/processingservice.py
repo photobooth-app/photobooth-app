@@ -1,6 +1,7 @@
 """
 _summary_
 """
+
 import logging
 import os
 import time
@@ -14,9 +15,7 @@ from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
-from .mediacollectionservice import (
-    MediacollectionService,
-)
+from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModel
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
@@ -118,7 +117,7 @@ class ProcessingService(BaseService):
 
         ## run in separate thread
         logger.debug("starting _process_thread")
-        self._process_thread = Thread(name="_process_thread", target=self._process_fun, args=(), daemon=True)
+        self._process_thread = Thread(name="_processingservice_thread", target=self._process_fun, args=(), daemon=True)
         self._process_thread.start()
 
     ##

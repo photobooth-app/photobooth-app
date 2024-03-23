@@ -1,6 +1,7 @@
 """
 Testing VIRTUALCAMERA Backend
 """
+
 import logging
 import time
 from unittest import mock

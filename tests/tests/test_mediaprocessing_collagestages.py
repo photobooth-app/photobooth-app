@@ -1,6 +1,7 @@
 """
 Testing Mediaprocessing collage
 """
+
 import logging
 
 import pytest

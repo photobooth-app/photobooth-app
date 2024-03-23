@@ -2,7 +2,6 @@
 Control logging for the app
 """
 
-
 import logging
 import os
 import sys

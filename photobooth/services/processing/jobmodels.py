@@ -21,7 +21,7 @@ class CountdownTimer:
         self._duration = duration
         self._countdown = duration
 
-        self._ticker_thread = Thread(name="_ticker_thread", target=self._ticker_fun, daemon=True)
+        self._ticker_thread = Thread(name="_jobmodels_ticker_thread", target=self._ticker_fun, daemon=True)
         self._ticker_thread.start()
 
     def reset(self):

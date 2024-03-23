@@ -3,7 +3,6 @@ AppConfig class providing central config
 
 """
 
-
 from pydantic import BaseModel, ConfigDict, Field
 
 

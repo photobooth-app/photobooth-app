@@ -1,4 +1,5 @@
 """Example 2nd-level subpackage."""
+
 from fastapi import APIRouter
 
 from . import config, files

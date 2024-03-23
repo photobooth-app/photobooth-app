@@ -1,6 +1,7 @@
 """
 backend opencv2 for webcameras
 """
+
 import logging
 import platform
 import time

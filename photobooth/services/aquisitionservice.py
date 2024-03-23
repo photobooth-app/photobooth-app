@@ -1,6 +1,7 @@
 """
 manage up to two photobooth-app backends in this module
 """
+
 import dataclasses
 import logging
 import time
@@ -23,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class AquisitionService(BaseService):
-
     """
     Class managing photobooth-app backends
     MAIN: used for high quality still pictures

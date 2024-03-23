@@ -1,6 +1,7 @@
 """
 v4l webcam implementation backend
 """
+
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 

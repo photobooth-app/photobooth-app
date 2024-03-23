@@ -1,6 +1,7 @@
 """
 abstract for the photobooth-app backends
 """
+
 import dataclasses
 import logging
 import os

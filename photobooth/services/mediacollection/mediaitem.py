@@ -1,6 +1,7 @@
 """
 Handle all media collection related functions
 """
+
 import hashlib
 import io
 import logging

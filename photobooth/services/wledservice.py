@@ -1,5 +1,5 @@
-""" WLED Integration
-"""
+"""WLED Integration"""
+
 import json
 import time
 

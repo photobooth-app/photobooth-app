@@ -1,6 +1,7 @@
 """
 Handle all media collection related functions
 """
+
 import logging
 import os
 import time

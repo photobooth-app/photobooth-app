@@ -1,6 +1,7 @@
 """
 Virtual Camera backend for testing.
 """
+
 import glob
 import logging
 import random

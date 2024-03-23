@@ -11,7 +11,6 @@ evdev: linux only
 sshkeyboard: ?
 """
 
-
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..vendor.packages.keyboard import keyboard
 from .baseservice import BaseService

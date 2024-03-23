@@ -1,6 +1,7 @@
 """
 Testing mediaprocessing singleimages pipeline
 """
+
 import logging
 
 import pytest

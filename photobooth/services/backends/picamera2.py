@@ -2,6 +2,7 @@
 Picamera2 backend implementation
 
 """
+
 import dataclasses
 import io
 import logging
@@ -11,7 +12,11 @@ from threading import Condition, Event
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
-from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
+from picamera2.encoders import (
+    H264Encoder,
+    MJPEGEncoder,  # type: ignore
+    Quality,
+)
 from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...utils.stoppablethread import StoppableThread
@@ -164,7 +169,7 @@ class Picamera2Backend(AbstractBackend):
         # start camera
         self._picamera2.start()
 
-        self._worker_thread = StoppableThread(name="_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread = StoppableThread(name="_picamera2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
         # wait until threads are up and deliver images actually. raises exceptions if fails after several retries

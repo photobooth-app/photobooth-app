@@ -1,6 +1,7 @@
 """
 Repeat Timer in separate thread for tasks to be executed in intervals
 """
+
 from threading import Event, Thread
 
 # The timer class was contributed by Itamar Shtull-Trauring

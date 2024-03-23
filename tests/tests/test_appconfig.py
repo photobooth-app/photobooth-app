@@ -1,6 +1,7 @@
 """
 Testing virtual camera Backend
 """
+
 import logging
 
 import pytest

@@ -6,7 +6,6 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 """
 
-
 from pydantic import BaseModel, ConfigDict, Field, validator
 
 from .mediaprocessing import EnumPilgramFilter
