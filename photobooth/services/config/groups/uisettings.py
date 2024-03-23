@@ -6,7 +6,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 """
 
-from pydantic import BaseModel, ConfigDict, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
 from .mediaprocessing import EnumPilgramFilter
 
@@ -53,17 +53,11 @@ class GroupUiSettings(BaseModel):
         description="Show button to admin center, usually only during setup.",
     )
 
-    show_automatic_slideshow_timeout: int = Field(
-        default=300, description="Timeout (seconds) after which a random order slideshow of all images is started. Set to 0 to disable."
+    show_automatic_slideshow_timeout: NonNegativeInt = Field(
+        default=300,
+        ge=30,
+        description="Timeout (seconds) after which a random order slideshow of all images is started. Set to 0 to disable.",
     )
-
-    @validator("show_automatic_slideshow_timeout")
-    def allow_zero_or_large(cls, v):
-        if v < 0:
-            raise ValueError("ensure this value is not negative")
-        if v > 0 and v < 30:
-            raise ValueError("ensure this value is at least 30")
-        return v
 
     livestream_mirror_effect: bool = Field(
         default=True,
