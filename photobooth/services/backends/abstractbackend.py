@@ -5,13 +5,13 @@ abstract for the photobooth-app backends
 import dataclasses
 import logging
 import os
+import subprocess
 import time
 import uuid
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 from multiprocessing import Condition, Lock, shared_memory
 from pathlib import Path
-from subprocess import PIPE, Popen
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
@@ -223,6 +223,26 @@ class AbstractBackend(ABC):
             self.block_until_device_is_running()
             logger.info("backend started, finished blocking")
 
+        # load ffmpeg once to have it in memory. otherwise first video might fail because startup time is not respected by implementation
+        logger.info("running ffmpeg once to have it in memory later for video use")
+        try:
+            subprocess.run(
+                args=["ffmpeg", "-version"],
+                timeout=10,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+        except FileNotFoundError:
+            logger.info("ffmpeg not found on system. this is not a problem if video functions are not used.")
+        except subprocess.CalledProcessError as exc:
+            # non zero returncode
+            logger.warning(f"ffmpeg returned an error: {exc}")
+        except subprocess.TimeoutExpired as exc:
+            logger.error(f"ffmpeg took too long to load, timeout {exc}")
+        else:
+            # no error, service restart ok
+            logger.info("ffmpeg loaded successfully")
+
     def stop(self):
         """To stop the backend to serve"""
 
@@ -321,6 +341,8 @@ class AbstractBackend(ABC):
     def start_recording(self):
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=False)
         self._video_worker_thread.start()
+        # TODO: improvement: add wait here until ffmpeg really started and captures. could take some time (especially on first start)
+        # because ffmpeg is not in memory. Until now we work around by invoking ffmpeg once during service startup
         logger.info("_video_worker_thread started")
 
     def stop_recording(self):
@@ -346,7 +368,7 @@ class AbstractBackend(ABC):
         # generate temp filename to record to
         mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
 
-        ffmpeg_subprocess = Popen(
+        ffmpeg_subprocess = subprocess.Popen(
             [
                 "ffmpeg",
                 "-use_wallclock_as_timestamps",
@@ -370,8 +392,8 @@ class AbstractBackend(ABC):
                 "+faststart",
                 str(mp4_output_filepath),
             ],
-            stdin=PIPE,
-            stderr=PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
 
         logger.info("writing to ffmpeg stdin")
