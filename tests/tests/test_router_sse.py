@@ -21,7 +21,7 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture
 def client() -> TestClient:
-    with TestClient(app=app, base_url="http://test") as client:
+    with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client
         container.stop()

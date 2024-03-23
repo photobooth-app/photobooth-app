@@ -25,7 +25,7 @@ def run_around_tests():
 def client() -> TestClient:
     from photobooth.application import app
 
-    with TestClient(app=app, base_url="http://test") as client:
+    with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client
         container.stop()
@@ -42,6 +42,6 @@ def test_config_post_validationerror(client: TestClient):
     # set illegal setting, that provokes validation error
     config_dict["common"]["countdown_capture_first"] = -1
 
-    response = client.post("/api/admin/config/current", json=config_dict)
+    response = client.post("/admin/config/current", json=config_dict)
 
     assert response.status_code == 422
