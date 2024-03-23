@@ -29,6 +29,7 @@ def main(run_server: bool = True):
     # guard to start only one instance at a time.
     try:
         s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
     except OSError as exc:
         print("startup aborted. another instance is running. exiting.")
@@ -81,6 +82,8 @@ def main(run_server: bool = True):
     # this one is not executed in tests because it's not stoppable from within
     if run_server:
         server.run()
+    # else:
+    #     container.stop()
 
     # close single instance port
     s.close()
