@@ -5,7 +5,7 @@ v4l webcam implementation backend
 import logging
 from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
-from v4l2py import Device, VideoCapture  # type: ignore
+from linuxpy.video.device import Device, VideoCapture  # type: ignore
 
 from ..config import AppConfig, appconfig
 from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer

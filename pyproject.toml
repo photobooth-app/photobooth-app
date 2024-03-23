@@ -3,12 +3,10 @@ name = "photobooth-app"
 requires-python = ">=3.9,<3.13"
 dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
-authors = [
-    { name = "Michael G", email = "me@mgrl.de" },
-]
+authors = [{ name = "Michael G", email = "me@mgrl.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
 readme = "README.md"
-license = {text = "MIT"}
+license = { text = "MIT" }
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
@@ -32,27 +30,27 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-    "fastapi>=0.106.0",
-    "opencv-python>=4.8.1",
-    "numpy>=1.26.0",
-    "pillow>=10.0.0",
-    "psutil>=5.9.0",
-    "pydantic>=2.5.2",
-    "pydantic-extra-types>=2.3.0",
-    "pydantic-settings>=2.1.0",
-    "pyturbojpeg>=1.7.0",
-    "requests>=2.31.0",
-    "sse-starlette>=1.8.0",
-    "uvicorn>=0.24",
-    "python-dotenv>=1.0.0",
-    "pyserial~=3.5",
-    "jsonref>=1.1.0",
-    "pilgram2>=2.0.2",
-    "v4l2py>=2.3.0; platform_system == 'Linux'",
-    "gpiozero>=2.0.0",
-    "gphoto2~=2.5.0; platform_system == 'Linux'",
-    "python-statemachine>=2.1",
-    "python-multipart>=0.0.6",
+  "fastapi>=0.106.0",
+  "opencv-python>=4.8.1",
+  "numpy>=1.26.0",
+  "pillow>=10.0.0",
+  "psutil>=5.9.0",
+  "pydantic>=2.5.2",
+  "pydantic-extra-types>=2.3.0",
+  "pydantic-settings>=2.1.0",
+  "pyturbojpeg>=1.7.0",
+  "requests>=2.31.0",
+  "sse-starlette>=1.8.0",
+  "uvicorn>=0.24",
+  "python-dotenv>=1.0.0",
+  "pyserial~=3.5",
+  "jsonref>=1.1.0",
+  "pilgram2>=2.0.2",
+  "linuxpy>=0.10.0; platform_system == 'Linux'",
+  "gpiozero>=2.0.0",
+  "gphoto2~=2.5.0; platform_system == 'Linux'",
+  "python-statemachine>=2.1",
+  "python-multipart>=0.0.6",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -123,9 +121,7 @@ test = [
   "pyvips>=2.2.2",
   "pydot>=2.0.0",
 ]
-lint= [
-  "ruff>=0.1.8",
-]
+lint = ["ruff>=0.1.8"]
 
 [tool.pdm.build]
 includes = ["./photobooth"]
@@ -133,4 +129,3 @@ includes = ["./photobooth"]
 [tool.pdm.scripts]
 test = "pytest --basetemp=./tests_tmp/ -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
 benchmark = "pytest --basetemp=./tests_tmp/ -v ./tests/benchmarks"
-
