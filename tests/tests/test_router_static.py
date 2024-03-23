@@ -18,7 +18,7 @@ def run_around_tests():
 
 @pytest.fixture
 def client() -> TestClient:
-    with TestClient(app=app, base_url="http://test/api/") as client:
+    with TestClient(app=app, base_url="http://test/") as client:
         container.start()
         yield client
         container.stop()
@@ -33,7 +33,7 @@ def test_read_main(client: TestClient):
 
 
 def test_read_log(client: TestClient):
-    response = client.get("/debug/log/latest")
+    response = client.get("/api/debug/log/latest")
     assert response.status_code == 200
 
 
