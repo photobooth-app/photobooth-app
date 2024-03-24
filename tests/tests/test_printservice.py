@@ -46,7 +46,7 @@ def test_print_service_disabled(mock_run, _container: Container):
     with pytest.raises(ConnectionRefusedError):
         _container.printing_service.print(latest_mediaitem)
 
-    assert not mock_run.called
+    assert mock_run.assert_not_called
 
 
 @patch("subprocess.run")
