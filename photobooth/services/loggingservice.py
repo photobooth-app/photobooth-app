@@ -78,7 +78,7 @@ class LoggingService(BaseService):
         logging.debug("loggingservice __init__ basicConfig set")
         logging.debug("loggingservice __init__ started")
 
-        self.debug_level = appconfig.common.DEBUG_LEVEL.value
+        self.debug_level = appconfig.common.debug_level
 
         ## logger
         # default logger (root = None or "")

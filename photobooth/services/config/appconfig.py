@@ -13,11 +13,7 @@ from typing import Any
 import jsonref
 from pydantic import PrivateAttr
 from pydantic.fields import FieldInfo
-from pydantic_settings import (
-    BaseSettings,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from .groups.backends import GroupBackends
 from .groups.common import GroupCommon
@@ -30,7 +26,6 @@ from .groups.mediaprocessing import (
     GroupMediaprocessingPipelinePrint,
     GroupMediaprocessingPipelineSingleImage,
 )
-from .groups.mediaprocessing_collagenew import GroupCollageProcess
 from .groups.misc import GroupMisc
 from .groups.sharing import GroupSharing
 from .groups.uisettings import GroupUiSettings
@@ -106,7 +101,6 @@ class AppConfig(BaseSettings):
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
     misc: GroupMisc = GroupMisc()
-    mediaprocessing_pipeline_collage_list2: GroupCollageProcess = GroupCollageProcess()  # TODO: implement correctly. fix also other sublevels
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
