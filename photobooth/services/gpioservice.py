@@ -122,19 +122,19 @@ class GpioService(BaseService):
             self._logger.critical(exc)
 
     def _take1pic(self):
-        self._logger.info(f"trigger {__name__}")
+        self._logger.info("trigger _take1pic")
         self._startjob(self._processing_service.start_job_1pic)
 
     def _takecollage(self):
-        self._logger.info(f"trigger {__name__}")
+        self._logger.info("trigger _takecollage")
         self._startjob(self._processing_service.start_job_collage)
 
     def _takeanimation(self):
-        self._logger.info(f"trigger {__name__}")
+        self._logger.info("trigger _takeanimation")
         self._startjob(self._processing_service.start_job_animation)
 
     def _takevideo(self):
-        self._logger.info(f"trigger {__name__}")
+        self._logger.info("trigger _takevideo")
         self._startjob(self._processing_service.start_or_stop_job_video)
 
     def _print_recent_item(self):
