@@ -10,11 +10,10 @@ import uuid
 from pathlib import Path
 from threading import Condition, Event
 
-from libcamera import Transform, controls  # type: ignore
-from picamera2 import Picamera2  # type: ignore
-from picamera2.encoders import MJPEGEncoder  # type: ignore
-from picamera2.encoders import H264Encoder, Quality
-from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
+from libcamera import Transform, controls
+from picamera2 import Picamera2
+from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality
+from picamera2.outputs import FfmpegOutput, FileOutput
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
