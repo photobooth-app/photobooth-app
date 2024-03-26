@@ -91,7 +91,7 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
 
-        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "hq_img").resolve()}/*.jpg')
+        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "images").resolve()}/*.jpg')
         current_hq_image_index = random.randint(0, len(hq_images) - 1)
 
         # get img off the producing queue
@@ -145,38 +145,45 @@ def img_aquisition(
 
     logger.info("img_aquisition process started")
 
-    last_time = time.time_ns()
+    last_time_frame = time.time_ns()
+    last_time_newimage = time.time()
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    path_live_img = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "background.jpg").resolve()
     path_font = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "fonts", "Roboto-Bold.ttf").resolve()
 
-    img_original = Image.open(path_live_img)
-    img_original.load()
+    lores_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "images").resolve()}/*.jpg')
+    img_original = [Image.open(lores_image) for lores_image in lores_images]
+    current_lores_image_index = 0
+
     text_fill = "#888"
 
     while not _event_proc_shutdown.is_set():
         now_time = time.time_ns()
-        if (now_time - last_time) / 1000**3 <= (1 / _fps_target):
+        if (now_time - last_time_frame) / 1000**3 <= (1 / _fps_target):
             # limit max framerate to every ~2ms
             time.sleep(2 / 1000.0)
             continue
 
-        fps = round(1 / (now_time - last_time) * 1000**3, 1)
-        last_time = now_time
+        fps = round(1 / (now_time - last_time_frame) * 1000**3, 1)
+        last_time_frame = now_time
+
+        # update liveview image every 5 seconds
+        if (time.time() - last_time_newimage) > 5:
+            # update image every 5 seconds
+            current_lores_image_index = random.randint(0, len(lores_images) - 1)
+            last_time_newimage = time.time()
 
         # create PIL image
-        img = img_original.copy()
+        img = img_original[current_lores_image_index].copy()
 
         # add text
         img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(font=str(path_font), size=22)
-        font_small = ImageFont.truetype(font=str(path_font), size=15)
+        font_large = ImageFont.truetype(font=str(path_font), size=50)
+        font_small = ImageFont.truetype(font=str(path_font), size=25)
 
-        img_draw.text((25, 200), "virtual camera preview", fill=text_fill, font=font_large)
-        img_draw.text((25, 230), datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), fill=text_fill, font=font_large)
-        img_draw.text((25, 260), f"framerate: {fps}", fill=text_fill, font=font_small)
-        img_draw.text((25, 400), "you see this, so installation was successful :)", fill=text_fill, font=font_small)
+        img_draw.text((25, 400), "virtual camera", fill=text_fill, font=font_large)
+        img_draw.text((25, 460), datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), fill=text_fill, font=font_large)
+        img_draw.text((25, 520), f"framerate: {fps}", fill=text_fill, font=font_small)
 
         # flip if mirror effect is on because messages shall be readable on screen
         if _mirror:
