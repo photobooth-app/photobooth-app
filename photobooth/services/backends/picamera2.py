@@ -12,11 +12,8 @@ from threading import Condition, Event
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
-from picamera2.encoders import (
-    H264Encoder,
-    MJPEGEncoder,  # type: ignore
-    Quality,
-)
+from picamera2.encoders import MJPEGEncoder  # type: ignore
+from picamera2.encoders import H264Encoder, Quality
 from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...utils.stoppablethread import StoppableThread
@@ -161,10 +158,10 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"controls: {self._picamera2.controls}")
 
         self.set_ae_exposure(appconfig.backends.picamera2_AE_EXPOSURE_MODE)
-        logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality.name]=}")
+        logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality]=}")
 
         # start encoder
-        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality.name])
+        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
 
         # start camera
         self._picamera2.start()
@@ -309,7 +306,7 @@ class Picamera2Backend(AbstractBackend):
 
         self._picamera2.switch_mode(self._current_config)
 
-        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality.name])
+        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
 
         logger.info("switchmode finished successfully")
 

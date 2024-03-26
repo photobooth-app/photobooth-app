@@ -5,12 +5,13 @@ AppConfig class providing central config
 
 import platform
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class EnumImageBackendsMain(str, Enum):
-    """enum to choose image backend MAIN from"""
+    "Main backend to use for high quality still captures. Also used for livepreview if backend is capable of."
 
     VIRTUALCAMERA = "VirtualCamera"
 
@@ -26,7 +27,7 @@ class EnumImageBackendsMain(str, Enum):
 
 
 class EnumImageBackendsLive(str, Enum):
-    """enum to choose image backend LIVE from"""
+    "Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability."
 
     DISABLED = "Disabled"
 
@@ -39,18 +40,6 @@ class EnumImageBackendsLive(str, Enum):
 
     if platform.system() == "Windows":
         pass
-
-
-class EnumPicamStreamQuality(str, Enum):
-    """Enum type to describe the quality wanted from an encoder.
-    This may be passed if a specific value (such as bitrate) has not been set.
-    """
-
-    VERY_LOW = "very low"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    VERY_HIGH = "very high"
 
 
 class GroupBackends(BaseModel):
@@ -200,8 +189,8 @@ class GroupBackends(BaseModel):
         le=4,
         description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
     )
-    picamera2_stream_quality: EnumPicamStreamQuality = Field(
+    picamera2_stream_quality: Literal["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"] = Field(
         title="Picamera2 Stream Quality (for livepreview)",
-        default=EnumPicamStreamQuality.MEDIUM,
+        default="MEDIUM",
         description="Lower quality results in less data to be transferred and may reduce load on display device.",
     )
