@@ -63,7 +63,7 @@ class TextsConfig(BaseModel):
     rotate: int = 0
     font_size: PositiveInt = 40
     font: str = "fonts/Roboto-Bold.ttf"
-    color: Color = Color("red").as_named()
+    color: Color = Color("red").as_hex()
 
 
 class CollageMergeDefinition(BaseModel):
@@ -94,7 +94,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     capture_fill_background_color: Color = Field(
-        default=Color("blue").as_named(),
+        default=Color("blue").as_hex(),
         description="Solid color used to fill background.",
     )
     capture_img_background_enable: bool = Field(
@@ -151,7 +151,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
         description="Apply solid color background to collage",
     )
     canvas_fill_background_color: Color = Field(
-        default=Color("green").as_named(),
+        default=Color("green").as_hex(),
         description="Solid color used to fill background.",
     )
     canvas_img_background_enable: bool = Field(
@@ -181,7 +181,7 @@ class GroupMediaprocessingPipelineCollage(BaseModel):
                 pos_x=200,
                 pos_y=1100,
                 rotate=1,
-                color=Color("#333"),
+                color=Color("#333").as_hex(),
             ),
         ],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
