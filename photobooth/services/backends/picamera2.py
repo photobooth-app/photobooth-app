@@ -296,18 +296,22 @@ class Picamera2Backend(AbstractBackend):
 
     def _switch_mode(self):
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
-        # revisit later, maybe.
-        # sometimes picamera2 got stuck calling switch_mode.
-        # Seems it got better when changing from switch_mode to stop_encoder, stop, configure.
-        # some further information here: https://github.com/raspberrypi/picamera2/issues/554
+
         self._picamera2.stop_encoder()
         self._last_config = self._current_config
 
-        self._picamera2.switch_mode(self._current_config)
-
-        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
-
-        logger.info("switchmode finished successfully")
+        try:
+            # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
+            # if this happens, backend signals error and shall be restarted.
+            self._picamera2.switch_mode(self._current_config)
+        except RuntimeError as exc:
+            logger.exception(exc)
+            logger.critical(f"error switching mode in picamera due to {exc}")
+            # mark as faulty to restart.
+            self.device_set_status_fault_flag()
+        else:
+            self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
+            logger.info("switchmode finished successfully")
 
     def _init_autofocus(self):
         """
