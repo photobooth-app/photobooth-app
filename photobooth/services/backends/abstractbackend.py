@@ -246,6 +246,8 @@ class AbstractBackend(ABC):
     def stop(self):
         """To stop the backend to serve"""
 
+        self.stop_recording()
+
         if self._connect_thread and self._connect_thread.is_alive():
             self._connect_thread.stop()
             self._connect_thread.join()
@@ -339,7 +341,7 @@ class AbstractBackend(ABC):
             raise RuntimeError("device raised exception") from exc
 
     def start_recording(self):
-        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=False)
+        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
         self._video_worker_thread.start()
         # TODO: improvement: add wait here until ffmpeg really started and captures. could take some time (especially on first start)
         # because ffmpeg is not in memory. Until now we work around by invoking ffmpeg once during service startup
@@ -347,6 +349,7 @@ class AbstractBackend(ABC):
 
     def stop_recording(self):
         if self._video_worker_thread:
+            logger.debug("stop recording")
             self._video_worker_thread.stop()
             self._video_worker_thread.join()
             logger.info("_video_worker_thread stopped and joined")
@@ -359,7 +362,7 @@ class AbstractBackend(ABC):
         if self._video_recorded_videofilepath is not None:
             return self._video_recorded_videofilepath
         else:
-            raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
+            raise FileNotFoundError(f"'{self._video_recorded_videofilepath}' video not found! pls check logs")
 
     def _videoworker_fun(self):
         # init worker, set output to None which indicates there is no current video available to get
@@ -393,7 +396,11 @@ class AbstractBackend(ABC):
                 str(mp4_output_filepath),
             ],
             stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            # following report is workaround to avoid deadlock by pushing too much output in stdout/err
+            # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
+            env=dict(os.environ, FFREPORT="file=./log/ffmpeg-last.log:level=32"),
+            # stdout=subprocess.PIPE,
+            # stderr=subprocess.STDOUT,
         )
 
         logger.info("writing to ffmpeg stdin")
