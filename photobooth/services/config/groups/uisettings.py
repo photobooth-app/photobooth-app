@@ -7,6 +7,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 """
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+from pydantic_extra_types.color import Color
 
 from .mediaprocessing import EnumPilgramFilter
 
@@ -16,16 +17,14 @@ class GroupUiSettings(BaseModel):
 
     model_config = ConfigDict(title="Personalize the User Interface")
 
-    PRIMARY_COLOR: str = Field(
-        default="#196cb0",
+    PRIMARY_COLOR: Color = Field(
+        default=Color("#196cb0").as_hex(),
         description="Primary color (e.g. buttons, title bar).",
-        json_schema_extra={"ui_component": "ColorPicker"},
     )
 
-    SECONDARY_COLOR: str = Field(
-        default="#b8124f",
+    SECONDARY_COLOR: Color = Field(
+        default=Color("#b8124f").as_hex(),
         description="Secondary color (admin interface, accents).",
-        json_schema_extra={"ui_component": "ColorPicker"},
     )
 
     show_takepic_on_frontpage: bool = Field(
