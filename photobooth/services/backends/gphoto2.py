@@ -44,6 +44,10 @@ class Gphoto2Backend(AbstractBackend):
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
 
+        # if True signal to switch optimized, set none after switch again.
+        self._configure_optimized_for_hq_capture_flag = None
+        self._configure_optimized_for_idle_flag = None
+
         # generate dict for clear events clear text names
         # defined events http://www.gphoto.org/doc/api/gphoto2-camera_8h.html#a438ab2ac60ad5d5ced30e4201476800b
         self.event_texts = {}
@@ -174,12 +178,24 @@ class Gphoto2Backend(AbstractBackend):
             return self._lores_data.data
 
     def _on_configure_optimized_for_hq_capture(self):
-        self._iso(appconfig.backends.gphoto2_iso_capture)
-        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
+        self._configure_optimized_for_hq_capture_flag = True
 
     def _on_configure_optimized_for_idle(self):
-        self._iso(appconfig.backends.gphoto2_iso_liveview)
-        self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
+        self._configure_optimized_for_idle_flag = True
+
+    def _configure_optimized_for_hq_capture(self):
+        if self._configure_optimized_for_hq_capture_flag:
+            logger.debug("configure camera optimized for still capture")
+            self._configure_optimized_for_hq_capture_flag = None
+            self._iso(appconfig.backends.gphoto2_iso_capture)
+            self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
+
+    def _configure_optimized_for_idle(self):
+        if self._configure_optimized_for_idle_flag:
+            logger.debug("configure camera optimized for idle/video")
+            self._configure_optimized_for_idle_flag = None
+            self._iso(appconfig.backends.gphoto2_iso_liveview)
+            self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
     def _capturetarget(self, val: str = ""):
         if not val:
@@ -233,6 +249,9 @@ class Gphoto2Backend(AbstractBackend):
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request_hires_still.is_set():
                 if self.device_enable_lores_stream:
+                    # check if flag is true and configure if so once.
+                    self._configure_optimized_for_idle()
+
                     try:
                         capture = self._camera.capture_preview()
 
@@ -272,6 +291,9 @@ class Gphoto2Backend(AbstractBackend):
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 
+                # check if flag is true and configure if so once.
+                self._configure_optimized_for_hq_capture()
+
                 # capture hq picture
                 logger.info("taking hq picture")
                 try:
@@ -282,9 +304,6 @@ class Gphoto2Backend(AbstractBackend):
 
                     # try again in next loop
                     continue
-
-                self._iso(appconfig.backends.gphoto2_iso_liveview)
-                self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
 
                 # empty the event queue, needed in case of RAW+JPG shooting usually.
                 # used usually only if capture JPG+RAW enabled (2 files added in one capture)
