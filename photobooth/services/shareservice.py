@@ -113,7 +113,13 @@ class ShareService(BaseService):
 
                 # filter out keep-alive new lines
                 if line:
-                    decoded_line = json.loads(line)
+                    try:
+                        # if webserver not correctly setup, decoding might fail. catch exception mostly to inform user to debug
+                        decoded_line: dict = json.loads(line)
+                    except json.JSONDecodeError as exc:
+                        self._logger.exception(exc)
+                        self._logger.error("webserver response from dl.php malformed. please check webserver setup and webserver's logs.")
+                        break
 
                     if decoded_line.get("file_identifier", None) and decoded_line.get("status", None):
                         # valid job check whether pending and upload
