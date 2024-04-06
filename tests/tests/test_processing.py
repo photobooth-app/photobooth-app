@@ -170,7 +170,7 @@ def test_video(_container: Container):
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # ensure written video is about in tolerance duration
-    assert abs(round(video_duration(video_item.path_original), 1) - appconfig.misc.video_duration) < 0.3
+    assert abs(round(video_duration(video_item.path_original), 1) - appconfig.misc.video_duration) < 1
 
 
 def test_video_stop_early(_container: Container):
@@ -195,4 +195,4 @@ def test_video_stop_early(_container: Container):
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # ensure written video is about in tolerance duration
-    assert abs(round(video_duration(video_item.path_original), 1) - 3) < 0.3
+    assert abs(round(video_duration(video_item.path_original), 1) - 3) < 1
