@@ -1,5 +1,6 @@
 import io
 import logging
+import time
 from unittest import mock
 from unittest.mock import patch
 
@@ -9,10 +10,7 @@ from PIL import Image
 from photobooth.container import Container, container
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
-from photobooth.services.config.groups.backends import (
-    EnumImageBackendsLive,
-    EnumImageBackendsMain,
-)
+from photobooth.services.config.groups.backends import EnumImageBackendsLive, EnumImageBackendsMain
 from photobooth.services.sseservice import SseService
 from photobooth.services.wledservice import WledService
 
@@ -69,6 +67,17 @@ def test_getimages_directlyaccess_backends(_container: Container):
     with Image.open(io.BytesIO(_container.aquisition_service._live_backend.wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
+
+
+def test_getvideo(_container: Container):
+    """get video from service"""
+    _container.aquisition_service.start_recording()
+    time.sleep(2)
+    _container.aquisition_service.stop_recording()
+
+    videopath = _container.aquisition_service.get_recorded_video()
+    logger.info(f"video stored to file {videopath}")
+    assert videopath and videopath.is_file()
 
 
 def test_getimages_change_backend_during_runtime(_container: Container):
@@ -131,6 +140,7 @@ def test_switch_modes(_container: Container):
 
     _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
     _container.aquisition_service.signalbackend_configure_optimized_for_idle()
+    _container.aquisition_service.signalbackend__configure_optimized_for_video()
 
 
 def test_simulated_init_exceptions(_container: Container):

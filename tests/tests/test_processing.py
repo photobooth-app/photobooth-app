@@ -1,10 +1,13 @@
 import logging
+import time
 
 import pytest
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
 from photobooth.services.processingservice import ProcessingService
+
+from .image_utils import video_duration
 
 logger = logging.getLogger(name=None)
 
@@ -150,3 +153,46 @@ def test_animation(_container: Container):
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._state_machine is None
+
+
+def test_video(_container: Container):
+    _container.processing_service.start_or_stop_job_video()
+
+    assert _container.processing_service._state_machine is not None
+    number_of_images_before = _container.mediacollection_service.number_of_images
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
+
+    assert _container.mediacollection_service.number_of_images == number_of_images_before + 1
+
+    video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
+
+    # ensure written video is about in tolerance duration
+    assert abs(round(video_duration(video_item.path_original), 1) - appconfig.misc.video_duration) < 0.3
+
+
+def test_video_stop_early(_container: Container):
+    _container.processing_service.start_or_stop_job_video()
+
+    assert _container.processing_service._state_machine is not None
+    number_of_images_before = _container.mediacollection_service.number_of_images
+
+    # wait until countdown is finished
+    while not _container.processing_service._state_machine.record.is_active:
+        time.sleep(0.1)
+
+    # recording active, wait 3 secs before stopping.
+    time.sleep(3)
+    _container.processing_service.start_or_stop_job_video()
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
+
+    assert _container.mediacollection_service.number_of_images == number_of_images_before + 1
+
+    video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
+
+    # ensure written video is about in tolerance duration
+    assert abs(round(video_duration(video_item.path_original), 1) - 3) < 0.3
