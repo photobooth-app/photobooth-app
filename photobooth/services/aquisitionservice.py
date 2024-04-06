@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.backends import EnumImageBackendsLive, EnumImageBackendsMain
+from .config.groups.backends import BackendsLive, BackendsMain
 from .sseservice import SseService
 from .wledservice import WledService
 
@@ -53,7 +53,7 @@ class AquisitionService(BaseService):
 
         self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
 
-        if appconfig.backends.LIVE_BACKEND is not EnumImageBackendsLive.DISABLED:
+        if appconfig.backends.LIVE_BACKEND is not BackendsLive.DISABLED:
             self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
         else:
             self._live_backend: AbstractBackend = None
@@ -162,7 +162,7 @@ class AquisitionService(BaseService):
         self.signalbackend_configure_optimized_for_idle()
 
     @staticmethod
-    def _import_backend(backend: Union[EnumImageBackendsMain, EnumImageBackendsLive]):
+    def _import_backend(backend: Union[BackendsMain, BackendsLive]):
         # dynamic import of backend
 
         module_path = f".backends.{backend.name.lower()}"

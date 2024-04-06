@@ -10,7 +10,7 @@ from PIL import Image
 from photobooth.container import Container, container
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
-from photobooth.services.config.groups.backends import EnumImageBackendsLive, EnumImageBackendsMain
+from photobooth.services.config.groups.backends import BackendsLive, BackendsMain
 from photobooth.services.sseservice import SseService
 from photobooth.services.wledservice import WledService
 
@@ -29,8 +29,8 @@ def _container() -> Container:
     # setup
 
     appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsMain.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.MAIN_BACKEND = BackendsMain.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.DISABLED
 
     container.start()
 
@@ -46,8 +46,8 @@ def test_getimage(_container: Container):
 
 
 def test_getimages_directlyaccess_backends(_container: Container):
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsMain.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.MAIN_BACKEND = BackendsMain.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
 
     container.stop()
     container.start()
@@ -90,7 +90,7 @@ def test_getimages_change_backend_during_runtime(_container: Container):
     assert _container.aquisition_service._live_backend is None
 
     # now reconfigure
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
 
     # shutdown/init to restart resources
     _container.aquisition_service.stop()
@@ -110,8 +110,8 @@ def test_getimages_change_backend_during_runtime(_container: Container):
 def test_gen_stream_main_backend(_container: Container):
     # now reconfigure
     appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.DISABLED
+    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.DISABLED
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
@@ -122,8 +122,8 @@ def test_gen_stream_main_backend(_container: Container):
 def test_get_stats(_container: Container):
     # now reconfigure
     appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
@@ -133,8 +133,8 @@ def test_get_stats(_container: Container):
 def test_switch_modes(_container: Container):
     # now reconfigure
     appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = EnumImageBackendsLive.VIRTUALCAMERA
+    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 

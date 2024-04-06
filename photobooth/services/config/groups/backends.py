@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class EnumImageBackendsMain(str, Enum):
+class BackendsMain(str, Enum):
     "Main backend to use for high quality still captures. Also used for livepreview if backend is capable of."
 
     VIRTUALCAMERA = "VirtualCamera"
@@ -26,7 +26,7 @@ class EnumImageBackendsMain(str, Enum):
         DIGICAMCONTROL = "Digicamcontrol"
 
 
-class EnumImageBackendsLive(str, Enum):
+class BackendsLive(str, Enum):
     "Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability."
 
     DISABLED = "Disabled"
@@ -51,14 +51,14 @@ class GroupBackends(BaseModel):
 
     model_config = ConfigDict(title="Camera Backend Config")
 
-    MAIN_BACKEND: EnumImageBackendsMain = Field(
+    MAIN_BACKEND: BackendsMain = Field(
         title="Main Backend",
-        default=EnumImageBackendsMain.VIRTUALCAMERA,
+        default=BackendsMain.VIRTUALCAMERA,
         description="Main backend to use for high quality still captures. Also used for livepreview if backend is capable of.",
     )
-    LIVE_BACKEND: EnumImageBackendsLive = Field(
+    LIVE_BACKEND: BackendsLive = Field(
         title="Live Backend",
-        default=EnumImageBackendsLive.DISABLED,
+        default=BackendsLive.DISABLED,
         description="Secondary backend used for live streaming only. Useful to stream from webcam if DSLR camera has no livestream capability.",
     )
     LIVEPREVIEW_ENABLED: bool = Field(
