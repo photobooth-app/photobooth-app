@@ -56,6 +56,24 @@ def test_chose_animation(client: TestClient):
         container.processing_service.start_job_animation.assert_called()
 
 
+def test_chose_video(client: TestClient):
+    with patch.object(container.processing_service, "start_or_stop_job_video"):
+        # emulate action
+        response = client.get("/processing/chose/video")
+        assert response.status_code == 200
+
+        container.processing_service.start_or_stop_job_video.assert_called()
+
+
+def test_chose_video_stoprecording(client: TestClient):
+    with patch.object(container.processing_service, "stop_recording"):
+        # emulate action
+        response = client.get("/processing/cmd/stop")
+        assert response.status_code == 200
+
+        container.processing_service.stop_recording.assert_called()
+
+
 def test_chose_1pic_occupied(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = ProcessMachineOccupiedError("mock error")
