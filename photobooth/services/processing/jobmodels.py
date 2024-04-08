@@ -45,7 +45,7 @@ class CountdownTimer:
 
     def _ticker_fun(self):
         while not self._countdown_finished():
-            time.sleep(0.1)
+            time.sleep(self.TIMER_TICK)
 
             self._countdown -= self.TIMER_TICK
 
