@@ -59,8 +59,8 @@ class FileTransferService(BaseService):
 
             _previous_devices = current_devices
 
-            # poll every 4 seconds
-            time.sleep(4)
+            # poll every 1 seconds
+            time.sleep(1)
 
     def handle_mount(self, device: psutil._common.sdiskpart):
         self._logger.info(f"Device {device.device} has been newly detected.")
@@ -78,8 +78,8 @@ class FileTransferService(BaseService):
 
     @staticmethod
     def get_current_removable_media():
-        """Returns set of removable drives detected on the computer."""
-        return {device for device in psutil.disk_partitions(all=False) if "removable" in device.opts}
+        """Returns set of removable drives detected on the  computer."""
+        return {device for device in psutil.disk_partitions(all=False)}
 
     def has_enough_space(self, device_path):
         _, _, free = shutil.disk_usage(device_path)
