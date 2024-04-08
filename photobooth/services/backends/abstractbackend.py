@@ -399,6 +399,8 @@ class AbstractBackend(ABC):
                 f"{appconfig.misc.video_bitrate}k",
                 "-movflags",
                 "+faststart",
+                "-r",
+                f"{appconfig.misc.video_framerate}",
                 str(mp4_output_filepath),
             ],
             stdin=subprocess.PIPE,

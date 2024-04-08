@@ -26,3 +26,10 @@ class GroupMisc(BaseModel):
         le=10000,
         description="Video quality bitrate in k.",
     )
+
+    video_framerate: int = Field(
+        default=25,
+        ge=1,
+        le=30,
+        description="Video framerate (frames per second).",
+    )
