@@ -50,7 +50,7 @@ class EventstreamLogHandler(logging.Handler):
 class LoggingService(BaseService):
     """_summary_"""
 
-    debug_level = logging.DEBUG
+    logging_level = logging.DEBUG
 
     def __init__(self, sse_service: SseService):
         """Setup logger
@@ -78,7 +78,7 @@ class LoggingService(BaseService):
         logging.debug("loggingservice __init__ basicConfig set")
         logging.debug("loggingservice __init__ started")
 
-        self.debug_level = appconfig.common.debug_level
+        self.logging_level = appconfig.common.logging_level
 
         ## logger
         # default logger (root = None or "")
@@ -87,7 +87,7 @@ class LoggingService(BaseService):
         root_logger = logging.getLogger(name=None)
 
         # set level based on users config
-        root_logger.setLevel(self.debug_level)
+        root_logger.setLevel(self.logging_level)
 
         ## handler
 
@@ -164,7 +164,7 @@ class LoggingService(BaseService):
             "uvicorn",
         ]:
             lgr = logging.getLogger(name=name)
-            lgr.setLevel(self.debug_level)
+            lgr.setLevel(self.logging_level)
             lgr.propagate = False
             lgr.handlers = [
                 logging.root.handlers[0],  # this is the streamhandler if not in pytest.

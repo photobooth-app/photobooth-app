@@ -30,7 +30,7 @@ class GroupCommon(BaseModel):
     )
     countdown_camera_capture_offset: float = Field(
         default=0.2,
-        multiple_of=0.1,
+        multiple_of=0.05,
         ge=0,
         le=20,
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
@@ -49,7 +49,7 @@ class GroupCommon(BaseModel):
         description="Show individual images of collages/animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
-    debug_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+    logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         default="DEBUG",
         description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",
     )
