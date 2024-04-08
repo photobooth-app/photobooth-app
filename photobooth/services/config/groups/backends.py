@@ -189,8 +189,7 @@ class GroupBackends(BaseModel):
         le=4,
         description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
     )
-    picamera2_stream_quality: Literal["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"] = Field(
-        title="Picamera2 Stream Quality (for livepreview)",
+    picamera2_videostream_quality: Literal["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"] = Field(
         default="MEDIUM",
-        description="Lower quality results in less data to be transferred and may reduce load on display device.",
+        description="Lower quality results in less data to be transferred and may reduce load on devices.",
     )

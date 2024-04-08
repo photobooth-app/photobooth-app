@@ -157,10 +157,10 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"controls: {self._picamera2.controls}")
 
         self.set_ae_exposure(appconfig.backends.picamera2_AE_EXPOSURE_MODE)
-        logger.info(f"stream quality {Quality[appconfig.backends.picamera2_stream_quality]=}")
+        logger.info(f"stream quality {Quality[appconfig.backends.picamera2_videostream_quality]=}")
 
         # start encoder
-        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
+        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_videostream_quality])
 
         # start camera
         self._picamera2.start()
@@ -310,7 +310,9 @@ class Picamera2Backend(AbstractBackend):
             # mark as faulty to restart.
             self.device_set_status_fault_flag()
         else:
-            self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_stream_quality])
+            self._picamera2.start_encoder(
+                MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[appconfig.backends.picamera2_videostream_quality]
+            )
             logger.info("switchmode finished successfully")
 
     def _init_autofocus(self):
