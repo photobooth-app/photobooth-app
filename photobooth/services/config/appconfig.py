@@ -6,6 +6,7 @@ AppConfig class providing central config
 import json
 import logging
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -143,6 +144,11 @@ class AppConfig(BaseSettings):
     def persist(self):
         """Persist config to file"""
         logger.debug("persist config to json file")
+
+        # if a config exists, backup before overwriting
+        if Path(CONFIG_FILENAME).exists():
+            datetimestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(CONFIG_FILENAME, f"{CONFIG_FILENAME}_backup-{datetimestr}")
 
         with open(CONFIG_FILENAME, mode="w", encoding="utf-8") as write_file:
             write_file.write(self.model_dump_json(indent=2))
