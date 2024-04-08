@@ -6,6 +6,7 @@ import dataclasses
 import logging
 import os
 import subprocess
+import threading
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -342,10 +343,14 @@ class AbstractBackend(ABC):
 
     def start_recording(self):
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
+        self._video_worker_capture_started = threading.Event()
         self._video_worker_thread.start()
-        # TODO: improvement: add wait here until ffmpeg really started and captures. could take some time (especially on first start)
-        # because ffmpeg is not in memory. Until now we work around by invoking ffmpeg once during service startup
-        logger.info("_video_worker_thread started")
+
+        # gives 3 seconds to actually capture with ffmpeg, otherwise timeout. if ffmpeg is not in memory it needs time to load from disk
+        tms = time.time()
+        if not self._video_worker_capture_started.wait(timeout=3):
+            logger.warning("ffmpeg could not start within timeout; cpu too slow?")
+        logger.debug(f"-- ffmpeg startuptime: {round((time.time() - tms), 2)}s ")
 
     def stop_recording(self):
         if self._video_worker_thread:
@@ -365,6 +370,7 @@ class AbstractBackend(ABC):
             raise FileNotFoundError(f"'{self._video_recorded_videofilepath}' video not found! pls check logs")
 
     def _videoworker_fun(self):
+        logger.info("_videoworker_fun start")
         # init worker, set output to None which indicates there is no current video available to get
         self._video_recorded_videofilepath = None
 
@@ -405,6 +411,7 @@ class AbstractBackend(ABC):
 
         logger.info("writing to ffmpeg stdin")
         tms = time.time()
+        self._video_worker_capture_started.set()  # inform calling function, that ffmpeg is about to start, timing starts from now
 
         while not self._video_worker_thread.stopped():
             try:
