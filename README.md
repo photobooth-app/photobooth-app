@@ -53,4 +53,4 @@ If you like my work and like to keep me motivated you can sponsor me:
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=8255Y566TBNEC)
 
-[Or help translating the software to your language.](https://github.com/photobooth-app/photobooth-app/blob/main/CONTRIBUTING.md#help-translate-the-app).
+Or help [translate the software in your language](https://github.com/photobooth-app/photobooth-app/blob/main/CONTRIBUTING.md#help-translate-the-app).
