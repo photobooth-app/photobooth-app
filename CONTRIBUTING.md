@@ -2,6 +2,21 @@
 
 ## Help Improve
 
+### Help Translate the App
+
+[![Crowdin](https://badges.crowdin.net/photobooth-app/localized.svg)](https://crowdin.com/project/photobooth-app)
+
+We use automated pre-translation powered by Crowdin.
+Help to improve the accuracy by proofreading the translation.
+It's very easy to translate and proofread the current translations:
+
+- [Open the photobooth-app translation project in Crowdin](https://crowdin.com/project/photobooth-app/invite?h=b00f8c8abec20ed573058db633f2452c2057822).
+- Click the dropdown button next to your language to open language details.
+- Click the button "translate" or "proofread".
+- Work through the items, improve the translation and click the check mark to approve.
+- If the language is 100% translated and proofread, it will be included in the next release.
+- Leave a short notice in the discussions that you improved the translation to let us know. Thank you!
+
 ### Post Issues
 
 If you find an issue, please post it in the [photobooth app issue tracker](https://github.com/photobooth-app/photobooth-app/issues).
@@ -9,10 +24,6 @@ If you find an issue, please post it in the [photobooth app issue tracker](https
 ### Improve Documentation
 
 If you find an issue in the documentation, [modify the documentation](https://github.com/photobooth-app/photobooth-docs) or open a [discussion](https://github.com/photobooth-app/photobooth-app/discussions).
-
-### Translate the app
-
-To add a new language, add a new language folder in [the frontend](https://github.com/photobooth-app/photobooth-frontend) reposity at `src/i18n`. Copy `index.js` from `src/i18n/en-US` into your folder and edit the strings accorindgly. To make your translation available in the frontend, add it in `src/i18n/index.js`.
 
 ### Send Patches via Pull Request
 
