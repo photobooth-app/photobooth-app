@@ -79,6 +79,7 @@ class AbstractBackend(ABC):
         self._connect_thread: StoppableThread = None
 
         # video feature
+        self._video_feature_available: bool = False
         self._video_worker_thread: StoppableThread = None
         self._video_recorded_videofilepath: Path = None
 
@@ -208,6 +209,9 @@ class AbstractBackend(ABC):
         # reset the request for this backend to deliver lores frames
         self.device_enable_lores_stream = False
 
+        # disable video feature avail
+        self._video_feature_available = False
+
         # statistics
         self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
         self._stats_thread.start()
@@ -234,15 +238,16 @@ class AbstractBackend(ABC):
                 stdout=subprocess.DEVNULL,
             )
         except FileNotFoundError:
-            logger.info("ffmpeg not found on system. this is not a problem if video functions are not used.")
+            logger.warning("ffmpeg not found on system. this is not a problem if video functions are not used.")
         except subprocess.CalledProcessError as exc:
             # non zero returncode
-            logger.warning(f"ffmpeg returned an error: {exc}")
+            logger.error(f"ffmpeg returned an error: {exc}")
         except subprocess.TimeoutExpired as exc:
             logger.error(f"ffmpeg took too long to load, timeout {exc}")
         else:
             # no error, service restart ok
             logger.info("ffmpeg loaded successfully")
+            self._video_feature_available = True
 
     def stop(self):
         """To stop the backend to serve"""
@@ -342,12 +347,15 @@ class AbstractBackend(ABC):
             raise RuntimeError("device raised exception") from exc
 
     def start_recording(self):
+        if not self._video_feature_available:
+            raise RuntimeError("video feature is not available. check logs for more information. maybe ffmpeg missing?")
+
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
         self._video_worker_capture_started = threading.Event()
         self._video_worker_thread.start()
 
-        # gives 3 seconds to actually capture with ffmpeg, otherwise timeout. if ffmpeg is not in memory it needs time to load from disk
         tms = time.time()
+        # gives 3 seconds to actually capture with ffmpeg, otherwise timeout. if ffmpeg is not in memory it needs time to load from disk
         if not self._video_worker_capture_started.wait(timeout=3):
             logger.warning("ffmpeg could not start within timeout; cpu too slow?")
         logger.debug(f"-- ffmpeg startuptime: {round((time.time() - tms), 2)}s ")
