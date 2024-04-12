@@ -1,6 +1,6 @@
 <h1 align="center"><img src="https://raw.githubusercontent.com/photobooth-app/photobooth-app/main/assets/logo/logo-text-blue-transparent.png" alt="photobooth app logo" /></h1>
 
-Welcome to your brand-new photobooth-app! Written in Python 🐍, coming along with a modern Vue3 frontend.
+Welcome to your brand-new open-source photobooth-app! Written in Python 🐍, coming along with a modern Vue3 frontend.
 
 [![PyPI](https://img.shields.io/pypi/v/photobooth-app)](https://pypi.org/project/photobooth-app/)
 ![python versions supported 3.9, 3.10, 3.11](https://img.shields.io/pypi/pyversions/photobooth-app)
@@ -14,18 +14,20 @@ Welcome to your brand-new photobooth-app! Written in Python 🐍, coming along w
 
 ## 😍 Features
 
-- 📹 camera live preview with shortest delay as possible, permanent video live view in background
-- 🛫 optimized for speed, highly response UI
-- 🫶 several camera backends supported for high quality stills and livestream
-- 💡 WLED support signaling photo countdown and feedback to the user when the photo is actually taken
-- 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported
+📷 capture stills, animated gif, collages and even 📹 videos!  
+🎉 camera live preview with shortest delay as possible, permanent video live view in background  
+🛫 optimized for speed, highly response UI  
+🫶 several camera backends supported for high quality stills and livestream  
+💡 WLED support signaling photo countdown and feedback to the user when the photo is actually taken  
+🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported  
+🔓 Open-source, non-restrictive MIT license  
 
 ## 📷 Supported Cameras
 
 The photobooth app's Python backend allows to use different camera types on Linux and Windows platforms:
 
 - Raspberry Pi Camera Module 1/2/3 (with or without autofocus)
-- Arducam cameras (with or without autofocus)
+- Arducam cameras (with or without autofocus, not preferred because separate installation)
 - DSLR camera via
   - gphoto2, Linux
   - digicamcontrol, Windows
