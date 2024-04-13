@@ -5,8 +5,9 @@ name: benchmarks
 # after all jobs finished, coverage is uploaded as described here
 # https://about.codecov.io/blog/uploading-code-coverage-in-a-separate-job-on-github-actions/
 
-on: [push, pull_request]
-
+on:
+  workflow_dispatch:
+    
 permissions:
   contents: read
 
