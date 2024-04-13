@@ -182,9 +182,13 @@ def test_video_stop_early(_container: Container):
     assert _container.processing_service._state_machine is not None
     number_of_images_before = _container.mediacollection_service.number_of_images
 
-    # wait until countdown is finished
-    while not _container.processing_service._state_machine.record.is_active:
-        time.sleep(0.1)
+    # wait until actually recording
+    timeout_counter = 0
+    while not _container.aquisition_service.is_recording():
+        time.sleep(0.05)
+        timeout_counter += 0.05
+        if timeout_counter > 10:
+            raise RuntimeError("timed out waiting for record to start!")
 
     # recording active, wait 3 secs before stopping.
     time.sleep(3)
@@ -198,4 +202,6 @@ def test_video_stop_early(_container: Container):
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # ensure written video is about in tolerance duration
-    assert abs(round(video_duration(video_item.path_original), 1) - 3) < 1
+    video_duration_seconds = abs(round(video_duration(video_item.path_original), 1))
+    logger.info(f"{video_duration_seconds=}")
+    assert (video_duration_seconds - 3) < 0.5

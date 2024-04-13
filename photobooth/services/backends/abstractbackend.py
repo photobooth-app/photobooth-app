@@ -360,7 +360,13 @@ class AbstractBackend(ABC):
             logger.warning("ffmpeg could not start within timeout; cpu too slow?")
         logger.debug(f"-- ffmpeg startuptime: {round((time.time() - tms), 2)}s ")
 
+    def is_recording(self):
+        return self._video_worker_thread is not None and self._video_worker_capture_started.is_set()
+
     def stop_recording(self):
+        # clear notifier that capture was started
+        self._video_worker_capture_started.clear()
+
         if self._video_worker_thread:
             logger.debug("stop recording")
             self._video_worker_thread.stop()
@@ -422,6 +428,9 @@ class AbstractBackend(ABC):
         logger.info("writing to ffmpeg stdin")
         tms = time.time()
 
+        # inform calling function, that ffmpeg received first image now
+        self._video_worker_capture_started.set()
+
         while not self._video_worker_thread.stopped():
             try:
                 ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
@@ -433,9 +442,6 @@ class AbstractBackend(ABC):
 
                 self._video_worker_thread.stop()
                 break
-
-            # inform calling function, that ffmpeg received first image now
-            self._video_worker_capture_started.set()
 
         if ffmpeg_subprocess is not None:
             logger.info("writing to ffmpeg stdin finished")

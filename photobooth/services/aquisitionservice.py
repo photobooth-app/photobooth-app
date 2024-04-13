@@ -105,10 +105,8 @@ class AquisitionService(BaseService):
 
     def _get_video_backend(self) -> AbstractBackend:
         if self._is_real_backend(self._live_backend):
-            logger.info("video requested from dedicated live backend")
             return self._live_backend
         else:
-            logger.info("video requested from main backend")
             return self._main_backend
 
     def gen_stream(self):
@@ -139,6 +137,9 @@ class AquisitionService(BaseService):
 
     def stop_recording(self):
         self._get_video_backend().stop_recording()
+
+    def is_recording(self):
+        return self._get_video_backend().is_recording()
 
     def get_recorded_video(self):
         return self._get_video_backend().get_recorded_video()
