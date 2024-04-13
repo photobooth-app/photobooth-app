@@ -79,6 +79,7 @@ class AbstractBackend(ABC):
         self._connect_thread: StoppableThread = None
 
         # video feature
+        self._video_worker_capture_started = threading.Event()
         self._video_feature_available: bool = False
         self._video_worker_thread: StoppableThread = None
         self._video_recorded_videofilepath: Path = None
@@ -350,8 +351,8 @@ class AbstractBackend(ABC):
         if not self._video_feature_available:
             raise RuntimeError("video feature is not available. check logs for more information. maybe ffmpeg missing?")
 
+        self._video_worker_capture_started.clear()
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
-        self._video_worker_capture_started = threading.Event()
         self._video_worker_thread.start()
 
         tms = time.time()
