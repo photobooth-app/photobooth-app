@@ -74,8 +74,8 @@ async def get_list(dir: str = "/"):
     if not path.is_dir():
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file / does not exist!")
 
-    folders = [f for f in path.iterdir() if f.is_dir()]
-    files = [f for f in path.iterdir() if f.is_file()]
+    folders = [f for f in sorted(path.iterdir()) if f.is_dir()]
+    files = [f for f in sorted(path.iterdir()) if f.is_file()]
 
     output = []
     for f in folders:
