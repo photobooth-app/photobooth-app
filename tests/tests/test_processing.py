@@ -29,6 +29,9 @@ def _container() -> Container:
         container.processing_service.start_job_1pic()
         container.processing_service.wait_until_job_finished()
 
+    # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
+    container.aquisition_service._get_video_backend().block_until_device_is_running()
+
     # deliver
     yield container
     container.stop()
