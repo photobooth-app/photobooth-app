@@ -421,7 +421,6 @@ class AbstractBackend(ABC):
 
         logger.info("writing to ffmpeg stdin")
         tms = time.time()
-        self._video_worker_capture_started.set()  # inform calling function, that ffmpeg is about to start, timing starts from now
 
         while not self._video_worker_thread.stopped():
             try:
@@ -434,6 +433,9 @@ class AbstractBackend(ABC):
 
                 self._video_worker_thread.stop()
                 break
+
+            # inform calling function, that ffmpeg received first image now
+            self._video_worker_capture_started.set()
 
         if ffmpeg_subprocess is not None:
             logger.info("writing to ffmpeg stdin finished")
