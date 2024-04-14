@@ -15,6 +15,7 @@ router = APIRouter(
 @router.get("/gphoto2config")
 def api_get_backend_gphoto2_config():
     """ """
+    status = ""
     output = {}
     try:
         import gphoto2 as gp
@@ -33,7 +34,7 @@ def api_get_backend_gphoto2_config():
             config = dict(backend._camera.list_config())
             # for n in range(len(config)):
             #     logger.debug(f"{config.get_name(n)}={config.get_value(n)}")
-        except gp.Gphoto2Error as exc:
+        except gp.GPhoto2Error as exc:
             raise RuntimeError(f"could not get device information, error {exc}") from exc
 
         backend.stop()
@@ -42,6 +43,6 @@ def api_get_backend_gphoto2_config():
         output = {"summary": summary, "config": config}
 
     except Exception as exc:
-        error = f"Error: {exc}"
+        status = f"Error: {exc}"
 
-    return {"status": error, "output": output}
+    return {"status": status, "output": output}
