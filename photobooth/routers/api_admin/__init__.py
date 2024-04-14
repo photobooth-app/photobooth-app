@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from . import config, files, utils
+from . import config, files
 
 __all__ = [
     "config",  # refers to the 'config.py' file
