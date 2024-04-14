@@ -43,18 +43,13 @@ jobs:
           sudo apt update
           sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
           sudo apt -y install ffmpeg
-      - name: Add tty and input to user for keyboard to work
-        run: |
-          sudo usermod -aG tty,input $USER
-          sudo -s -u ${USER} bash -c 'whoami && groups'
       - name: install pdm
         run: |
           pipx install pdm # on hosted pipx is installed
           PDM_PREFER_BINARY=gphoto2 pdm install
       - name: Run pytest
-        # run with sudo but as user, so usermod from above is in effect.
         run: |
-          sudo -s -u ${USER} pdm run test
+          pdm run test
       - name: output php logs
         if: always()
         run: |
