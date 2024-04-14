@@ -7,10 +7,8 @@ from . import config, files, utils
 __all__ = [
     "config",  # refers to the 'config.py' file
     "files",
-    "utils",
 ]
 
 router = APIRouter(prefix="/api/admin")
 router.include_router(config.router)
 router.include_router(files.router)
-router.include_router(utils.router)
