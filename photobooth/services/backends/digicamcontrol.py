@@ -157,7 +157,7 @@ class DigicamcontrolBackend(AbstractBackend):
             time.sleep(0.2)
 
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.2):
+            if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.data

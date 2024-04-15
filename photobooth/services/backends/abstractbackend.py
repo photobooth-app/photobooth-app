@@ -191,9 +191,9 @@ class AbstractBackend(ABC):
 
     def _block_until_delivers_lores_images(self):
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        for _ in range(1, 60):
+        for _ in range(1, 20):
             try:
-                self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
                 break  # stop trying we got an image can leave without hitting else.
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail
@@ -301,7 +301,7 @@ class AbstractBackend(ABC):
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
-    def wait_for_lores_image(self, retries: int = 20):
+    def wait_for_lores_image(self, retries: int = 10):
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
 
@@ -318,7 +318,7 @@ class AbstractBackend(ABC):
 
         for _ in range(1, retries):
             try:
-                return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail (else of for below)
                 # logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")  # removed to avoid too many log entries.
@@ -335,7 +335,7 @@ class AbstractBackend(ABC):
 
         # final call
         try:
-            return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+            return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
         except Exception as exc:
             # we failed finally all the attempts - deal with the consequences.
             logger.exception(exc)
