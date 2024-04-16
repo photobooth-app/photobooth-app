@@ -434,7 +434,8 @@ class AbstractBackend(ABC):
 
         while not self._video_worker_thread.stopped():
             try:
-                ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+                # retry with a low number because video would be messed anyways if needs to retry
+                ffmpeg_subprocess.stdin.write(self.wait_for_lores_image(retries=4))
                 ffmpeg_subprocess.stdin.flush()  # forces every frame to get timestamped individually
             except Exception as exc:  # presumably a BrokenPipeError? should we check explicitly?
                 ffmpeg_subprocess = None
