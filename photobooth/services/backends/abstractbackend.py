@@ -395,6 +395,7 @@ class AbstractBackend(ABC):
         ffmpeg_subprocess = subprocess.Popen(
             [
                 "ffmpeg",
+                "-hide_banner",
                 "-use_wallclock_as_timestamps",
                 "1",
                 "-loglevel",
@@ -410,6 +411,8 @@ class AbstractBackend(ABC):
                 "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
                 "-preset",
                 "veryfast",
+                "-pix_fmt",  # fixes #233. needs more cpu and seems deprecated, maybe in future it will be configurable to disable
+                "yuv420p",
                 "-b:v",  # bitrate
                 f"{appconfig.misc.video_bitrate}k",
                 "-movflags",
