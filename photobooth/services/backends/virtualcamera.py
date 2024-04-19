@@ -191,7 +191,7 @@ def img_aquisition(
 
         # create jpeg
         jpeg_buffer = BytesIO()
-        img.save(jpeg_buffer, format="jpeg", quality=90)
+        img.save(jpeg_buffer, format="jpeg", quality=90)  # add subsampling="4:2:2" could be useful to test for #233
 
         # put jpeg on queue until full. If full this function blocks until queue empty
         with _img_buffer_lock:

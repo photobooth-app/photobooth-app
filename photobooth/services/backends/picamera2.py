@@ -239,7 +239,7 @@ class Picamera2Backend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.2):
+            if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.frame

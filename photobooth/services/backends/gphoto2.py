@@ -110,7 +110,7 @@ class Gphoto2Backend(AbstractBackend):
             config = self._camera.list_config()
             for n in range(len(config)):
                 logger.debug(f"{config.get_name(n)}={config.get_value(n)}")
-        except gp.Gphoto2Error as exc:
+        except gp.GPhoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
         self._capturetarget(appconfig.backends.gphoto2_capture_target)
@@ -172,7 +172,7 @@ class Gphoto2Backend(AbstractBackend):
             time.sleep(0.2)
 
         with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.2):
+            if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.data

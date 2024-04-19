@@ -14,6 +14,7 @@ from ..__version__ import __version__
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
+from .printingservice import PrintingService
 from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
@@ -22,10 +23,11 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService):
+    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService, printing_service: PrintingService):
         super().__init__(sse_service)
 
         self._aquisition_service = aquisition_service
+        self._printing_service = printing_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
@@ -99,6 +101,7 @@ class InformationService(BaseService):
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
+                printer=self._gather_printing_stats(),
             ),
         )
 
@@ -125,6 +128,9 @@ class InformationService(BaseService):
             cma = {"CmaTotal": None, "CmaFree": None}
 
         return cma
+
+    def _gather_printing_stats(self):
+        return self._printing_service.stats()
 
     def _gather_backends_stats(self):
         return self._aquisition_service.stats()
