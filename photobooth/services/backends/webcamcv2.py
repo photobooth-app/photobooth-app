@@ -111,7 +111,7 @@ class WebcamCv2Backend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
 
         with self._img_buffer.condition:
-            if not self._img_buffer.condition.wait(timeout=0.2):
+            if not self._img_buffer.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
             with self._img_buffer.lock:

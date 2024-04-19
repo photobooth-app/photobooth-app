@@ -33,3 +33,8 @@ class GroupMisc(BaseModel):
         le=30,
         description="Video framerate (frames per second).",
     )
+
+    video_compatibility_mode: bool = Field(
+        default=False,
+        description="Enable for improved video compatibility on iOS devices. Might reduce resulting quality slightly.",
+    )

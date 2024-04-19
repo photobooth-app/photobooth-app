@@ -191,9 +191,9 @@ class AbstractBackend(ABC):
 
     def _block_until_delivers_lores_images(self):
         # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        for _ in range(1, 60):
+        for _ in range(1, 20):
             try:
-                self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
                 break  # stop trying we got an image can leave without hitting else.
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail
@@ -301,7 +301,7 @@ class AbstractBackend(ABC):
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
-    def wait_for_lores_image(self, retries: int = 20):
+    def wait_for_lores_image(self, retries: int = 10):
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
 
@@ -318,7 +318,7 @@ class AbstractBackend(ABC):
 
         for _ in range(1, retries):
             try:
-                return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+                return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail (else of for below)
                 # logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")  # removed to avoid too many log entries.
@@ -335,7 +335,7 @@ class AbstractBackend(ABC):
 
         # final call
         try:
-            return self._wait_for_lores_image()  # blocks 0.2s usually. 20 retries default wait time=4s
+            return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
         except Exception as exc:
             # we failed finally all the attempts - deal with the consequences.
             logger.exception(exc)
@@ -392,32 +392,55 @@ class AbstractBackend(ABC):
         # generate temp filename to record to
         mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
 
+        command_general_options = [
+            "-hide_banner",
+            "-loglevel",
+            "info",
+            "-y",
+        ]
+        command_video_input = [
+            "-use_wallclock_as_timestamps",
+            "1",
+            "-thread_queue_size",
+            "64",
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            "mjpeg",
+            "-i",
+            "-",
+        ]
+        command_video_output = [
+            "-vcodec",
+            "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
+            "-preset",
+            "veryfast",
+            "-b:v",
+            f"{appconfig.misc.video_bitrate}k",
+            "-movflags",
+            "+faststart",
+            "-r",
+            f"{appconfig.misc.video_framerate}",
+        ]
+        command_video_output_compat_mode = []
+        if appconfig.misc.video_compatibility_mode:
+            # fixes #233. needs more cpu and seems deprecated, maybe in future it will be configurable to disable
+            command_video_output_compat_mode = [
+                "-pix_fmt",
+                "yuv420p",
+            ]
+
+        ffmpeg_command = (
+            ["ffmpeg"]
+            + command_general_options
+            + command_video_input
+            + command_video_output
+            + command_video_output_compat_mode
+            + [str(mp4_output_filepath)]
+        )
+
         ffmpeg_subprocess = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-use_wallclock_as_timestamps",
-                "1",
-                "-loglevel",
-                "info",
-                "-y",
-                "-f",
-                "image2pipe",
-                "-vcodec",
-                "mjpeg",
-                "-i",
-                "-",
-                "-vcodec",
-                "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
-                "-preset",
-                "veryfast",
-                "-b:v",  # bitrate
-                f"{appconfig.misc.video_bitrate}k",
-                "-movflags",
-                "+faststart",
-                "-r",
-                f"{appconfig.misc.video_framerate}",
-                str(mp4_output_filepath),
-            ],
+            ffmpeg_command,
             stdin=subprocess.PIPE,
             # following report is workaround to avoid deadlock by pushing too much output in stdout/err
             # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
@@ -434,7 +457,8 @@ class AbstractBackend(ABC):
 
         while not self._video_worker_thread.stopped():
             try:
-                ffmpeg_subprocess.stdin.write(self._wait_for_lores_image())
+                # retry with a low number because video would be messed anyways if needs to retry
+                ffmpeg_subprocess.stdin.write(self.wait_for_lores_image(retries=4))
                 ffmpeg_subprocess.stdin.flush()  # forces every frame to get timestamped individually
             except Exception as exc:  # presumably a BrokenPipeError? should we check explicitly?
                 ffmpeg_subprocess = None

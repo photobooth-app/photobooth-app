@@ -2,6 +2,7 @@
 Handle all media collection related functions
 """
 
+import dataclasses
 import subprocess
 import time
 
@@ -12,6 +13,16 @@ from .mediacollectionservice import MediacollectionService
 from .sseservice import SseEventFrontendNotification, SseService
 
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
+
+
+@dataclasses.dataclass
+class PrinterStats:
+    """
+    defines some common stats, used in frontend also
+    """
+
+    is_blocked: bool = None
+    waiting_time: float = None
 
 
 class PrintingService(BaseService):
@@ -94,3 +105,17 @@ class PrintingService(BaseService):
     def _print_timer_fun(self):
         ## thread to send updates to client about remaining blocked time
         pass
+
+    def stats(self):
+        """
+        Gather stats service used for frontend.
+
+        Returns:
+            _type_: _description_
+        """
+        stats = PrinterStats(
+            is_blocked=self.is_blocked(),
+            waiting_time=round(self.remaining_time_blocked(), 1),
+        )
+
+        return dataclasses.asdict(stats)
