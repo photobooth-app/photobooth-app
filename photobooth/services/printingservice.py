@@ -49,10 +49,24 @@ class PrintingService(BaseService):
         ## print mediaitem
 
         if not appconfig.hardwareinputoutput.printing_enabled:
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="negative",
+                    message="Printing is disabled! Enable in config first.",
+                    caption="Print Error",
+                )
+            )
             raise ConnectionRefusedError("Printing is disabled! Enable in config first.")
 
         # block queue new prints until configured time is over
         if self.is_blocked():
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"Print request ignored! Wait {self.remaining_time_blocked():.0f}s before try again.",
+                    caption="Print Error",
+                )
+            )
             raise BlockingIOError(f"Print request ignored! Wait {self.remaining_time_blocked():.0f}s before try again.")
 
         # filename absolute to print, use in printing command
@@ -78,6 +92,8 @@ class PrintingService(BaseService):
 
             # update last print time to calc block time on next run
             self._start_time_blocked()
+
+            self._sse_service.dispatch_event(SseEventFrontendNotification(color="positive", message="Started printing...", spinner=True))
         except Exception as exc:
             self._sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Print Error"))
             raise RuntimeError(f"print failed, error {exc}") from exc
