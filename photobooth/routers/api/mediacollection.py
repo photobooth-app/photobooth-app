@@ -1,6 +1,7 @@
 import logging
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Body, HTTPException, status
 
 from ...container import container
 
@@ -20,8 +21,8 @@ def api_getitems():
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
-@router.get("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete(image_id: str):
+@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
+def api_gallery_delete(image_id: Annotated[str, Body(embed=True)]):
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
         container.mediacollection_service.delete_image_by_id(image_id)

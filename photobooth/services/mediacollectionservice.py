@@ -179,11 +179,12 @@ class MediacollectionService(BaseService):
 
             # remove from collection
             self._db_delete_item_by_item(item)
+
+            self._logger.debug(f"deleted mediaitem from db and files {item}")
         except Exception as exc:
             self._logger.exception(exc)
             self._logger.error(f"error deleting item id={item_id}")
-
-        self._logger.debug(f"deleted mediaitem from db and files {item}")
+            raise exc
 
     def delete_mediaitem_files(self, mediaitem: MediaItem):
         """delete single file and it's related thumbnails"""
