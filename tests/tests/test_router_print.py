@@ -32,7 +32,7 @@ def test_printing_disabled(client: TestClient):
 
     response = client.get("/print/latest")
 
-    assert response.status_code == 405
+    assert response.status_code == 200
 
 
 @patch("subprocess.run")
@@ -83,7 +83,7 @@ def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
 
     response = client.get("/print/latest")  # should be blocked and error
 
-    assert response.status_code == 425
+    assert response.status_code == 200  # gives 200 nowadays, triggers separate event.
     mock_run.assert_called()
 
     # wait a little more until printing is fine again
