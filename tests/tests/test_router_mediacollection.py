@@ -46,7 +46,7 @@ def test_get_items_exception(client: TestClient):
 def test_delete_item(mock_remove, client: TestClient):
     mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
-    response = client.get("/mediacollection/delete", params={"image_id": mediaitem.id})
+    response = client.post("/mediacollection/delete", json={"image_id": mediaitem.id})
 
     assert response.status_code == 204
 
@@ -59,7 +59,7 @@ def test_delete_item_exception_nonexistant(client: TestClient):
     error_mock.side_effect = Exception("mock error")
 
     with patch.object(MediacollectionService, "delete_image_by_id", error_mock):
-        response = client.get("/mediacollection/delete", params={"image_id": "illegalid"})
+        response = client.post("/mediacollection/delete", json={"image_id": "illegalid"})
         assert response.status_code == 500
         assert "detail" in response.json()
 
