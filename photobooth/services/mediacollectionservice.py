@@ -157,7 +157,7 @@ class MediacollectionService(BaseService):
         item = next((x for x in self._db if x.id == item_id), None)
 
         if item is None:
-            self._logger.debug(f"image {item_id} not found!")
+            self._logger.error(f"image {item_id} not found!")
             raise FileNotFoundError(f"image {item_id} not found!")
 
         return item
