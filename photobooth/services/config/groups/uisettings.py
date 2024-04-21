@@ -95,7 +95,7 @@ class GroupUiSettings(BaseModel):
     )
     gallery_filter_userselectable: list[EnumPilgramFilter] = Field(
         title="Pic1 Filter Userselectable",
-        default=[e.value for e in EnumPilgramFilter],
+        default=[e for e in EnumPilgramFilter],
         description="Filter the user may choose from in the gallery. 'original' applies no filter.",
     )
     gallery_show_download: bool = Field(
