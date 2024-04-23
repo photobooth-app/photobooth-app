@@ -13,10 +13,10 @@ class GroupHardwareInputOutput(BaseModel):
 
     model_config = ConfigDict(title="Hardware Input/Output Config")
 
-    # keyboardservice config
+    # keyboard config
     keyboard_input_enabled: bool = Field(
         default=False,
-        description="Enable keyboard input globally",
+        description="Enable keyboard input globally. Keyup is catched in browsers connected to the app.",
     )
     keyboard_input_keycode_takepic: str = Field(
         default="i",

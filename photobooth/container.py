@@ -5,7 +5,6 @@ from .services.baseservice import BaseService
 from .services.filtetransferservice import FileTransferService
 from .services.gpioservice import GpioService
 from .services.informationservice import InformationService
-from .services.keyboardservice import KeyboardService
 from .services.loggingservice import LoggingService
 from .services.mediacollectionservice import MediacollectionService
 from .services.mediaprocessingservice import MediaprocessingService
@@ -52,12 +51,6 @@ class Container:
     )
     printing_service = PrintingService(
         sse_service,
-        mediacollection_service,
-    )
-    keyboard_service = KeyboardService(
-        sse_service,
-        processing_service,
-        printing_service,
         mediacollection_service,
     )
     gpio_service = GpioService(
