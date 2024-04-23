@@ -36,7 +36,7 @@ class GroupCommon(BaseModel):
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
     )
     collage_automatic_capture_continue: bool = Field(
-        default=True,
+        default=False,
         description="Automatically continue with second and following images to capture for collage. No user interaction in between.",
     )
     collage_approve_autoconfirm_timeout: float = Field(

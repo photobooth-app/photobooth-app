@@ -110,29 +110,3 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show print button for items in gallery.",
     )
-
-    # keyboardservice config
-    keyboard_input_enabled: bool = Field(
-        default=False,
-        description="Enable keyboard input globally",
-    )
-    keyboard_input_keycode_takepic: str = Field(
-        default="i",
-        description="Keycode triggers capture of one image",
-    )
-    keyboard_input_keycode_takecollage: str = Field(
-        default="c",
-        description="Keycode triggers capture of collage",
-    )
-    keyboard_input_keycode_takeanimation: str = Field(
-        default="g",
-        description="Keycode triggers capture of animation (GIF)",
-    )
-    keyboard_input_keycode_takevideo: str = Field(
-        default="v",
-        description="Keycode triggers start and stop of video (MP4)",
-    )
-    keyboard_input_keycode_print_recent_item: str = Field(
-        default="p",
-        description="Keycode triggers printing most recent image captured",
-    )
