@@ -74,15 +74,24 @@ async def get_list(dir: str = "/"):
     if not path.is_dir():
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file / does not exist!")
 
-    folders = [f for f in sorted(path.iterdir()) if f.is_dir()]
-    files = [f for f in sorted(path.iterdir()) if f.is_file()]
-
     output = []
+
+    folders = [f for f in sorted(path.iterdir()) if f.is_dir()]
     for f in folders:
-        folder_size = sum(os.path.getsize(os.path.join(dirpath, filename)) for dirpath, dirnames, filenames in os.walk(f) for filename in filenames)
-        output.append(PathListItem(f.name, f.as_posix(), f.is_dir(), folder_size))
+        try:
+            folder_size = sum(
+                os.path.getsize(os.path.join(dirpath, filename)) for dirpath, dirnames, filenames in os.walk(f) for filename in filenames
+            )
+            output.append(PathListItem(f.name, f.as_posix(), f.is_dir(), folder_size))
+        except Exception as exc:
+            logger.warning(f"skipped folder {f.name}, due to error: {exc}")
+
+    files = [f for f in sorted(path.iterdir()) if f.is_file()]
     for f in files:
-        output.append(PathListItem(f.name, f.as_posix(), f.is_dir(), f.stat().st_size))
+        try:
+            output.append(PathListItem(f.name, f.as_posix(), f.is_dir(), f.stat().st_size))
+        except Exception as exc:
+            logger.warning(f"skipped file {f.name}, due to error: {exc}")
 
     return output
 
