@@ -130,13 +130,47 @@ class AppConfig(BaseSettings):
             file_secret_settings,
         )
 
-    def get_schema(self, schema_type: str = "default"):
+    @classmethod
+    def _fix_single_allof(cls, dictionary):
+        """Remove allof that would interfere with the normal processing of jsonforms
+        Despite there is a bugfix in pydantic, it seems it applies only on first level, nested
+        BaseModels still have the allof with just 1 item.
+
+        References:
+        - https://github.com/pydantic/pydantic/issues/1209
+        - https://github.com/flexcompute/Flow360/pull/90/files#diff-1552b8f7a48149f4361b20a50d6c8a0f79856de26b0765626abc5d54093a7f99
+        Args:
+            dictionary (_type_): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if not isinstance(dictionary, dict):
+            raise ValueError("Input must be a dictionary")
+
+        for key, value in list(dictionary.items()):
+            if key == "allOf" and len(value) == 1 and isinstance(value[0], dict):
+                for allOfKey, allOfValue in list(value[0].items()):
+                    dictionary[allOfKey] = allOfValue
+                del dictionary["allOf"]
+            elif isinstance(value, dict):
+                cls._fix_single_allof(value)
+
+        return dictionary
+
+    @classmethod
+    def get_schema(cls, schema_type: str = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
+        schema = cls.model_json_schema()
+        cls._fix_single_allof(schema)
         if schema_type == "dereferenced":
             # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
-            return jsonref.loads(json.dumps(self.model_json_schema()))
-
-        return self.model_json_schema()
+            return jsonref.loads(json.dumps(schema))
+        else:
+            return schema
 
     def reset_defaults(self):
         self.__dict__.update(__class__())
