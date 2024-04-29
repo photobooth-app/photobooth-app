@@ -11,6 +11,7 @@ import pytest
 
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendVirtualcamera
 
 from .backends_utils import get_images
 
@@ -27,7 +28,7 @@ def run_around_tests():
 @pytest.fixture()
 def backend_virtual() -> VirtualCameraBackend:
     # setup
-    backend = VirtualCameraBackend()
+    backend = VirtualCameraBackend(GroupBackendVirtualcamera())
 
     # deliver
     backend.start()

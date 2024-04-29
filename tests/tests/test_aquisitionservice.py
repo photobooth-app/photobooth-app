@@ -111,7 +111,7 @@ def test_gen_stream_main_backend(_container: Container):
     # now reconfigure
     appconfig.backends.enable_livestream = True
     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "DISABLED"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
 
     _container.aquisition_service.stop()
     _container.aquisition_service.start()

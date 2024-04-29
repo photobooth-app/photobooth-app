@@ -9,6 +9,7 @@ import pytest
 from photobooth.services.backends.webcamcv2 import WebcamCv2Backend
 from photobooth.services.backends.webcamcv2 import available_camera_indexes as cv2_avail
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendOpenCv2
 
 from .backends_utils import get_images
 
@@ -25,7 +26,7 @@ def run_around_tests():
 @pytest.fixture()
 def backend_cv2() -> WebcamCv2Backend:
     # setup
-    backend = WebcamCv2Backend()
+    backend = WebcamCv2Backend(GroupBackendOpenCv2())
 
     logger.info("probing for available cameras")
     _availableCameraIndexes = cv2_avail()
@@ -37,9 +38,9 @@ def backend_cv2() -> WebcamCv2Backend:
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
-    appconfig.backends.cv2_device_index = cameraIndex
-    appconfig.backends.cv2_CAMERA_TRANSFORM_HFLIP = True
-    appconfig.backends.cv2_CAMERA_TRANSFORM_VFLIP = True
+    backend._config.device_index = cameraIndex
+    backend._config.CAMERA_TRANSFORM_HFLIP = True
+    backend._config.CAMERA_TRANSFORM_VFLIP = True
 
     # deliver
     backend.start()

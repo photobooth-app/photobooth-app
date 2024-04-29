@@ -9,6 +9,7 @@ from PIL import Image
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
 from .backends_utils import get_images
 
@@ -29,14 +30,15 @@ def backend_digicamcontrol_hardware() -> DigicamcontrolBackend:
     if not platform.system() == "Windows":
         pytest.skip("tests are windows only platform, skipping test", allow_module_level=True)
 
+    backend = DigicamcontrolBackend(GroupBackendDigicamcontrol())
+
     logger.info("probing for available cameras")
-    _availableCameraIndexes = DigicamcontrolBackend.available_camera_indexes()
+    _availableCameraIndexes = backend.available_camera_indexes()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test", allow_module_level=True)
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     # setup
-    backend = DigicamcontrolBackend()
 
     # deliver
     backend.start()
@@ -58,7 +60,7 @@ def test_get_images_disable_liveview_recovery(backend_digicamcontrol_hardware: D
 
     # disable liveview to test exceptions and if it recovers properly
     session = requests.Session()
-    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+    r = session.get(f"{backend_digicamcontrol_hardware._config.base_url}/?CMD=LiveViewWnd_Hide")
     assert r.status_code == 200
     if not r.ok:
         raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
@@ -72,7 +74,7 @@ def test_get_images_disable_liveview_recovery_more_retries(backend_digicamcontro
 
     # disable live view
     session = requests.Session()
-    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+    r = session.get(f"{backend_digicamcontrol_hardware._config.base_url}/?CMD=LiveViewWnd_Hide")
     assert r.status_code == 200
     if not r.ok:
         raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")

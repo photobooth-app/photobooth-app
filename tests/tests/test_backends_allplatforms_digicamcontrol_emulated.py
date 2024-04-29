@@ -12,6 +12,7 @@ from werkzeug.wrappers import Request, Response
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
 from .backends_utils import get_images
 
@@ -28,6 +29,7 @@ def run_around_tests():
 @pytest.fixture()
 def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     # setup
+    backend = DigicamcontrolBackend(GroupBackendDigicamcontrol())
 
     def handler_liveview_response(request: Request):
         # deliver some random images.
@@ -57,8 +59,8 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
         return Response("illegal request", 500)
 
     httpserver.host = "127.0.0.1"  # force ipv4 since httpserver listens only on ipv4 ip but localhost resolves to ipv6 address first
-    appconfig.backends.digicamcontrol_base_url = httpserver.url_for("/")
-    logger.info(f"set mockup testserver: {appconfig.backends.digicamcontrol_base_url}")
+    backend._config.base_url = httpserver.url_for("/")
+    logger.info(f"set mockup testserver: {backend._config.base_url}")
 
     httpserver.expect_request("/", query_string="CMD=LiveViewWnd_Show", method="GET").respond_with_data("OK", content_type="text/plain")
     httpserver.expect_request("/", query_string="CMD=LiveViewWnd_Hide", method="GET").respond_with_data("OK", content_type="text/plain")
@@ -70,8 +72,6 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     httpserver.expect_request("/", query_string="slc=get&param1=lastcaptured&param2=", method="GET").respond_with_data("input.jpg")
     httpserver.expect_request("/", method="GET").respond_with_handler(handler_set_tempfolder_and_prepare_output_image)
     httpserver.expect_request("/liveview.jpg", method="GET").respond_with_handler(handler_liveview_response)
-
-    backend = DigicamcontrolBackend()
 
     # deliver
     backend.start()
@@ -89,7 +89,7 @@ def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digi
 
     # disable live view
     session = requests.Session()
-    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+    r = session.get(f"{backend_digicamcontrol_emulated._config.base_url}/?CMD=LiveViewWnd_Hide")
     assert r.status_code == 200
     if not r.ok:
         raise AssertionError(f"error disabling liveview {r.status_code} {r.text}")
