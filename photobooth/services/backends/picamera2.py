@@ -97,7 +97,7 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.close()
             del self._picamera2
 
-        self._picamera2: Picamera2 = Picamera2()
+        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num)
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(

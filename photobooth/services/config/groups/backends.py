@@ -35,6 +35,10 @@ class GroupBackendVirtualcamera(BaseModel):
 class GroupBackendPicamera2(BaseModel):
     model_config = ConfigDict(title="Picamera2")
 
+    camera_num: int = Field(
+        default=0,
+        description="Camera number. Usually 0 or 1.",
+    )
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
         default=1280,
         description="camera resolution width to capture high resolution photo",
