@@ -12,7 +12,7 @@ from threading import Condition, Event
 import gphoto2 as gp
 
 from ...utils.stoppablethread import StoppableThread
-from ..config import appconfig
+from ..config.groups.backends import GroupBackendGphoto2
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,8 @@ class Gphoto2Backend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self):
+    def __init__(self, config: GroupBackendGphoto2):
+        self._config: GroupBackendGphoto2 = config
         super().__init__()
 
         self._camera = gp.Camera()
@@ -113,7 +114,7 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
-        self._capturetarget(appconfig.backends.gphoto2_capture_target)
+        self._capturetarget(self._config.gcapture_target)
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -187,15 +188,15 @@ class Gphoto2Backend(AbstractBackend):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
             self._configure_optimized_for_hq_capture_flag = None
-            self._iso(appconfig.backends.gphoto2_iso_capture)
-            self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_capture)
+            self._iso(self._config.iso_capture)
+            self._shutter_speed(self._config.shutter_speed_capture)
 
     def _configure_optimized_for_idle(self):
         if self._configure_optimized_for_idle_flag:
             logger.debug("configure camera optimized for idle/video")
             self._configure_optimized_for_idle_flag = None
-            self._iso(appconfig.backends.gphoto2_iso_liveview)
-            self._shutter_speed(appconfig.backends.gphoto2_shutter_speed_liveview)
+            self._iso(self._config.iso_liveview)
+            self._shutter_speed(self._config.shutter_speed_liveview)
 
     def _capturetarget(self, val: str = ""):
         if not val:
@@ -287,7 +288,7 @@ class Gphoto2Backend(AbstractBackend):
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
-                if appconfig.backends.gphoto2_disable_viewfinder_before_capture:
+                if self._config.disable_viewfinder_before_capture:
                     logger.info("disable viewfinder before capture")
                     self._viewfinder(0)
 

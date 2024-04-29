@@ -7,7 +7,7 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 
 from linuxpy.video.device import Device, VideoCapture  # type: ignore
 
-from ..config import AppConfig, appconfig
+from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
@@ -22,7 +22,8 @@ class WebcamV4lBackend(AbstractBackend):
         AbstractBackend (_type_): _description_
     """
 
-    def __init__(self):
+    def __init__(self, config: GroupBackendV4l2):
+        self._config: GroupBackendV4l2 = config
         super().__init__()
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
@@ -49,7 +50,7 @@ class WebcamV4lBackend(AbstractBackend):
         # start camera
         self._event_proc_shutdown.clear()
 
-        logger.info(f"starting webcam process, {appconfig.backends.v4l_device_index=}")
+        logger.info(f"starting webcam process, {self._config.device_index=}")
 
         self._v4l_process = Process(
             target=v4l_img_aquisition,
@@ -58,9 +59,7 @@ class WebcamV4lBackend(AbstractBackend):
                 self._img_buffer.sharedmemory.name,
                 self._img_buffer.condition,
                 self._img_buffer.lock,
-                # need to pass config, because unittests can change config,
-                # if not passed, the config are not available in the separate process!
-                appconfig,
+                self._config,
                 self._event_proc_shutdown,
             ),
             daemon=True,
@@ -88,7 +87,7 @@ class WebcamV4lBackend(AbstractBackend):
         """
         For v4l we check to open device is possible
         """
-        return is_valid_camera_index(appconfig.backends.v4l_device_index)
+        return is_valid_camera_index(self._config.device_index)
 
     def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
@@ -123,7 +122,7 @@ def v4l_img_aquisition(
     shm_buffer_name,
     _condition_img_buffer_ready: Condition,
     _img_buffer_lock: Lock,
-    _config: AppConfig,
+    _config: GroupBackendV4l2,
     _event_proc_shutdown: Event,
 ):
     """_summary_
@@ -143,15 +142,15 @@ def v4l_img_aquisition(
 
     shm = shared_memory.SharedMemory(shm_buffer_name)
 
-    with Device.from_id(_config.backends.v4l_device_index) as device:
-        logger.info(f"webcam devices index {_config.backends.v4l_device_index} opened")
+    with Device.from_id(_config.device_index) as device:
+        logger.info(f"webcam devices index {_config.device_index} opened")
         logger.info(f"webcam info: {device.info.card}")
 
         try:
             capture = VideoCapture(device)
-            capture.set_format(_config.backends.v4l_CAM_RESOLUTION_WIDTH, _config.backends.v4l_CAM_RESOLUTION_HEIGHT, "MJPG")
+            capture.set_format(_config.CAM_RESOLUTION_WIDTH, _config.CAM_RESOLUTION_HEIGHT, "MJPG")
         except (AttributeError, FileNotFoundError) as exc:
-            logger.error(f"cannot open camera {_config.backends.v4l_device_index} properly.")
+            logger.error(f"cannot open camera {_config.device_index} properly.")
             logger.exception(exc)
             raise exc
 

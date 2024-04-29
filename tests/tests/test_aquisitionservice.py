@@ -10,7 +10,7 @@ from PIL import Image
 from photobooth.container import Container, container
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
-from photobooth.services.config.groups.backends import BackendsLive, BackendsMain
+from photobooth.services.config.groups.backends import backends_live_concat, backends_main_concat
 from photobooth.services.sseservice import SseService
 from photobooth.services.wledservice import WledService
 
@@ -28,9 +28,9 @@ def run_around_tests():
 def _container() -> Container:
     # setup
 
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = BackendsMain.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = BackendsLive.DISABLED
+    appconfig.backends.enable_livestream = True
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
 
     container.start()
 
@@ -46,8 +46,8 @@ def test_getimage(_container: Container):
 
 
 def test_getimages_directlyaccess_backends(_container: Container):
-    appconfig.backends.MAIN_BACKEND = BackendsMain.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
 
     container.stop()
     container.start()
@@ -90,7 +90,7 @@ def test_getimages_change_backend_during_runtime(_container: Container):
     assert _container.aquisition_service._live_backend is None
 
     # now reconfigure
-    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
 
     # shutdown/init to restart resources
     _container.aquisition_service.stop()
@@ -109,9 +109,10 @@ def test_getimages_change_backend_during_runtime(_container: Container):
 
 def test_gen_stream_main_backend(_container: Container):
     # now reconfigure
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = BackendsLive.DISABLED
+    appconfig.backends.enable_livestream = True
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "DISABLED"
+
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
@@ -121,9 +122,9 @@ def test_gen_stream_main_backend(_container: Container):
 
 def test_get_stats(_container: Container):
     # now reconfigure
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.enable_livestream = True
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
@@ -132,9 +133,9 @@ def test_get_stats(_container: Container):
 
 def test_switch_modes(_container: Container):
     # now reconfigure
-    appconfig.backends.LIVEPREVIEW_ENABLED = True
-    appconfig.backends.MAIN_BACKEND = BackendsLive.VIRTUALCAMERA
-    appconfig.backends.LIVE_BACKEND = BackendsLive.VIRTUALCAMERA
+    appconfig.backends.enable_livestream = True
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 

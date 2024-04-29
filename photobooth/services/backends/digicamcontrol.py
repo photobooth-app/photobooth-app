@@ -46,7 +46,7 @@ from threading import Condition, Event
 import requests
 
 from ...utils.stoppablethread import StoppableThread
-from ..config import appconfig
+from ..config.groups.backends import GroupBackendDigicamcontrol
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,8 @@ class DigicamcontrolBackend(AbstractBackend):
         # condition when frame is avail
         condition: Condition = None
 
-    def __init__(self):
+    def __init__(self, config: GroupBackendDigicamcontrol):
+        self._config: GroupBackendDigicamcontrol = config
         super().__init__()
 
         self._hires_data: __class__.DigicamcontrolDataBytes = __class__.DigicamcontrolDataBytes(
@@ -114,7 +115,7 @@ class DigicamcontrolBackend(AbstractBackend):
         # when stopping the backend also stop the livestream by following command.
         # if livestream is stopped, the camera is available to other processes again.
         session = requests.Session()
-        session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Hide")
+        session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Hide")
         # not raise_for_status, because we ignore and want to continue stopping the backend
 
         if self._worker_thread and self._worker_thread.is_alive():
@@ -169,9 +170,9 @@ class DigicamcontrolBackend(AbstractBackend):
         logger.debug("enable liveview and minimize windows")
         try:
             session = requests.Session()
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=LiveViewWnd_Show")
+            r = session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Show")
             r.raise_for_status()
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?CMD=All_Minimize")
+            r = session.get(f"{self._config.base_url}/?CMD=All_Minimize")
             r.raise_for_status()
         except Exception as exc:
             logger.exception(exc)
@@ -202,14 +203,14 @@ class DigicamcontrolBackend(AbstractBackend):
                     logger.info(f"requesting digicamcontrol to store files to {tmp_dir=}")
 
                     r = session.get(
-                        f"{appconfig.backends.digicamcontrol_base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
+                        f"{self._config.base_url}/?slc=set&param1=session.folder&param2={urllib.parse.quote(tmp_dir, safe='')}"  # noqa: E501
                     )
                     if r.text != "OK":
                         # text = r.text if (not r.headers.get("Content-Type") == "image/jpeg") else "IMAGE-data removed"
                         raise RuntimeError(f"error setting directory, status_code {r.status_code}, text: {r.text}")
                     r.raise_for_status()
 
-                    r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=capture&param1=&param2=")
+                    r = session.get(f"{self._config.base_url}/?slc=capture&param1=&param2=")
                     r.raise_for_status()
                     if r.text != "OK":
                         # text = r.text if (not r.headers.get("Content-Type") == "image/jpeg") else "IMAGE-data removed"
@@ -218,7 +219,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     for attempt in range(1, 5):
                         try:
                             # it could happen, that the http request finished, but the image is not yet fully processed. retry with little delay again
-                            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/?slc=get&param1=lastcaptured&param2=")
+                            r = session.get(f"{self._config.base_url}/?slc=get&param1=lastcaptured&param2=")
                             r.raise_for_status()
                             if r.text in ("-", "?"):  # "-" means capture in progress, "?" means not yet an image captured
                                 error_translation = {"-": "capture still in process", "?": "not yet an image captured"}
@@ -237,8 +238,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
                     else:
                         # we failed finally all the attempts - deal with the consequences.
-                        logger.critical(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
-                        raise RuntimeError(f"finally failed after {appconfig.backends.retry_capture} attempts to capture image!")
+                        logger.critical("finally failed after 5 attempts to capture image!")
+                        raise RuntimeError("finally failed after 5 attempts to capture image!")
 
                     logger.info(f"trying to open captured file {captured_filepath}")
                     with open(captured_filepath, "rb") as fh:
@@ -260,7 +261,7 @@ class DigicamcontrolBackend(AbstractBackend):
                 if self.device_enable_lores_stream:
                     try:
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
-                        r = session.get(f"{appconfig.backends.digicamcontrol_base_url}/liveview.jpg")
+                        r = session.get(f"{self._config.base_url}/liveview.jpg")
                         r.raise_for_status()
 
                         if self._lores_data.data and (self._lores_data.data == r.content):
@@ -297,8 +298,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
         logger.warning("_worker_fun exits")
 
-    @staticmethod
-    def available_camera_indexes():
+    def available_camera_indexes(self):
         """
         find available cameras, return valid indexes.
         """
@@ -307,7 +307,7 @@ class DigicamcontrolBackend(AbstractBackend):
         session = requests.Session()
 
         try:
-            r = session.get(f"{appconfig.backends.digicamcontrol_base_url}?slc=list&param1=cameras&param2=")
+            r = session.get(f"{self._config.base_url}?slc=list&param1=cameras&param2=")
             r.raise_for_status()
 
             for line in r.iter_lines():

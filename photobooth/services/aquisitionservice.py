@@ -9,14 +9,12 @@ from functools import cache
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from typing import Union
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.backends import BackendsLive, BackendsMain
 from .sseservice import SseService
 from .wledservice import WledService
 
@@ -51,10 +49,14 @@ class AquisitionService(BaseService):
 
         # get backend obj and instanciate
 
-        self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.MAIN_BACKEND)()
+        self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.group_main.active_backend)(
+            getattr(appconfig.backends.group_main, str(appconfig.backends.group_main.active_backend).lower())
+        )
 
-        if appconfig.backends.LIVE_BACKEND is not BackendsLive.DISABLED:
-            self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.LIVE_BACKEND)()
+        if appconfig.backends.group_live.active_backend != "Disabled":
+            self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.group_live.active_backend)(
+                getattr(appconfig.backends.group_live, str(appconfig.backends.group_live.active_backend).lower())
+            )
         else:
             self._live_backend: AbstractBackend = None
 
@@ -114,7 +116,7 @@ class AquisitionService(BaseService):
         assigns a backend to generate a stream
         """
 
-        if appconfig.backends.LIVEPREVIEW_ENABLED:
+        if appconfig.backends.enable_livestream:
             return self._get_stream_from_backend(self._get_video_backend())
 
         raise ConnectionRefusedError("livepreview not enabled")
@@ -163,11 +165,11 @@ class AquisitionService(BaseService):
         self.signalbackend_configure_optimized_for_idle()
 
     @staticmethod
-    def _import_backend(backend: Union[BackendsMain, BackendsLive]):
+    def _import_backend(backend: str):
         # dynamic import of backend
 
-        module_path = f".backends.{backend.name.lower()}"
-        class_name = f"{backend.value}Backend"
+        module_path = f".backends.{backend.lower()}"
+        class_name = f"{backend}Backend"
         pkg = ".".join(__name__.split(".")[:-1])  # to allow relative imports
 
         module = import_module(module_path, package=pkg)
@@ -185,7 +187,7 @@ class AquisitionService(BaseService):
         last_time = time.time_ns()
         while self._running:
             now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.LIVEPREVIEW_FRAMERATE):
+            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.livestream_framerate):
                 last_time = now_time
 
                 try:

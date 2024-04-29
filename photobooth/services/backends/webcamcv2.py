@@ -10,7 +10,7 @@ from multiprocessing import Condition, Event, Lock, Process, shared_memory
 import cv2
 from turbojpeg import TurboJPEG
 
-from ..config import AppConfig, appconfig
+from ..config.groups.backends import GroupBackendOpenCv2
 from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
@@ -24,8 +24,10 @@ class WebcamCv2Backend(AbstractBackend):
     opencv2 backend implementation for webcameras
     """
 
-    def __init__(self):
+    def __init__(self, config: GroupBackendOpenCv2):
+        self._config: GroupBackendOpenCv2 = config
         super().__init__()
+
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
         self._img_buffer = SharedMemoryDataExch(
@@ -63,7 +65,7 @@ class WebcamCv2Backend(AbstractBackend):
                 self._img_buffer.sharedmemory.name,
                 self._img_buffer.lock,
                 self._img_buffer.condition,
-                appconfig,
+                self._config,
                 self._event_proc_shutdown,
             ),
             daemon=True,
@@ -92,7 +94,7 @@ class WebcamCv2Backend(AbstractBackend):
         """
         For cv2 we check to open device is possible
         """
-        device = cv2.VideoCapture(appconfig.backends.cv2_device_index)
+        device = cv2.VideoCapture(self._config.device_index)
         ret, array = device.read()  # ret True if connected properly, otherwise False
         if ret:
             device.release()
@@ -136,7 +138,7 @@ def cv2_img_aquisition(
     _condition_img_buffer_ready: Condition,
     # need to pass config, because unittests can change config,
     # if not passed, the config are not available in the separate process!
-    _config: AppConfig,
+    _config: GroupBackendOpenCv2,
     _event_proc_shutdown: Event,
 ):
     """
@@ -153,21 +155,21 @@ def cv2_img_aquisition(
 
     if platform.system() == "Windows":
         logger.info("force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
-        _video = cv2.VideoCapture(_config.backends.cv2_device_index, cv2.CAP_DSHOW)
+        _video = cv2.VideoCapture(_config.device_index, cv2.CAP_DSHOW)
     else:
-        _video = cv2.VideoCapture(_config.backends.cv2_device_index)
+        _video = cv2.VideoCapture(_config.device_index)
 
     # activate preview mode on init
     _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
-    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.backends.cv2_CAM_RESOLUTION_WIDTH)
-    _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, _config.backends.cv2_CAM_RESOLUTION_HEIGHT)
+    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.CAM_RESOLUTION_WIDTH)
+    _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, _config.CAM_RESOLUTION_HEIGHT)
 
     if not _video.isOpened():
-        raise OSError(f"cannot open camera index {_config.backends.cv2_device_index}")
+        raise OSError(f"cannot open camera index {_config.device_index}")
 
     if not _video.read()[0]:
-        raise OSError(f"cannot read camera index {_config.backends.cv2_device_index}")
+        raise OSError(f"cannot read camera index {_config.device_index}")
 
     logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
     logger.info(f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x" f"{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
@@ -183,9 +185,9 @@ def cv2_img_aquisition(
             raise OSError("error reading camera frame")
 
         # apply flip image to stream only:
-        if _config.backends.cv2_CAMERA_TRANSFORM_HFLIP:
+        if _config.CAMERA_TRANSFORM_HFLIP:
             array = cv2.flip(array, 1)
-        if _config.backends.cv2_CAMERA_TRANSFORM_VFLIP:
+        if _config.CAMERA_TRANSFORM_VFLIP:
             array = cv2.flip(array, 0)
 
         # preview livestream

@@ -14,6 +14,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ..config import appconfig
+from ..config.groups.backends import GroupBackendVirtualcamera
 from .abstractbackend import AbstractBackend, compile_buffer, decompile_buffer
 
 SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
@@ -25,7 +26,8 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self):
+    def __init__(self, config: GroupBackendVirtualcamera):
+        self._config: GroupBackendVirtualcamera = config
         super().__init__()
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
