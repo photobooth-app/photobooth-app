@@ -116,7 +116,7 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
 
     # change some values
     backend_gphoto2._config.iso_capture = "auto"
-    backend_gphoto2._config.gphoto2_iso_liveview = "200"
+    backend_gphoto2._config.iso_liveview = "200"
     backend_gphoto2._config.shutter_speed_capture = "1/20"
     backend_gphoto2._config.shutter_speed_liveview = "1/30"
     backend_gphoto2._on_configure_optimized_for_hq_capture()
