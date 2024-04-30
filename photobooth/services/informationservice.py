@@ -34,6 +34,7 @@ class InformationService(BaseService):
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
+        self._logger.info(f"{platform.uname()=}")
         self._logger.info(f"{platform.release()=}")
         self._logger.info(f"{platform.machine()=}")
         self._logger.info(f"{platform.python_version()=}")
