@@ -4,14 +4,14 @@ AppConfig class providing central config
 """
 
 import platform
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 backends_main_base = Literal["VirtualCamera", "WebcamCv2"]
 backends_main_linux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 backends_main_win = Literal["Digicamcontrol"]
-backends_main_concat: TypeAlias = Literal[backends_main_base]
+backends_main_concat = Literal[backends_main_base]
 if platform.system() == "Linux":
     backends_main_concat = Literal[backends_main_concat, backends_main_linux]
 if platform.system() == "Windows":
@@ -20,7 +20,7 @@ if platform.system() == "Windows":
 
 backends_live_base = Literal["Disabled", "VirtualCamera", "WebcamCv2"]
 backends_live_linux = Literal["Picamera2", "WebcamV4l"]
-backends_live_concat: TypeAlias = Literal[backends_live_base]
+backends_live_concat = Literal[backends_live_base]
 if platform.system() == "Linux":
     backends_live_concat = Literal[backends_live_concat, backends_live_linux]
 if platform.system() == "Windows":
