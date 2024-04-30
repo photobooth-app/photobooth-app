@@ -4,6 +4,7 @@ import platform
 import pytest
 
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendV4l2
 
 from .backends_utils import get_images
 
@@ -36,7 +37,7 @@ def backend_v4l():
     from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
 
     # setup
-    backend = WebcamV4lBackend()
+    backend = WebcamV4lBackend(GroupBackendV4l2())
 
     logger.info("probing for available cameras")
     _availableCameraIndexes = v4l_avail()
@@ -48,7 +49,7 @@ def backend_v4l():
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
-    appconfig.backends.v4l_device_index = cameraIndex
+    backend._config.device_index = cameraIndex
 
     # deliver
     backend.start()

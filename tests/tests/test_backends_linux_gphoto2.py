@@ -7,6 +7,7 @@ import pytest
 from PIL import Image
 
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendGphoto2
 
 logger = logging.getLogger(name=None)
 
@@ -87,7 +88,7 @@ def backend_gphoto2():
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
 
-    backend = Gphoto2Backend()
+    backend = Gphoto2Backend(GroupBackendGphoto2())
     # deliver
     backend.start()
     backend.block_until_device_is_running()
@@ -114,18 +115,18 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_configure_optimized_for_idle()
 
     # change some values
-    appconfig.backends.gphoto2_iso_capture = "auto"
-    appconfig.backends.gphoto2_iso_liveview = "200"
-    appconfig.backends.gphoto2_shutter_speed_capture = "1/20"
-    appconfig.backends.gphoto2_shutter_speed_liveview = "1/30"
+    backend_gphoto2._config.iso_capture = "auto"
+    backend_gphoto2._config.gphoto2_iso_liveview = "200"
+    backend_gphoto2._config.shutter_speed_capture = "1/20"
+    backend_gphoto2._config.shutter_speed_liveview = "1/30"
     backend_gphoto2._on_configure_optimized_for_hq_capture()
     backend_gphoto2._on_configure_optimized_for_idle()
 
     # and try illegal values that raise exception
-    appconfig.backends.gphoto2_iso_capture = "illegal"
-    appconfig.backends.gphoto2_iso_liveview = "illegal"
-    appconfig.backends.gphoto2_shutter_speed_capture = "illegal"
-    appconfig.backends.gphoto2_shutter_speed_liveview = "illegal"
+    backend_gphoto2._config.iso_capture = "illegal"
+    backend_gphoto2._config.iso_liveview = "illegal"
+    backend_gphoto2._config.shutter_speed_capture = "illegal"
+    backend_gphoto2._config.shutter_speed_liveview = "illegal"
     backend_gphoto2._on_configure_optimized_for_hq_capture()  # should log an error but ignore and continue
     backend_gphoto2._on_configure_optimized_for_idle()  # should log an error but ignore and continue
 

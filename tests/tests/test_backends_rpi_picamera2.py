@@ -4,6 +4,7 @@ import time
 import pytest
 
 from photobooth.services.config import appconfig
+from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 
 from .backends_utils import get_images
@@ -35,7 +36,7 @@ def backend_picamera2():
     from photobooth.services.backends.picamera2 import Picamera2Backend
 
     # setup
-    backend = Picamera2Backend()
+    backend = Picamera2Backend(GroupBackendPicamera2())
 
     # deliver
     backend.start()

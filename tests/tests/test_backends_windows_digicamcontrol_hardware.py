@@ -2,6 +2,7 @@ import io
 import logging
 import platform
 import time
+from collections.abc import Generator
 
 import pytest
 import requests
@@ -25,7 +26,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def backend_digicamcontrol_hardware() -> DigicamcontrolBackend:
+def backend_digicamcontrol_hardware() -> Generator[DigicamcontrolBackend, None, None]:
     ## check skip if wrong platform
     if not platform.system() == "Windows":
         pytest.skip("tests are windows only platform, skipping test", allow_module_level=True)
