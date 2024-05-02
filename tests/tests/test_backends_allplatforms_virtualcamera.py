@@ -75,7 +75,7 @@ def test_get_images_virtualcamera_force_hqstillfail_ensure_recovery(backend_virt
 
 def test_get_video_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
-    backend_virtual.start_recording()
+    backend_virtual.start_recording(video_framerate=5)
     time.sleep(6)
     backend_virtual.stop_recording()
 

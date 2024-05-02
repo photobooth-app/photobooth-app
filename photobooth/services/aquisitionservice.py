@@ -134,8 +134,8 @@ class AquisitionService(BaseService):
 
         return image_bytes
 
-    def start_recording(self):
-        self._get_video_backend().start_recording()
+    def start_recording(self, video_framerate: int = 25):
+        self._get_video_backend().start_recording(video_framerate)
 
     def stop_recording(self):
         self._get_video_backend().stop_recording()

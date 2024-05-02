@@ -65,22 +65,8 @@ class ConfirmRejectUserinputObserver:
 
 def test_capture(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
-    appconfig.common.collage_automatic_capture_continue = False
 
-    _container.processing_service.start_job_1pic()
-
-    assert _container.processing_service._state_machine is not None
-
-    _container.processing_service.wait_until_job_finished()
-
-    assert _container.processing_service._state_machine is None
-
-
-def test_capture_autoconfirm(_container: Container):
-    """this function processes single images (in contrast to collages or videos)"""
-    appconfig.common.collage_automatic_capture_continue = True
-
-    _container.processing_service.start_job_1pic()
+    container.processing_service.trigger_action("image", 0)
 
     assert _container.processing_service._state_machine is not None
 
@@ -93,7 +79,7 @@ def test_capture_zero_countdown(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
     appconfig.common.countdown_capture_first = 0
 
-    _container.processing_service.start_job_1pic()
+    _container.processing_service.trigger_action("image", 0)
 
     assert _container.processing_service._state_machine is not None
 
@@ -102,15 +88,10 @@ def test_capture_zero_countdown(_container: Container):
     assert _container.processing_service._state_machine is None
 
 
-def test_capture_manual_confirm(_container: Container):
-    # there is not confirm/reject for single captures possible
-    pass
-
-
 def test_collage_auto_approval(_container: Container):
-    appconfig.common.collage_automatic_capture_continue = True
+    appconfig.actions.collage[0].actions.ask_approval_each_capture = False
 
-    _container.processing_service.start_job_collage()
+    _container.processing_service.trigger_action("collage", 0)
 
     assert _container.processing_service._state_machine is not None
 
@@ -120,10 +101,10 @@ def test_collage_auto_approval(_container: Container):
 
 
 def test_collage_manual_approval(_container: Container):
-    appconfig.common.collage_automatic_capture_continue = False
+    appconfig.actions.collage[0].actions.ask_approval_each_capture = True
 
     # starts in separate thread
-    _container.processing_service.start_job_collage()
+    _container.processing_service.trigger_action("collage", 0)
 
     # observer that is used to confirm the captures.
     _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service))
@@ -136,9 +117,9 @@ def test_collage_manual_approval(_container: Container):
 
 
 def test_collage_manual_abort(_container: Container):
-    appconfig.common.collage_automatic_capture_continue = False
+    appconfig.actions.collage[0].actions.ask_approval_each_capture = True
 
-    _container.processing_service.start_job_collage()
+    _container.processing_service.trigger_action("collage", 0)
     _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
 
     assert _container.processing_service._state_machine is not None
@@ -149,7 +130,7 @@ def test_collage_manual_abort(_container: Container):
 
 
 def test_animation(_container: Container):
-    _container.processing_service.start_job_animation()
+    _container.processing_service.trigger_action("animation", 0)
 
     assert _container.processing_service._state_machine is not None
 
@@ -159,7 +140,7 @@ def test_animation(_container: Container):
 
 
 def test_video(_container: Container):
-    _container.processing_service.start_or_stop_job_video()
+    _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
     number_of_images_before = _container.mediacollection_service.number_of_images
@@ -173,11 +154,12 @@ def test_video(_container: Container):
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # ensure written video is about in tolerance duration
-    assert abs(round(video_duration(video_item.path_original), 1) - appconfig.misc.video_duration) < 1
+    default_video_duration = appconfig.actions.video[0].actions.video_duration
+    assert abs(round(video_duration(video_item.path_original), 1) - default_video_duration) < 1
 
 
 def test_video_stop_early(_container: Container):
-    _container.processing_service.start_or_stop_job_video()
+    _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
     number_of_images_before = _container.mediacollection_service.number_of_images
@@ -192,7 +174,7 @@ def test_video_stop_early(_container: Container):
 
     # recording active, wait 3 secs before stopping.
     time.sleep(3)
-    _container.processing_service.start_or_stop_job_video()
+    _container.processing_service.trigger_action("video", 0)
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._state_machine is None

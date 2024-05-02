@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Response, status
 
 from ...container import container
-from ...services.config.groups.mediaprocessing import EnumPilgramFilter
+from ...services.config.models.models import PilgramFilter
 from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
@@ -44,9 +44,10 @@ def api_get_applyfilter(mediaitem_id, filter: str = None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
+        raise NotImplementedError("error, need to reimplement!")
         # create updated config that is the image is processed according to
         config = container.mediaprocessing_service.get_config_based_on_media_type(mediaitem)
-        config.filter = EnumPilgramFilter(filter)  # manually overwrite filter definition
+        config.filter = PilgramFilter(filter)  # manually overwrite filter definition
 
         container.mediaprocessing_service.process_image_collageimage_animationimage(mediaitem, None, config)
     except Exception as exc:

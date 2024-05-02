@@ -16,16 +16,13 @@ from pydantic import PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
+from .groups.actions import GroupActions, GroupPrintActions
 from .groups.backends import GroupBackends
 from .groups.common import GroupCommon
 from .groups.filetransfer import GroupFileTransfer
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
 from .groups.mediaprocessing import (
     GroupMediaprocessing,
-    GroupMediaprocessingPipelineAnimation,
-    GroupMediaprocessingPipelineCollage,
-    GroupMediaprocessingPipelinePrint,
-    GroupMediaprocessingPipelineSingleImage,
 )
 from .groups.misc import GroupMisc
 from .groups.sharing import GroupSharing
@@ -91,13 +88,11 @@ class AppConfig(BaseSettings):
 
     # groups -> setting items
     common: GroupCommon = GroupCommon()
+    actions: GroupActions = GroupActions()
+    print: GroupPrintActions = GroupPrintActions()
     sharing: GroupSharing = GroupSharing()
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
-    mediaprocessing_pipeline_singleimage: GroupMediaprocessingPipelineSingleImage = GroupMediaprocessingPipelineSingleImage()
-    mediaprocessing_pipeline_collage: GroupMediaprocessingPipelineCollage = GroupMediaprocessingPipelineCollage()
-    mediaprocessing_pipeline_animation: GroupMediaprocessingPipelineAnimation = GroupMediaprocessingPipelineAnimation()
-    mediaprocessing_pipeline_printing: GroupMediaprocessingPipelinePrint = GroupMediaprocessingPipelinePrint()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupBackends = GroupBackends()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()

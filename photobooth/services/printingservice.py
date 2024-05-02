@@ -36,6 +36,7 @@ class PrintingService(BaseService):
 
         # custom service objects
         self._last_print_time = None
+        self._last_printing_blocked_time = None
         self._printing_queue = None  # TODO: could add queue later
 
     def start(self):
@@ -45,8 +46,8 @@ class PrintingService(BaseService):
     def stop(self):
         pass
 
-    def print(self, mediaitem: MediaItem):
-        ## print mediaitem
+    def print(self, mediaitem: MediaItem, config_index: int = 0):
+        """print mediaitem"""
 
         if not appconfig.hardwareinputoutput.printing_enabled:
             self._sse_service.dispatch_event(
@@ -69,6 +70,13 @@ class PrintingService(BaseService):
             )
             raise BlockingIOError(f"Print request ignored! Wait {self.remaining_time_blocked():.0f}s before try again.")
 
+        # get config
+        try:
+            config = appconfig.print.print[config_index].actions
+        except Exception as exc:
+            self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
+            raise exc
+
         # filename absolute to print, use in printing command
         filename = mediaitem.path_full.absolute()
 
@@ -77,7 +85,7 @@ class PrintingService(BaseService):
             self._logger.info(f"printing {filename=}")
 
             completed_process = subprocess.run(
-                str(appconfig.hardwareinputoutput.printing_command).format(filename=filename),
+                str(config.printing_command).format(filename=filename),
                 capture_output=True,
                 check=True,
                 timeout=TIMEOUT_PROCESS_RUN,
@@ -91,7 +99,7 @@ class PrintingService(BaseService):
             self._logger.info(f"print command started successfully {mediaitem}")
 
             # update last print time to calc block time on next run
-            self._start_time_blocked()
+            self._start_time_blocked(config.printing_blocked_time)
 
             self._sse_service.dispatch_event(SseEventFrontendNotification(color="positive", message="Started printing...", spinner=True))
         except Exception as exc:
@@ -106,15 +114,16 @@ class PrintingService(BaseService):
             return 0.0
 
         delta = time.time() - self._last_print_time
-        if delta >= appconfig.hardwareinputoutput.printing_blocked_time:
+        if delta >= self._last_printing_blocked_time:
             # last print is longer than configured time in the past - return 0 to indicate no wait time
             return 0.0
         else:
             # there is some time to wait left.
-            return appconfig.hardwareinputoutput.printing_blocked_time - delta
+            return self._last_printing_blocked_time - delta
 
-    def _start_time_blocked(self):
+    def _start_time_blocked(self, printing_blocked_time: int):
         self._last_print_time = time.time()
+        self._last_printing_blocked_time = printing_blocked_time
 
         # TODO: add some timer/coroutine to send regular update to UI with current remaining time blocked
 

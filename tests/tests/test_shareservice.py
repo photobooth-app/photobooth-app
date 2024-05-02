@@ -44,10 +44,9 @@ def _container() -> Container:
 
 
 # @pytest.fixture()
-@pytest.fixture(params=["start_job_1pic", "start_job_collage", "start_job_animation", "start_or_stop_job_video"])
+@pytest.fixture(params=["image", "collage", "animation", "video"])
 def _mediaitem(request, _container: Container) -> MediaItem:
-    job = getattr(_container.processing_service, request.param)
-    job()
+    _container.processing_service.trigger_action(request.param)
     container.processing_service.wait_until_job_finished()
     yield _container.mediacollection_service.db_get_most_recent_mediaitem()
 

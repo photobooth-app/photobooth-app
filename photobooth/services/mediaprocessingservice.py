@@ -6,7 +6,6 @@ import io
 import logging
 import os
 import time
-from typing import Union
 
 from PIL import Image
 from pydantic_extra_types.color import Color
@@ -16,13 +15,8 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.mediaprocessing import (
-    AnimationMergeDefinition,
-    CollageMergeDefinition,
-    EnumPilgramFilter,
-    GroupMediaprocessingPipelineSingleImage,
-    TextsConfig,
-)
+from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing
+from .config.models.models import SinglePictureDefinition, TextsConfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediaprocessing.animation_pipelinestages import align_sizes_stage
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
@@ -136,57 +130,10 @@ class MediaprocessingService(BaseService):
 
         return buffer_preview_pipeline_applied
 
-    @staticmethod
-    def create_config_collageimage(index: int = None) -> GroupMediaprocessingPipelineSingleImage:
-        cfg_collage = appconfig.mediaprocessing_pipeline_collage
-
-        # list only captured_images from merge_definition (excludes predefined)
-        captured_images = [item for item in cfg_collage.canvas_merge_definition if not item.predefined_image]
-
-        config_singleimage_captures_for_collage = GroupMediaprocessingPipelineSingleImage(
-            fill_background_enable=cfg_collage.capture_fill_background_enable,
-            fill_background_color=cfg_collage.capture_fill_background_color,
-            img_background_enable=cfg_collage.capture_img_background_enable,
-            img_background_file=cfg_collage.capture_img_background_file,
-            texts_enable=False,
-            img_frame_enable=False,
-            filter=captured_images[index].filter.value if index is not None else EnumPilgramFilter.original.value,
-        )
-
-        return config_singleimage_captures_for_collage
-
-    @staticmethod
-    def create_config_animationimage(index: int = None) -> GroupMediaprocessingPipelineSingleImage:
-        cfg_animation = appconfig.mediaprocessing_pipeline_animation
-
-        # list only captured_images from merge_definition (excludes predefined)
-        captured_images = [item for item in cfg_animation.sequence_merge_definition if not item.predefined_image]
-
-        config_singleimage_captures_for_animation = GroupMediaprocessingPipelineSingleImage(
-            texts_enable=False,
-            img_frame_enable=False,
-            filter=captured_images[index].filter.value if index is not None else EnumPilgramFilter.original.value,
-        )
-
-        return config_singleimage_captures_for_animation
-
-    def get_config_based_on_media_type(self, mediaitem: MediaItem, index: int = None):
-        if mediaitem.media_type is MediaItemTypes.image:
-            config = appconfig.mediaprocessing_pipeline_singleimage  # this one can be used as is currently
-        elif mediaitem.media_type is MediaItemTypes.collageimage:
-            config = __class__.create_config_collageimage(index)
-        elif mediaitem.media_type is MediaItemTypes.animationimage:
-            config = __class__.create_config_animationimage(index)
-        else:
-            raise RuntimeError(f"illegal mediatype to process. type {mediaitem.media_type} cant be handled by {__name__}")
-
-        return config
-
     def process_image_collageimage_animationimage(
         self,
         mediaitem: MediaItem,
-        index: int = None,
-        config: GroupMediaprocessingPipelineSingleImage = None,
+        config: SinglePictureDefinition,
     ) -> MediaItem:
         """
         Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
@@ -198,10 +145,6 @@ class MediaprocessingService(BaseService):
         - get config for that type.
         - process it (all processes are the same, just config is different source)
         """
-
-        # if no config was provided externally, autocreate one
-        if not config:
-            config = self.get_config_based_on_media_type(mediaitem, index)
 
         image = Image.open(mediaitem.path_full_unprocessed)
 
@@ -258,11 +201,8 @@ class MediaprocessingService(BaseService):
 
         return mediaitem
 
-    def create_collage(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
+    def create_collage(self, captured_mediaitems: list[MediaItem], _config: GroupCollageProcessing) -> MediaItem:
         """apply preconfigured pipeline."""
-
-        # get the local config
-        _config = appconfig.mediaprocessing_pipeline_collage
 
         tms = time.time()
 
@@ -274,7 +214,7 @@ class MediaprocessingService(BaseService):
         # get all images to process
         collage_images: list[Image.Image] = []
 
-        for _definition in _config.canvas_merge_definition:
+        for _definition in _config.merge_definition:
             if _definition.predefined_image:
                 try:
                     predefined_image = Image.open(get_user_file(_definition.predefined_image))
@@ -291,7 +231,7 @@ class MediaprocessingService(BaseService):
 
         # merge to one canvas
         try:
-            canvas = merge_collage_stage(canvas, collage_images, _config.canvas_merge_definition)
+            canvas = merge_collage_stage(canvas, collage_images, _config.merge_definition)
         except PipelineError as exc:
             logger.error(f"apply merge_collage_stage failed, reason: {exc}. stage not applied, abort")
             raise RuntimeError("abort processing due to pipelineerror") from exc
@@ -328,11 +268,8 @@ class MediaprocessingService(BaseService):
 
         return mediaitem
 
-    def create_animation(self, captured_mediaitems: list[MediaItem]) -> MediaItem:
+    def create_animation(self, captured_mediaitems: list[MediaItem], _config: GroupAnimationProcessing) -> MediaItem:
         """apply preconfigured pipeline."""
-
-        # get the local config
-        _config = appconfig.mediaprocessing_pipeline_animation
 
         tms = time.time()
 
@@ -343,7 +280,7 @@ class MediaprocessingService(BaseService):
         # get all images to process
         animation_images: list[Image.Image] = []
 
-        for _definition in _config.sequence_merge_definition:
+        for _definition in _config.merge_definition:
             if _definition.predefined_image:
                 try:
                     predefined_image = Image.open(get_user_file(_definition.predefined_image))
@@ -380,7 +317,7 @@ class MediaprocessingService(BaseService):
                 append_images=animation_images_resized[1:] if len(animation_images_resized) > 1 else None,
                 optimize=True,
                 # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-                duration=[definition.duration for definition in _config.sequence_merge_definition],
+                duration=[definition.duration for definition in _config.merge_definition],
                 loop=0,  # loop forever
             )
         except PipelineError as exc:
@@ -399,53 +336,6 @@ class MediaprocessingService(BaseService):
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
 
         return mediaitem
-
-    def number_of_captures_to_take_for_collage(self) -> int:
-        """analyze the configuration and return the needed number of captures to take by camera.
-        If there are fixed images given these do not count to the number to capture.
-
-        Returns:
-            int: number of captures
-        """
-        if not appconfig.mediaprocessing_pipeline_collage.canvas_merge_definition:
-            raise PipelineError("collage definition not set up!")
-
-        collage_merge_definition = appconfig.mediaprocessing_pipeline_collage.canvas_merge_definition
-
-        return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
-
-    def number_of_captures_to_take_for_animation(self) -> int:
-        """analyze the configuration and return the needed number of captures to take by camera.
-        If there are fixed images given these do not count to the number to capture.
-
-        Returns:
-            int: number of captures
-        """
-        if not appconfig.mediaprocessing_pipeline_animation.sequence_merge_definition:
-            raise PipelineError("collage definition not set up!")
-
-        collage_merge_definition = appconfig.mediaprocessing_pipeline_animation.sequence_merge_definition
-
-        return self.get_number_of_captures_from_merge_definition(collage_merge_definition)
-
-    @staticmethod
-    def get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[AnimationMergeDefinition]]) -> int:
-        # item.predefined_image None or "" are considered as to capture aka not predefined
-        predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
-        for predefined_image in predefined_images:
-            try:
-                # preflight check here without use.
-                _ = get_user_file(predefined_image)
-            except FileNotFoundError as exc:
-                logger.exception(exc)
-                raise PipelineError(f"predefined image {predefined_image} not found!") from exc
-
-        total_images_in_collage = len(merge_definition)
-        fixed_images = len(predefined_images)
-
-        captures_to_take = total_images_in_collage - fixed_images
-
-        return captures_to_take
 
     def apply_pipeline_video(self):
         """

@@ -7,14 +7,14 @@ from ...utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/processing",
-    tags=["processing"],
+    prefix="/actions",
+    tags=["actions"],
 )
 
 
-def _capture(job):
+def _capture(action_type, action_index: int):
     try:
-        job()
+        container.processing_service.trigger_action(action_type, action_index)
 
         return "OK"
     except ProcessMachineOccupiedError as exc:
@@ -33,27 +33,27 @@ def _capture(job):
         ) from exc
 
 
-@router.get("/chose/1pic")
-def api_chose_1pic_get():
-    return _capture(container.processing_service.start_job_1pic)
+@router.get("/image/{index}")
+def api_chose_1pic_get(index: int = 0):
+    return _capture("image", index)
 
 
-@router.get("/chose/collage")
-def api_chose_collage_get():
-    return _capture(container.processing_service.start_job_collage)
+@router.get("/collage/{index}")
+def api_chose_collage_get(index: int = 0):
+    return _capture("collage", index)
 
 
-@router.get("/chose/animation")
-def api_chose_animation_get():
-    return _capture(container.processing_service.start_job_animation)
+@router.get("/animation/{index}")
+def api_chose_animation_get(index: int = 0):
+    return _capture("animation", index)
 
 
-@router.get("/chose/video")
-def api_chose_video_get():
-    return _capture(container.processing_service.start_or_stop_job_video)
+@router.get("/video/{index}")
+def api_chose_video_get(index: int = 0):
+    return _capture("video", index)
 
 
-@router.get("/cmd/confirm")
+@router.get("/confirm")
 def api_cmd_confirm_get():
     try:
         container.processing_service.confirm_capture()
@@ -67,7 +67,7 @@ def api_cmd_confirm_get():
         ) from exc
 
 
-@router.get("/cmd/reject")
+@router.get("/reject")
 def api_cmd_reject_get():
     try:
         container.processing_service.reject_capture()
@@ -81,7 +81,7 @@ def api_cmd_reject_get():
         ) from exc
 
 
-@router.get("/cmd/stop")
+@router.get("/stop")
 def api_cmd_stop_get():
     try:
         container.processing_service.stop_recording()
@@ -95,7 +95,7 @@ def api_cmd_stop_get():
         ) from exc
 
 
-@router.get("/cmd/abort")
+@router.get("/abort")
 def api_cmd_abort_get():
     try:
         container.processing_service.abort_process()

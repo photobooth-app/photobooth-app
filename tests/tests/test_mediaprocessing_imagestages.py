@@ -10,7 +10,7 @@ from pydantic_extra_types.color import Color
 
 import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
 from photobooth.services.config import AppConfig, appconfig
-from photobooth.services.config.groups.mediaprocessing import TextsConfig
+from photobooth.services.config.groups.actions import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
 from .image_utils import is_same

@@ -4,7 +4,7 @@ import time
 import pytest
 
 from photobooth.services.config import appconfig
-from photobooth.services.processing.jobmodels import CountdownTimer, JobModel
+from photobooth.services.processing.jobmodels import CountdownTimer, GroupSingleImageProcessing, JobModelImage
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +27,7 @@ def test_countdowntimer_zero():
     ct.start(DURATION)
 
     start_time = time.time()
-    ct.wait_countdown_finished(timeout=1)
+    ct.wait_countdown_finished()
     end_time = time.time()
 
     delta = (end_time - start_time) - DURATION
@@ -45,7 +45,7 @@ def test_countdowntimer_accuracy():
     ct.start(DURATION)
 
     start_time = time.time()
-    ct.wait_countdown_finished(timeout=4)
+    ct.wait_countdown_finished()
     end_time = time.time()
 
     delta = (end_time - start_time) - DURATION
@@ -54,7 +54,7 @@ def test_countdowntimer_accuracy():
 
 
 def test_jobmodel_start_count():
-    jm = JobModel()
+    jm = JobModelImage(GroupSingleImageProcessing())
 
     expected_blocking_time = 0.75
 
@@ -70,7 +70,7 @@ def test_jobmodel_start_count():
 
 
 def test_jobmodel_start_count_zero():
-    jm = JobModel()
+    jm = JobModelImage(GroupSingleImageProcessing())
 
     expected_blocking_time = 0
 
@@ -86,7 +86,7 @@ def test_jobmodel_start_count_zero():
 
 
 def test_jobmodel_start_count_equal():
-    jm = JobModel()
+    jm = JobModelImage(GroupSingleImageProcessing())
 
     expected_blocking_time = 0
 
@@ -102,7 +102,7 @@ def test_jobmodel_start_count_equal():
 
 
 def test_jobmodel_start_count_bigger_offset():
-    jm = JobModel()
+    jm = JobModelImage(GroupSingleImageProcessing())
 
     expected_blocking_time = 0
 

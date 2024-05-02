@@ -83,6 +83,7 @@ class AbstractBackend(ABC):
         self._video_feature_available: bool = False
         self._video_worker_thread: StoppableThread = None
         self._video_recorded_videofilepath: Path = None
+        self._video_framerate: int = None
 
         # services are responsible to create their folders needed for proper processing:
         os.makedirs("tmp", exist_ok=True)
@@ -347,11 +348,15 @@ class AbstractBackend(ABC):
 
             raise RuntimeError("device raised exception") from exc
 
-    def start_recording(self):
+    def start_recording(
+        self,
+        video_framerate: int,
+    ):
         if not self._video_feature_available:
             raise RuntimeError("video feature is not available. check logs for more information. maybe ffmpeg missing?")
 
         self._video_worker_capture_started.clear()
+        self._video_framerate = video_framerate
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
         self._video_worker_thread.start()
 
@@ -420,7 +425,7 @@ class AbstractBackend(ABC):
             "-movflags",
             "+faststart",
             "-r",
-            f"{appconfig.misc.video_framerate}",
+            f"{self._video_framerate}",
         ]
         command_video_output_compat_mode = []
         if appconfig.misc.video_compatibility_mode:

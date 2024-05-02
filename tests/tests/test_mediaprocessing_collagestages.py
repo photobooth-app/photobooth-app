@@ -9,7 +9,7 @@ from PIL import Image
 
 import photobooth.services.mediaprocessing.collage_pipelinestages as collage_stages
 from photobooth.services.config import appconfig
-from photobooth.services.config.groups.mediaprocessing import CollageMergeDefinition
+from photobooth.services.config.groups.actions import CollageMergeDefinition
 
 
 @pytest.fixture(autouse=True)

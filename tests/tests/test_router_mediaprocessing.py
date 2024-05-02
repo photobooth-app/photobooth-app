@@ -26,8 +26,8 @@ logger = logging.getLogger(name=None)
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
-        if container.mediacollection_service.number_of_images == 0:
-            container.processing_service.start_job_1pic()
+        container.processing_service.trigger_action("image", 0)
+        container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
 

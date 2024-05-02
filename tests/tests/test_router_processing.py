@@ -30,45 +30,45 @@ def client() -> TestClient:
 
 
 def test_chose_1pic(client: TestClient):
-    with patch.object(container.processing_service, "start_job_1pic"):
+    with patch.object(container.processing_service, "trigger_action"):
         # emulate action
-        response = client.get("/processing/chose/1pic")
+        response = client.get("/actions/image/0")
         assert response.status_code == 200
 
-        container.processing_service.start_job_1pic.assert_called()
+        container.processing_service.trigger_action.assert_called()
 
 
 def test_chose_collage(client: TestClient):
-    with patch.object(container.processing_service, "start_job_collage"):
+    with patch.object(container.processing_service, "trigger_action"):
         # emulate action
-        response = client.get("/processing/chose/collage")
+        response = client.get("/actions/collage/0")
         assert response.status_code == 200
 
-        container.processing_service.start_job_collage.assert_called()
+        container.processing_service.trigger_action.assert_called()
 
 
 def test_chose_animation(client: TestClient):
-    with patch.object(container.processing_service, "start_job_animation"):
+    with patch.object(container.processing_service, "trigger_action"):
         # emulate action
-        response = client.get("/processing/chose/animation")
+        response = client.get("/actions/animation/0")
         assert response.status_code == 200
 
-        container.processing_service.start_job_animation.assert_called()
+        container.processing_service.trigger_action.assert_called()
 
 
 def test_chose_video(client: TestClient):
-    with patch.object(container.processing_service, "start_or_stop_job_video"):
+    with patch.object(container.processing_service, "trigger_action"):
         # emulate action
-        response = client.get("/processing/chose/video")
+        response = client.get("/actions/video/0")
         assert response.status_code == 200
 
-        container.processing_service.start_or_stop_job_video.assert_called()
+        container.processing_service.trigger_action.assert_called()
 
 
 def test_chose_video_stoprecording(client: TestClient):
     with patch.object(container.processing_service, "stop_recording"):
         # emulate action
-        response = client.get("/processing/cmd/stop")
+        response = client.get("/actions/stop")
         assert response.status_code == 200
 
         container.processing_service.stop_recording.assert_called()
@@ -78,8 +78,8 @@ def test_chose_1pic_occupied(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = ProcessMachineOccupiedError("mock error")
 
-    with patch.object(ProcessingService, "start_job_1pic", error_mock):
-        response = client.get("/processing/chose/1pic")
+    with patch.object(ProcessingService, "trigger_action", error_mock):
+        response = client.get("/actions/image/0")
         assert response.status_code == 400
 
 
@@ -87,29 +87,29 @@ def test_chose_1pic_otherexception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(ProcessingService, "start_job_1pic", error_mock):
-        response = client.get("/processing/chose/1pic")
+    with patch.object(ProcessingService, "trigger_action", error_mock):
+        response = client.get("/actions/image/0")
         assert response.status_code == 500
 
 
 def test_confirm_reject_abort(client: TestClient):
     with patch.object(container.processing_service, "confirm_capture"):
         # emulate action
-        response = client.get("/processing/cmd/confirm")
+        response = client.get("/actions/confirm")
         assert response.status_code == 200
 
         container.processing_service.confirm_capture.assert_called()
 
     with patch.object(container.processing_service, "reject_capture"):
         # emulate action
-        response = client.get("/processing/cmd/reject")
+        response = client.get("/actions/reject")
         assert response.status_code == 200
 
         container.processing_service.reject_capture.assert_called()
 
     with patch.object(container.processing_service, "abort_process"):
         # emulate action
-        response = client.get("/processing/cmd/abort")
+        response = client.get("/actions/abort")
         assert response.status_code == 200
 
         container.processing_service.abort_process.assert_called()

@@ -9,7 +9,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
-from .mediaprocessing import EnumPilgramFilter
+from ..models.models import PilgramFilter
 
 
 class GroupUiSettings(BaseModel):
@@ -93,10 +93,8 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show instagramlike filter (pilgram2).",
     )
-    gallery_filter_userselectable: list[EnumPilgramFilter] = Field(
-        title="Pic1 Filter Userselectable",
-        default=[e for e in EnumPilgramFilter],
-        description="Filter the user may choose from in the gallery. 'original' applies no filter.",
+    gallery_filter_userselectable: list[PilgramFilter] = Field(
+        default=[e for e in PilgramFilter],
     )
     gallery_show_download: bool = Field(
         default=True,

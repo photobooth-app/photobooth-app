@@ -14,10 +14,12 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
+from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing, GroupSingleImageConfigurationSet
+from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
-from .processing.jobmodels import JobModel
+from .processing.jobmodels import JobModelAnimation, JobModelBase, JobModelCollage, JobModelImage, JobModelVideo, action_type_literal
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
 
@@ -83,24 +85,14 @@ class ProcessingService(BaseService):
 
         logger.debug("_process_fun left")
 
-    ### external functions to start processes
-
-    def start_job(self, jobmodel_typ, number_of_captures_to_take):
+    def _start_job(self, job_model):
         ## preflight checks
         self._check_occupied()
 
+        logger.info(f"starting job model: {job_model=}")
+
         # start with clear queue
         self._external_cmd_queue = Queue()
-
-        ## setup job
-        job_model = JobModel()
-        logger.info(f"set up job to start: {jobmodel_typ=}, {number_of_captures_to_take=}")
-
-        job_model.start_model(
-            jobmodel_typ,
-            number_of_captures_to_take,
-            collage_automatic_capture_continue=appconfig.common.collage_automatic_capture_continue,
-        )
 
         ## init statemachine
         self._state_machine = ProcessingMachine(
@@ -112,8 +104,6 @@ class ProcessingService(BaseService):
             self._external_cmd_queue,
             job_model,
         )
-
-        logger.info(f"start job {job_model}")
 
         ## run in separate thread
         logger.debug("starting _process_thread")
@@ -127,22 +117,40 @@ class ProcessingService(BaseService):
         if self._state_machine:
             self._state_machine._emit_model_state_update()
 
-    def start_job_1pic(self):
-        self.start_job(JobModel.Typ.image, 1)
+    def _get_config_by_index(self, type_actions, index: int = 0):
+        if not type_actions or len(type_actions) == 0:
+            raise RuntimeError("error: empty configuration!")
 
-    def start_job_collage(self):
-        self.start_job(JobModel.Typ.collage, self._mediaprocessing_service.number_of_captures_to_take_for_collage())
+        try:
+            return type_actions[index]
+        except Exception as exc:
+            logger.critical(f"could not find action configuration with index {index}, error {exc}")
+            raise exc
 
-    def start_job_animation(self):
-        self.start_job(JobModel.Typ.animation, self._mediaprocessing_service.number_of_captures_to_take_for_animation())
+    ### external functions to start processes
 
-    def start_or_stop_job_video(self):
-        if self._state_machine is not None:
-            # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
-            logger.info("running job, sending stop recording info")
-            self.stop_recording()
+    def trigger_action(self, action_type: action_type_literal, action_index: int = 0):
+        logger.info(f"trigger {action_type=}, {action_index=}")
+
+        if action_type == "image":
+            config = self._get_config_by_index(appconfig.actions.image, action_index)
+            self._start_job(JobModelImage(config.actions))
+        elif action_type == "collage":
+            config = self._get_config_by_index(appconfig.actions.collage, action_index)
+            self._start_job(JobModelCollage(config.actions))
+        elif action_type == "animation":
+            config = self._get_config_by_index(appconfig.actions.animation, action_index)
+            self._start_job(JobModelAnimation(config.actions))
+        elif action_type == "video":
+            if self._state_machine is not None:
+                # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
+                logger.info("running job, sending stop recording info")
+                self.stop_recording()
+            else:
+                config = self._get_config_by_index(appconfig.actions.video, action_index)
+                self._start_job(JobModelVideo(config.actions))
         else:
-            self.start_job(JobModel.Typ.video, 1)
+            raise RuntimeError(f"illegal {action_type=}")
 
     def wait_until_job_finished(self):
         if self._process_thread is None:
@@ -202,7 +210,7 @@ class ProcessingMachine(StateMachine):
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
         _external_cmd_queue: Queue,
-        jobmodel: JobModel,
+        jobmodel: JobModelBase,
     ):
         self._sse_service: SseService = sse_service
         self._aquisition_service: AquisitionService = aquisition_service
@@ -211,10 +219,58 @@ class ProcessingMachine(StateMachine):
         self._wled_service: WledService = wled_service
         self._external_cmd_queue: Queue = _external_cmd_queue
 
-        self.model: JobModel  # for linting, initialized in super-class actually below
+        self.model: JobModelBase  # for linting, initialized in super-class actually below
 
         # # call StateMachine init fun
         super().__init__(model=jobmodel)
+
+    @staticmethod
+    def create_config_image(job_config: GroupSingleImageConfigurationSet) -> SinglePictureDefinition:
+        config_singleimage = SinglePictureDefinition(**job_config.model_dump())
+
+        return config_singleimage
+
+    @staticmethod
+    def create_config_collageimage(job_config: GroupCollageProcessing, index: int = None) -> SinglePictureDefinition:
+        # list only captured_images from merge_definition (excludes predefined)
+        captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
+
+        config_singleimage_captures_for_collage = SinglePictureDefinition(
+            fill_background_enable=job_config.capture_fill_background_enable,
+            fill_background_color=job_config.capture_fill_background_color,
+            img_background_enable=job_config.capture_img_background_enable,
+            img_background_file=job_config.capture_img_background_file,
+            texts_enable=False,
+            img_frame_enable=False,
+            filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
+        )
+
+        return config_singleimage_captures_for_collage
+
+    @staticmethod
+    def create_config_animationimage(job_config: GroupAnimationProcessing, index: int = None) -> SinglePictureDefinition:
+        # list only captured_images from merge_definition (excludes predefined)
+        captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
+
+        config_singleimage_captures_for_animation = SinglePictureDefinition(
+            texts_enable=False,
+            img_frame_enable=False,
+            filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
+        )
+
+        return config_singleimage_captures_for_animation
+
+    def get_config_based_on_media_type(self, mediaitem: MediaItem, index: int = None):
+        if mediaitem.media_type is MediaItemTypes.image:
+            config = __class__.create_config_image(self.model._job_config)  # TODO: refactor
+        elif mediaitem.media_type is MediaItemTypes.collageimage:
+            config = __class__.create_config_collageimage(self.model._job_config, index)
+        elif mediaitem.media_type is MediaItemTypes.animationimage:
+            config = __class__.create_config_animationimage(self.model._job_config, index)
+        else:
+            raise RuntimeError(f"illegal mediatype to process. type {mediaitem.media_type} cant be handled by {__name__}")
+
+        return config
 
     ## state actions
 
@@ -238,10 +294,10 @@ class ProcessingMachine(StateMachine):
 
     def on_exit_idle(self):
         # when idle left, check that all is properly set up!
-
-        if not self.model._validate_job():
-            logger.error(self.model)
-            raise RuntimeError("job setup illegal")
+        pass
+        # if not self.model._validate_job():
+        #     logger.error(self.model)
+        #     raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):
         """_summary_"""
@@ -258,7 +314,7 @@ class ProcessingMachine(StateMachine):
         self._wled_service.preset_thrill()
 
         # set backends to capture mode; backends take their own actions if needed.
-        if self.model._typ is not JobModel.Typ.video:
+        if not self.model.jobtype_recording():
             # signal the backend we need hq still in every case, except video.
             self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
@@ -308,14 +364,12 @@ class ProcessingMachine(StateMachine):
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
         _type = MediaItemTypes.image
         _visibility = True
-        if self.model._typ is JobModel.Typ.collage:
+        if self.model._typ is JobModelBase.Typ.collage:
             _type = MediaItemTypes.collageimage  # 1st phase collage image
-            _visibility = appconfig.common.gallery_show_individual_images
-        if self.model._typ is JobModel.Typ.animation:
+            _visibility = self.model._job_config.gallery_show_individual_images
+        if self.model._typ is JobModelBase.Typ.animation:
             _type = MediaItemTypes.animationimage  # 1st phase animation image
-            _visibility = appconfig.common.gallery_show_individual_images
-        if self.model._typ is JobModel.Typ.video:
-            raise RuntimeError("videos are not processed in capture state")
+            _visibility = self.model._job_config.gallery_show_individual_images
 
         filepath_neworiginalfile = get_new_filename(type=_type, visibility=_visibility)
         logger.debug(f"capture to {filepath_neworiginalfile=}")
@@ -358,7 +412,13 @@ class ProcessingMachine(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem, self.model.number_captures_taken())
+        self._mediaprocessing_service.process_image_collageimage_animationimage(
+            mediaitem,
+            self.get_config_based_on_media_type(
+                mediaitem,
+                self.model.number_captures_taken(),
+            ),
+        )
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         if not mediaitem.fileset_valid():
@@ -373,13 +433,13 @@ class ProcessingMachine(StateMachine):
         # if job is collage, each single capture could be confirmed or not:
         if self.model.ask_user_for_approval():
             # present capture with buttons to approve.
-            logger.info(f"finished capture, waiting {appconfig.common.collage_approve_autoconfirm_timeout}s for user to confirm, reject or abort")
+            logger.info(f"finished capture, waiting {self.model._job_config.approve_autoconfirm_timeout}s for user to confirm, reject or abort")
 
             try:
-                event = self._external_cmd_queue.get(block=True, timeout=appconfig.common.collage_approve_autoconfirm_timeout)
+                event = self._external_cmd_queue.get(block=True, timeout=self.model._job_config.approve_autoconfirm_timeout)
                 logger.debug(f"user chose {event}")
             except Empty:
-                logger.info(f"no user input within {appconfig.common.collage_approve_autoconfirm_timeout}s so assume to confirm")
+                logger.info(f"no user input within {self.model._job_config.approve_autoconfirm_timeout}s so assume to confirm")
 
                 event = "confirm"
 
@@ -414,15 +474,15 @@ class ProcessingMachine(StateMachine):
 
         self._wled_service.preset_record()
 
-        self._aquisition_service.start_recording()
+        self._aquisition_service.start_recording(self.model._job_config.video_framerate)
 
         try:
-            event = self._external_cmd_queue.get(block=True, timeout=float(appconfig.misc.video_duration))
+            event = self._external_cmd_queue.get(block=True, timeout=float(self.model._job_config.video_duration))
             logger.debug(f"user chose {event}")
             # continue if external_cmd_queue has an event
         except Empty:
             # after timeout
-            logger.info(f"no user input within {appconfig.misc.video_duration}s so stopping video")
+            logger.info(f"no user input within {self.model._job_config.video_duration}s so stopping video")
 
         self.stop_recording()
 
@@ -438,12 +498,12 @@ class ProcessingMachine(StateMachine):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        if self.model._typ is JobModel.Typ.collage:
+        if self.model._typ is JobModelBase.Typ.collage:
             # apply collage phase2 pipeline:
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy(), self.model._job_config)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
 
@@ -451,12 +511,12 @@ class ProcessingMachine(StateMachine):
             self.model.add_confirmed_capture_to_collection(mediaitem)
             self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
 
-        elif self.model._typ is JobModel.Typ.animation:
+        elif self.model._typ is JobModelBase.Typ.animation:
             # apply animation phase2 pipeline:
             tms = time.time()
 
             # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy())
+            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy(), self.model._job_config)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
 
@@ -464,7 +524,7 @@ class ProcessingMachine(StateMachine):
             self.model.add_confirmed_capture_to_collection(mediaitem)
             self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
 
-        elif self.model._typ is JobModel.Typ.video:
+        elif self.model._typ is JobModelBase.Typ.video:
             # apply video phase2 pipeline:
             tms = time.time()
 

@@ -212,7 +212,7 @@ class MediaItem:
 
         # if filename has no information about type and visibility: raise Exception
         if not (len(split_filename(self.filename)) == 3):
-            raise ValueError(f"the original_file {self.filename} is not a valid filename - ignored")
+            raise ValueError(f"the original_file {self.filename} is not a valid filename")
 
         if not ((self.path_original).is_file()):
             raise FileNotFoundError(f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file")

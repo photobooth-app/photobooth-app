@@ -21,8 +21,8 @@ def run_around_tests():
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
-        if container.mediacollection_service.number_of_images == 0:
-            container.processing_service.start_job_1pic()
+        container.processing_service.trigger_action("image", 0)
+        container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
 
@@ -30,7 +30,7 @@ def client() -> TestClient:
 def test_printing_disabled(client: TestClient):
     # default printing is disabled, try to print gives a 405
 
-    response = client.get("/print/latest")
+    response = client.get("/print/latest/0")
 
     assert response.status_code == 200
 
@@ -40,7 +40,7 @@ def test_print_latest(mock_run: mock.Mock, client: TestClient):
     # enable printing
     appconfig.hardwareinputoutput.printing_enabled = True
 
-    response = client.get("/print/latest")
+    response = client.get("/print/latest/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -53,7 +53,7 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
     # get an image to print
     mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
-    response = client.get(f"/print/item/{mediaitem.id}")
+    response = client.get(f"/print/{mediaitem.id}/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -65,7 +65,7 @@ def test_print_exception(mock_run: mock.Mock, client: TestClient):
 
     appconfig.hardwareinputoutput.printing_enabled = True
 
-    response = client.get("/print/latest")
+    response = client.get("/print/latest/0")
 
     assert response.status_code == 500
     mock_run.assert_called()
@@ -75,21 +75,21 @@ def test_print_exception(mock_run: mock.Mock, client: TestClient):
 def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     # get config
     appconfig.hardwareinputoutput.printing_enabled = True
-    appconfig.hardwareinputoutput.printing_blocked_time = 2
+    appconfig.print.print[0].actions.printing_blocked_time = 2
 
-    response = client.get("/print/latest")
+    response = client.get("/print/latest/0")
 
-    time.sleep(appconfig.hardwareinputoutput.printing_blocked_time / 2)
+    time.sleep(appconfig.print.print[0].actions.printing_blocked_time / 2)
 
-    response = client.get("/print/latest")  # should be blocked and error
+    response = client.get("/print/latest/0")  # should be blocked and error
 
     assert response.status_code == 200  # gives 200 nowadays, triggers separate event.
     mock_run.assert_called()
 
     # wait a little more until printing is fine again
-    time.sleep((appconfig.hardwareinputoutput.printing_blocked_time / 2) + 0.2)
+    time.sleep((appconfig.print.print[0].actions.printing_blocked_time / 2) + 0.2)
 
-    response = client.get("/print/latest")  # should give no error again
+    response = client.get("/print/latest/0")  # should give no error again
 
     assert response.status_code == 200
     mock_run.assert_called()

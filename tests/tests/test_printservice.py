@@ -74,7 +74,6 @@ def test_print_image_blocked(mock_run, _container: Container):
     """enable service and try to print, check that it repsonds blocking correctly"""
 
     appconfig.hardwareinputoutput.printing_enabled = True
-    appconfig.hardwareinputoutput.printing_blocked_time = 2
 
     _container.stop()
     _container.start()
@@ -82,9 +81,13 @@ def test_print_image_blocked(mock_run, _container: Container):
     # get the newest mediaitem
     latest_mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
-    # two prints issued that should not block because 3s>2s
+    # two prints issued
+
     _container.printing_service.print(latest_mediaitem)
-    time.sleep(3)
+    while _container.printing_service.is_blocked():
+        logger.debug("waiting for printer to unblock")
+        time.sleep(1)
+
     _container.printing_service.print(latest_mediaitem)
     time.sleep(1)
     with pytest.raises(BlockingIOError):

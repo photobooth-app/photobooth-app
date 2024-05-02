@@ -12,9 +12,9 @@ router = APIRouter(
 )
 
 
-def _print(mediaitem):
+def _print(mediaitem, index: int):
     try:
-        container.printing_service.print(mediaitem=mediaitem)
+        container.printing_service.print(mediaitem, index)
     except BlockingIOError:
         pass  # informed by sepearate sse event
     except ConnectionRefusedError:
@@ -27,20 +27,20 @@ def _print(mediaitem):
         ) from exc
 
 
-@router.get("/latest")
-def api_print_latest():
+@router.get("/latest/{index}")
+def api_print_latest(index: int = 0):
     try:
         latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
 
-    _print(mediaitem=latest_mediaitem)
+    _print(latest_mediaitem, index)
 
 
-@router.get("/item/{id}")
-def api_print_item_id(id: str):
+@router.get("/{id}/{index}")
+def api_print_item_id(id: str, index: int = 0):
     try:
         requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
-    _print(mediaitem=requested_mediaitem)
+    _print(requested_mediaitem, index)

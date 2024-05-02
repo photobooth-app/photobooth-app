@@ -1,67 +1,21 @@
-import time
 from enum import Enum
-from threading import Condition, Thread
+from typing import Literal, Union
 
+from ...utils.helper import get_user_file
+from ..config.groups.actions import (
+    GroupAnimationProcessing,
+    GroupCollageProcessing,
+    GroupSingleImageProcessing,
+    GroupVideoProcessing,
+)
+from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..mediacollection.mediaitem import MediaItem
+from .countdowntimer import CountdownTimer
+
+action_type_literal = Literal["image", "collage", "animation", "video"]
 
 
-class CountdownTimer:
-    TIMER_TICK = 0.1
-    TIMER_TOLERANCE = 0.05  # to account for float not 100% accurate
-    TIMER_MAX_DURATION = 20
-
-    def __init__(self):
-        self._duration: float = 0
-        self._countdown: float = 0
-
-        self._ticker_thread: Thread = None
-        self._finished_condition: Condition = Condition()
-
-    def start(self, duration: float):
-        self._duration = duration
-        self._countdown = duration
-
-        self._ticker_thread = Thread(name="_jobmodels_ticker_thread", target=self._ticker_fun, daemon=True)
-        self._ticker_thread.start()
-
-    def reset(self):
-        self._duration = 0
-        self._countdown = 0
-
-    def wait_countdown_finished(self, timeout: float = (TIMER_MAX_DURATION + 1)):
-        # TODO: timeout needs to be higher than max possible value to avoid any deadlocks
-
-        # return early if already finished when called.
-        # to avoid any race condition if countdown from 0 but wait_countdown was not called yet so condition is missed.
-        if self._countdown_finished():
-            return
-
-        with self._finished_condition:
-            if not self._finished_condition.wait(timeout=timeout):
-                raise TimeoutError("error timing out")
-
-    def _countdown_finished(self):
-        return self._countdown <= self.TIMER_TOLERANCE
-
-    def _ticker_fun(self):
-        while not self._countdown_finished():
-            time.sleep(self.TIMER_TICK)
-
-            self._countdown -= self.TIMER_TICK
-
-        # ticker finished, reset
-        self.reset()
-
-        # notify waiting threads
-        with self._finished_condition:
-            self._finished_condition.notify_all()
-
-        # done, exit fun, exit thread
-
-
-class JobModel:  # TODO: derive from model class?
-    """This jobmodel is controlled by the statemachine"""
-
+class JobModelBase:
     class Typ(str, Enum):
         undefined = "undefined"
         image = "image"
@@ -69,25 +23,46 @@ class JobModel:  # TODO: derive from model class?
         animation = "animation"
         video = "video"
 
-    def __init__(self):
-        """_summary_
-        Init model
+    def __init__(
+        self,
+        job_config: Union[GroupSingleImageProcessing, GroupCollageProcessing, GroupAnimationProcessing, GroupVideoProcessing],
+    ):
+        self._typ: __class__.Typ = __class__.Typ.undefined
+        self._job_config = job_config
 
-        """
-        # job description
-        self._typ: __class__.Typ = None
-
-        # job model processing vars
-        self._confirmed_captures_collection: list[MediaItem] = []
         self._total_captures_to_take: int = 0
-        self._last_captured_mediaitem: MediaItem = None
+        self._ask_approval_each_capture: bool = False
 
-        # job metadata processing ui interaction
-        self._collage_automatic_capture_continue = False
+        self._last_captured_mediaitem: MediaItem = None
+        self._confirmed_captures_collection: list[MediaItem] = []
 
         # job model timer
         self._duration_user: float = 0
         self._countdown_timer: CountdownTimer = CountdownTimer()
+
+    @staticmethod
+    def _get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[AnimationMergeDefinition]]) -> int:
+        # item.predefined_image None or "" are considered as to capture aka not predefined
+        predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
+        for predefined_image in predefined_images:
+            try:
+                # preflight check here without use.
+                _ = get_user_file(predefined_image)
+            except FileNotFoundError as exc:
+                raise RuntimeError(f"predefined image {predefined_image} not found!") from exc
+
+        total_images_in_collage = len(merge_definition)
+        fixed_images = len(predefined_images)
+
+        captures_to_take = total_images_in_collage - fixed_images
+
+        return captures_to_take
+
+    def __repr__(self):
+        return (
+            f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
+            f"confirmed_captures_collection={self._confirmed_captures_collection}, last_capture={self._last_captured_mediaitem}"
+        )
 
     def export(self) -> dict:
         """Export model as dict for UI (needds to be jsonserializable)
@@ -114,23 +89,6 @@ class JobModel:  # TODO: derive from model class?
 
         return out
 
-    def __repr__(self):
-        return (
-            f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
-            f"confirmed_captures_collection={self._confirmed_captures_collection}, last_capture={self._last_captured_mediaitem}"
-        )
-
-    def _validate_job(self):
-        if (
-            self._typ is None
-            or self._total_captures_to_take is None
-            or self._total_captures_to_take < 1
-            or self._confirmed_captures_collection is None
-        ):
-            return False
-        else:
-            return True
-
     # external model processing controls
     def add_confirmed_capture_to_collection(self, captured_item: MediaItem):
         self._confirmed_captures_collection.append(captured_item)  # most recent is always at N pos., get latest with get_last_capture
@@ -145,58 +103,27 @@ class JobModel:  # TODO: derive from model class?
         return self._last_captured_mediaitem
 
     def total_captures_to_take(self) -> int:
-        assert self._total_captures_to_take is not None
-
         return self._total_captures_to_take
 
     def remaining_captures_to_take(self) -> int:
-        assert self._confirmed_captures_collection is not None
-        assert self._total_captures_to_take is not None
-
         return self._total_captures_to_take - len(self._confirmed_captures_collection)
 
     def number_captures_taken(self) -> int:
-        assert self._confirmed_captures_collection is not None
-        assert self._total_captures_to_take is not None
-
         return len(self._confirmed_captures_collection)
 
     def all_captures_confirmed(self) -> bool:
-        assert self._confirmed_captures_collection is not None
-        assert self._total_captures_to_take is not None
-
         return len(self._confirmed_captures_collection) >= self._total_captures_to_take
 
     def ask_user_for_approval(self) -> bool:
         # display only for collage (multistep process if configured, otherwise always false)
-        if self._typ is JobModel.Typ.collage and not self._collage_automatic_capture_continue:
-            return True
-        else:
-            return False
+        return self._ask_approval_each_capture
 
     def jobtype_recording(self) -> bool:
         # to check if mode is video or HQ captures request
-        if self._typ is JobModel.Typ.video:
+        if self._typ is __class__.Typ.video:
             return True
         else:
             return False
-
-    # external model start/stop controls
-    def start_model(self, typ: Typ, total_captures_to_take: int, collage_automatic_capture_continue: bool = False):
-        self.reset_job()
-        self._typ = typ
-        self._total_captures_to_take = total_captures_to_take
-        self._last_captured_mediaitem = None
-        self._confirmed_captures_collection = []
-        self._collage_automatic_capture_continue = collage_automatic_capture_continue
-
-        self._validate_job()
-
-    def reset_job(self):
-        self._typ = None
-        self._total_captures_to_take = 0
-        self._last_captured_mediaitem = None
-        self._confirmed_captures_collection = []
 
     # external countdown controls
     def start_countdown(self, duration_user: float, offset_camera: float = 0.0):
@@ -218,3 +145,45 @@ class JobModel:  # TODO: derive from model class?
     def wait_countdown_finished(self):
         self._countdown_timer.wait_countdown_finished()
         self._duration_user = 0
+
+
+class JobModelImage(JobModelBase):
+    def __init__(self, job_config: GroupSingleImageProcessing):
+        super().__init__(job_config)
+        self._typ: __class__.Typ = __class__.Typ.image
+
+        self._total_captures_to_take = 1
+
+        # self._validate_job()
+
+
+class JobModelCollage(JobModelBase):
+    def __init__(self, job_config: GroupCollageProcessing):
+        super().__init__(job_config)
+        self._typ: __class__.Typ = __class__.Typ.collage
+
+        self._ask_approval_each_capture = job_config.ask_approval_each_capture
+        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(job_config.merge_definition)
+
+        # self._validate_job()
+
+
+class JobModelAnimation(JobModelBase):
+    def __init__(self, job_config: GroupAnimationProcessing):
+        super().__init__(job_config)
+        self._typ: __class__.Typ = __class__.Typ.animation
+
+        self._ask_approval_each_capture = job_config.ask_approval_each_capture
+        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(job_config.merge_definition)
+
+        # self._validate_job()
+
+
+class JobModelVideo(JobModelBase):
+    def __init__(self, job_config: GroupVideoProcessing):
+        super().__init__(job_config)
+        self._typ: __class__.Typ = __class__.Typ.video
+
+        self._total_captures_to_take = 1
+
+        # self._validate_job()

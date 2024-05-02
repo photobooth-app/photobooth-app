@@ -63,60 +63,21 @@ def test_button_reboot(mock_check_call, _container: Container):
     mock_check_call.assert_called()
 
 
-def test_button_take1pic(_container: Container):
+def test_button_action_buttons(_container: Container):
     # modify config
     # services.config().hardwareinputoutput.gpio_enabled = True
 
-    with patch.object(_container.processing_service, "start_job_1pic"):
+    with patch.object(_container.processing_service, "_start_job"):
         # emulate gpio active low driven (simulates button press)
-        _container.gpio_service.take1pic_btn.pin.drive_low()
+        for action_button in _container.gpio_service.action_btns:
+            action_button.pin.drive_low()
 
-        # wait debounce time
-        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
+            # wait debounce time
+            time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
 
-        _container.processing_service.start_job_1pic.assert_called()
+        _container.processing_service._start_job.assert_called()
 
-
-def test_button_takecollage(_container: Container):
-    # modify config
-    # services.config().hardwareinputoutput.gpio_enabled = True
-
-    with patch.object(_container.processing_service, "start_job_collage"):
-        # emulate gpio active low driven (simulates button press)
-        _container.gpio_service.takecollage_btn.pin.drive_low()
-
-        # wait debounce time
-        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
-
-        _container.processing_service.start_job_collage.assert_called()
-
-
-def test_button_takeanimation(_container: Container):
-    # modify config
-    # services.config().hardwareinputoutput.gpio_enabled = True
-
-    with patch.object(_container.processing_service, "start_job_animation"):
-        # emulate gpio active low driven (simulates button press)
-        _container.gpio_service.takeanimation_btn.pin.drive_low()
-
-        # wait debounce time
-        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
-
-        _container.processing_service.start_job_animation.assert_called()
-
-
-def test_button_takevideo(_container: Container):
-    # modify config
-    # services.config().hardwareinputoutput.gpio_enabled = True
-
-    with patch.object(_container.processing_service, "start_or_stop_job_video"):
-        # emulate gpio active low driven (simulates button press)
-        _container.gpio_service.takevideo_btn.pin.drive_low()
-
-        # wait debounce time
-        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
-
-        _container.processing_service.start_or_stop_job_video.assert_called()
+        assert len(_container.gpio_service.action_btns) == _container.processing_service._start_job.call_count
 
 
 @patch("subprocess.run")
@@ -124,10 +85,15 @@ def test_button_print(mock_run, _container: Container):
     appconfig.hardwareinputoutput.printing_enabled = True
 
     # emulate gpio active low driven (simulates button press)
-    _container.gpio_service.print_recent_item_btn.pin.drive_low()
+    for print_button in _container.gpio_service.print_btns:
+        print_button.pin.drive_low()
 
-    # wait hold time
-    time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
+        # wait debounce time
+        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
 
-    # check subprocess.check_call was invoked
+        # emulate print finished, to avoid need to wait for blocking time.
+        _container.printing_service._last_print_time = None
+
     mock_run.assert_called()
+
+    assert len(_container.gpio_service.print_btns) == mock_run.call_count

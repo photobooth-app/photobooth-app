@@ -17,7 +17,7 @@ from fastapi import Request
 from sse_starlette import ServerSentEvent
 
 from .mediacollection.mediaitem import MediaItem
-from .processing.jobmodels import JobModel
+from .processing.jobmodels import JobModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class SseEventFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
-    jobmodel: JobModel = None
+    jobmodel: JobModelBase = None
 
     event: str = "ProcessStateinfo"
 

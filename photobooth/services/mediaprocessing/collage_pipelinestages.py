@@ -2,7 +2,7 @@ import logging
 
 from PIL import Image, ImageOps
 
-from ..config.groups.mediaprocessing import CollageMergeDefinition
+from ..config.models.models import CollageMergeDefinition
 from .pipelinestages_utils import rotate
 
 logger = logging.getLogger(__name__)
