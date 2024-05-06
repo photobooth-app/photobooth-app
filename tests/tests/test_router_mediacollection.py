@@ -23,6 +23,7 @@ def client() -> TestClient:
         container.start()
         if container.mediacollection_service.number_of_images == 0:
             container.processing_service.trigger_action("image", 0)
+            container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
 
