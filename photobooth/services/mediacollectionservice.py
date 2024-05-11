@@ -83,7 +83,7 @@ class MediacollectionService(BaseService):
         self._db.insert(0, item)  # insert at first position (prepend)
 
         # and insert in client db collection so gallery is up to date.
-        if item.visible:
+        if not item.hide:
             self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=item))
 
         return item.id
@@ -92,7 +92,7 @@ class MediacollectionService(BaseService):
         self._db.remove(item)
 
         # and remove from client db collection so gallery is up to date.
-        if item.visible:
+        if not item.hide:
             self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=item))
 
     def _db_delete_items(self):
@@ -115,7 +115,7 @@ class MediacollectionService(BaseService):
             list: _description_
         """
         tms = time.time()
-        out = [item.asdict() for item in self._db if item.visible]
+        out = [item.asdict() for item in self._db if not item.hide]
         logger.debug(f"-- process time: {round((time.time() - tms), 2)}s to compile db_get_images_as_dict output")
         return out
 
@@ -126,7 +126,7 @@ class MediacollectionService(BaseService):
         Returns:
             list: _description_
         """
-        return [item for item in self._db if item.visible]
+        return [item for item in self._db if not item.hide]
 
     def db_get_most_recent_mediaitem(self):
         # get most recent item
