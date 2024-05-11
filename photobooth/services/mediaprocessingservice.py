@@ -6,6 +6,7 @@ import io
 import logging
 import os
 import time
+from pathlib import Path
 
 from PIL import Image
 from pydantic_extra_types.color import Color
@@ -15,9 +16,9 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing
+from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing, GroupVideoProcessing
 from .config.models.models import SinglePictureDefinition, TextsConfig
-from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
+from .mediacollection.mediaitem import MediaItem, MediaItemTypes
 from .mediaprocessing.animation_pipelinestages import align_sizes_stage
 from .mediaprocessing.collage_pipelinestages import merge_collage_stage
 from .mediaprocessing.image_pipelinestages import (
@@ -130,11 +131,7 @@ class MediaprocessingService(BaseService):
 
         return buffer_preview_pipeline_applied
 
-    def process_image_collageimage_animationimage(
-        self,
-        mediaitem: MediaItem,
-        config: SinglePictureDefinition,
-    ) -> MediaItem:
+    def process_image_collageimage_animationimage(self, mediaitem: MediaItem):
         """
         Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
         Since config is different and also can depend on the current number of the image in the capture sequence,
@@ -145,6 +142,9 @@ class MediaprocessingService(BaseService):
         - get config for that type.
         - process it (all processes are the same, just config is different source)
         """
+
+        # get config from mediaitem, that is passed as json dict (model_dump) along with it
+        _config = SinglePictureDefinition(**mediaitem._config)
 
         image = Image.open(mediaitem.path_full_unprocessed)
 
@@ -159,28 +159,28 @@ class MediaprocessingService(BaseService):
             number_stages_applied += 1
 
         ## stage: pilgram filter
-        if config.filter and config.filter.value and config.filter.value != "original":
-            image = self._apply_stage_pilgram(image, config.filter.value)
+        if _config.filter and _config.filter.value and _config.filter.value != "original":
+            image = self._apply_stage_pilgram(image, _config.filter.value)
             number_stages_applied += 1
 
         ## stage: new background shining through transparent parts (or extended frame)
-        if config.fill_background_enable:
-            image = self._apply_stage_fill_background(image, config.fill_background_color)
+        if _config.fill_background_enable:
+            image = self._apply_stage_fill_background(image, _config.fill_background_color)
             number_stages_applied += 1
 
         ## stage: new background image behin transparent parts (or extended frame)
-        if config.img_background_enable:
-            image = self._apply_stage_img_background(image, config.img_background_file)
+        if _config.img_background_enable:
+            image = self._apply_stage_img_background(image, _config.img_background_file)
             number_stages_applied += 1
 
         ## stage: new image in front of transparent parts (or extended frame)
-        if config.img_frame_enable:
-            image = self._apply_stage_img_frame(image, config.img_frame_file)
+        if _config.img_frame_enable:
+            image = self._apply_stage_img_frame(image, _config.img_frame_file)
             number_stages_applied += 1
 
         ## stage: text overlay
-        if config.texts_enable:
-            image = self._apply_stage_texts(image, config.texts)
+        if _config.texts_enable:
+            image = self._apply_stage_texts(image, _config.texts)
             number_stages_applied += 1
 
         logger.info(f"{number_stages_applied} stages applied in: {round((time.time() - tms), 2)}s")
@@ -201,10 +201,13 @@ class MediaprocessingService(BaseService):
 
         return mediaitem
 
-    def create_collage(self, captured_mediaitems: list[MediaItem], _config: GroupCollageProcessing) -> MediaItem:
+    def create_collage(self, captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
         """apply preconfigured pipeline."""
 
         tms = time.time()
+
+        # get config from mediaitem, that is passed as json dict (model_dump) along with it
+        _config = GroupCollageProcessing(**mediaitem._config)
 
         ## prepare: create canvas
         canvas_size = (_config.canvas_width, _config.canvas_height)
@@ -213,6 +216,7 @@ class MediaprocessingService(BaseService):
         ## stage: merge captured images and predefined to one image with transparency
         # get all images to process
         collage_images: list[Image.Image] = []
+        _captured_mediaitems = captured_mediaitems.copy()
 
         for _definition in _config.merge_definition:
             if _definition.predefined_image:
@@ -227,7 +231,7 @@ class MediaprocessingService(BaseService):
                 except FileNotFoundError as exc:
                     raise PipelineError(f"error getting predefined file {exc}") from exc
             else:
-                collage_images.append(Image.open(captured_mediaitems.pop(0).path_full))
+                collage_images.append(Image.open(_captured_mediaitems.pop(0).path_full))
 
         # merge to one canvas
         try:
@@ -256,9 +260,7 @@ class MediaprocessingService(BaseService):
 
         ## create mediaitem
         canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.collage)
-        canvas.save(filepath_neworiginalfile, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
-        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))  # instanciate mediaitem with new original file
+        canvas.save(mediaitem.path_original, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
         # create scaled versions (unprocessed and processed are same here for now
         mediaitem.create_fileset_unprocessed()
@@ -266,12 +268,13 @@ class MediaprocessingService(BaseService):
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to save image and create scaled versions")
 
-        return mediaitem
-
-    def create_animation(self, captured_mediaitems: list[MediaItem], _config: GroupAnimationProcessing) -> MediaItem:
+    def create_animation(self, captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
         """apply preconfigured pipeline."""
 
         tms = time.time()
+
+        # get config from mediaitem, that is passed as json dict (model_dump) along with it
+        _config = GroupAnimationProcessing(**mediaitem._config)
 
         ## prepare: create canvas
         canvas_size = (_config.canvas_width, _config.canvas_height)
@@ -279,6 +282,7 @@ class MediaprocessingService(BaseService):
         ## stage: merge captured images and predefined to one image with transparency
         # get all images to process
         animation_images: list[Image.Image] = []
+        _captured_mediaitems = captured_mediaitems.copy()
 
         for _definition in _config.merge_definition:
             if _definition.predefined_image:
@@ -293,7 +297,7 @@ class MediaprocessingService(BaseService):
                 except FileNotFoundError as exc:
                     raise PipelineError(f"error getting predefined file {exc}") from exc
             else:
-                animation_images.append(Image.open(captured_mediaitems.pop(0).path_full))
+                animation_images.append(Image.open(_captured_mediaitems.pop(0).path_full))
 
         # line images up and resize to make them all fit to canvas.
         try:
@@ -306,12 +310,11 @@ class MediaprocessingService(BaseService):
 
         ## final: save full result and create scaled versions
         tms = time.time()
-        filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.animation)
 
         # convert to RGB and store jpeg as new original
         try:
             animation_images_resized[0].save(
-                filepath_neworiginalfile,
+                mediaitem.path_original,
                 format="gif",
                 save_all=True,
                 append_images=animation_images_resized[1:] if len(animation_images_resized) > 1 else None,
@@ -326,20 +329,23 @@ class MediaprocessingService(BaseService):
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create original")
 
-        # instanciate mediaitem with new original file
-        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-
         # create scaled versions (unprocessed and processed are same here for now
         tms = time.time()
         mediaitem.create_fileset_unprocessed()
         mediaitem.copy_fileset_processed()
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
 
-        return mediaitem
+    def create_video(self, temp_videofilepath: Path, mediaitem: MediaItem):
+        """apply preconfigured pipeline."""
 
-    def apply_pipeline_video(self):
-        """
-        there will probably be no video pipeline or needs to be handled different.
-        focus on images in these pipelines now
-        """
-        raise NotImplementedError
+        tms = time.time()
+
+        # get config from mediaitem, that is passed as json dict (model_dump) along with it
+        _config = GroupVideoProcessing(**mediaitem._config)
+
+        os.rename(temp_videofilepath, mediaitem.path_original)
+
+        mediaitem.create_fileset_unprocessed()
+        mediaitem.copy_fileset_processed()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")

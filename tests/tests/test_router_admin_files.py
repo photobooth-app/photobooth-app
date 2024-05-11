@@ -88,6 +88,7 @@ def test_admin_files_zip_post(client: TestClient):
 
 def test_admin_files_zip_post_notfound(client: TestClient):
     # make up a list - only filepath needs to be valid for this function.
+    # there is a bug in zipfile.py. can ignore the warning for our booth: https://github.com/python/cpython/issues/81954
     selected_files = [
         asdict(PathListItem(name=".gitignore", filepath=".gitignore1", is_dir=False, size=0)),  # file
         asdict(PathListItem(name="log", filepath="./log1", is_dir=True, size=0)),  # dir, both types are tested

@@ -4,18 +4,22 @@ Handle all media collection related functions
 
 import hashlib
 import io
+import json
 import logging
 import os
 import shutil
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
+from typing import Union
 
 from PIL import Image, ImageSequence, UnidentifiedImageError
+from pydantic import BaseModel
 from turbojpeg import TurboJPEG
+from typing_extensions import Self
 
 from ..config import appconfig
 
@@ -59,43 +63,52 @@ class MediaItemAllowedFileendings(str, Enum):
     mp4 = "mp4"  # video/h264/mp4
 
 
-def get_new_filename(type: MediaItemTypes = MediaItemTypes.image, visibility: bool = True) -> Path:
-    filename_ending = MediaItemAllowedFileendings.jpg.value  # image, collage, collage_image, animation_image are jpg
-    if type is MediaItemTypes.animation:
-        # only result of animation is gif, other can be jpg because more efficient and better quality.
-        filename_ending = MediaItemAllowedFileendings.gif.value
-    if type is MediaItemTypes.video:
-        # video is mp4/h264. not yet clear if thumbnail is also mp4 or a still preview(?)
-        filename_ending = MediaItemAllowedFileendings.mp4.value
-
-    return Path(
-        PATH_ORIGINAL,
-        f"{type.name}_{'show' if visibility else 'hide'}_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.{filename_ending}",
-    )
+MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
+    MediaItemTypes.image: MediaItemAllowedFileendings.jpg,
+    MediaItemTypes.collage: MediaItemAllowedFileendings.jpg,
+    MediaItemTypes.collageimage: MediaItemAllowedFileendings.jpg,
+    MediaItemTypes.animation: MediaItemAllowedFileendings.gif,
+    MediaItemTypes.animationimage: MediaItemAllowedFileendings.jpg,
+    MediaItemTypes.video: MediaItemAllowedFileendings.mp4,
+}
 
 
-def split_filename(filename):
-    splitted = Path(filename).stem.split("_", 2)
-    return splitted
+@dataclass
+class MetaDataDict:
+    media_type: MediaItemTypes = None
+    hide: bool = False
+    config: dict = field(default_factory={})
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            media_type=data.get("media_type"),
+            hide=data.get("hide"),
+            config=data.get("config"),
+        )
 
 
-def get_type(filename) -> MediaItemTypes:
-    return MediaItemTypes[split_filename(filename)[0]]
-
-
-def get_visibility(filename) -> bool:
-    return split_filename(filename)[1].lower() in ("true", "show")
-
-
-def get_caption(filename) -> str:
-    return split_filename(filename)[2]
-
-
-@dataclass(frozen=True)
+@dataclass()
 class MediaItem:
     """Class for keeping track of an media item in dict database."""
 
     filename: str = None
+    _metadata: MetaDataDict = None
+
+    # https://www.reddit.com/r/learnpython/comments/wfitql/properly_subclassing_a_dataclass_with_a_factory/
+    @classmethod
+    def create(cls, metadata: MetaDataDict) -> Self:
+        """to instanciate a new mediaitem when creating a new media item during a job.
+        if loading files, just use MediaItem() method, which skips generating a new filename.
+        """
+        filename_ending = MEDIAITEM_TYPE_TO_FILEENDING_MAPPING[metadata.media_type]
+
+        new_filename = f"{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.{filename_ending.value}"
+        kls = cls(filename=new_filename, _metadata=metadata)
+
+        kls.persist_metadata()
+
+        return kls
 
     # For call to str(). Prints readable form
     def __str__(self):
@@ -110,23 +123,11 @@ class MediaItem:
 
     @cached_property
     def caption(self) -> str:
-        return get_caption(self.filename)
+        return self.filename
 
     @cached_property
     def datetime(self) -> float:
         return os.path.getmtime(self.path_original)
-
-    @cached_property
-    def media_type(self) -> MediaItemTypes:
-        return get_type(self.filename)
-
-    @cached_property
-    def visible(self) -> bool:
-        return get_visibility(self.filename)
-
-    @cached_property
-    def data_type(self) -> str:
-        return Path(self.filename).suffix[1:]
 
     @cached_property
     def path_original(self) -> Path:
@@ -206,16 +207,101 @@ class MediaItem:
             # if not, user can sync images on his own and provide a download URL:
             return appconfig.sharing.share_custom_qr_url.format(filename=self.filename)
 
+    @property
+    def metadata_filename(self) -> Path:
+        return self.path_original.with_suffix(".json")
+
+    @property
+    def media_type(self) -> MediaItemTypes:
+        return self._metadata.media_type
+
+    @property
+    def _config(self) -> dict:
+        return self._metadata.config
+
+    @_config.setter
+    def _config(self, value: Union[dict, BaseModel]):
+        self._metadata.config = value
+        self.persist_metadata()
+
+    @property
+    def hide(self) -> bool:
+        return self._metadata.hide
+
+    @hide.setter
+    def hide(self, value: bool):
+        self._metadata.hide = value
+        self.persist_metadata()
+
+    def load_metadata(self):
+        try:
+            with open(self.metadata_filename, encoding="utf-8") as openfile:
+                self._metadata = MetaDataDict.from_dict(json.load(openfile))
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"no metadata found or error decoding! Error: {exc}") from exc
+        except Exception as exc:
+            logger.exception(exc)
+            raise RuntimeError(f"unknown error loading metadata, error: {exc}") from exc
+
+    def persist_metadata(self) -> None:
+        try:
+            with open(self.metadata_filename, "w", encoding="utf-8") as outfile:
+                json.dump(asdict(self._metadata), outfile, indent=2)
+        except Exception as exc:
+            logger.warning(f"could not save job config along with image, error: {exc}")
+
     def __post_init__(self):
         if not self.filename:
             raise ValueError("Filename must be given")
 
-        # if filename has no information about type and visibility: raise Exception
-        if not (len(split_filename(self.filename)) == 3):
-            raise ValueError(f"the original_file {self.filename} is not a valid filename")
+        # if loading files, metadata is default=None
+        if self._metadata is None:
+            # - that means, load the data
+            try:
+                self.load_metadata()
+            except Exception as exc:
+                raise RuntimeError(f"could not load metadata, error: {exc}") from exc
 
-        if not ((self.path_original).is_file()):
-            raise FileNotFoundError(f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file")
+            # - that means also, valid to check if original is a file, otherwise fail
+            if not ((self.path_original).is_file()):
+                raise FileNotFoundError(f"the original_file {self.filename} does not exist, cannot create mediaitem for nonexisting file")
+
+    def asdict(self) -> dict:
+        """
+        Returns a dict including properties used for frontend gallery,
+        excluding private __items__ and other callable functions. https://stackoverflow.com/a/51734064
+
+        If iterating over whole database with lots of items, computing the properties is slow
+        (~3 seconds for 1000items on i7). The data of the item does not change after being created so caching is used.
+        Second time the database is .asdict'ed, time reduces from 3 seconds to ~50ms which is acceptable.
+
+        # example output:
+        # "caption": "20230826-080101-985506",
+        # "datetime": 1693029662.089048,
+        # "filename": "image_True_20230826-080101-985506.jpg",
+        # "full": "data/processed/full/image_True_20230826-080101-985506.jpg",
+        # "id": "7c8271229631bb286a4489bc012217f2",
+        # "media_type": "image",
+        # "original": "data/original/image_True_20230826-080101-985506.jpg",
+        # "preview": "data/processed/preview/image_True_20230826-080101-985506.jpg",
+        # "share_url": "https://dl.qbooth.net/dl.php?action=download&id=7c8271229631bb286a4489bc012217f2",
+        # "thumbnail": "data/processed/thumbnail/image_True_20230826-080101-985506.jpg",
+        # "visible": true
+
+
+        Returns:
+            dict: MediaItems
+        """
+        out = {
+            prop: getattr(self, prop)
+            for prop in dir(self)
+            if (
+                not prop.startswith("_")  # no privates
+                and not callable(getattr(__class__, prop, None))  # no callables
+                and not isinstance(getattr(self, prop), Path)  # no path instances (not json.serializable)
+            )
+        }
+        return out
 
     def fileset_valid(self) -> bool:
         return (
@@ -254,7 +340,7 @@ class MediaItem:
         - gif PIL is used
 
         """
-        suffix = Path(PATH_ORIGINAL, self.filename).suffix
+        suffix = self.path_original.suffix
 
         if suffix.lower() in (".jpg", ".jpeg"):
             self._create_fileset_unprocessed_jpg()
@@ -476,41 +562,3 @@ class MediaItem:
         )
 
         return om
-
-    def asdict(self) -> dict:
-        """
-        Returns a dict including properties used for frontend gallery,
-        excluding private __items__ and other callable functions. https://stackoverflow.com/a/51734064
-
-        If iterating over whole database with lots of items, computing the properties is slow
-        (~3 seconds for 1000items on i7). The data of the item does not change after being created so caching is used.
-        Second time the database is .asdict'ed, time reduces from 3 seconds to ~50ms which is acceptable.
-
-        # example output:
-        # "caption": "20230826-080101-985506",
-        # "data_type": "jpg",
-        # "datetime": 1693029662.089048,
-        # "filename": "image_True_20230826-080101-985506.jpg",
-        # "full": "data/processed/full/image_True_20230826-080101-985506.jpg",
-        # "id": "7c8271229631bb286a4489bc012217f2",
-        # "media_type": "image",
-        # "original": "data/original/image_True_20230826-080101-985506.jpg",
-        # "preview": "data/processed/preview/image_True_20230826-080101-985506.jpg",
-        # "share_url": "https://dl.qbooth.net/dl.php?action=download&id=7c8271229631bb286a4489bc012217f2",
-        # "thumbnail": "data/processed/thumbnail/image_True_20230826-080101-985506.jpg",
-        # "visible": true
-
-
-        Returns:
-            dict: MediaItems
-        """
-        out = {
-            prop: getattr(self, prop)
-            for prop in dir(self)
-            if (
-                not prop.startswith("__")  # no privates
-                and not callable(getattr(__class__, prop, None))  # no callables
-                and not isinstance(getattr(self, prop), Path)  # no path instances (not json.serializable)
-            )
-        }
-        return out

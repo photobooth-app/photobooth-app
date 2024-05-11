@@ -72,7 +72,6 @@ def test_preview_filter_nonexistentfilter(client: TestClient):
 
 
 def test_apply_filter(client: TestClient):
-    pytest.skip("needs new implementation! not working yet again!")
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 

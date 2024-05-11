@@ -202,9 +202,9 @@ class GroupCollageProcessing(BaseModel):
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
-    gallery_show_individual_images: bool = Field(
+    gallery_hide_individual_images: bool = Field(
         default=False,
-        description="Show individual images of collages/animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+        description="Hide individual images of collages in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
     canvas_fill_background_enable: bool = Field(
@@ -286,9 +286,9 @@ class GroupAnimationProcessing(BaseModel):
         description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
-    gallery_show_individual_images: bool = Field(
+    gallery_hide_individual_images: bool = Field(
         default=False,
-        description="Show individual images of collages/animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+        description="Hide individual images of animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
 

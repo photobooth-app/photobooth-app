@@ -3,7 +3,6 @@ _summary_
 """
 
 import logging
-import os
 import time
 from queue import Empty, Queue
 from threading import Thread
@@ -16,7 +15,7 @@ from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing, GroupSingleImageConfigurationSet
 from .config.models.models import PilgramFilter, SinglePictureDefinition
-from .mediacollection.mediaitem import MediaItem, MediaItemTypes, get_new_filename
+from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
 from .processing.jobmodels import JobModelAnimation, JobModelBase, JobModelCollage, JobModelImage, JobModelVideo, action_type_literal
@@ -24,6 +23,13 @@ from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, 
 from .wledservice import WledService
 
 logger = logging.getLogger(__name__)
+
+
+JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE = {
+    JobModelBase.Typ.image: MediaItemTypes.image,
+    JobModelBase.Typ.collage: MediaItemTypes.collageimage,
+    JobModelBase.Typ.animation: MediaItemTypes.animationimage,
+}
 
 
 class ProcessingService(BaseService):
@@ -260,15 +266,15 @@ class ProcessingMachine(StateMachine):
 
         return config_singleimage_captures_for_animation
 
-    def get_config_based_on_media_type(self, mediaitem: MediaItem, index: int = None):
-        if mediaitem.media_type is MediaItemTypes.image:
-            config = __class__.create_config_image(self.model._job_config)  # TODO: refactor
-        elif mediaitem.media_type is MediaItemTypes.collageimage:
+    def get_config_based_on_media_type(self, media_type: MediaItemTypes, index: int = None):
+        if media_type is MediaItemTypes.image:
+            config = __class__.create_config_image(self.model._job_config)
+        elif media_type is MediaItemTypes.collageimage:
             config = __class__.create_config_collageimage(self.model._job_config, index)
-        elif mediaitem.media_type is MediaItemTypes.animationimage:
+        elif media_type is MediaItemTypes.animationimage:
             config = __class__.create_config_animationimage(self.model._job_config, index)
         else:
-            raise RuntimeError(f"illegal mediatype to process. type {mediaitem.media_type} cant be handled by {__name__}")
+            raise RuntimeError(f"illegal mediatype to process. type {media_type} cant be handled by {__name__}")
 
         return config
 
@@ -362,26 +368,20 @@ class ProcessingMachine(StateMachine):
 
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
-        _type = MediaItemTypes.image
-        _visibility = True
-        if self.model._typ is JobModelBase.Typ.collage:
-            _type = MediaItemTypes.collageimage  # 1st phase collage image
-            _visibility = self.model._job_config.gallery_show_individual_images
-        if self.model._typ is JobModelBase.Typ.animation:
-            _type = MediaItemTypes.animationimage  # 1st phase animation image
-            _visibility = self.model._job_config.gallery_show_individual_images
+        _hide = getattr(self.model._job_config, "gallery_hide_individual_images", False)
+        _type = JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE[self.model._typ]
+        _config = self.get_config_based_on_media_type(_type, self.model.number_captures_taken()).model_dump(mode="json")
 
-        filepath_neworiginalfile = get_new_filename(type=_type, visibility=_visibility)
-        logger.debug(f"capture to {filepath_neworiginalfile=}")
+        mediaitem = MediaItem.create(MetaDataDict(media_type=_type, hide=_hide, config=_config))
+        logger.debug(f"capture to {mediaitem.path_original=}")
 
         start_time_capture = time.time()
         image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.
 
-        with open(filepath_neworiginalfile, "wb") as file:
+        with open(mediaitem.path_original, "wb") as file:
             file.write(image_bytes)
 
         # populate image item for further processing:
-        mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
         self.model.set_last_capture(mediaitem)
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
@@ -412,13 +412,7 @@ class ProcessingMachine(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        self._mediaprocessing_service.process_image_collageimage_animationimage(
-            mediaitem,
-            self.get_config_based_on_media_type(
-                mediaitem,
-                self.model.number_captures_taken(),
-            ),
-        )
+        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         if not mediaitem.fileset_valid():
@@ -498,31 +492,37 @@ class ProcessingMachine(StateMachine):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
+        phase2_mediaitem: MediaItem = None
+
         if self.model._typ is JobModelBase.Typ.collage:
             # apply collage phase2 pipeline:
             tms = time.time()
 
-            # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection.copy(), self.model._job_config)
+            phase2_mediaitem = MediaItem.create(
+                MetaDataDict(
+                    media_type=MediaItemTypes.collage,
+                    hide=False,
+                    config=self.model._job_config.model_dump(mode="json"),
+                )
+            )
+            self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
-
-            # resulting collage mediaitem will be added to the collection as most recent item
-            self.model.add_confirmed_capture_to_collection(mediaitem)
-            self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
 
         elif self.model._typ is JobModelBase.Typ.animation:
             # apply animation phase2 pipeline:
             tms = time.time()
 
-            # pass copy to process_collage, so it cannot alter the model here (.pop() is called)
-            mediaitem = self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection.copy(), self.model._job_config)
+            phase2_mediaitem = MediaItem.create(
+                MetaDataDict(
+                    media_type=MediaItemTypes.animation,
+                    hide=False,
+                    config=self.model._job_config.model_dump(mode="json"),
+                )
+            )
+            self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
-
-            # resulting collage mediaitem will be added to the collection as most recent item
-            self.model.add_confirmed_capture_to_collection(mediaitem)
-            self.model.set_last_capture(mediaitem)  # set last item also to collage, so UI can rely on last capture being the one to present
 
         elif self.model._typ is JobModelBase.Typ.video:
             # apply video phase2 pipeline:
@@ -530,26 +530,28 @@ class ProcessingMachine(StateMachine):
 
             # get video in h264 format for further processing.
             temp_videofilepath = self._aquisition_service.get_recorded_video()
+            logger.debug(f"recorded to {temp_videofilepath=}")
 
             # populate image item for further processing:
-            filepath_neworiginalfile = get_new_filename(type=MediaItemTypes.video)
-            logger.debug(f"record to {filepath_neworiginalfile=}")
-
-            os.rename(temp_videofilepath, filepath_neworiginalfile)
-            mediaitem = MediaItem(os.path.basename(filepath_neworiginalfile))
-            self.model.set_last_capture(mediaitem)
-
-            mediaitem.create_fileset_unprocessed()
-            mediaitem.copy_fileset_processed()
+            phase2_mediaitem = MediaItem.create(
+                MetaDataDict(
+                    media_type=MediaItemTypes.video,
+                    hide=False,
+                    config=self.model._job_config.model_dump(mode="json"),
+                )
+            )
+            self._mediaprocessing_service.create_video(temp_videofilepath, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
-
-            # resulting collage mediaitem will be added to the collection as most recent item
-            self.model.add_confirmed_capture_to_collection(mediaitem)
 
         else:
             pass
             # nothing to do for other job type
+
+        # resulting collage mediaitem will be added to the collection as most recent item
+        if phase2_mediaitem:
+            self.model.add_confirmed_capture_to_collection(phase2_mediaitem)
+            self.model.set_last_capture(phase2_mediaitem)
 
         ## FINISH:
         # to inform frontend about new image to display
