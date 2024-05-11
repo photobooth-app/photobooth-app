@@ -30,7 +30,9 @@ from .groups.uisettings import GroupUiSettings
 
 logger = logging.getLogger(__name__)
 
-CONFIG_FILENAME = "./config/config.json"
+CONFIG_DIR = "./config/"
+CONFIG_FILENAME = "config.json"
+CONFIG_FILEPATH = f"{CONFIG_DIR}{CONFIG_FILENAME}"
 
 
 class JsonConfigSettingsSource(PydanticBaseSettingsSource):
@@ -46,7 +48,7 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
         encoding = self.config.get("env_file_encoding")
         field_value = None
         try:
-            file_content_json = json.loads(Path(CONFIG_FILENAME).read_text(encoding))
+            file_content_json = json.loads(Path(CONFIG_FILEPATH).read_text(encoding))
             field_value = file_content_json.get(field_name)
         except FileNotFoundError:
             # ignore file not found, because it could have been deleted or not yet initialized
@@ -175,19 +177,36 @@ class AppConfig(BaseSettings):
         logger.debug("persist config to json file")
 
         # if a config exists, backup before overwriting
-        if Path(CONFIG_FILENAME).exists():
-            datetimestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-            shutil.copy2(CONFIG_FILENAME, f"{CONFIG_FILENAME}_backup-{datetimestr}")
+        self.backup_config()
 
-        with open(CONFIG_FILENAME, mode="w", encoding="utf-8") as write_file:
+        # write model to disk to persist
+        with open(CONFIG_FILEPATH, mode="w", encoding="utf-8") as write_file:
             write_file.write(self.model_dump_json(indent=2))
+
+        # remove old config to not clutter the config dir
+        self.remove_old_configs()
 
     def deleteconfig(self):
         """Reset to defaults"""
         logger.debug("config reset to default")
 
         try:
-            os.remove(CONFIG_FILENAME)
-            logger.debug(f"deleted {CONFIG_FILENAME} file.")
+            os.remove(CONFIG_FILEPATH)
+            logger.debug(f"deleted {CONFIG_FILEPATH} file.")
         except (FileNotFoundError, PermissionError):
-            logger.info(f"delete {CONFIG_FILENAME} file failed.")
+            logger.warning(f"delete {CONFIG_FILEPATH} file failed.")
+
+    def backup_config(self):
+        if Path(CONFIG_FILEPATH).exists():
+            datetimestr = datetime.now().strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(CONFIG_FILEPATH, f"{CONFIG_FILEPATH}_backup-{datetimestr}")
+
+    def remove_old_configs(self):
+        KEEP_NO = 10
+
+        paths = sorted(Path(CONFIG_DIR).glob("*_backup*"), key=os.path.getmtime, reverse=True)
+
+        if len(paths) > KEEP_NO:
+            for path in paths[KEEP_NO:]:
+                logging.debug(f"deleting old config {path}")
+                os.remove(path)
