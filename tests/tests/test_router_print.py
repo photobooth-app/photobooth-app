@@ -40,7 +40,7 @@ def test_print_latest(mock_run: mock.Mock, client: TestClient):
     # enable printing
     appconfig.hardwareinputoutput.printing_enabled = True
 
-    response = client.get("/print/latest/0")
+    response = client.get("/printer/print/latest/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -53,7 +53,7 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
     # get an image to print
     mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
-    response = client.get(f"/print/{mediaitem.id}/0")
+    response = client.get(f"/printer/print/{mediaitem.id}/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -61,11 +61,12 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
 
 @patch("subprocess.run")
 def test_print_exception(mock_run: mock.Mock, client: TestClient):
+    # ensure 500 is sent if exception during enabled printing service (process command fails for example)
     mock_run.side_effect = Exception("mock error")
 
     appconfig.hardwareinputoutput.printing_enabled = True
 
-    response = client.get("/print/latest/0")
+    response = client.get("/printer/print/latest/0")
 
     assert response.status_code == 500
     mock_run.assert_called()
@@ -75,21 +76,21 @@ def test_print_exception(mock_run: mock.Mock, client: TestClient):
 def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     # get config
     appconfig.hardwareinputoutput.printing_enabled = True
-    appconfig.print.print[0].actions.printing_blocked_time = 2
+    appconfig.printer.print[0].actions.printing_blocked_time = 2
 
-    response = client.get("/print/latest/0")
+    response = client.get("/printer/print/latest/0")
 
-    time.sleep(appconfig.print.print[0].actions.printing_blocked_time / 2)
+    time.sleep(appconfig.printer.print[0].actions.printing_blocked_time / 2)
 
-    response = client.get("/print/latest/0")  # should be blocked and error
+    response = client.get("/printer/print/latest/0")  # should be blocked and error
 
     assert response.status_code == 200  # gives 200 nowadays, triggers separate event.
     mock_run.assert_called()
 
     # wait a little more until printing is fine again
-    time.sleep((appconfig.print.print[0].actions.printing_blocked_time / 2) + 0.2)
+    time.sleep((appconfig.printer.print[0].actions.printing_blocked_time / 2) + 0.2)
 
-    response = client.get("/print/latest/0")  # should give no error again
+    response = client.get("/printer/print/latest/0")  # should give no error again
 
     assert response.status_code == 200
     mock_run.assert_called()
