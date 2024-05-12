@@ -7,8 +7,8 @@ from ...services.mediacollection.mediaitem import MediaItem
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/print",
-    tags=["print"],
+    prefix="/printer",
+    tags=["printer"],
 )
 
 
@@ -27,7 +27,8 @@ def _print(mediaitem, index: int):
         ) from exc
 
 
-@router.get("/latest/{index}")
+@router.get("/print/{index}")
+@router.get("/print/latest/{index}")
 def api_print_latest(index: int = 0):
     try:
         latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
@@ -37,7 +38,7 @@ def api_print_latest(index: int = 0):
     _print(latest_mediaitem, index)
 
 
-@router.get("/{id}/{index}")
+@router.get("print/{id}/{index}")
 def api_print_item_id(id: str, index: int = 0):
     try:
         requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
