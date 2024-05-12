@@ -6,56 +6,47 @@ from pydantic_extra_types.color import Color
 from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PilgramFilter, TextsConfig
 
 
-class GroupFrontpageTriggerActions(BaseModel):
+class FrontpageTrigger(BaseModel):
     """
     Frontpage triggers configuration.
     """
 
     model_config = ConfigDict(title="Frontpage triggers configuration")
 
-    # ui config
-    # use_advanced_ui_buttons: bool = Field(
-    #     default=False,
-    #     description="Use below defined buttons instead automatic button rendering.",
-    # )
+    title: str = Field(
+        default="",
+        description="Label used for the trigger button.",
+    )
+    icon: str = Field(
+        default="",
+        description="Icon used for the trigger button (any icon from material icons, see documentation).",
+    )
 
-    title: str = ""
-    icon: str = ""
-    klass: str = ""
 
-
-class GroupKeyboardTriggerActions(BaseModel):
+class KeyboardTrigger(BaseModel):
     """
     Configure trigger the user can interact with. Sources are GPIO and keyboard.
     """
 
     model_config = ConfigDict(title="Keyboard triggers configuration")
 
-    # keyboard config
-    # keyboard_input_enabled: bool = Field(
-    #     default=False,
-    #     description="Enable keyboard input globally. Keyup is catched in browsers connected to the app.",
-    # )
     keycode: str = Field(
         default="",
         description="Define keyboard keys to trigger actions.",
     )
 
 
-class GroupGpioTriggerActions(BaseModel):
+class GpioTrigger(BaseModel):
     """
     Configure trigger the user can interact with. Sources are GPIO and keyboard.
     """
 
     model_config = ConfigDict(title="GPIO triggers configuration")
 
-    # gpio config
-    # gpio_enabled: bool = Field(
-    #     default=False,
-    #     description="Enable GPIO globally. Works only on Raspberry Pi.",
-    # )
-
-    pin: int = None
+    pin: str = Field(
+        default="",
+        description="GPIO the button is connected to.",
+    )
 
     trigger_on: Literal["pressed", "released", "longpress"] = Field(
         default="pressed",
@@ -63,28 +54,25 @@ class GroupGpioTriggerActions(BaseModel):
     )
 
 
-class GroupTrigger(BaseModel):
+class Trigger(BaseModel):
     """
     Configure trigger the user can interact with. Sources are GPIO and keyboard.
     """
 
-    model_config = ConfigDict(title="Trigger action configuration")
+    model_config = ConfigDict(title="Trigger configuration")
 
-    # ui config
-    frontpage_trigger_actions: GroupFrontpageTriggerActions = GroupFrontpageTriggerActions()
-    keyboard_trigger_actions: GroupKeyboardTriggerActions = GroupKeyboardTriggerActions()
-    gpio_trigger_actions: GroupGpioTriggerActions = GroupGpioTriggerActions()
+    frontpage_trigger: FrontpageTrigger = FrontpageTrigger()
+    keyboard_trigger: KeyboardTrigger = KeyboardTrigger()
+    gpio_trigger: GpioTrigger = GpioTrigger()
 
 
-class GroupSingleImageProcessing(BaseModel):
+class SingleImageProcessing(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
 
     filter: PilgramFilter = Field(
-        title="Pic1 Filter",
         default=PilgramFilter.original,
-        description="Instagram-like filter to apply per default. 'original' applies no filter.",
     )
     fill_background_enable: bool = Field(
         default=False,
@@ -99,42 +87,34 @@ class GroupSingleImageProcessing(BaseModel):
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
     img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.jpg",
+        default="",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
     img_frame_enable: bool = Field(
-        default=True,
+        default=False,
         description="Mount captured image to frame.",
     )
     img_frame_file: str = Field(
-        default="frames/pixabay-holidays-1798208_1920.png",
+        default="",
         description="Image file to which the captured image is mounted to. Frame determines the output image size! Photos are visible through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
     )
     texts_enable: bool = Field(
-        default=True,
+        default=False,
         description="General enable apply texts below.",
     )
     texts: list[TextsConfig] = Field(
-        default=[
-            TextsConfig(
-                text="Made with the photobooth-app",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
-                pos_x=100,
-                pos_y=1300,
-                rotate=0,
-                color=Color("#ccc").as_hex(),
-            ),
-        ],
+        default=[],
         description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
 
 
-class GroupCollageProcessing(BaseModel):
+class CollageProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
     model_config = ConfigDict(title="Process collage after capture")
 
     ask_approval_each_capture: bool = Field(
-        default=True,
+        default=False,
         description="Stop after every capture to ask user if he would like to continue or redo the capture. If disabled captures are granted as approved always.",
     )
     approve_autoconfirm_timeout: float = Field(
@@ -157,7 +137,7 @@ class GroupCollageProcessing(BaseModel):
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
     capture_img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.jpg",
+        default="",
         description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
     )
 
@@ -172,33 +152,6 @@ class GroupCollageProcessing(BaseModel):
         description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     merge_definition: list[CollageMergeDefinition] = Field(
-        default=[
-            CollageMergeDefinition(
-                pos_x=160,
-                pos_y=220,
-                width=510,
-                height=725,
-                rotate=0,
-                filter=PilgramFilter.earlybird,
-            ),
-            CollageMergeDefinition(
-                pos_x=705,
-                pos_y=66,
-                width=510,
-                height=725,
-                rotate=0,
-                predefined_image="predefined_images/photobooth-collage-predefined-image.png",
-                filter=PilgramFilter.original,
-            ),
-            CollageMergeDefinition(
-                pos_x=1245,
-                pos_y=220,
-                width=510,
-                height=725,
-                rotate=0,
-                filter=PilgramFilter.reyes,
-            ),
-        ],
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
@@ -220,36 +173,28 @@ class GroupCollageProcessing(BaseModel):
         description="Add image from file to background.",
     )
     canvas_img_background_file: str = Field(
-        default="backgrounds/pink-7761356_1920.jpg",
+        default="",
         description="Image file to use as background filling transparent area. File needs to be located in userdata/*",
     )
     canvas_img_front_enable: bool = Field(
-        default=True,
+        default=False,
         description="Overlay image on canvas image.",
     )
     canvas_img_front_file: str = Field(
-        default="frames/pixabay-poster-2871536_1920.png",
+        default="",
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
     )
     canvas_texts_enable: bool = Field(
-        default=True,
+        default=False,
         description="General enable apply texts below.",
     )
     canvas_texts: list[TextsConfig] = Field(
-        default=[
-            TextsConfig(
-                text="Have a nice day :)",
-                pos_x=200,
-                pos_y=1100,
-                rotate=1,
-                color=Color("#333").as_hex(),
-            ),
-        ],
+        default=[],
         description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
     )
 
 
-class GroupAnimationProcessing(BaseModel):
+class AnimationProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
     model_config = ConfigDict(title="Process Animation (GIF) after capture")
@@ -274,15 +219,7 @@ class GroupAnimationProcessing(BaseModel):
         description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     merge_definition: list[AnimationMergeDefinition] = Field(
-        default=[
-            AnimationMergeDefinition(filter=PilgramFilter.crema),
-            AnimationMergeDefinition(filter=PilgramFilter.inkwell),
-            AnimationMergeDefinition(
-                duration=4000,
-                filter=PilgramFilter.original,
-                predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
-            ),
-        ],
+        default=[],
         description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
@@ -292,7 +229,7 @@ class GroupAnimationProcessing(BaseModel):
     )
 
 
-class GroupVideoProcessing(BaseModel):
+class VideoProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
     model_config = ConfigDict(title="Video Actions")
@@ -313,22 +250,22 @@ class GroupVideoProcessing(BaseModel):
     )
 
 
-class GroupPrintingProcessing(BaseModel):
+class PrinterProcessing(BaseModel):
     """Configure options to print images."""
 
     model_config = ConfigDict(title="Printing Actions")
 
     printing_command: str = Field(
-        default="mspaint /p {filename}",
+        # default="",
         description="Command issued to print. Use {filename} as placeholder for the JPEG image to be printed.",
     )
     printing_blocked_time: int = Field(
-        default=10,
+        # default=10,
         description="Block queue print until time is passed. Time in seconds.",
     )
 
 
-class GroupSingleImageConfigurationSet(BaseModel):
+class SingleImageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
@@ -336,14 +273,11 @@ class GroupSingleImageConfigurationSet(BaseModel):
         default="default single image settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: GroupSingleImageProcessing = GroupSingleImageProcessing()
-    trigger: GroupTrigger = GroupTrigger(
-        gpio_trigger_actions=GroupGpioTriggerActions(pin=27),
-        keyboard_trigger_actions=GroupKeyboardTriggerActions(keycode="i"),
-    )
+    actions: SingleImageProcessing
+    trigger: Trigger
 
 
-class GroupCollageConfigurationSet(BaseModel):
+class CollageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
@@ -351,14 +285,11 @@ class GroupCollageConfigurationSet(BaseModel):
         default="default collage settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: GroupCollageProcessing = GroupCollageProcessing()
-    trigger: GroupTrigger = GroupTrigger(
-        gpio_trigger_actions=GroupGpioTriggerActions(pin=22),
-        keyboard_trigger_actions=GroupKeyboardTriggerActions(keycode="c"),
-    )
+    actions: CollageProcessing
+    trigger: Trigger
 
 
-class GroupAnimationConfigurationSet(BaseModel):
+class AnimationConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
@@ -366,14 +297,11 @@ class GroupAnimationConfigurationSet(BaseModel):
         default="default animation settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: GroupAnimationProcessing = GroupAnimationProcessing()
-    trigger: GroupTrigger = GroupTrigger(
-        gpio_trigger_actions=GroupGpioTriggerActions(pin=24),
-        keyboard_trigger_actions=GroupKeyboardTriggerActions(keycode="g"),
-    )
+    actions: AnimationProcessing
+    trigger: Trigger
 
 
-class GroupVideoConfigurationSet(BaseModel):
+class VideoConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
@@ -381,14 +309,11 @@ class GroupVideoConfigurationSet(BaseModel):
         default="default video settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: GroupVideoProcessing = GroupVideoProcessing()
-    trigger: GroupTrigger = GroupTrigger(
-        gpio_trigger_actions=GroupGpioTriggerActions(pin=26),
-        keyboard_trigger_actions=GroupKeyboardTriggerActions(keycode="v"),
-    )
+    actions: VideoProcessing
+    trigger: Trigger
 
 
-class GroupPrintingConfigurationSet(BaseModel):
+class PrintingConfigurationSet(BaseModel):
     """Configure stages how to process mediaitem before printing on paper."""
 
     model_config = ConfigDict(title="Process mediaitem before printing on paper")
@@ -397,11 +322,8 @@ class GroupPrintingConfigurationSet(BaseModel):
         default="default print settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: GroupPrintingProcessing = GroupPrintingProcessing()
-    trigger: GroupTrigger = GroupTrigger(
-        gpio_trigger_actions=GroupGpioTriggerActions(pin=23),
-        keyboard_trigger_actions=GroupKeyboardTriggerActions(keycode="p"),
-    )
+    actions: PrinterProcessing
+    trigger: Trigger
 
 
 class GroupActions(BaseModel):
@@ -411,45 +333,160 @@ class GroupActions(BaseModel):
 
     model_config = ConfigDict(title="Actions configuration")
 
-    image: list[GroupSingleImageConfigurationSet] = Field(
+    image: list[SingleImageConfigurationSet] = Field(
         default=[
-            GroupSingleImageConfigurationSet(),
+            SingleImageConfigurationSet(
+                actions=SingleImageProcessing(
+                    img_background_enable=True,
+                    img_background_file="backgrounds/pink-7761356_1920.jpg",
+                    img_frame_enable=True,
+                    img_frame_file="frames/pixabay-holidays-1798208_1920.png",
+                    texts_enable=True,
+                    texts=[
+                        TextsConfig(
+                            text="Made with the photobooth-app",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
+                            pos_x=100,
+                            pos_y=1300,
+                            rotate=0,
+                            color=Color("#ccc").as_hex(),
+                        )
+                    ],
+                ),
+                trigger=Trigger(
+                    frontpage_trigger=FrontpageTrigger(title="Image", icon="o_photo_camera"),
+                    gpio_trigger=GpioTrigger(pin="27"),
+                    keyboard_trigger=KeyboardTrigger(keycode="i"),
+                ),
+            ),
         ],
         description="Capture single images.",
     )
 
-    collage: list[GroupCollageConfigurationSet] = Field(
+    collage: list[CollageConfigurationSet] = Field(
         default=[
-            GroupCollageConfigurationSet(),
+            CollageConfigurationSet(
+                actions=CollageProcessing(
+                    ask_approval_each_capture=True,
+                    canvas_width=1920,
+                    canvas_height=1280,
+                    merge_definition=[
+                        CollageMergeDefinition(
+                            pos_x=160,
+                            pos_y=220,
+                            width=510,
+                            height=725,
+                            rotate=0,
+                            filter=PilgramFilter.earlybird,
+                        ),
+                        CollageMergeDefinition(
+                            pos_x=705,
+                            pos_y=66,
+                            width=510,
+                            height=725,
+                            rotate=0,
+                            predefined_image="predefined_images/photobooth-collage-predefined-image.png",
+                            filter=PilgramFilter.original,
+                        ),
+                        CollageMergeDefinition(
+                            pos_x=1245,
+                            pos_y=220,
+                            width=510,
+                            height=725,
+                            rotate=0,
+                            filter=PilgramFilter.reyes,
+                        ),
+                    ],
+                    gallery_hide_individual_images=False,
+                    canvas_img_front_enable=True,
+                    canvas_img_front_file="frames/pixabay-poster-2871536_1920.png",
+                    canvas_texts_enable=True,
+                    canvas_texts=[
+                        TextsConfig(
+                            text="Have a nice day :)",
+                            pos_x=200,
+                            pos_y=1100,
+                            rotate=1,
+                            color=Color("#333").as_hex(),
+                        )
+                    ],
+                ),
+                trigger=Trigger(
+                    frontpage_trigger=FrontpageTrigger(title="Collage", icon="o_auto_awesome_mosaic"),
+                    gpio_trigger=GpioTrigger(pin="22"),
+                    keyboard_trigger=KeyboardTrigger(keycode="c"),
+                ),
+            )
         ],
         description="Capture collages consist of one or more still images.",
     )
 
-    animation: list[GroupAnimationConfigurationSet] = Field(
+    animation: list[AnimationConfigurationSet] = Field(
         default=[
-            GroupAnimationConfigurationSet(),
+            AnimationConfigurationSet(
+                actions=AnimationProcessing(
+                    ask_approval_each_capture=False,
+                    canvas_width=1500,
+                    canvas_height=900,
+                    merge_definition=[
+                        AnimationMergeDefinition(filter=PilgramFilter.crema),
+                        AnimationMergeDefinition(filter=PilgramFilter.inkwell),
+                        AnimationMergeDefinition(
+                            duration=4000,
+                            filter=PilgramFilter.original,
+                            predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
+                        ),
+                    ],
+                    gallery_hide_individual_images=True,
+                ),
+                trigger=Trigger(
+                    frontpage_trigger=FrontpageTrigger(title="Animation", icon="o_gif_box"),
+                    gpio_trigger=GpioTrigger(pin="24"),
+                    keyboard_trigger=KeyboardTrigger(keycode="g"),
+                ),
+            ),
         ],
         description="Capture GIF animation sequence consist of one or more still images. It's not a video but a low number of still images.",
     )
 
-    video: list[GroupVideoConfigurationSet] = Field(
+    video: list[VideoConfigurationSet] = Field(
         default=[
-            GroupVideoConfigurationSet(),
+            VideoConfigurationSet(
+                name="default boomerang video",
+                actions=VideoProcessing(
+                    video_duration=5,
+                    boomerang=True,
+                    video_framerate=15,
+                ),
+                trigger=Trigger(
+                    frontpage_trigger=FrontpageTrigger(title="Video", icon="o_movie"),
+                    gpio_trigger=GpioTrigger(pin="26"),
+                    keyboard_trigger=KeyboardTrigger(keycode="v"),
+                ),
+            ),
         ],
         description="Capture videos from live streaming backend.",
     )
 
 
-class GroupPrintActions(BaseModel):
+class GroupPrinter(BaseModel):
     """
     Configure actions like capture photo, video, collage and animations.
     """
 
-    model_config = ConfigDict(title="Actions configuration")
+    model_config = ConfigDict(title="Printer configuration")
 
-    print: list[GroupPrintingConfigurationSet] = Field(
+    print: list[PrintingConfigurationSet] = Field(
         default=[
-            GroupPrintingConfigurationSet(),
+            PrintingConfigurationSet(
+                actions=PrinterProcessing(
+                    printing_command="mspaint /p {filename}",
+                    printing_blocked_time=10,
+                ),
+                trigger=Trigger(
+                    gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
+                    keyboard_trigger=KeyboardTrigger(keycode="p"),
+                ),
+            )
         ],
         description="Process media items before printing.",
     )
