@@ -16,7 +16,7 @@ from ..utils.exceptions import PipelineError
 from ..utils.helper import get_user_file
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing, GroupVideoProcessing
+from .config.groups.actions import AnimationProcessing, CollageProcessing, VideoProcessing
 from .config.models.models import SinglePictureDefinition, TextsConfig
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes
 from .mediaprocessing.animation_pipelinestages import align_sizes_stage
@@ -207,7 +207,7 @@ class MediaprocessingService(BaseService):
         tms = time.time()
 
         # get config from mediaitem, that is passed as json dict (model_dump) along with it
-        _config = GroupCollageProcessing(**mediaitem._config)
+        _config = CollageProcessing(**mediaitem._config)
 
         ## prepare: create canvas
         canvas_size = (_config.canvas_width, _config.canvas_height)
@@ -274,7 +274,7 @@ class MediaprocessingService(BaseService):
         tms = time.time()
 
         # get config from mediaitem, that is passed as json dict (model_dump) along with it
-        _config = GroupAnimationProcessing(**mediaitem._config)
+        _config = AnimationProcessing(**mediaitem._config)
 
         ## prepare: create canvas
         canvas_size = (_config.canvas_width, _config.canvas_height)
@@ -341,7 +341,7 @@ class MediaprocessingService(BaseService):
         tms = time.time()
 
         # get config from mediaitem, that is passed as json dict (model_dump) along with it
-        _config = GroupVideoProcessing(**mediaitem._config)
+        _config = VideoProcessing(**mediaitem._config)
 
         os.rename(temp_videofilepath, mediaitem.path_original)
 

@@ -3,10 +3,10 @@ from typing import Literal, Union
 
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
-    GroupAnimationProcessing,
-    GroupCollageProcessing,
-    GroupSingleImageProcessing,
-    GroupVideoProcessing,
+    AnimationProcessing,
+    CollageProcessing,
+    SingleImageProcessing,
+    VideoProcessing,
 )
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..mediacollection.mediaitem import MediaItem
@@ -25,7 +25,7 @@ class JobModelBase:
 
     def __init__(
         self,
-        job_config: Union[GroupSingleImageProcessing, GroupCollageProcessing, GroupAnimationProcessing, GroupVideoProcessing],
+        job_config: Union[SingleImageProcessing, CollageProcessing, AnimationProcessing, VideoProcessing],
     ):
         self._typ: __class__.Typ = __class__.Typ.undefined
         self._job_config = job_config
@@ -148,7 +148,7 @@ class JobModelBase:
 
 
 class JobModelImage(JobModelBase):
-    def __init__(self, job_config: GroupSingleImageProcessing):
+    def __init__(self, job_config: SingleImageProcessing):
         super().__init__(job_config)
         self._typ: __class__.Typ = __class__.Typ.image
 
@@ -158,7 +158,7 @@ class JobModelImage(JobModelBase):
 
 
 class JobModelCollage(JobModelBase):
-    def __init__(self, job_config: GroupCollageProcessing):
+    def __init__(self, job_config: CollageProcessing):
         super().__init__(job_config)
         self._typ: __class__.Typ = __class__.Typ.collage
 
@@ -169,7 +169,7 @@ class JobModelCollage(JobModelBase):
 
 
 class JobModelAnimation(JobModelBase):
-    def __init__(self, job_config: GroupAnimationProcessing):
+    def __init__(self, job_config: AnimationProcessing):
         super().__init__(job_config)
         self._typ: __class__.Typ = __class__.Typ.animation
 
@@ -180,7 +180,7 @@ class JobModelAnimation(JobModelBase):
 
 
 class JobModelVideo(JobModelBase):
-    def __init__(self, job_config: GroupVideoProcessing):
+    def __init__(self, job_config: VideoProcessing):
         super().__init__(job_config)
         self._typ: __class__.Typ = __class__.Typ.video
 

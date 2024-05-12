@@ -16,7 +16,7 @@ from pydantic import PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-from .groups.actions import GroupActions, GroupPrintActions
+from .groups.actions import GroupActions, GroupPrinter
 from .groups.backends import GroupBackends
 from .groups.common import GroupCommon
 from .groups.filetransfer import GroupFileTransfer
@@ -91,7 +91,7 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     actions: GroupActions = GroupActions()
-    print: GroupPrintActions = GroupPrintActions()
+    printer: GroupPrinter = GroupPrinter()
     sharing: GroupSharing = GroupSharing()
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()

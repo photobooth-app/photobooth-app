@@ -13,7 +13,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import GroupPrintingConfigurationSet
+from .config.groups.actions import PrintingConfigurationSet
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
@@ -138,10 +138,10 @@ class GpioService(BaseService):
 
             self._logger.debug(f"finished setup: {btn}")
 
-    def _setup_print_button(self, print_config: GroupPrintingConfigurationSet, index: int):
+    def _setup_print_button(self, print_config: PrintingConfigurationSet, index: int):
         try:
-            pin = print_config.trigger.gpio_trigger_actions.pin
-            trigger_on = print_config.trigger.gpio_trigger_actions.trigger_on
+            pin = print_config.trigger.gpio_trigger.pin
+            trigger_on = print_config.trigger.gpio_trigger.trigger_on
 
             if not pin:
                 self._logger.info(f"skip register print config {index=} because pin empty")

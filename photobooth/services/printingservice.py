@@ -72,7 +72,7 @@ class PrintingService(BaseService):
 
         # get config
         try:
-            config = appconfig.print.print[config_index].actions
+            config = appconfig.printer.print[config_index].actions
         except Exception as exc:
             self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
             raise exc

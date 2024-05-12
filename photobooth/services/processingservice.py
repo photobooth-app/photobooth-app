@@ -13,7 +13,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import GroupAnimationProcessing, GroupCollageProcessing, GroupSingleImageConfigurationSet
+from .config.groups.actions import AnimationProcessing, CollageProcessing, SingleImageConfigurationSet
 from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
@@ -231,13 +231,13 @@ class ProcessingMachine(StateMachine):
         super().__init__(model=jobmodel)
 
     @staticmethod
-    def create_config_image(job_config: GroupSingleImageConfigurationSet) -> SinglePictureDefinition:
+    def create_config_image(job_config: SingleImageConfigurationSet) -> SinglePictureDefinition:
         config_singleimage = SinglePictureDefinition(**job_config.model_dump())
 
         return config_singleimage
 
     @staticmethod
-    def create_config_collageimage(job_config: GroupCollageProcessing, index: int = None) -> SinglePictureDefinition:
+    def create_config_collageimage(job_config: CollageProcessing, index: int = None) -> SinglePictureDefinition:
         # list only captured_images from merge_definition (excludes predefined)
         captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
 
@@ -254,7 +254,7 @@ class ProcessingMachine(StateMachine):
         return config_singleimage_captures_for_collage
 
     @staticmethod
-    def create_config_animationimage(job_config: GroupAnimationProcessing, index: int = None) -> SinglePictureDefinition:
+    def create_config_animationimage(job_config: AnimationProcessing, index: int = None) -> SinglePictureDefinition:
         # list only captured_images from merge_definition (excludes predefined)
         captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
 
