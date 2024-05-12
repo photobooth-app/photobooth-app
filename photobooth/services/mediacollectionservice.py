@@ -70,7 +70,7 @@ class MediacollectionService(BaseService):
                 self.db_add_item(mediaitem)
 
             except Exception as exc:
-                self._logger.error(f"file {filename} processing failed. file ignored. {exc}")
+                self._logger.warning(f"file {filename} processing failed. file ignored, reason: {exc}")
 
         self._logger.info(f"initialized image DB, added {self.number_of_images} valid images")
         self._logger.info(f"-- process time: {round((time.time() - start_time_initialize), 2)}s to initialize mediacollection")
