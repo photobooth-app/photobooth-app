@@ -13,7 +13,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import PrintingConfigurationSet
+from .config.groups.actions import GpioTrigger
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .printingservice import PrintingService
@@ -110,10 +110,10 @@ class GpioService(BaseService):
             # other errors
             self._logger.critical(exc)
 
-    def _setup_action_button(self, action_type: action_type_literal, action_config, index: int):
+    def _setup_action_button(self, action_type: action_type_literal, gpio_trigger: GpioTrigger, index: int):
         try:
-            pin = action_config.trigger.gpio_trigger_actions.pin
-            trigger_on = action_config.trigger.gpio_trigger_actions.trigger_on
+            pin = gpio_trigger.pin
+            trigger_on = gpio_trigger.trigger_on
 
             btn = ActionButton(
                 action_type=action_type,
@@ -138,10 +138,10 @@ class GpioService(BaseService):
 
             self._logger.debug(f"finished setup: {btn}")
 
-    def _setup_print_button(self, print_config: PrintingConfigurationSet, index: int):
+    def _setup_print_button(self, gpio_trigger: GpioTrigger, index: int):
         try:
-            pin = print_config.trigger.gpio_trigger.pin
-            trigger_on = print_config.trigger.gpio_trigger.trigger_on
+            pin = gpio_trigger.pin
+            trigger_on = gpio_trigger.trigger_on
 
             if not pin:
                 self._logger.info(f"skip register print config {index=} because pin empty")
@@ -188,16 +188,16 @@ class GpioService(BaseService):
 
         # action buttons dynamic registering
         for index, config in enumerate(appconfig.actions.image):
-            self._setup_action_button("image", config, index)
+            self._setup_action_button("image", config.trigger.gpio_trigger, index)
         for index, config in enumerate(appconfig.actions.collage):
-            self._setup_action_button("collage", config, index)
+            self._setup_action_button("collage", config.trigger.gpio_trigger, index)
         for index, config in enumerate(appconfig.actions.animation):
-            self._setup_action_button("animation", config, index)
+            self._setup_action_button("animation", config.trigger.gpio_trigger, index)
         for index, config in enumerate(appconfig.actions.video):
-            self._setup_action_button("video", config, index)
+            self._setup_action_button("video", config.trigger.gpio_trigger, index)
 
         for index, config in enumerate(appconfig.printer.print):
-            self._setup_print_button(config, index)
+            self._setup_print_button(config.trigger.gpio_trigger, index)
 
     def start(self):
         super().set_status_started()
