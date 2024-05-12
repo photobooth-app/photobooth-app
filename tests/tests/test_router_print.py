@@ -30,7 +30,7 @@ def client() -> TestClient:
 def test_printing_disabled(client: TestClient):
     # default printing is disabled, try to print gives a 405
 
-    response = client.get("/print/latest/0")
+    response = client.get("/printer/print/latest/0")
 
     assert response.status_code == 200
 

@@ -38,7 +38,7 @@ def api_print_latest(index: int = 0):
     _print(latest_mediaitem, index)
 
 
-@router.get("print/{id}/{index}")
+@router.get("/print/{id}/{index}")
 def api_print_item_id(id: str, index: int = 0):
     try:
         requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
