@@ -59,6 +59,18 @@ class GroupMediaprocessing(BaseModel):
         description="Width of resized thumbnail image, height is automatically calculated to keep aspect ratio",
     )
 
+    video_bitrate: int = Field(
+        default=3000,
+        ge=1000,
+        le=10000,
+        description="Video quality bitrate in k.",
+    )
+
+    video_compatibility_mode: bool = Field(
+        default=False,
+        description="Enable for improved video compatibility on iOS devices. Might reduce resulting quality slightly.",
+    )
+
     removechromakey_enable: bool = Field(
         default=False,
         description="Apply chromakey greenscreen removal from captured images",

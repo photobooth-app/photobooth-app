@@ -421,14 +421,14 @@ class AbstractBackend(ABC):
             "-preset",
             "veryfast",
             "-b:v",
-            f"{appconfig.misc.video_bitrate}k",
+            f"{appconfig.mediaprocessing.video_bitrate}k",
             "-movflags",
             "+faststart",
             "-r",
             f"{self._video_framerate}",
         ]
         command_video_output_compat_mode = []
-        if appconfig.misc.video_compatibility_mode:
+        if appconfig.mediaprocessing.video_compatibility_mode:
             # fixes #233. needs more cpu and seems deprecated, maybe in future it will be configurable to disable
             command_video_output_compat_mode = [
                 "-pix_fmt",

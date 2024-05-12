@@ -248,7 +248,7 @@ class Picamera2Backend(AbstractBackend):
 
     def start_recording(self):
         self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
-        self._video_encoder = H264Encoder(appconfig.misc.video_bitrate * 1000)  # bitrate in k in appconfig, so *1000
+        self._video_encoder = H264Encoder(appconfig.mediaprocessing.video_bitrate * 1000)  # bitrate in k in appconfig, so *1000
         self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")

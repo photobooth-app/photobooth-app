@@ -3,7 +3,7 @@ AppConfig class providing central config
 
 """
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class GroupMisc(BaseModel):
@@ -12,15 +12,3 @@ class GroupMisc(BaseModel):
     """
 
     model_config = ConfigDict(title="Miscellaneous Config")
-
-    video_bitrate: int = Field(
-        default=3000,
-        ge=1000,
-        le=10000,
-        description="Video quality bitrate in k.",
-    )
-
-    video_compatibility_mode: bool = Field(
-        default=False,
-        description="Enable for improved video compatibility on iOS devices. Might reduce resulting quality slightly.",
-    )
