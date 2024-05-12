@@ -19,17 +19,6 @@ from .routers.static import static_router
 
 logger = logging.getLogger(f"{__name__}")
 
-FASTAPI_DECRIPTION = """
-Photobooth App 🚀
-
-The photobooth app is written in Python and coming along with a modern Vue frontend.
-
-Following api is provided by the app.
-
-## API may change any time.
-
-"""
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -68,13 +57,13 @@ def _create_app() -> FastAPI:
     container.logging_service.start()
 
     _app = FastAPI(
-        title="Photobooth App API",
-        description=FASTAPI_DECRIPTION,
+        title="Photobooth-App API",
+        description="API may change any time.",
         version=__version__,
         contact={
             "name": "mgineer85",
             "url": "https://github.com/photobooth-app/photobooth-app",
-            "email": "me@mgrl.de",
+            "email": "me@mgineer85.de",
         },
         license_info={
             "name": "MIT",
