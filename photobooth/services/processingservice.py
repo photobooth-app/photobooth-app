@@ -540,7 +540,7 @@ class ProcessingMachine(StateMachine):
                     config=self.model._job_config.model_dump(mode="json"),
                 )
             )
-            self._mediaprocessing_service.create_video(temp_videofilepath, phase2_mediaitem)
+            self._mediaprocessing_service.process_video(temp_videofilepath, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
 

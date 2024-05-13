@@ -29,6 +29,7 @@ from .mediaprocessing.image_pipelinestages import (
     removechromakey_stage,
     text_stage,
 )
+from .mediaprocessing.video_pipelinestages import boomerang_stage
 from .sseservice import SseService
 
 turbojpeg = TurboJPEG()
@@ -201,6 +202,27 @@ class MediaprocessingService(BaseService):
 
         return mediaitem
 
+    def process_video(self, video_in: Path, mediaitem: MediaItem):
+        """apply preconfigured pipeline."""
+
+        tms = time.time()
+        video_proc: Path = video_in
+
+        # get config from mediaitem, that is passed as json dict (model_dump) along with it
+        _config = VideoProcessing(**mediaitem._config)
+
+        ## stage: boomerang video
+        if _config.boomerang:
+            logger.info("boomerang stage to apply")
+            video_proc = boomerang_stage(video_proc)
+
+        # create final video
+        os.rename(video_proc, mediaitem.path_original)
+        mediaitem.create_fileset_unprocessed()
+        mediaitem.copy_fileset_processed()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
+
     def create_collage(self, captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
         """apply preconfigured pipeline."""
 
@@ -333,19 +355,4 @@ class MediaprocessingService(BaseService):
         tms = time.time()
         mediaitem.create_fileset_unprocessed()
         mediaitem.copy_fileset_processed()
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
-
-    def create_video(self, temp_videofilepath: Path, mediaitem: MediaItem):
-        """apply preconfigured pipeline."""
-
-        tms = time.time()
-
-        # get config from mediaitem, that is passed as json dict (model_dump) along with it
-        _config = VideoProcessing(**mediaitem._config)
-
-        os.rename(temp_videofilepath, mediaitem.path_original)
-
-        mediaitem.create_fileset_unprocessed()
-        mediaitem.copy_fileset_processed()
-
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
