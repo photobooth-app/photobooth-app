@@ -155,6 +155,11 @@ def test_video(_container: Container):
 
     # ensure written video is about in tolerance duration
     default_video_duration = appconfig.actions.video[0].actions.video_duration
+
+    # boomerang reverses video so double length
+    if appconfig.actions.video[0].actions.boomerang:
+        default_video_duration *= 2
+
     assert abs(round(video_duration(video_item.path_original), 1) - default_video_duration) < 1
 
 
@@ -173,7 +178,8 @@ def test_video_stop_early(_container: Container):
             raise RuntimeError("timed out waiting for record to start!")
 
     # recording active, wait 3 secs before stopping.
-    time.sleep(3)
+    desired_video_duration = 3
+    time.sleep(desired_video_duration)
     _container.processing_service.trigger_action("video", 0)
     _container.processing_service.wait_until_job_finished()
 
@@ -186,4 +192,9 @@ def test_video_stop_early(_container: Container):
     # ensure written video is about in tolerance duration
     video_duration_seconds = abs(round(video_duration(video_item.path_original), 1))
     logger.info(f"{video_duration_seconds=}")
-    assert (video_duration_seconds - 3) < 0.5
+
+    # boomerang reverses video so double length
+    if appconfig.actions.video[0].actions.boomerang:
+        desired_video_duration *= 2
+
+    assert (video_duration_seconds - desired_video_duration) < 1
