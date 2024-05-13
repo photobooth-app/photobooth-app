@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 # ffmpeg -stream_loop 3 -i .\output_looped_video.mp4 -c copy output-stream.mp4
 
 # https://medium.com/@caglarispirli/make-boomerang-w-single-ffmpeg-command-ae6c672acb7
-# ffmpeg -i avmsakini_story.mp4 -filter_complex “[0]trim=start=3.5:end=5.5,setpts=0.5*PTS-STARTPTS,split[out0][out1];[out0]reverse[r];[out1][r]concat,loop=2:250,setpts=N/25/TB[out]” -map [out] out4.mp4
+# ffmpeg -i avmsakini_story.mp4 -filter_complex “[0]trim=start=3.5:end=5.5,setpts=0.5*PTS-STARTPTS,
+# split[out0][out1];[out0]reverse[r];[out1][r]concat,loop=2:250,setpts=N/25/TB[out]” -map [out] out4.mp4
 
 
 def boomerang_stage(video_in: Path) -> Path:
