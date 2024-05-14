@@ -157,6 +157,7 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"camera_config: {self._picamera2.camera_config}")
         logger.info(f"camera_controls: {self._picamera2.camera_controls}")
         logger.info(f"controls: {self._picamera2.controls}")
+        logger.info(f"camera_properties: {self._picamera2.camera_properties}")
 
         self.set_ae_exposure(self._config.AE_EXPOSURE_MODE)
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
