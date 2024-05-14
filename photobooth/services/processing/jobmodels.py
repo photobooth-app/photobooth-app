@@ -73,6 +73,11 @@ class JobModelBase:
         Returns:
             dict: _description_
         """
+        confirmed_captures_collection = (
+            [captured_item.asdict() for captured_item in self._confirmed_captures_collection] if self._confirmed_captures_collection else []
+        )
+        last_captured_mediaitem = self._last_captured_mediaitem.asdict() if self._last_captured_mediaitem else None
+
         out = dict(
             state=self.state,
             typ=self._typ,
@@ -81,10 +86,8 @@ class JobModelBase:
             number_captures_taken=self.number_captures_taken(),
             duration=self._duration_user,
             ask_user_for_approval=self.ask_user_for_approval(),
-            confirmed_captures_collection=[captured_item.asdict() for captured_item in self._confirmed_captures_collection]
-            if self._confirmed_captures_collection
-            else [],
-            last_captured_mediaitem=self._last_captured_mediaitem.asdict() if self._last_captured_mediaitem else None,
+            confirmed_captures_collection=confirmed_captures_collection,
+            last_captured_mediaitem=last_captured_mediaitem,
         )
 
         return out
