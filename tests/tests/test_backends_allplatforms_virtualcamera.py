@@ -48,7 +48,7 @@ def test_get_images_virtualcamera_force_processexit_ensure_recovery(backend_virt
 
     # force process to exit, which equals a device failing.
     logger.info("killing virtualcamera process to simulate failing device")
-    backend_virtual._virtualcamera_process.terminate()
+    backend_virtual._worker_thread.stop()
 
     logger.info("trying to get images again, fails if not restarted by supervisor")
     with pytest.raises(RuntimeError):

@@ -108,7 +108,7 @@ class VirtualCameraBackend(AbstractBackend):
     #
 
     def _worker_fun(self):
-        logger.info("img_aquisition process started")
+        logger.info("virtualcamera thread function starts")
 
         last_time_frame = time.time_ns()
 

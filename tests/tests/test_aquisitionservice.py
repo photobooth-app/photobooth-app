@@ -213,20 +213,6 @@ def test_get_livestream_virtualcamera(_container: Container):
             logger.info("setting device_set_status_fault_flag True")
             _container.aquisition_service._main_backend.device_set_status_fault_flag()
 
-        if i == 10:
-            # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            logger.info("setting _event_proc_shutdown True")
-            _container.aquisition_service._main_backend._event_proc_shutdown.set()
-
-        # following tests not working yet:
-        # if i == 15:
-        #     logger.info("simulating timeout exception mock")
-        #     patch.object(_container.aquisition_service._main_backend, "wait_for_lores_image", error_mock_timeout)
-
-        # if i == 20:
-        #     logger.info("simulating runtime exception mock")
-        #     patch.object(_container.aquisition_service._main_backend, "wait_for_lores_image", error_mock_runtime)
-
         if i > 30:
             g_stream.close()
 
