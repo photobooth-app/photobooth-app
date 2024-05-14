@@ -2,23 +2,20 @@
 Virtual Camera backend for testing.
 """
 
+import dataclasses
 import glob
 import logging
+import mmap
 import random
 import time
-from datetime import datetime
-from io import BytesIO
-from multiprocessing import Condition, Event, Lock, Process, shared_memory
 from pathlib import Path
+from threading import Condition
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-
-from ..config import appconfig
+from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendVirtualcamera
-from .abstractbackend import AbstractBackend, compile_buffer, decompile_buffer
+from .abstractbackend import AbstractBackend
 
-SHARED_MEMORY_BUFFER_BYTES = 1 * 1024**2
-FPS_TARGET = 15
+FPS_TARGET = 25
 
 logger = logging.getLogger(__name__)
 
@@ -26,44 +23,38 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
+    @dataclasses.dataclass
+    class VirtualcameraDataBytes:
+        """
+        bundle data bytes and it's condition.
+        1) save some instance attributes and
+        2) bundle as it makes sense
+        """
+
+        # jpeg data as bytes
+        data: bytes = None
+        # condition when frame is avail
+        condition: Condition = None
+
     def __init__(self, config: GroupBackendVirtualcamera):
         self._config: GroupBackendVirtualcamera = config
         super().__init__()
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
-        self._img_buffer_shm: shared_memory.SharedMemory = None
-        self._condition_img_buffer_ready = Condition()
-        self._img_buffer_lock = Lock()
-        self._event_proc_shutdown: Event = Event()
+        self._lores_data: __class__.VirtualcameraDataBytes = __class__.VirtualcameraDataBytes(
+            data=None,
+            condition=Condition(),
+        )
 
-        self._virtualcamera_process: Process = None
+        # worker threads
+        self._worker_thread: StoppableThread = None
 
     def _device_start(self):
         """To start the image backend"""
         # ensure shutdown event is cleared (needed for restart during testing)
 
-        self._event_proc_shutdown.clear()
-
-        self._img_buffer_shm = shared_memory.SharedMemory(
-            create=True,
-            size=SHARED_MEMORY_BUFFER_BYTES,
-        )
-
-        self._virtualcamera_process = Process(
-            target=img_aquisition,
-            name="VirtualCameraAquisitionProcess",
-            args=(
-                self._img_buffer_shm.name,
-                self._condition_img_buffer_ready,
-                self._img_buffer_lock,
-                self._event_proc_shutdown,
-                appconfig.uisettings.livestream_mirror_effect,
-                FPS_TARGET,
-            ),
-            daemon=True,
-        )
-        # start process
-        self._virtualcamera_process.start()
+        self._worker_thread = StoppableThread(name="virtualcamera_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
 
         # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
         self._block_until_delivers_lores_images()
@@ -71,18 +62,9 @@ class VirtualCameraBackend(AbstractBackend):
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
-        # signal process to shutdown properly
-        self._event_proc_shutdown.set()
-
-        # wait until shutdown finished
-        if self._virtualcamera_process:
-            # https://stackoverflow.com/a/58866932
-            self._virtualcamera_process.join()
-            self._virtualcamera_process.close()  # close to allow garbage collection
-
-        if self._img_buffer_shm:
-            self._img_buffer_shm.close()
-            self._img_buffer_shm.unlink()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -109,14 +91,11 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
 
-        with self._condition_img_buffer_ready:
-            if not self._condition_img_buffer_ready.wait(timeout=0.2):
+        with self._lores_data.condition:
+            if not self._lores_data.condition.wait(timeout=0.2):
                 raise TimeoutError("timeout receiving frames")
 
-        with self._img_buffer_lock:
-            img = decompile_buffer(self._img_buffer_shm)
-
-        return img
+            return self._lores_data.data
 
     def _on_configure_optimized_for_hq_capture(self):
         pass
@@ -128,82 +107,47 @@ class VirtualCameraBackend(AbstractBackend):
     # INTERNAL IMAGE GENERATOR
     #
 
+    def _worker_fun(self):
+        logger.info("img_aquisition process started")
 
-def img_aquisition(
-    shm_buffer_name,
-    _condition_img_buffer_ready: Condition,
-    _img_buffer_lock: Lock,
-    _event_proc_shutdown: Event,
-    _mirror: bool,
-    _fps_target: int,
-):
-    """function started in separate process to deliver images"""
+        last_time_frame = time.time_ns()
 
-    ## Create a logger. INFO: this logger is in separate process and just logs to console.
-    # Could be replaced in future by a more sophisticated solution
-    logger = logging.getLogger()
-    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
-    logging.basicConfig(level=logging.DEBUG, format=fmt)
+        jpeg_chunks = []  # offset, len --> seek(offset), read(len)
+        last_chunk = 0
+        last_offset = 0
 
-    logger.info("img_aquisition process started")
+        with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "demovideo.mjpg").resolve(), "rb") as stream_file_obj:
+            with mmap.mmap(stream_file_obj.fileno(), length=0, access=mmap.ACCESS_READ) as stream_mmap_obj:
+                # preprocess video, get chunks of jpeg to slice out of mjpg file (which is just jpg's concatenated)
+                bytes = b""
+                for chunk in iter(lambda: stream_mmap_obj.read(4096), b""):
+                    bytes += chunk
+                    a = bytes.find(b"\xff\xd8")  # jpeg start code
+                    b = bytes.find(b"\xff\xd9")  # jpeg end code
+                    if a != -1 and b != -1:
+                        jpeg_chunks.append((last_offset + a, b + 2))  # offset,len
+                        bytes = bytes[b + 2 :]  # reset bytes var to start at next jpg
+                        last_offset += b + 2
 
-    last_time_frame = time.time_ns()
-    last_time_newimage = time.time()
-    shm = shared_memory.SharedMemory(shm_buffer_name)
+                logger.info(f"found {len(jpeg_chunks)} images in virtualcamera video")
 
-    path_font = Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "fonts", "Roboto-Bold.ttf").resolve()
+                while not self._worker_thread.stopped():  # repeat until stopped
+                    now_time = time.time_ns()
+                    if (now_time - last_time_frame) / 1000**3 <= (1 / FPS_TARGET):
+                        # limit max framerate to every ~2ms
+                        time.sleep(0.002)
+                        continue
+                    last_time_frame = now_time
 
-    lores_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "images").resolve()}/*.jpg')
-    img_original = [Image.open(lores_image) for lores_image in lores_images]
-    current_lores_image_index = 0
+                    if last_chunk >= len(jpeg_chunks):
+                        last_chunk = 0  # start over at the beginning
+                    stream_mmap_obj.seek(jpeg_chunks[last_chunk][0])
+                    jpeg_bytes = stream_mmap_obj.read(jpeg_chunks[last_chunk][1])
+                    last_chunk += 1
 
-    text_fill = "#888"
+                    # success
+                    with self._lores_data.condition:
+                        self._lores_data.data = jpeg_bytes
+                        self._lores_data.condition.notify_all()
 
-    while not _event_proc_shutdown.is_set():
-        now_time = time.time_ns()
-        if (now_time - last_time_frame) / 1000**3 <= (1 / _fps_target):
-            # limit max framerate to every ~2ms
-            time.sleep(2 / 1000.0)
-            continue
-
-        fps = round(1 / (now_time - last_time_frame) * 1000**3, 1)
-        last_time_frame = now_time
-
-        # update liveview image every 5 seconds
-        if (time.time() - last_time_newimage) > 5:
-            # update image every 5 seconds
-            current_lores_image_index = random.randint(0, len(lores_images) - 1)
-            last_time_newimage = time.time()
-
-        # create PIL image
-        img = img_original[current_lores_image_index].copy()
-
-        # add text
-        img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(font=str(path_font), size=50)
-        font_small = ImageFont.truetype(font=str(path_font), size=25)
-
-        img_draw.text((25, 400), "virtual camera", fill=text_fill, font=font_large)
-        img_draw.text((25, 460), datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"), fill=text_fill, font=font_large)
-        img_draw.text((25, 520), f"framerate: {fps}", fill=text_fill, font=font_small)
-
-        # flip if mirror effect is on because messages shall be readable on screen
-        if _mirror:
-            img = ImageOps.mirror(img)
-
-        # create jpeg
-        jpeg_buffer = BytesIO()
-        img.save(jpeg_buffer, format="jpeg", quality=90)  # add subsampling="4:2:2" could be useful to test for #233
-
-        # put jpeg on queue until full. If full this function blocks until queue empty
-        with _img_buffer_lock:
-            jpeg_bytes = jpeg_buffer.getvalue()
-            assert len(jpeg_bytes) < SHARED_MEMORY_BUFFER_BYTES
-
-            compile_buffer(shm, jpeg_bytes)
-
-        with _condition_img_buffer_ready:
-            # wait to be notified
-            _condition_img_buffer_ready.notify_all()
-
-    logger.info("img_aquisition process finished")
+        logger.info("virtualcamera thread finished")
