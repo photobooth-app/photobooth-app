@@ -2,14 +2,14 @@
 
 ## Video source
 
-The videos were downloaded from
+The video licensed from
 
-- <https://www.vecteezy.com/video/34488133-smiling-man-and-woman-in-love-look-into-boxes>
+- <https://www.pond5.com/de/stock-footage/item/59529661-two-boy-and-pretty-girl-are-making-photos-photo-accessories>
 
 ## Convert command
 
-```bash
-ffmpeg -y -i .\input.avi -filter:v scale=-2:960,setsar=1:1,fps=15 -vcodec mjpeg -q:v 3 -an demovideo.mjpg
+```sh
+ffmpeg -hide_banner -loglevel info -y -i .\input.avi -filter:v scale=-2:960,setsar=1:1,fps=15 -vcodec mjpeg -q:v 3 -an demovideo.mjpg
 ```
 
 - `-q`: switch valid range is 1-31 (lower being better quality)

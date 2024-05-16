@@ -3,10 +3,8 @@ Virtual Camera backend for testing.
 """
 
 import dataclasses
-import glob
 import logging
 import mmap
-import random
 import time
 from pathlib import Path
 from threading import Condition
@@ -75,14 +73,7 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
 
-        hq_images = glob.glob(f'{Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "images").resolve()}/*.jpg')
-        current_hq_image_index = random.randint(0, len(hq_images) - 1)
-
-        # get img off the producing queue
-        logger.info(f"provide {hq_images[current_hq_image_index]} as hq_image")
-        img = open(hq_images[current_hq_image_index], "rb").read()
-
-        return img
+        return self._wait_for_lores_image()
 
     #
     # INTERNAL FUNCTIONS
