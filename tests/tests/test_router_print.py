@@ -76,11 +76,11 @@ def test_print_exception(mock_run: mock.Mock, client: TestClient):
 def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     # get config
     appconfig.hardwareinputoutput.printing_enabled = True
-    appconfig.printer.print[0].actions.printing_blocked_time = 2
+    appconfig.printer.print[0].processing.printing_blocked_time = 2
 
     response = client.get("/printer/print/latest/0")
 
-    time.sleep(appconfig.printer.print[0].actions.printing_blocked_time / 2)
+    time.sleep(appconfig.printer.print[0].processing.printing_blocked_time / 2)
 
     response = client.get("/printer/print/latest/0")  # should be blocked and error
 
@@ -88,7 +88,7 @@ def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     mock_run.assert_called()
 
     # wait a little more until printing is fine again
-    time.sleep((appconfig.printer.print[0].actions.printing_blocked_time / 2) + 0.2)
+    time.sleep((appconfig.printer.print[0].processing.printing_blocked_time / 2) + 0.2)
 
     response = client.get("/printer/print/latest/0")  # should give no error again
 

@@ -13,7 +13,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import AnimationProcessing, CollageProcessing, SingleImageConfigurationSet
+from .config.groups.actions import AnimationProcessing, CollageProcessing
 from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
@@ -139,22 +139,22 @@ class ProcessingService(BaseService):
         logger.info(f"trigger {action_type=}, {action_index=}")
 
         if action_type == "image":
-            config = self._get_config_by_index(appconfig.actions.image, action_index)
-            self._start_job(JobModelImage(config.actions))
+            configurationset = self._get_config_by_index(appconfig.actions.image, action_index)
+            self._start_job(JobModelImage(configurationset))
         elif action_type == "collage":
-            config = self._get_config_by_index(appconfig.actions.collage, action_index)
-            self._start_job(JobModelCollage(config.actions))
+            configurationset = self._get_config_by_index(appconfig.actions.collage, action_index)
+            self._start_job(JobModelCollage(configurationset))
         elif action_type == "animation":
-            config = self._get_config_by_index(appconfig.actions.animation, action_index)
-            self._start_job(JobModelAnimation(config.actions))
+            configurationset = self._get_config_by_index(appconfig.actions.animation, action_index)
+            self._start_job(JobModelAnimation(configurationset))
         elif action_type == "video":
             if self._state_machine is not None:
                 # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
                 logger.info("running job, sending stop recording info")
                 self.stop_recording()
             else:
-                config = self._get_config_by_index(appconfig.actions.video, action_index)
-                self._start_job(JobModelVideo(config.actions))
+                configurationset = self._get_config_by_index(appconfig.actions.video, action_index)
+                self._start_job(JobModelVideo(configurationset))
         else:
             raise RuntimeError(f"illegal {action_type=}")
 
@@ -231,21 +231,21 @@ class ProcessingMachine(StateMachine):
         super().__init__(model=jobmodel)
 
     @staticmethod
-    def create_config_image(job_config: SingleImageConfigurationSet) -> SinglePictureDefinition:
-        config_singleimage = SinglePictureDefinition(**job_config.model_dump())
+    def create_config_image(configuration_set_processing: SinglePictureDefinition) -> SinglePictureDefinition:
+        config_singleimage = SinglePictureDefinition(**configuration_set_processing.model_dump())
 
         return config_singleimage
 
     @staticmethod
-    def create_config_collageimage(job_config: CollageProcessing, index: int = None) -> SinglePictureDefinition:
+    def create_config_collageimage(configuration_set_processing: CollageProcessing, index: int = None) -> SinglePictureDefinition:
         # list only captured_images from merge_definition (excludes predefined)
-        captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
+        captured_images = [item for item in configuration_set_processing.merge_definition if not item.predefined_image]
 
         config_singleimage_captures_for_collage = SinglePictureDefinition(
-            fill_background_enable=job_config.capture_fill_background_enable,
-            fill_background_color=job_config.capture_fill_background_color,
-            img_background_enable=job_config.capture_img_background_enable,
-            img_background_file=job_config.capture_img_background_file,
+            fill_background_enable=configuration_set_processing.capture_fill_background_enable,
+            fill_background_color=configuration_set_processing.capture_fill_background_color,
+            img_background_enable=configuration_set_processing.capture_img_background_enable,
+            img_background_file=configuration_set_processing.capture_img_background_file,
             texts_enable=False,
             img_frame_enable=False,
             filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
@@ -254,9 +254,9 @@ class ProcessingMachine(StateMachine):
         return config_singleimage_captures_for_collage
 
     @staticmethod
-    def create_config_animationimage(job_config: AnimationProcessing, index: int = None) -> SinglePictureDefinition:
+    def create_config_animationimage(configuration_set_processing: AnimationProcessing, index: int = None) -> SinglePictureDefinition:
         # list only captured_images from merge_definition (excludes predefined)
-        captured_images = [item for item in job_config.merge_definition if not item.predefined_image]
+        captured_images = [item for item in configuration_set_processing.merge_definition if not item.predefined_image]
 
         config_singleimage_captures_for_animation = SinglePictureDefinition(
             texts_enable=False,
@@ -266,17 +266,17 @@ class ProcessingMachine(StateMachine):
 
         return config_singleimage_captures_for_animation
 
-    def get_config_based_on_media_type(self, media_type: MediaItemTypes, index: int = None):
+    def get_configurationset_singlepicturedefinition_for_media_type(self, media_type: MediaItemTypes, index: int = None) -> SinglePictureDefinition:
         if media_type is MediaItemTypes.image:
-            config = __class__.create_config_image(self.model._job_config)
+            configuration_set_processing_single = __class__.create_config_image(self.model._configuration_set.processing)
         elif media_type is MediaItemTypes.collageimage:
-            config = __class__.create_config_collageimage(self.model._job_config, index)
+            configuration_set_processing_single = __class__.create_config_collageimage(self.model._configuration_set.processing, index)
         elif media_type is MediaItemTypes.animationimage:
-            config = __class__.create_config_animationimage(self.model._job_config, index)
+            configuration_set_processing_single = __class__.create_config_animationimage(self.model._configuration_set.processing, index)
         else:
             raise RuntimeError(f"illegal mediatype to process. type {media_type} cant be handled by {__name__}")
 
-        return config
+        return configuration_set_processing_single
 
     ## state actions
 
@@ -324,32 +324,9 @@ class ProcessingMachine(StateMachine):
             # signal the backend we need hq still in every case, except video.
             self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
-        # determine countdown time, first and following could have different times
-        duration = (
-            appconfig.common.countdown_capture_first
-            if (self.model.number_captures_taken() == 0)
-            else appconfig.common.countdown_capture_second_following
-        )
+        self.model.start_countdown(appconfig.backends.countdown_camera_capture_offset)
+        logger.info(f"started countdown, duration={self.model._duration_user}, offset_camera={appconfig.backends.countdown_camera_capture_offset}")
 
-        # if countdown is 0, skip following and transition to next state directy
-        if duration == 0:
-            logger.info("no timer, skip countdown")
-
-            # leave this state by here
-            self._counted()
-
-            return
-            # do not continue here again after counted has processed
-
-        # starting countdown
-        if (duration - appconfig.common.countdown_camera_capture_offset) <= 0:
-            logger.warning("duration equal/shorter than camera offset makes no sense. this results in 0s countdown!")
-
-        logger.info(f"start countdown, duration_user={duration=}, offset_camera={appconfig.common.countdown_camera_capture_offset}")
-        self.model.start_countdown(
-            duration_user=duration,
-            offset_camera=appconfig.common.countdown_camera_capture_offset,
-        )
         # inform UI to count
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
@@ -368,9 +345,9 @@ class ProcessingMachine(StateMachine):
 
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
-        _hide = getattr(self.model._job_config, "gallery_hide_individual_images", False)
+        _hide = getattr(self.model._configuration_set.jobcontrol, "gallery_hide_individual_images", False)
         _type = JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE[self.model._typ]
-        _config = self.get_config_based_on_media_type(_type, self.model.number_captures_taken()).model_dump(mode="json")
+        _config = self.get_configurationset_singlepicturedefinition_for_media_type(_type, self.model.number_captures_taken()).model_dump(mode="json")
 
         mediaitem = MediaItem.create(MetaDataDict(media_type=_type, hide=_hide, config=_config))
         logger.debug(f"capture to {mediaitem.path_original=}")
@@ -427,13 +404,15 @@ class ProcessingMachine(StateMachine):
         # if job is collage, each single capture could be confirmed or not:
         if self.model.ask_user_for_approval():
             # present capture with buttons to approve.
-            logger.info(f"finished capture, waiting {self.model._job_config.approve_autoconfirm_timeout}s for user to confirm, reject or abort")
+            logger.info(
+                f"finished capture, waiting {self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout}s for user to confirm, reject or abort"
+            )
 
             try:
-                event = self._external_cmd_queue.get(block=True, timeout=self.model._job_config.approve_autoconfirm_timeout)
+                event = self._external_cmd_queue.get(block=True, timeout=self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout)
                 logger.debug(f"user chose {event}")
             except Empty:
-                logger.info(f"no user input within {self.model._job_config.approve_autoconfirm_timeout}s so assume to confirm")
+                logger.info(f"no user input within {self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout}s so assume to confirm")
 
                 event = "confirm"
 
@@ -468,15 +447,15 @@ class ProcessingMachine(StateMachine):
 
         self._wled_service.preset_record()
 
-        self._aquisition_service.start_recording(self.model._job_config.video_framerate)
+        self._aquisition_service.start_recording(self.model._configuration_set.processing.video_framerate)
 
         try:
-            event = self._external_cmd_queue.get(block=True, timeout=float(self.model._job_config.video_duration))
+            event = self._external_cmd_queue.get(block=True, timeout=float(self.model._configuration_set.processing.video_duration))
             logger.debug(f"user chose {event}")
             # continue if external_cmd_queue has an event
         except Empty:
             # after timeout
-            logger.info(f"no user input within {self.model._job_config.video_duration}s so stopping video")
+            logger.info(f"no user input within {self.model._configuration_set.processing.video_duration}s so stopping video")
 
         self.stop_recording()
 
@@ -502,7 +481,7 @@ class ProcessingMachine(StateMachine):
                 MetaDataDict(
                     media_type=MediaItemTypes.collage,
                     hide=False,
-                    config=self.model._job_config.model_dump(mode="json"),
+                    config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
             self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection, phase2_mediaitem)
@@ -517,7 +496,7 @@ class ProcessingMachine(StateMachine):
                 MetaDataDict(
                     media_type=MediaItemTypes.animation,
                     hide=False,
-                    config=self.model._job_config.model_dump(mode="json"),
+                    config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
             self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection, phase2_mediaitem)
@@ -537,7 +516,7 @@ class ProcessingMachine(StateMachine):
                 MetaDataDict(
                     media_type=MediaItemTypes.video,
                     hide=False,
-                    config=self.model._job_config.model_dump(mode="json"),
+                    config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
             self._mediaprocessing_service.process_video(temp_videofilepath, phase2_mediaitem)

@@ -3,10 +3,11 @@ from typing import Literal, Union
 
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
-    AnimationProcessing,
-    CollageProcessing,
-    SingleImageProcessing,
-    VideoProcessing,
+    AnimationConfigurationSet,
+    CollageConfigurationSet,
+    MultiImageJobControl,
+    SingleImageConfigurationSet,
+    VideoConfigurationSet,
 )
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..mediacollection.mediaitem import MediaItem
@@ -25,10 +26,10 @@ class JobModelBase:
 
     def __init__(
         self,
-        job_config: Union[SingleImageProcessing, CollageProcessing, AnimationProcessing, VideoProcessing],
+        configuration_set: Union[SingleImageConfigurationSet, CollageConfigurationSet, AnimationConfigurationSet, VideoConfigurationSet],
     ):
         self._typ: __class__.Typ = __class__.Typ.undefined
-        self._job_config = job_config
+        self._configuration_set = configuration_set
 
         self._total_captures_to_take: int = 0
         self._ask_approval_each_capture: bool = False
@@ -129,21 +130,29 @@ class JobModelBase:
             return False
 
     # external countdown controls
-    def start_countdown(self, duration_user: float, offset_camera: float = 0.0):
+    def start_countdown(self, offset: float = 0.0):
         """Countdown until camera shall trigger
 
-        duration_user: Total time displayed to frontend user
-        duration_capture: Time until camera is triggered to start capture
+        offset: Subtract from countdown to account for camera delays
 
         Args:
             duration (float): _description_
         """
 
-        # countdown is capped to maximum
-        self._duration_user = duration_user if duration_user < CountdownTimer.TIMER_MAX_DURATION else CountdownTimer.TIMER_MAX_DURATION
-        _offset_camera = offset_camera if (offset_camera <= duration_user) else duration_user
+        if self.number_captures_taken() == 0:
+            duration_user = self._configuration_set.jobcontrol.countdown_capture
+        else:
+            # countdown_capture_second_following is only defined for multiimagejobs
+            assert isinstance(self._configuration_set.jobcontrol, MultiImageJobControl)
+            duration_user = self._configuration_set.jobcontrol.countdown_capture_second_following
 
-        self._countdown_timer.start(duration=(duration_user - _offset_camera))
+        # if offset is less than duration, take it, else use duration for offset which results actually in 0
+        # countdown because delay of camera is longer than desired countdown
+        _offset = offset if (offset <= duration_user) else duration_user
+
+        self._duration_user = duration_user
+
+        self._countdown_timer.start(duration=(duration_user - _offset))
 
     def wait_countdown_finished(self):
         self._countdown_timer.wait_countdown_finished()
@@ -151,8 +160,8 @@ class JobModelBase:
 
 
 class JobModelImage(JobModelBase):
-    def __init__(self, job_config: SingleImageProcessing):
-        super().__init__(job_config)
+    def __init__(self, configuration_set: SingleImageConfigurationSet):
+        super().__init__(configuration_set)
         self._typ: __class__.Typ = __class__.Typ.image
 
         self._total_captures_to_take = 1
@@ -161,30 +170,30 @@ class JobModelImage(JobModelBase):
 
 
 class JobModelCollage(JobModelBase):
-    def __init__(self, job_config: CollageProcessing):
-        super().__init__(job_config)
+    def __init__(self, configuration_set: CollageConfigurationSet):
+        super().__init__(configuration_set)
         self._typ: __class__.Typ = __class__.Typ.collage
 
-        self._ask_approval_each_capture = job_config.ask_approval_each_capture
-        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(job_config.merge_definition)
+        self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
+        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
 
         # self._validate_job()
 
 
 class JobModelAnimation(JobModelBase):
-    def __init__(self, job_config: AnimationProcessing):
-        super().__init__(job_config)
+    def __init__(self, configuration_set: AnimationConfigurationSet):
+        super().__init__(configuration_set)
         self._typ: __class__.Typ = __class__.Typ.animation
 
-        self._ask_approval_each_capture = job_config.ask_approval_each_capture
-        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(job_config.merge_definition)
+        self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
+        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
 
         # self._validate_job()
 
 
 class JobModelVideo(JobModelBase):
-    def __init__(self, job_config: VideoProcessing):
-        super().__init__(job_config)
+    def __init__(self, configuration_set: VideoConfigurationSet):
+        super().__init__(configuration_set)
         self._typ: __class__.Typ = __class__.Typ.video
 
         self._total_captures_to_take = 1

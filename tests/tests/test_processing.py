@@ -77,7 +77,7 @@ def test_capture(_container: Container):
 
 def test_capture_zero_countdown(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
-    appconfig.common.countdown_capture_first = 0
+    appconfig.actions.image[0].countdown_capture = 0
 
     _container.processing_service.trigger_action("image", 0)
 
@@ -89,7 +89,7 @@ def test_capture_zero_countdown(_container: Container):
 
 
 def test_collage_auto_approval(_container: Container):
-    appconfig.actions.collage[0].actions.ask_approval_each_capture = False
+    appconfig.actions.collage[0].processing.ask_approval_each_capture = False
 
     _container.processing_service.trigger_action("collage", 0)
 
@@ -101,7 +101,7 @@ def test_collage_auto_approval(_container: Container):
 
 
 def test_collage_manual_approval(_container: Container):
-    appconfig.actions.collage[0].actions.ask_approval_each_capture = True
+    appconfig.actions.collage[0].processing.ask_approval_each_capture = True
 
     # starts in separate thread
     _container.processing_service.trigger_action("collage", 0)
@@ -117,7 +117,7 @@ def test_collage_manual_approval(_container: Container):
 
 
 def test_collage_manual_abort(_container: Container):
-    appconfig.actions.collage[0].actions.ask_approval_each_capture = True
+    appconfig.actions.collage[0].processing.ask_approval_each_capture = True
 
     _container.processing_service.trigger_action("collage", 0)
     _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
@@ -154,10 +154,10 @@ def test_video(_container: Container):
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
     # ensure written video is about in tolerance duration
-    default_video_duration = appconfig.actions.video[0].actions.video_duration
+    default_video_duration = appconfig.actions.video[0].processing.video_duration
 
     # boomerang reverses video so double length
-    if appconfig.actions.video[0].actions.boomerang:
+    if appconfig.actions.video[0].processing.boomerang:
         default_video_duration *= 2
 
     assert abs(round(video_duration(video_item.path_original), 1) - default_video_duration) < 1
@@ -194,7 +194,7 @@ def test_video_stop_early(_container: Container):
     logger.info(f"{video_duration_seconds=}")
 
     # boomerang reverses video so double length
-    if appconfig.actions.video[0].actions.boomerang:
+    if appconfig.actions.video[0].processing.boomerang:
         desired_video_duration *= 2
 
     assert (video_duration_seconds - desired_video_duration) < 1

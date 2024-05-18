@@ -5,7 +5,6 @@ from threading import Condition, Thread
 class CountdownTimer:
     TIMER_TICK = 0.1
     TIMER_TOLERANCE = TIMER_TICK / 2  # to account for float not 100% accurate
-    TIMER_MAX_DURATION = 20
 
     def __init__(self):
         self._duration: float = 0
@@ -17,6 +16,11 @@ class CountdownTimer:
     def start(self, duration: float):
         self._duration = duration
         self._countdown = duration
+
+        if self._countdown_finished():
+            # countdown on start already finished because initialized with 0 duration.
+            # no need to start a thread, exit early to continue as fast as possible with job.
+            return
 
         self._ticker_thread = Thread(name="_countdowntimer_thread", target=self._countdowntimer_fun, daemon=True)
         self._ticker_thread.start()

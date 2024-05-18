@@ -66,10 +66,73 @@ class Trigger(BaseModel):
     gpio_trigger: GpioTrigger = GpioTrigger()
 
 
+class SingleImageJobControl(BaseModel):
+    """Configure job control affecting the procedure."""
+
+    model_config = ConfigDict(title="Job control for single captures")
+
+    countdown_capture: float = Field(
+        default=2.0,
+        multiple_of=0.1,
+        ge=0,
+        le=20,
+        description="Countdown in seconds, when user starts a capture process.",
+    )
+
+
+class MultiImageJobControl(BaseModel):
+    """Configure job control affecting the procedure."""
+
+    model_config = ConfigDict(title="Job control for multiple captures")
+
+    countdown_capture: float = Field(
+        default=2.0,
+        multiple_of=0.1,
+        ge=0,
+        le=20,
+        description="Countdown in seconds, when user starts a capture process",
+    )
+    countdown_capture_second_following: float = Field(
+        default=1.0,
+        multiple_of=0.1,
+        ge=0,
+        le=20,
+        description="Countdown in seconds, used for second and following captures for collages",
+    )
+
+    ask_approval_each_capture: bool = Field(
+        default=False,
+        description="Stop after every capture to ask user if he would like to continue or redo the capture. If disabled captures are granted as approved always.",
+    )
+    approve_autoconfirm_timeout: float = Field(
+        default=15.0,
+        description="If user is required to approve collage captures, after this timeout, the job continues and user confirmation is assumed.",
+    )
+
+    gallery_hide_individual_images: bool = Field(
+        default=False,
+        description="Hide individual images of series in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+    )
+
+
+class VideoJobControl(BaseModel):
+    """Configure job control affecting the procedure."""
+
+    model_config = ConfigDict(title="Job control for video captures")
+
+    countdown_capture: float = Field(
+        default=2.0,
+        multiple_of=0.1,
+        ge=0,
+        le=20,
+        description="Countdown in seconds, when user starts a capture process.",
+    )
+
+
 class SingleImageProcessing(BaseModel):
     """Configure stages how to process images after capture."""
 
-    model_config = ConfigDict(title="Postprocess single captures")
+    model_config = ConfigDict(title="Single captures processing after capture")
 
     filter: PilgramFilter = Field(
         default=PilgramFilter.original,
@@ -111,16 +174,7 @@ class SingleImageProcessing(BaseModel):
 class CollageProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Process collage after capture")
-
-    ask_approval_each_capture: bool = Field(
-        default=False,
-        description="Stop after every capture to ask user if he would like to continue or redo the capture. If disabled captures are granted as approved always.",
-    )
-    approve_autoconfirm_timeout: float = Field(
-        default=15.0,
-        description="If user is required to approve collage captures, after this timeout, the job continues and user confirmation is assumed.",
-    )
+    model_config = ConfigDict(title="Collage processing after capture")
 
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
@@ -154,12 +208,6 @@ class CollageProcessing(BaseModel):
     merge_definition: list[CollageMergeDefinition] = Field(
         description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
-
-    gallery_hide_individual_images: bool = Field(
-        default=False,
-        description="Hide individual images of collages in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
-    )
-
     canvas_fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to collage",
@@ -197,16 +245,7 @@ class CollageProcessing(BaseModel):
 class AnimationProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Process Animation (GIF) after capture")
-
-    ask_approval_each_capture: bool = Field(
-        default=False,
-        description="Stop after every capture to ask user if he would like to continue or redo the capture. If disabled captures are granted as approved always.",
-    )
-    approve_autoconfirm_timeout: float = Field(
-        default=15.0,
-        description="If user is required to approve animation captures, after this timeout, the job continues and user confirmation is assumed.",
-    )
+    model_config = ConfigDict(title="Animation (GIF) processing after capture")
 
     ## phase 2 per collage settings.
 
@@ -223,16 +262,11 @@ class AnimationProcessing(BaseModel):
         description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
     )
 
-    gallery_hide_individual_images: bool = Field(
-        default=False,
-        description="Hide individual images of animations in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
-    )
-
 
 class VideoProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Video Actions")
+    model_config = ConfigDict(title="Video Processing")
 
     video_duration: int = Field(
         default=5,
@@ -269,47 +303,59 @@ class SingleImageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
+
     name: str = Field(
         default="default single image settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: SingleImageProcessing
+
+    jobcontrol: SingleImageJobControl
+    processing: SingleImageProcessing
     trigger: Trigger
 
 
 class CollageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
-    model_config = ConfigDict(title="Postprocess single captures")
+    model_config = ConfigDict(title="Postprocess collage captures")
+
     name: str = Field(
         default="default collage settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: CollageProcessing
+
+    jobcontrol: MultiImageJobControl
+    processing: CollageProcessing
     trigger: Trigger
 
 
 class AnimationConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
-    model_config = ConfigDict(title="Postprocess single captures")
+    model_config = ConfigDict(title="Postprocess animation captures")
+
     name: str = Field(
         default="default animation settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: AnimationProcessing
+
+    jobcontrol: MultiImageJobControl
+    processing: AnimationProcessing
     trigger: Trigger
 
 
 class VideoConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
-    model_config = ConfigDict(title="Postprocess single captures")
+    model_config = ConfigDict(title="Postprocess video captures")
+
     name: str = Field(
         default="default video settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: VideoProcessing
+
+    jobcontrol: VideoJobControl
+    processing: VideoProcessing
     trigger: Trigger
 
 
@@ -322,7 +368,8 @@ class PrintingConfigurationSet(BaseModel):
         default="default print settings",
         description="Name to identify, only used for display in admin center.",
     )
-    actions: PrinterProcessing
+
+    processing: PrinterProcessing
     trigger: Trigger
 
 
@@ -336,7 +383,8 @@ class GroupActions(BaseModel):
     image: list[SingleImageConfigurationSet] = Field(
         default=[
             SingleImageConfigurationSet(
-                actions=SingleImageProcessing(
+                jobcontrol=SingleImageJobControl(),
+                processing=SingleImageProcessing(
                     img_background_enable=True,
                     img_background_file="backgrounds/pink-7761356_1920.jpg",
                     img_frame_enable=True,
@@ -365,7 +413,11 @@ class GroupActions(BaseModel):
     collage: list[CollageConfigurationSet] = Field(
         default=[
             CollageConfigurationSet(
-                actions=CollageProcessing(
+                jobcontrol=MultiImageJobControl(
+                    ask_approval_each_capture=True,
+                    gallery_hide_individual_images=False,
+                ),
+                processing=CollageProcessing(
                     ask_approval_each_capture=True,
                     canvas_width=1920,
                     canvas_height=1280,
@@ -423,13 +475,20 @@ class GroupActions(BaseModel):
     animation: list[AnimationConfigurationSet] = Field(
         default=[
             AnimationConfigurationSet(
-                actions=AnimationProcessing(
+                jobcontrol=MultiImageJobControl(
+                    ask_approval_each_capture=False,
+                    gallery_hide_individual_images=True,
+                    countdown_capture_second_following=0.5,
+                ),
+                processing=AnimationProcessing(
                     ask_approval_each_capture=False,
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
                         AnimationMergeDefinition(filter=PilgramFilter.crema),
                         AnimationMergeDefinition(filter=PilgramFilter.inkwell),
+                        AnimationMergeDefinition(filter=PilgramFilter.clarendon),
+                        AnimationMergeDefinition(filter=PilgramFilter.toaster),
                         AnimationMergeDefinition(
                             duration=4000,
                             filter=PilgramFilter.original,
@@ -451,8 +510,8 @@ class GroupActions(BaseModel):
     video: list[VideoConfigurationSet] = Field(
         default=[
             VideoConfigurationSet(
-                name="default boomerang video",
-                actions=VideoProcessing(
+                jobcontrol=VideoJobControl(),
+                processing=VideoProcessing(
                     video_duration=5,
                     boomerang=True,
                     video_framerate=15,
@@ -478,7 +537,7 @@ class GroupPrinter(BaseModel):
     print: list[PrintingConfigurationSet] = Field(
         default=[
             PrintingConfigurationSet(
-                actions=PrinterProcessing(
+                processing=PrinterProcessing(
                     printing_command="mspaint /p {filename}",
                     printing_blocked_time=10,
                 ),
