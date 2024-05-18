@@ -10,7 +10,7 @@ from photobooth.services.config import appconfig
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def _container() -> Container:
     # setup
     container.start()

@@ -19,10 +19,6 @@ logger = logging.getLogger(name=None)
 def _container() -> Container:
     # setup
     container.start()
-    # create one image to ensure there is at least one
-    if container.mediacollection_service.number_of_images == 0:
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
 
     # force register listener for testing purposes
     container.gpio_service.init_io()

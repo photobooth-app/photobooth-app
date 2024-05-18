@@ -17,10 +17,6 @@ logger = logging.getLogger(name=None)
 def _container() -> Container:
     # setup
     container.start()
-    # create one image to ensure there is at least one
-    if container.mediacollection_service.number_of_images == 0:
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
     container.aquisition_service._get_video_backend().block_until_device_is_running()

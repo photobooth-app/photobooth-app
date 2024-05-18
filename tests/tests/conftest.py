@@ -14,8 +14,11 @@ def global_session_setup():
 
     if container.mediacollection_service.number_of_images == 0:
         logger.info("no mediaitem in collection, creating one image")
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
+        container.start()
+        if container.mediacollection_service.number_of_images == 0:
+            container.processing_service.trigger_action("image", 0)
+            container.processing_service.wait_until_job_finished()
+        container.stop()
 
     yield
 

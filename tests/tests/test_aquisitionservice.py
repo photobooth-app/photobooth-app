@@ -17,7 +17,7 @@ from photobooth.services.wledservice import WledService
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def _container() -> Container:
     # setup
 
@@ -74,6 +74,13 @@ def test_getvideo(_container: Container):
 
 
 def test_getimages_change_backend_during_runtime(_container: Container):
+    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
+
+    # shutdown/init to restart resources
+    _container.aquisition_service.stop()
+    _container.aquisition_service.start()
+
     # main gives image
     with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_hq_image())) as img:
         logger.info(img)

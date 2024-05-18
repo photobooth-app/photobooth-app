@@ -9,19 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.container import container
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.services.config import AppConfig
 
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client() -> TestClient:
     from photobooth.application import app
 

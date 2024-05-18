@@ -20,6 +20,7 @@ logger = logging.getLogger(name=None)
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
+        # need an image for sure as last item because this is safe to filter
         container.processing_service.trigger_action("image", 0)
         container.processing_service.wait_until_job_finished()
         yield client
