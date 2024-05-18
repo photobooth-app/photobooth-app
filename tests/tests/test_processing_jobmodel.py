@@ -4,7 +4,8 @@ import time
 import pytest
 
 from photobooth.services.config import appconfig
-from photobooth.services.processing.jobmodels import CountdownTimer, JobModelImage, SingleImageConfigurationSet
+from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
+from photobooth.services.processing.jobmodels import CountdownTimer, JobModelImage
 
 
 @pytest.fixture(autouse=True)
@@ -54,11 +55,19 @@ def test_countdowntimer_accuracy():
 
 
 def test_jobmodel_start_count():
-    jm = JobModelImage(SingleImageConfigurationSet())
+    countdown_time = 1
+    offset = 0.25
+    expected_blocking_time = countdown_time - offset
 
-    expected_blocking_time = 0.75
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        )
+    )
 
-    jm.start_countdown(1, 0.25)
+    jm.start_countdown(offset)
 
     start_time = time.time()
     jm.wait_countdown_finished()
@@ -70,11 +79,19 @@ def test_jobmodel_start_count():
 
 
 def test_jobmodel_start_count_zero():
-    jm = JobModelImage(SingleImageConfigurationSet())
+    countdown_time = 0
+    offset = 0
+    expected_blocking_time = countdown_time - offset
 
-    expected_blocking_time = 0
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        )
+    )
 
-    jm.start_countdown(0, 0)
+    jm.start_countdown(offset)
 
     start_time = time.time()
     jm.wait_countdown_finished()
@@ -86,11 +103,19 @@ def test_jobmodel_start_count_zero():
 
 
 def test_jobmodel_start_count_equal():
-    jm = JobModelImage(SingleImageConfigurationSet())
+    countdown_time = 1
+    offset = 1
+    expected_blocking_time = countdown_time - offset
 
-    expected_blocking_time = 0
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        )
+    )
 
-    jm.start_countdown(1, 1)
+    jm.start_countdown(offset)
 
     start_time = time.time()
     jm.wait_countdown_finished()
@@ -102,11 +127,19 @@ def test_jobmodel_start_count_equal():
 
 
 def test_jobmodel_start_count_bigger_offset():
-    jm = JobModelImage(SingleImageConfigurationSet())
+    countdown_time = 1
+    offset = 2
+    expected_blocking_time = 0  # in this case due to camera delay longer than actual countdown, the blocking time is skipped.
 
-    expected_blocking_time = 0
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        )
+    )
 
-    jm.start_countdown(1, 2)
+    jm.start_countdown(offset)
 
     start_time = time.time()
     jm.wait_countdown_finished()
