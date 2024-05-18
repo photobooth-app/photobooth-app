@@ -77,7 +77,7 @@ def test_capture(_container: Container):
 
 def test_capture_zero_countdown(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
-    appconfig.actions.image[0].countdown_capture = 0
+    appconfig.actions.image[0].jobcontrol.countdown_capture = 0
 
     _container.processing_service.trigger_action("image", 0)
 
@@ -89,7 +89,7 @@ def test_capture_zero_countdown(_container: Container):
 
 
 def test_collage_auto_approval(_container: Container):
-    appconfig.actions.collage[0].processing.ask_approval_each_capture = False
+    appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = False
 
     _container.processing_service.trigger_action("collage", 0)
 
@@ -101,7 +101,7 @@ def test_collage_auto_approval(_container: Container):
 
 
 def test_collage_manual_approval(_container: Container):
-    appconfig.actions.collage[0].processing.ask_approval_each_capture = True
+    appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = True
 
     # starts in separate thread
     _container.processing_service.trigger_action("collage", 0)
@@ -117,7 +117,7 @@ def test_collage_manual_approval(_container: Container):
 
 
 def test_collage_manual_abort(_container: Container):
-    appconfig.actions.collage[0].processing.ask_approval_each_capture = True
+    appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = True
 
     _container.processing_service.trigger_action("collage", 0)
     _container.processing_service._state_machine.add_observer(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
