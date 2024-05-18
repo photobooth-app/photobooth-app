@@ -39,6 +39,7 @@ class InformationService(BaseService):
         self._logger.info(f"{platform.machine()=}")
         self._logger.info(f"{platform.python_version()=}")
         self._logger.info(f"{platform.node()=}")
+        self._logger.info(f"{self._gather_model()=}")
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
@@ -82,6 +83,7 @@ class InformationService(BaseService):
                 platform_python_version=platform.python_version(),
                 platform_node=platform.node(),
                 platform_cpu_count=psutil.cpu_count(),
+                model=self._gather_model(),
                 data_directory=Path.cwd().resolve(),
                 python_executable=sys.executable,
                 disk=self._gather_disk(),
@@ -145,3 +147,16 @@ class InformationService(BaseService):
             raise RuntimeError("platform not supported")
 
         return disk
+
+    def _gather_model(self) -> str:
+        model = "unknown"
+
+        if platform.system() == "Linux":
+            # try to get raspberry model
+            try:
+                with open("/proc/device-tree/model") as f:
+                    model = f.read()
+            except Exception:
+                self._logger.info("cannot detect computer model")
+
+        return model

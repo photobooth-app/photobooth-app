@@ -154,6 +154,7 @@ class SseEventOnetimeInformationRecord(SseEventBase):
     platform_python_version: str = None
     platform_node: str = None
     platform_cpu_count: int = None
+    model: str = None
     data_directory: Path = None
     python_executable: str = None
     disk: dict[str, Any] = None
@@ -169,6 +170,7 @@ class SseEventOnetimeInformationRecord(SseEventBase):
                 platform_python_version=self.platform_python_version,
                 platform_node=self.platform_node,
                 platform_cpu_count=self.platform_cpu_count,
+                model=self.model,
                 data_directory=str(self.data_directory),
                 python_executable=self.python_executable,
                 disk=self.disk,
