@@ -10,19 +10,11 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendVirtualcamera
 
 from .backends_utils import get_images
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 @pytest.fixture()

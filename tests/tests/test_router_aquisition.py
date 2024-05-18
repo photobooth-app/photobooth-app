@@ -16,13 +16,6 @@ from photobooth.services.config import appconfig
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
-
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:

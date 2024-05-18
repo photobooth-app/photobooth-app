@@ -9,18 +9,9 @@ import requests
 from PIL import Image
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
 from .backends_utils import get_images
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 logger = logging.getLogger(name=None)
 

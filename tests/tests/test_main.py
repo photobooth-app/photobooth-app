@@ -9,16 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from photobooth.services.config import appconfig
-
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 def test_singleinstance():

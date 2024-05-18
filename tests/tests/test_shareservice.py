@@ -23,13 +23,6 @@ if not is_valid_service:
     pytest.skip("no webservice found, skipping tests", allow_module_level=True)
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
-
 @pytest.fixture(scope="module")
 def _container() -> Container:
     appconfig.sharing.shareservice_enabled = True

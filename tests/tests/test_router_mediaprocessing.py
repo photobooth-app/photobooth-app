@@ -9,18 +9,9 @@ from PIL import Image
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.config import appconfig
 from photobooth.services.mediaprocessingservice import MediaprocessingService
 
 from .image_utils import is_same
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 logger = logging.getLogger(name=None)
 

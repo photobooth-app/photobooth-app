@@ -6,14 +6,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.config import AppConfig, appconfig
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
+from photobooth.services.config import AppConfig
 
 
 @pytest.fixture

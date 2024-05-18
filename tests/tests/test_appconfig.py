@@ -11,7 +11,7 @@ from photobooth.services.config import AppConfig, appconfig
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture(autouse=False)
+@pytest.fixture()
 def run_around_tests():
     # slightly modified fixture to ensure it's executed as expected during tests.
     # modify config, autouse fixture resets in next statement and shall give default values.

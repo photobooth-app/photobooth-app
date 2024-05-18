@@ -1,19 +1,8 @@
 import logging
 import time
 
-import pytest
-
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
 from photobooth.services.processing.jobmodels import CountdownTimer, JobModelImage
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 logger = logging.getLogger(name=None)
 

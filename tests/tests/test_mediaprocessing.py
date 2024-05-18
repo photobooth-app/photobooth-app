@@ -4,15 +4,6 @@ import os
 import pytest
 
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 logger = logging.getLogger(name=None)
 
@@ -20,14 +11,7 @@ logger = logging.getLogger(name=None)
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
 def _container() -> Container:
-    # setup
     container.start()
-    # create one image to ensure there is at least one
-    if container.mediacollection_service.number_of_images == 0:
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
-
-    # deliver
     yield container
     container.stop()
 

@@ -4,19 +4,9 @@ Testing Mediaprocessing collage
 
 import logging
 
-import pytest
 from PIL import Image
 
 import photobooth.services.mediaprocessing.animation_pipelinestages as animation_stages
-from photobooth.services.config import appconfig
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
 
 logger = logging.getLogger(name=None)
 

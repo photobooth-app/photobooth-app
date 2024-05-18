@@ -11,19 +11,11 @@ from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Request, Response
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
 from .backends_utils import get_images
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 @pytest.fixture()

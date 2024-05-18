@@ -8,19 +8,11 @@ import pytest
 
 from photobooth.services.backends.webcamcv2 import WebcamCv2Backend
 from photobooth.services.backends.webcamcv2 import available_camera_indexes as cv2_avail
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendOpenCv2
 
 from .backends_utils import get_images
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 @pytest.fixture()

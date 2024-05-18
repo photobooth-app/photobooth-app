@@ -10,14 +10,6 @@ from photobooth.container import Container, container
 from photobooth.services.config import appconfig
 from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
-
 Device.pin_factory = MockFactory()
 logger = logging.getLogger(name=None)
 

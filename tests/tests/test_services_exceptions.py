@@ -9,17 +9,9 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
 from photobooth.services.informationservice import InformationService
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up

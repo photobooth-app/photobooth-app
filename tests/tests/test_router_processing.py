@@ -7,18 +7,10 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.config import appconfig
 from photobooth.services.processingservice import ProcessingService
 from photobooth.utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
 
 
 @pytest.fixture

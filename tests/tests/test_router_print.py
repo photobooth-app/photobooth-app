@@ -10,13 +10,6 @@ from photobooth.container import container
 from photobooth.services.config import appconfig
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    appconfig.reset_defaults()
-
-    yield
-
-
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
