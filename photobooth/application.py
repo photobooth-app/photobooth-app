@@ -30,14 +30,8 @@ async def lifespan(_: FastAPI):
 
     def terminate_now(signum: int, frame: FrameType = None):
         logger.info("shutting down app via signal handler")
-
-        logger.info("stopping services")
         container.stop()
-
-        logger.debug("invoking default_sigint_handler")
         default_sigint_handler(signum, frame)
-
-        logger.debug(f"threads remaining after stopping container: {[thread.name for thread in threading.enumerate()]}")
 
     if threading.current_thread() is not threading.main_thread():
         # https://github.com/encode/uvicorn/pull/871

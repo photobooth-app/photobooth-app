@@ -193,6 +193,7 @@ class MediacollectionService(BaseService):
 
         try:
             os.remove(mediaitem.path_original)
+            os.remove(mediaitem.metadata_filename)
             os.remove(mediaitem.path_full_unprocessed)
             os.remove(mediaitem.path_full)
             os.remove(mediaitem.path_preview_unprocessed)
