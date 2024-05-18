@@ -155,6 +155,10 @@ def removechromakey_stage(pil_image: Image.Image, keycolor: int, tolerance: int)
 
 def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image:
     """ """
+    if not image.has_transparency_data:
+        logger.warning("no transparency in image, background stage makes no sense to apply!")
+        return image
+
     logger.info("image_fill_background_stage to apply")
     # force color to be of type color again, might be bug in pydantic.
     background_img = Image.new(mode=image.mode, size=image.size, color=Color(color).as_rgb_tuple())
@@ -167,7 +171,7 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
     """ """
     logger.info("image_img_background_stage to apply")
 
-    if image.mode not in ("RGBA", "P"):
+    if not image.has_transparency_data:
         logger.warning("no transparency in image, background stage makes no sense to apply!")
         return image
 
