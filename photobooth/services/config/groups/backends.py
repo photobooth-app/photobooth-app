@@ -31,6 +31,14 @@ class GroupBackendVirtualcamera(BaseModel):
     model_config = ConfigDict(title="VirtualCamera")
     # no additional configuration yet!
 
+    emulate_camera_delay_still_capture: float = Field(
+        default=0.2,
+        multiple_of=0.1,
+        ge=0,
+        le=5,
+        description="Emulate the delay of a camera. Time between camera is requested to deliver a still and actual delivery to the app.",
+    )
+
 
 class GroupBackendPicamera2(BaseModel):
     model_config = ConfigDict(title="Picamera2")
@@ -243,13 +251,19 @@ class GroupBackends(BaseModel):
         ge=5,
         le=30,
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
-        json_schema_extra={"ui_component": "QSlider"},
     )
     retry_capture: int = Field(
         default=3,
         ge=1,
         le=5,
         description="Number of attempts to gather a picture from backend.",
+    )
+    countdown_camera_capture_offset: float = Field(
+        default=0.2,
+        multiple_of=0.05,
+        ge=0,
+        le=20,
+        description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
     )
 
     group_main: GroupMainBackend = GroupMainBackend()

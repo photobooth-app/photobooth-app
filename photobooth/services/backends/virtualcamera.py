@@ -73,6 +73,8 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_hq_image(self):
         """for other threads to receive a hq JPEG image"""
 
+        time.sleep(self._config.emulate_camera_delay_still_capture)
+
         return self._wait_for_lores_image()
 
     #
