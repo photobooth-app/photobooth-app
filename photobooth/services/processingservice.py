@@ -401,12 +401,12 @@ class ProcessingMachine(StateMachine):
         self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
 
     def on_enter_approve_capture(self):
+        logger.info("finished capture")
+
         # if job is collage, each single capture could be confirmed or not:
         if self.model.ask_user_for_approval():
             # present capture with buttons to approve.
-            logger.info(
-                f"finished capture, waiting {self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout}s for user to confirm, reject or abort"
-            )
+            logger.info(f"waiting {self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout}s for user to confirm, reject or abort")
 
             try:
                 event = self._external_cmd_queue.get(block=True, timeout=self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout)
@@ -420,7 +420,7 @@ class ProcessingMachine(StateMachine):
 
         else:
             # auto continue
-            logger.info("finished capture, automatic confirm enabled")
+            logger.info("automatic confirm enabled")
             self.confirm()
 
     def on_exit_approve_capture(self, event):
