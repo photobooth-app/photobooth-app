@@ -153,8 +153,12 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
+        flag_logmsg_emitted_once = False
         while self._hires_data.request_hires_still.is_set():
-            logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
+            if not flag_logmsg_emitted_once:
+                logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
+                flag_logmsg_emitted_once = True  # avoid flooding logs
+
             time.sleep(0.2)
 
         with self._lores_data.condition:
