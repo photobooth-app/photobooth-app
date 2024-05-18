@@ -247,9 +247,14 @@ class Picamera2Backend(AbstractBackend):
 
             return self._lores_data.frame
 
-    def start_recording(self):
+    def start_recording(self, video_framerate: int):
+        """picamera2 has local start_recording, which overrides the abstract class implementation in favor of local handling by picamera2"""
         self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
-        self._video_encoder = H264Encoder(appconfig.mediaprocessing.video_bitrate * 1000)  # bitrate in k in appconfig, so *1000
+        self._video_encoder = H264Encoder(
+            bitrate=appconfig.mediaprocessing.video_bitrate * 1000,  # bitrate in k in appconfig, so *1000
+            framerate=video_framerate,
+            profile="baseline" if appconfig.mediaprocessing.video_compatibility_mode else None,  # compat mode, baseline produces yuv420
+        )
         self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")

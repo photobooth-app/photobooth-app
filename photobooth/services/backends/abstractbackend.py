@@ -348,10 +348,7 @@ class AbstractBackend(ABC):
 
             raise RuntimeError("device raised exception") from exc
 
-    def start_recording(
-        self,
-        video_framerate: int,
-    ):
+    def start_recording(self, video_framerate: int):
         if not self._video_feature_available:
             raise RuntimeError("video feature is not available. check logs for more information. maybe ffmpeg missing?")
 
