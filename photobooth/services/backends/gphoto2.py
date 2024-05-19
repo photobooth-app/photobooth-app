@@ -308,6 +308,7 @@ class Gphoto2Backend(AbstractBackend):
                     logger.critical(f"error capture! check logs for errors. {exc}")
 
                     # try again in next loop
+                    time.sleep(0.6)  # if it fails before next round, wait little because it might fail fast again
                     continue
 
                 # empty the event queue, needed in case of RAW+JPG shooting usually.
@@ -342,6 +343,7 @@ class Gphoto2Backend(AbstractBackend):
                     logger.critical("no capture or no jpeg captured! shooting in raw-only mode?")
 
                     # try again in next loop
+                    time.sleep(0.6)  # if it fails before next round, wait little because it might fail fast again
                     continue
 
                 # read from camera
@@ -353,9 +355,12 @@ class Gphoto2Backend(AbstractBackend):
                     logger.critical(f"error reading camera file! check logs for errors. {exc}")
 
                     # try again in next loop
+                    time.sleep(0.6)  # if it fails before next round, wait little because it might fail fast again
                     continue
 
                 # only capture one pic and return to lores streaming afterwards
+                # it's okay to clear in the end because wait_for_hires is taking care about resetting due to timeout also.
+                # changed here first #3cd344796044cd6837c0b5337d96bec7dc1e6b4d
                 self._hires_data.request_hires_still.clear()
 
                 with self._hires_data.condition:
