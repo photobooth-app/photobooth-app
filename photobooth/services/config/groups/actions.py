@@ -11,8 +11,12 @@ class FrontpageTrigger(BaseModel):
     Frontpage triggers configuration.
     """
 
-    model_config = ConfigDict(title="Frontpage triggers configuration")
+    model_config = ConfigDict(title="Frontpage button configuration")
 
+    show_button: bool = Field(
+        default=True,
+        description="Show a button to trigger process on the main screen.",
+    )
     title: str = Field(
         default="",
         description="Label used for the trigger button.",

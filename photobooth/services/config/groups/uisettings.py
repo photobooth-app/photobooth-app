@@ -27,22 +27,6 @@ class GroupUiSettings(BaseModel):
         description="Secondary color (admin interface, accents).",
     )
 
-    show_takepic_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture single picture on frontpage.",
-    )
-    show_takecollage_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture collage on frontpage.",
-    )
-    show_takeanimation_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture animated GIF on frontpage.",
-    )
-    show_takevideo_on_frontpage: bool = Field(
-        default=True,
-        description="Show button to capture video on frontpage.",
-    )
     show_gallery_on_frontpage: bool = Field(
         default=True,
         description="Show button to gallery on frontpage.",
