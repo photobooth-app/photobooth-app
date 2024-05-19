@@ -181,6 +181,10 @@ class AbstractBackend(ABC):
                     logger.exception(exc)
                     logger.critical("device failed to initialize!")
                     self.device_status = EnumDeviceStatus.fault
+                    try:
+                        self._device_stop()
+                    except Exception as exc:
+                        logger.error(f"error stopping faulty backend {exc}, still trying to recover")
 
             time.sleep(1)
             # next after wait is to check if connect_thread is stopped - in this case no further actions.
