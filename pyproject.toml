@@ -3,8 +3,8 @@ name = "photobooth-app"
 requires-python = ">=3.9,<3.13"
 dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
-authors = [{ name = "Michael G", email = "me@mgrl.de" }]
-maintainers = [{ name = "Michael G", email = "me@mgrl.de" }]
+authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
+maintainers = [{ name = "Michael G", email = "me@mgineer85.de" }]
 readme = "README.md"
 license = { text = "MIT" }
 classifiers = [
@@ -21,6 +21,9 @@ classifiers = [
 ]
 keywords = [
   "photobooth",
+  "photobooth-app",
+  "wedding",
+  "booth",
   "raspberry-pi",
   "camera",
   "python",
