@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import shutil
+import subprocess
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -462,10 +463,27 @@ class MediaItem:
 
     def _create_fileset_unprocessed_mp4(self):
         """create mp4 fileset in most efficient way."""
-        # TODO: actually implement resizer
+
+        tms = time.time()
+        # to save some processing time the full version and original are same for gif
         shutil.copy2(self.path_original, self.path_full_unprocessed)
-        shutil.copy2(self.path_original, self.path_preview_unprocessed)
-        shutil.copy2(self.path_original, self.path_thumbnail_unprocessed)
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy original to full_unprocessed")
+
+        tms = time.time()
+        self.resize_mp4(
+            video_in=self.path_original,
+            video_out=self.path_preview_unprocessed,
+            scaled_min_width=appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
+        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale preview_unprocessed")
+
+        tms = time.time()
+        self.resize_mp4(
+            video_in=self.path_preview_unprocessed,
+            video_out=self.path_thumbnail_unprocessed,
+            scaled_min_width=appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
+        )
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale thumbnail_unprocessed")
 
     def copy_fileset_processed(self):
         shutil.copy2(self.path_full_unprocessed, self.path_full)
@@ -562,3 +580,37 @@ class MediaItem:
         )
 
         return om
+
+    @staticmethod
+    def resize_mp4(video_in: Path, video_out: Path, scaled_min_width: int):
+        """ """
+
+        command_general_options = [
+            "-hide_banner",
+            "-loglevel",
+            "info",
+            "-y",
+        ]
+        command_video_input = [
+            "-i",
+            str(video_in),
+        ]
+        command_video_output = [
+            "-filter:v",
+            f"scale=min'({scaled_min_width},iw)':-2,setsar=1:1",  # no upscaling
+            "-sws_flags",
+            "fast_bilinear",
+            "-movflags",
+            "+faststart",
+        ]
+
+        ffmpeg_command = ["ffmpeg"] + command_general_options + command_video_input + command_video_output + [str(video_out)]
+        try:
+            subprocess.run(
+                args=ffmpeg_command,
+                check=True,
+                env=dict(os.environ, FFREPORT="file=./log/ffmpeg-resize-last.log:level=32"),
+            )
+        except Exception as exc:
+            logger.exception(exc)
+            raise RuntimeError(f"error resizing video, error: {exc}") from exc
