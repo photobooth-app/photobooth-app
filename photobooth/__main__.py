@@ -5,7 +5,6 @@ Photobooth Application start script
 
 import logging
 import os
-import socket
 from pathlib import Path
 
 import uvicorn
@@ -25,16 +24,6 @@ def main(run_server: bool = True):
         os.makedirs("log", exist_ok=True)
         os.makedirs("config", exist_ok=True)
         os.makedirs("tmp", exist_ok=True)
-
-    # guard to start only one instance at a time.
-    try:
-        s = socket.socket()
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(("localhost", 19988))  # bind fails on second instance, raising OSError
-    except OSError as exc:
-        print("startup aborted. another instance is running. exiting.")
-        logger.critical("startup aborted. another instance is running. exiting.")
-        raise SystemExit("only one instance allowed") from exc
 
     try:
         _create_basic_folders()
@@ -84,9 +73,6 @@ def main(run_server: bool = True):
         server.run()
     # else:
     #     container.stop()
-
-    # close single instance port
-    s.close()
 
 
 if __name__ == "__main__":
