@@ -26,3 +26,8 @@ class GroupCommon(BaseModel):
         default=8000,
         description="Port to serve the photobooth website. Ensure the port is available. Ports below 1024 need root!",
     )
+
+    users_delete_to_recycle_dir: bool = Field(
+        default=True,
+        description="If enabled, the captured files are moved to the recycle directory instead permanently deleted. Accidentally deleted images can be restored by the admin manually. Please inform users about the fact that no capture is deleted, if you enable the function!",
+    )

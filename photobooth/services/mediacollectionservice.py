@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from .baseservice import BaseService
+from .config import appconfig
 from .mediacollection.mediaitem import (
     PATH_FULL,
     PATH_FULL_UNPROCESSED,
@@ -23,6 +24,8 @@ from .mediaprocessingservice import MediaprocessingService
 from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
 
 logger = logging.getLogger(__name__)
+
+RECYCLE_DIR = "recycle"
 
 
 class MediacollectionService(BaseService):
@@ -49,6 +52,7 @@ class MediacollectionService(BaseService):
         os.makedirs(f"{PATH_FULL_UNPROCESSED}", exist_ok=True)
         os.makedirs(f"{PATH_PREVIEW_UNPROCESSED}", exist_ok=True)
         os.makedirs(f"{PATH_THUMBNAIL_UNPROCESSED}", exist_ok=True)
+        os.makedirs(f"{RECYCLE_DIR}", exist_ok=True)
 
         self._init_db()
 
@@ -192,7 +196,12 @@ class MediacollectionService(BaseService):
         self._logger.info(f"request delete files of {mediaitem}")
 
         try:
-            os.remove(mediaitem.path_original)
+            if appconfig.common.users_delete_to_recycle_dir:
+                self._logger.info(f"moving {mediaitem} to recycle directory")
+                os.rename(mediaitem.path_original, Path(RECYCLE_DIR, mediaitem.filename))
+            else:
+                os.remove(mediaitem.path_original)
+
             os.remove(mediaitem.metadata_filename)
             os.remove(mediaitem.path_full_unprocessed)
             os.remove(mediaitem.path_full)
@@ -202,11 +211,11 @@ class MediacollectionService(BaseService):
             os.remove(mediaitem.path_thumbnail)
         except Exception as exc:
             self._logger.exception(exc)
-            self._logger.error(f"error deleting files for item {mediaitem}")
+            raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
 
         self._logger.info(f"deleted files of {mediaitem}")
 
-    def delete_images(self):
+    def delete_all_mediaitems(self):
         """delete all images, inclusive thumbnails, ..."""
         try:
             for file in Path(f"{PATH_ORIGINAL}").glob("*.*"):
@@ -224,6 +233,8 @@ class MediacollectionService(BaseService):
             for file in Path(f"{PATH_THUMBNAIL_UNPROCESSED}").glob("*.*"):
                 os.remove(file)
             self._db_delete_items()
-        except OSError as exc:
+        except Exception as exc:
             self._logger.exception(exc)
-            self._logger.error(f"error deleting file {file}")
+            raise RuntimeError(f"error deleting file {file}") from exc
+
+        self._logger.info("deleted all mediaitems")

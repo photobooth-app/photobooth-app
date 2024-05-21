@@ -40,7 +40,7 @@ def api_gallery_delete_all():
     """
     logger.info("delete_all media items requested")
     try:
-        container.mediacollection_service.delete_images()
+        container.mediacollection_service.delete_all_mediaitems()
         logger.info("all media successfully deleted")
     except Exception as exc:
         logger.exception(exc)

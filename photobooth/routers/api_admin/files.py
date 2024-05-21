@@ -13,6 +13,7 @@ from fastapi import APIRouter, Body, UploadFile, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
+from ...services.mediacollectionservice import RECYCLE_DIR
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
@@ -208,3 +209,20 @@ def post_zip(selected_paths: list[PathListItem] = None):
         return zipfiles(filenames_to_process)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"selected file not found {exc}") from exc
+
+
+@router.get("/clear_recycle_dir", status_code=status.HTTP_204_NO_CONTENT)
+def api_clear_recycle_dir():
+    """Warning: deletes all files permanently without any further confirmation
+
+    Raises:
+        HTTPException: _description_
+    """
+
+    try:
+        for file in Path(f"{RECYCLE_DIR}").glob("*.*"):
+            os.remove(file)
+
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(500, f"clearing recycle directory failed, error: {exc}") from exc
