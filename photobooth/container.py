@@ -39,12 +39,18 @@ class Container:
         sse_service,
         mediaprocessing_service,
     )
+    information_service: InformationService = InformationService(
+        sse_service,
+        aquisition_service,
+    )
+
     processing_service = ProcessingService(
         sse_service,
         aquisition_service,
         mediacollection_service,
         mediaprocessing_service,
         wled_service,
+        information_service,
     )
     system_service = SystemService(
         sse_service,
@@ -52,6 +58,7 @@ class Container:
     printing_service = PrintingService(
         sse_service,
         mediacollection_service,
+        information_service,
     )
     gpio_service = GpioService(
         sse_service,
@@ -65,11 +72,6 @@ class Container:
     )
     filetransfer_service = FileTransferService(
         sse_service,
-    )
-    information_service: InformationService = InformationService(
-        sse_service,
-        aquisition_service,
-        printing_service,
     )
 
     def _service_list(self) -> list[BaseService]:

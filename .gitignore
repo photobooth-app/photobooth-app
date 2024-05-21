@@ -8,6 +8,8 @@ log/*.log*
 /userdata
 /tmp
 /recycle
+stats.json
+
 
 # python files
 __pycache__
@@ -33,5 +35,3 @@ dist/*
 
 # ignore drawing of statemachine
 diagram_ProcessingPicture.png
-
-

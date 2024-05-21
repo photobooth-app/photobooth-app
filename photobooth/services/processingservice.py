@@ -15,6 +15,7 @@ from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.actions import AnimationProcessing, CollageProcessing
 from .config.models.models import PilgramFilter, SinglePictureDefinition
+from .informationservice import InformationService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessingservice import MediaprocessingService
@@ -42,12 +43,14 @@ class ProcessingService(BaseService):
         mediacollection_service: MediacollectionService,
         mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
+        information_service: InformationService,
     ):
         super().__init__(sse_service)
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
         self._wled_service: WledService = wled_service
+        self._information_service: InformationService = information_service
 
         # objects
         self._state_machine: ProcessingMachine = None
@@ -141,12 +144,15 @@ class ProcessingService(BaseService):
         if action_type == "image":
             configurationset = self._get_config_by_index(appconfig.actions.image, action_index)
             self._start_job(JobModelImage(configurationset))
+            self._information_service.stats_counter_increment("images")
         elif action_type == "collage":
             configurationset = self._get_config_by_index(appconfig.actions.collage, action_index)
             self._start_job(JobModelCollage(configurationset))
+            self._information_service.stats_counter_increment("collages")
         elif action_type == "animation":
             configurationset = self._get_config_by_index(appconfig.actions.animation, action_index)
             self._start_job(JobModelAnimation(configurationset))
+            self._information_service.stats_counter_increment("animations")
         elif action_type == "video":
             if self._state_machine is not None:
                 # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
@@ -155,6 +161,7 @@ class ProcessingService(BaseService):
             else:
                 configurationset = self._get_config_by_index(appconfig.actions.video, action_index)
                 self._start_job(JobModelVideo(configurationset))
+                self._information_service.stats_counter_increment("videos")
         else:
             raise RuntimeError(f"illegal {action_type=}")
 

@@ -211,8 +211,8 @@ def post_zip(selected_paths: list[PathListItem] = None):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"selected file not found {exc}") from exc
 
 
-@router.get("/clear_recycle_dir", status_code=status.HTTP_204_NO_CONTENT)
-def api_clear_recycle_dir():
+@router.get("/clearrecycledir", status_code=status.HTTP_204_NO_CONTENT)
+def api_clearrecycledir():
     """Warning: deletes all files permanently without any further confirmation
 
     Raises:

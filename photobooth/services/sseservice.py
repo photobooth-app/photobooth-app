@@ -190,6 +190,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     cma: dict[str, Any] = None
     backends: dict[str, dict[str, Any]] = None
     printer: dict[str, Any] = None
+    stats_counter: dict[str, Any] = None
 
     @property
     def data(self) -> str:
@@ -201,6 +202,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 cma=self.cma,
                 backends=self.backends,
                 printer=self.printer,
+                stats_counter=self.stats_counter,
             )
         )
 

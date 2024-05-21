@@ -2,11 +2,17 @@
 _summary_
 """
 
+import functools
+import json
 import platform
 import socket
 import sys
 import threading
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
+from threading import Timer
+from typing import ClassVar
 
 import psutil
 
@@ -14,23 +20,97 @@ from ..__version__ import __version__
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
-from .printingservice import PrintingService
 from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
 
+# https://stackoverflow.com/a/78227581
+# https://gist.github.com/walkermatt/2871026
+def debounce(timeout: float):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            wrapper.func.cancel()
+            wrapper.func = Timer(timeout, func, args, kwargs)
+            wrapper.func.start()
+
+        wrapper.func = Timer(timeout, lambda: None)
+        return wrapper
+
+    return decorator
+
+
+@dataclass
+class StatsCounter:
+    images: int = 0
+    collages: int = 0
+    animations: int = 0
+    videos: int = 0
+    prints: int = 0
+    last_reset: str = None
+
+    stats_file: ClassVar = "stats.json"
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            images=data.get("images"),
+            collages=data.get("collages"),
+            animations=data.get("animations"),
+            videos=data.get("videos"),
+            prints=data.get("prints"),
+            last_reset=data.get("last_reset"),
+        )
+
+    @classmethod
+    def from_json(cls):
+        try:
+            with open(cls.stats_file, encoding="utf-8") as openfile:
+                return StatsCounter.from_dict(json.load(openfile))
+        except FileNotFoundError:
+            cls = StatsCounter()
+            cls.persist_stats()
+            return cls
+        except Exception as exc:
+            raise RuntimeError(f"unknown error loading stats, error: {exc}") from exc
+
+    def reset(self):
+        try:
+            self.__init__(last_reset=datetime.now().astimezone().strftime("%x %X"))  # ("%Y-%m-%d %H:%M:%S"))
+            self.persist_stats()
+        except Exception as exc:
+            raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
+
+    def increment(self, varname):
+        try:
+            current_value = getattr(self, varname)
+            setattr(self, varname, current_value + 1)
+        except Exception as exc:
+            raise RuntimeError(f"cannot increment {varname}, error: {exc}") from exc
+        else:
+            self.persist_stats()
+
+    @debounce(timeout=1)
+    def persist_stats(self) -> None:
+        try:
+            with open(self.stats_file, "w", encoding="utf-8") as outfile:
+                json.dump(asdict(self), outfile, indent=2)
+        except Exception as exc:
+            raise RuntimeError(f"could not save statscounter file, error: {exc}") from exc
+
+
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService, printing_service: PrintingService):
+    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService):
         super().__init__(sse_service)
 
         self._aquisition_service = aquisition_service
-        self._printing_service = printing_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
+        self._stats_counter: StatsCounter = StatsCounter.from_json()
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -70,6 +150,12 @@ class InformationService(BaseService):
         """_summary_"""
         self._stats_interval_timer.stop()
 
+    def stats_counter_reset(self):
+        self._stats_counter.reset()
+
+    def stats_counter_increment(self, varname):
+        self._stats_counter.increment(varname)
+
     def initial_emit(self):
         """_summary_"""
 
@@ -104,7 +190,7 @@ class InformationService(BaseService):
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
-                printer=self._gather_printing_stats(),
+                stats_counter=asdict(self._stats_counter),
             ),
         )
 

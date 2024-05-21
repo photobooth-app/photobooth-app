@@ -2,12 +2,12 @@
 Handle all media collection related functions
 """
 
-import dataclasses
 import subprocess
 import time
 
 from .baseservice import BaseService
 from .config import appconfig
+from .informationservice import InformationService
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .sseservice import SseEventFrontendNotification, SseService
@@ -15,24 +15,15 @@ from .sseservice import SseEventFrontendNotification, SseService
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 
 
-@dataclasses.dataclass
-class PrinterStats:
-    """
-    defines some common stats, used in frontend also
-    """
-
-    is_blocked: bool = None
-    waiting_time: float = None
-
-
 class PrintingService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService):
+    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService, information_service: InformationService):
         super().__init__(sse_service)
 
         # common objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
+        self._information_service: InformationService = information_service
 
         # custom service objects
         self._last_print_time = None
@@ -106,6 +97,8 @@ class PrintingService(BaseService):
             self._sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Print Error"))
             raise RuntimeError(f"print failed, error {exc}") from exc
 
+        self._information_service.stats_counter_increment("prints")
+
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
 
@@ -130,17 +123,3 @@ class PrintingService(BaseService):
     def _print_timer_fun(self):
         ## thread to send updates to client about remaining blocked time
         pass
-
-    def stats(self):
-        """
-        Gather stats service used for frontend.
-
-        Returns:
-            _type_: _description_
-        """
-        stats = PrinterStats(
-            is_blocked=self.is_blocked(),
-            waiting_time=round(self.remaining_time_blocked(), 1),
-        )
-
-        return dataclasses.asdict(stats)
