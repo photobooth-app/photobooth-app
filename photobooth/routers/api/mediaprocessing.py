@@ -18,7 +18,11 @@ def api_get_preview_image_filtered(mediaitem_id, filter=None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
         buffer_preview_pipeline_applied = container.mediaprocessing_service.get_filter_preview(mediaitem, filter)
-        return Response(content=buffer_preview_pipeline_applied.getvalue(), media_type="image/jpeg")
+        return Response(
+            content=buffer_preview_pipeline_applied.getvalue(),
+            media_type="image/jpeg",
+            headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
+        )
 
     except FileNotFoundError as exc:
         # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found
