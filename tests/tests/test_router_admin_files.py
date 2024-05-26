@@ -18,6 +18,14 @@ def client() -> TestClient:
         container.stop()
 
 
+@pytest.fixture
+def client_authenticated(client) -> TestClient:
+    response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
+    token = response.json()["access_token"]
+    client.headers = {"Authorization": f"Bearer {token}"}
+    yield client
+
+
 @pytest.fixture(
     params=[
         "/admin/files/list/",
@@ -30,55 +38,55 @@ def admin_files_endpoint(request):
     # cleanup
 
 
-def test_admin_simple_endpoints(client: TestClient, admin_files_endpoint):
-    response = client.get(admin_files_endpoint)
+def test_admin_simple_endpoints(client_authenticated: TestClient, admin_files_endpoint):
+    response = client_authenticated.get(admin_files_endpoint)
     assert response.status_code == 200
 
 
-def test_admin_file_endpoints(client: TestClient):
+def test_admin_file_endpoints(client_authenticated: TestClient):
     open(".testfile", "a").close()
-    response = client.get("/admin/files/file/.testfile")
+    response = client_authenticated.get("/admin/files/file/.testfile")
     os.remove(".testfile")
 
     assert response.status_code == 200
 
 
-def test_admin_list_notexists(client: TestClient):
-    response = client.get("/admin/files/list/.testfile_notexistantdir")
+def test_admin_list_notexists(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/files/list/.testfile_notexistantdir")
     assert response.status_code == 404
 
-    response = client.get("/admin/files/list/.testdir_notexistantdir/")
-    assert response.status_code == 404
-
-
-def test_admin_file_notexists(client: TestClient):
-    response = client.get("/admin/files/file/.testfile_notexistant")
+    response = client_authenticated.get("/admin/files/list/.testdir_notexistantdir/")
     assert response.status_code == 404
 
 
-def test_admin_files_traversalchecks(client: TestClient):
-    response = client.get("/admin/files/file/%2e%2e%2ftestfile_notexistant")
+def test_admin_file_notexists(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/files/file/.testfile_notexistant")
+    assert response.status_code == 404
+
+
+def test_admin_files_traversalchecks(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/files/file/%2e%2e%2ftestfile_notexistant")
     assert response.status_code == 400
 
-    response = client.get("/admin/files/list/%2e%2e%2ftestfile_notexistant/")
+    response = client_authenticated.get("/admin/files/list/%2e%2e%2ftestfile_notexistant/")
     assert response.status_code == 400
 
-    response = client.post("/admin/files/folder/new", json="/%2e%2e%2ftestfile_notexistant/")
+    response = client_authenticated.post("/admin/files/folder/new", json="/%2e%2e%2ftestfile_notexistant/")
     assert response.status_code == 400
 
 
-def test_admin_files_zip_post(client: TestClient):
+def test_admin_files_zip_post(client_authenticated: TestClient):
     # make up a list - only filepath needs to be valid for this function.
     selected_files = [
         asdict(PathListItem(name=".gitignore", filepath=".gitignore", is_dir=False, size=0)),  # file
         asdict(PathListItem(name="log", filepath="./log", is_dir=True, size=0)),  # dir, both types are tested
     ]
 
-    response = client.post("/admin/files/zip", json=selected_files)
+    response = client_authenticated.post("/admin/files/zip", json=selected_files)
     assert response.status_code == 200
 
 
-def test_admin_files_zip_post_notfound(client: TestClient):
+def test_admin_files_zip_post_notfound(client_authenticated: TestClient):
     # make up a list - only filepath needs to be valid for this function.
     # there is a bug in zipfile.py. can ignore the warning for our booth: https://github.com/python/cpython/issues/81954
     selected_files = [
@@ -86,13 +94,13 @@ def test_admin_files_zip_post_notfound(client: TestClient):
         asdict(PathListItem(name="log", filepath="./log1", is_dir=True, size=0)),  # dir, both types are tested
     ]
 
-    response = client.post("/admin/files/zip", json=selected_files)
+    response = client_authenticated.post("/admin/files/zip", json=selected_files)
     assert response.status_code == 400
 
 
-def test_admin_files_upload(client: TestClient):
+def test_admin_files_upload(client_authenticated: TestClient):
     with open("tests/assets/input.jpg", "rb") as f:
-        response = client.post(
+        response = client_authenticated.post(
             "/admin/files/file/upload",
             data={"upload_target_folder": "./"},
             files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
@@ -106,8 +114,8 @@ def test_admin_files_upload(client: TestClient):
             raise AssertionError("delete failed, so it was not created before.") from exc
 
 
-def test_admin_files_upload_fails(client: TestClient):
-    response = client.post(
+def test_admin_files_upload_fails(client_authenticated: TestClient):
+    response = client_authenticated.post(
         "/admin/files/file/upload",
         data={"upload_target_folder": "./"},
         files={},
@@ -115,7 +123,7 @@ def test_admin_files_upload_fails(client: TestClient):
     assert response.status_code == 400
 
     with open("tests/assets/input.jpg", "rb") as f:
-        response = client.post(
+        response = client_authenticated.post(
             "/admin/files/file/upload",
             data={"upload_target_folder": "./nonexistantfoldertouploadto_automated"},
             files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
@@ -123,7 +131,7 @@ def test_admin_files_upload_fails(client: TestClient):
         assert response.status_code == 400
 
 
-def test_admin_files_new_folder(client: TestClient):
+def test_admin_files_new_folder(client_authenticated: TestClient):
     # make up a list - only filepath needs to be valid for this function.
     target_path = "./userdata"
     new_folder_name = "testfolder_automated_testing"
@@ -134,10 +142,10 @@ def test_admin_files_new_folder(client: TestClient):
     except FileNotFoundError:
         pass  # ignore
 
-    response = client.post("/admin/files/folder/new", json=new_path.as_posix())
+    response = client_authenticated.post("/admin/files/folder/new", json=new_path.as_posix())
     assert response.status_code == 201
 
-    response = client.post("/admin/files/folder/new", json=new_path.as_posix())
+    response = client_authenticated.post("/admin/files/folder/new", json=new_path.as_posix())
     assert response.status_code == 409  # already exists
 
     try:
@@ -146,7 +154,7 @@ def test_admin_files_new_folder(client: TestClient):
         raise AssertionError("delete failed, so it was not created before.") from exc
 
 
-def test_admin_files_delete(client: TestClient):
+def test_admin_files_delete(client_authenticated: TestClient):
     # create tmp data to delete
     os.makedirs("tmp/test/test/test", exist_ok=True)
     open("./tmp/test/testfile", "a").close()
@@ -156,5 +164,5 @@ def test_admin_files_delete(client: TestClient):
         asdict(PathListItem(name="test", filepath="./tmp/test", is_dir=True, size=0)),  # dir, both types are tested
     ]
 
-    response = client.post("/admin/files/delete", json=selected_files)
+    response = client_authenticated.post("/admin/files/delete", json=selected_files)
     assert response.status_code == 204
