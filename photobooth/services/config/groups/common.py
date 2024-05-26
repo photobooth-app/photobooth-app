@@ -13,6 +13,11 @@ class GroupCommon(BaseModel):
 
     model_config = ConfigDict(title="Common Config")
 
+    admin_password: str = Field(
+        default="0000",
+        description="Password to access the admin dashboard.",
+    )
+
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         default="DEBUG",
         description="Log verbosity. File is writte to disc, and latest log is displayed also in UI.",

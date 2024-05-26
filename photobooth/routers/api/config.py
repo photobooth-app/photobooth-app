@@ -11,7 +11,7 @@ router = APIRouter(
 )
 
 
-@router.get("/ui")
-def index():
-    """get part of the config dedicated for UI only. UI requests this on startup"""
-    return appconfig.uisettings
+@router.get("/currentActive")
+def api_get_config_current_active():
+    """returns currently cached and active settings, ui requests this on startup."""
+    return appconfig

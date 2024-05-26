@@ -1,0 +1,98 @@
+import secrets
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Union
+
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jwt.exceptions import InvalidTokenError
+from pydantic import BaseModel
+
+from ..services.config import appconfig
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: Union[str, None] = None
+
+
+class User(BaseModel):
+    username: str
+    full_name: Union[str, None] = None
+    disabled: Union[bool, None] = None
+
+
+class UserInDB(User):
+    # hashed_password: str
+    password: str
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/admin/auth/token")
+
+
+def verify_password(plain_password: str, password: str):
+    return secrets.compare_digest(plain_password.encode("utf8"), password.encode("utf8"))
+
+
+def get_users() -> dict[str, UserInDB]:
+    users_db = {"admin": UserInDB(username="admin", full_name="Admin", password=appconfig.common.admin_password, disabled=False)}
+
+    return users_db
+
+
+def get_user(db: dict[str, UserInDB], user_id: str) -> UserInDB:
+    if user_id in db:
+        return db[user_id]
+
+
+def authenticate_user(users_db, user_id: str, password: str):
+    user = get_user(users_db, user_id)
+    if not user:
+        return False
+    if not verify_password(password, user.password):
+        return False
+    return user
+
+
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, appconfig.misc.secret_key, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, appconfig.misc.secret_key, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except InvalidTokenError as exc:
+        raise credentials_exception from exc
+    user = get_user(get_users(), user_id=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user

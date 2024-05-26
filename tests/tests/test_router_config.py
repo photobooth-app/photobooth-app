@@ -19,7 +19,7 @@ def client() -> TestClient:
 
 @pytest.fixture(
     params=[
-        "/config/ui",
+        "/config/currentActive",  # without password protection, UI reads the config
         "/admin/config/schema?schema_type=dereferenced",
         "/admin/config/currentActive",
         "/admin/config/current",
