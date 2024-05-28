@@ -122,7 +122,7 @@ def test_reject_exception(client: TestClient):
     error_mock.side_effect = Exception()
 
     with patch.object(ProcessingService, "reject_capture", error_mock):
-        response = client.get("/actions/confirm")
+        response = client.get("/actions/reject")
         assert response.status_code == 500
         assert "detail" in response.json()
 
