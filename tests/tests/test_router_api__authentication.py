@@ -2,12 +2,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth.application import app
+from photobooth.routers.auth_dependencies_bearer import User
 
 
 @pytest.fixture
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
         yield client
+
+
+@pytest.fixture
+def client_authenticated(client) -> TestClient:
+    response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
+    token = response.json()["access_token"]
+    client.headers = {"Authorization": f"Bearer {token}"}
+    yield client
 
 
 @pytest.fixture(scope="module")
@@ -47,3 +56,11 @@ def test_login_user_ok_password_wrong(client: TestClient, test_user_wrong_pw):
     json = response.json()
     assert json.get("access_token", None) is None
     assert json.get("detail", None) is not None
+
+
+def test_user_me(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/auth/me")
+    assert response.status_code == 200
+    user = response.json()
+
+    User.model_validate(user)

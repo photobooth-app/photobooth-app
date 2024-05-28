@@ -1,6 +1,9 @@
 import os
+import shutil
 from dataclasses import asdict
 from pathlib import Path
+from unittest import mock
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -41,6 +44,17 @@ def admin_files_endpoint(request):
 def test_admin_simple_endpoints(client_authenticated: TestClient, admin_files_endpoint):
     response = client_authenticated.get(admin_files_endpoint)
     assert response.status_code == 200
+
+
+def test_admin_list_exists_but_subfolder_and_subfile_missing_no_exception_reraised(client_authenticated: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(Path, "as_posix", error_mock):  # makes every object in the list fail so is skipped.
+        response = client_authenticated.get("/admin/files/list/")
+
+        assert response.json() == []  # no file, so check for empty
+        assert response.status_code == 200  # but still it's okay, because we just skipped files missing due to deleted after process started
 
 
 def test_admin_file_endpoints(client_authenticated: TestClient):
@@ -112,6 +126,27 @@ def test_admin_files_upload(client_authenticated: TestClient):
             os.unlink("./testupload_automated.jpg")  # fails if file was not created.
         except Exception as exc:
             raise AssertionError("delete failed, so it was not created before.") from exc
+
+
+def test_admin_files_upload_internalerror(client_authenticated: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception("mock error")
+
+    with patch.object(shutil, "copyfileobj", error_mock):
+        with open("tests/assets/input.jpg", "rb") as f:
+            response = client_authenticated.post(
+                "/admin/files/file/upload",
+                data={"upload_target_folder": "./"},
+                files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
+            )
+
+            try:
+                os.unlink("./testupload_automated.jpg")  # fails if file was not created.
+            except Exception:
+                pass
+
+            assert response.status_code == 500
+            assert "detail" in response.json()
 
 
 def test_admin_files_upload_fails(client_authenticated: TestClient):
