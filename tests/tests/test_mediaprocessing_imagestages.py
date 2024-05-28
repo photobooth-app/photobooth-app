@@ -13,7 +13,7 @@ from photobooth.services.config import AppConfig
 from photobooth.services.config.groups.actions import TextsConfig
 from photobooth.utils.exceptions import PipelineError
 
-from .image_utils import is_same
+from .utils import is_same
 
 logger = logging.getLogger(name=None)
 

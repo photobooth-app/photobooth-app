@@ -12,7 +12,7 @@ import pytest
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.config.groups.backends import GroupBackendVirtualcamera
 
-from .backends_utils import get_images
+from .utils import get_images
 
 logger = logging.getLogger(name=None)
 

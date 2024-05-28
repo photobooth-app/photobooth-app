@@ -105,3 +105,43 @@ def test_confirm_reject_abort(client: TestClient):
         assert response.status_code == 200
 
         container.processing_service.abort_process.assert_called()
+
+
+def test_confirm_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(ProcessingService, "confirm_capture", error_mock):
+        response = client.get("/actions/confirm")
+        assert response.status_code == 500
+        assert "detail" in response.json()
+
+
+def test_reject_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(ProcessingService, "reject_capture", error_mock):
+        response = client.get("/actions/confirm")
+        assert response.status_code == 500
+        assert "detail" in response.json()
+
+
+def test_stop_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(ProcessingService, "stop_recording", error_mock):
+        response = client.get("/actions/stop")
+        assert response.status_code == 500
+        assert "detail" in response.json()
+
+
+def test_abort_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(ProcessingService, "abort_process", error_mock):
+        response = client.get("/actions/abort")
+        assert response.status_code == 500
+        assert "detail" in response.json()

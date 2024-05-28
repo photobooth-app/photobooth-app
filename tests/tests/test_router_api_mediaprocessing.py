@@ -11,7 +11,7 @@ from photobooth.application import app
 from photobooth.container import container
 from photobooth.services.mediaprocessingservice import MediaprocessingService
 
-from .image_utils import is_same
+from .utils import is_same
 
 logger = logging.getLogger(name=None)
 

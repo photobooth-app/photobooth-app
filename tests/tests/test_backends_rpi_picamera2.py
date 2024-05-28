@@ -7,7 +7,7 @@ from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 
-from .backends_utils import get_images
+from .utils import get_images
 
 
 @pytest.fixture(autouse=True)
