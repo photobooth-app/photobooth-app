@@ -53,6 +53,9 @@ def test_config_post_validationerror(client_authenticated: TestClient):
 
     assert response.status_code == 422
 
+    # config is changed by this command - revert it do avoid affecting other tests.
+    AppConfig().deleteconfig()
+
 
 def test_config_post(client_authenticated: TestClient):
     # jsonify using pydantic's json function, because fastapi cannot convert all types (like Color)
@@ -60,6 +63,9 @@ def test_config_post(client_authenticated: TestClient):
 
     response = client_authenticated.post("/admin/config/current", json=config_dict)
     assert response.status_code == 200
+
+    # config is changed by this command - revert it do avoid affecting other tests.
+    AppConfig().deleteconfig()
 
 
 @patch("os.remove")
