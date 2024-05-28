@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from photobooth.application import app
 from photobooth.container import container
 from photobooth.services.config import appconfig
+from photobooth.services.mediacollectionservice import MediacollectionService
 
 
 @pytest.fixture
@@ -87,3 +88,19 @@ def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
 
     assert response.status_code == 200
     mock_run.assert_called()
+
+
+def test_latest_filenotfound_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = FileNotFoundError()
+
+    with patch.object(MediacollectionService, "db_get_most_recent_mediaitem", error_mock):
+        response = client.get("/printer/print/latest/0")
+        assert response.status_code == 404
+        assert "detail" in response.json()
+
+
+def test_id_filenotfound_exception(client: TestClient):
+    response = client.get("/printer/print/nonexistantid/0")
+    assert response.status_code == 404
+    assert "detail" in response.json()
