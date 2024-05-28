@@ -91,6 +91,9 @@ jobs:
       - name: install pdm
         run: |
           pip install pdm
+      - name: install app
+        run: |
+          pdm install
       - name: Run pytest
         run: |
           pdm run test
