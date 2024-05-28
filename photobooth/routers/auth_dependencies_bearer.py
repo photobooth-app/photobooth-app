@@ -42,7 +42,14 @@ def verify_password(plain_password: str, password: str):
 
 
 def get_users() -> dict[str, UserInDB]:
-    users_db = {"admin": UserInDB(username="admin", full_name="Admin", password=appconfig.common.admin_password, disabled=False)}
+    users_db = {
+        "admin": UserInDB(
+            username="admin",
+            full_name="Admin",
+            password=appconfig.common.admin_password.get_secret_value(),
+            disabled=False,
+        )
+    }
 
     return users_db
 

@@ -14,4 +14,4 @@ router = APIRouter(
 @router.get("/currentActive")
 def api_get_config_current_active():
     """returns currently cached and active settings, ui requests this on startup."""
-    return appconfig
+    return appconfig.model_dump(context={"secrets_is_allowed": False}, mode="json")

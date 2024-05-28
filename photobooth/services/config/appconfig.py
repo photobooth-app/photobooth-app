@@ -181,7 +181,7 @@ class AppConfig(BaseSettings):
 
         # write model to disk to persist
         with open(CONFIG_FILEPATH, mode="w", encoding="utf-8") as write_file:
-            write_file.write(self.model_dump_json(indent=2))
+            write_file.write(self.model_dump_json(context={"secrets_is_allowed": True}, indent=2))
 
         # remove old config to not clutter the config dir
         self.remove_old_configs()

@@ -5,7 +5,7 @@ AppConfig class providing central config
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, SerializationInfo, field_serializer
 
 
 class GroupCommon(BaseModel):
@@ -13,10 +13,18 @@ class GroupCommon(BaseModel):
 
     model_config = ConfigDict(title="Common Config")
 
-    admin_password: str = Field(
-        default="0000",
+    admin_password: SecretStr = Field(
+        default=SecretStr("0000"),
         description="Password to access the admin dashboard.",
     )
+
+    @field_serializer("admin_password")
+    def contextual_serializer(self, value, info: SerializationInfo):
+        if info.context:
+            if info.context.get("secrets_is_allowed", False):
+                return value.get_secret_value()
+
+        return "************"
 
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
         default="DEBUG",

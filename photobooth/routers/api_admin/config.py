@@ -32,13 +32,14 @@ def api_reset_config():
 @router.get("/currentActive")
 def api_get_config_current_active():
     """returns currently cached and active settings"""
-    return appconfig
+    return appconfig.model_dump(context={"secrets_is_allowed": True}, mode="json")
 
 
 @router.get("/current")
 def api_get_config_current():
     """read settings from drive and return"""
-    return AppConfig()
+    _appconfig = AppConfig()
+    return _appconfig.model_dump(context={"secrets_is_allowed": True}, mode="json")
 
 
 @router.post("/current")
