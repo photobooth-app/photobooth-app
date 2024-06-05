@@ -7,7 +7,6 @@ Pin Numbering: https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-number
 
 import subprocess
 
-# from gpiozero import Button
 from gpiozero import Button as ZeroButton
 
 from ..utils.exceptions import ProcessMachineOccupiedError
@@ -24,7 +23,7 @@ from .sseservice import SseService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
-DEBOUNCE_TIME = 0.06  # due to bugs in GPIOZERO this feature cannot be used and remains to default=None
+DEBOUNCE_TIME = 0.06
 
 
 class Button(ZeroButton):

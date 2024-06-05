@@ -34,7 +34,7 @@ def test_button_shutdown(mock_check_call, _container: Container):
     _container.gpio_service.shutdown_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_SHUTDOWN + 0.5)
+    time.sleep(DEBOUNCE_TIME + HOLD_TIME_SHUTDOWN + 0.5)
 
     # check subprocess.check_call was invoked
     mock_check_call.assert_called()
@@ -46,7 +46,7 @@ def test_button_reboot(mock_check_call, _container: Container):
     _container.gpio_service.reboot_btn.pin.drive_low()
 
     # wait hold time
-    time.sleep(DEBOUNCE_TIME or 0.0 + HOLD_TIME_REBOOT + 0.5)
+    time.sleep(DEBOUNCE_TIME + HOLD_TIME_REBOOT + 0.5)
 
     # check subprocess.check_call was invoked
     mock_check_call.assert_called()
@@ -62,7 +62,7 @@ def test_button_action_buttons(_container: Container):
             action_button.pin.drive_low()
 
             # wait debounce time
-            time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
+            time.sleep(DEBOUNCE_TIME + 0.5)
 
         _container.processing_service._start_job.assert_called()
 
@@ -78,7 +78,7 @@ def test_button_print(mock_run, _container: Container):
         print_button.pin.drive_low()
 
         # wait debounce time
-        time.sleep(DEBOUNCE_TIME or 0.0 + 0.5)
+        time.sleep(DEBOUNCE_TIME + 0.5)
 
         # emulate print finished, to avoid need to wait for blocking time.
         _container.printing_service._last_print_time = None
