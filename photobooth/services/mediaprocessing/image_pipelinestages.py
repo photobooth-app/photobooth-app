@@ -217,18 +217,21 @@ def image_frame_stage(image: Image.Image, frame_file: Union[Path, str]) -> Image
     # check frame is avail, otherwise send pipelineerror
     try:
         frame_path = get_user_file(frame_file)
-        image_frame = Image.open(frame_path)
+        # convert to rgba because there could be paletted PNGs in mode P but still with alpha in info.transparency.
+        # converting to RGBA moves info.transparency to actual channel and handling is easy
+        image_frame = Image.open(frame_path).convert("RGBA")
     except FileNotFoundError as exc:
         logger.exception(exc)
         raise PipelineError(f"frame {str(frame_file)} not found!") from exc
 
     logger.info(f"loaded {frame_path=}")
 
-    if image_frame.mode not in ("RGBA", "P"):
-        raise PipelineError("image has no alphachannel, cannot apply stage")
+    try:
+        # detect boundary box of transparent area, for this get alphachannel, invert and getbbox:
+        transparent_xy = ImageOps.invert(image_frame.getchannel("A")).getbbox()  # getchannel A returns img mode 'L'
+    except Exception as exc:  # no transparent channel A
+        raise PipelineError(f"error processing image, cannot apply stage, error {exc}") from exc
 
-    # detect boundary box of transparent area, for this get alphachannel, invert and getbbox:
-    transparent_xy = ImageOps.invert(image_frame.getchannel("A")).getbbox()  # Mode 'L'
     if transparent_xy is None:
         raise PipelineError("image has alphachannel but actually has not transparent area, cannot apply stage")
 
