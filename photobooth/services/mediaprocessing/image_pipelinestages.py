@@ -169,7 +169,7 @@ def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image
 
 def image_img_background_stage(image: Image.Image, background_file: Union[Path, str], reverse: bool = False) -> Image.Image:
     """ """
-    logger.info("image_img_background_stage to apply")
+    logger.info(f"image_img_background_stage to apply, {background_file=} {reverse=}")
 
     if not image.has_transparency_data:
         logger.warning("no transparency in image, background stage makes no sense to apply!")

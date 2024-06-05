@@ -268,7 +268,7 @@ class MediaprocessingService(BaseService):
         if _config.canvas_fill_background_enable:
             canvas = self._apply_stage_fill_background(canvas, _config.canvas_fill_background_color)
 
-        ## stage: new background image behing transparent parts (or extended frame)
+        ## stage: new background image behind transparent parts (or extended frame)
         if _config.canvas_img_background_enable:
             canvas = self._apply_stage_img_background(canvas, _config.canvas_img_background_file)
 
