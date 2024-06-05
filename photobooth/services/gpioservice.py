@@ -7,7 +7,8 @@ Pin Numbering: https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-number
 
 import subprocess
 
-from gpiozero import Button
+# from gpiozero import Button
+from gpiozero import Button as ZeroButton
 
 from ..utils.exceptions import ProcessMachineOccupiedError
 from ..utils.helper import is_rpi
@@ -23,7 +24,21 @@ from .sseservice import SseService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
-DEBOUNCE_TIME = None  # due to bugs in GPIOZERO this feature cannot be used and remains to default=None
+DEBOUNCE_TIME = 0.06  # due to bugs in GPIOZERO this feature cannot be used and remains to default=None
+
+
+class Button(ZeroButton):
+    def _fire_held(self):
+        # workaround for bug in gpiozero https://github.com/gpiozero/gpiozero/issues/697
+        # https://github.com/gpiozero/gpiozero/issues/697#issuecomment-1480117579
+        # Sometimes the kernel omits edges, so if the last
+        # deactivating edge is omitted held keeps firing. So
+        # check the current value and send a fake edge to
+        # EventsMixin to stop the held events.
+        if self.value:
+            super()._fire_held()
+        else:
+            self._fire_events(self.pin_factory.ticks(), False)
 
 
 class ActionButton(Button):
