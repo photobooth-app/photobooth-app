@@ -23,7 +23,7 @@ from .sseservice import SseService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
-DEBOUNCE_TIME = 0.06
+DEBOUNCE_TIME = 0.04
 
 
 class Button(ZeroButton):
