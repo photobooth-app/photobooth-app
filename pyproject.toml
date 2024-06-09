@@ -52,7 +52,7 @@ dependencies = [
     "linuxpy>=0.10.0; platform_system == 'Linux'",
     "gpiozero>=2.0.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
-    "python-statemachine>=2.1",
+    "python-statemachine==2.2",
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
 ]
