@@ -164,14 +164,14 @@ class MediaprocessingService(BaseService):
             image = self._apply_stage_pilgram(image, _config.filter.value)
             number_stages_applied += 1
 
-        ## stage: new background shining through transparent parts (or extended frame)
-        if _config.fill_background_enable:
-            image = self._apply_stage_fill_background(image, _config.fill_background_color)
-            number_stages_applied += 1
-
         ## stage: new background image behin transparent parts (or extended frame)
         if _config.img_background_enable:
             image = self._apply_stage_img_background(image, _config.img_background_file)
+            number_stages_applied += 1
+
+        ## stage: new background shining through transparent parts (or extended frame)
+        if _config.fill_background_enable:
+            image = self._apply_stage_fill_background(image, _config.fill_background_color)
             number_stages_applied += 1
 
         ## stage: new image in front of transparent parts (or extended frame)
@@ -264,13 +264,14 @@ class MediaprocessingService(BaseService):
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage original")
 
         ## apply pipelines
-        ## stage: new background shining through transparent parts (or extended frame)
-        if _config.canvas_fill_background_enable:
-            canvas = self._apply_stage_fill_background(canvas, _config.canvas_fill_background_color)
 
         ## stage: new background image behind transparent parts (or extended frame)
         if _config.canvas_img_background_enable:
             canvas = self._apply_stage_img_background(canvas, _config.canvas_img_background_file)
+
+        ## stage: new background shining through transparent parts (or extended frame)
+        if _config.canvas_fill_background_enable:
+            canvas = self._apply_stage_fill_background(canvas, _config.canvas_fill_background_color)
 
         ## stage: new image in front of transparent parts (or extended frame)
         if _config.canvas_img_front_enable:

@@ -178,7 +178,7 @@ class SingleImageProcessing(BaseModel):
 class CollageProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Collage processing after capture")
+    model_config = ConfigDict(title="Collage processing")
 
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 

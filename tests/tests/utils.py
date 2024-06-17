@@ -47,9 +47,40 @@ def is_same(img1: Image.Image, img2: Image.Image):
 
 def video_duration(input_video):
     result = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", input_video],
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
+            input_video,
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
-    print(result.stdout)
+
     return float(result.stdout)
+
+
+def video_frames(input_video):
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-count_frames",
+            "-show_entries",
+            "stream=nb_read_frames",
+            "-of",
+            "csv=p=0",
+            input_video,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    return int(result.stdout)
