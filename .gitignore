@@ -28,6 +28,7 @@ junit/*
 poetry.toml
 dist/*
 .pdm-python
+pdm.lock
 
 
 # ignore .DS_Store files in macos
