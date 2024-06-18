@@ -11,11 +11,6 @@ updates:
     schedule:
       interval: "daily"
       time: "19:00"
-    python-packages:
-      patterns:
-        - "*"
-    labels:
-      - 'dependencies'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
