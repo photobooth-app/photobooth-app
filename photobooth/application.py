@@ -74,6 +74,8 @@ def _create_app() -> FastAPI:
     _app.include_router(static_router)
     # serve data directory holding images, thumbnails, ...
     _app.mount("/media", StaticFiles(directory="media"), name="media")
+    # serve userdata for convenience
+    _app.mount("/userdata", StaticFiles(directory="userdata"), name="userdata")
     # if not match anything above, default to deliver static files from web directory
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
