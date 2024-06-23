@@ -2,17 +2,10 @@ import logging
 
 import pytest
 
-from photobooth.__main__ import _create_basic_folders
 from photobooth.container import container
 from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def global_session_setup():
-    logger.debug("create basic folders")
-    _create_basic_folders()
 
 
 @pytest.fixture(scope="function", autouse=True)

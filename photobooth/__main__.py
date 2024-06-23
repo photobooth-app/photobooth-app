@@ -4,7 +4,6 @@ Photobooth Application start script
 """
 
 import logging
-import os
 from pathlib import Path
 
 import uvicorn
@@ -17,21 +16,7 @@ from .services.config import appconfig
 logger = logging.getLogger(f"{__name__}")
 
 
-def _create_basic_folders():
-    os.makedirs("media", exist_ok=True)
-    os.makedirs("userdata", exist_ok=True)
-    os.makedirs("log", exist_ok=True)
-    os.makedirs("config", exist_ok=True)
-    os.makedirs("tmp", exist_ok=True)
-
-
 def main(run_server: bool = True):
-    try:
-        _create_basic_folders()
-    except Exception as exc:
-        logger.critical(f"cannot create data folders, error: {exc}")
-        raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
-
     # use to construct paths in app referring to assets
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
     # use to construct paths to user data

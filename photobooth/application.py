@@ -1,6 +1,7 @@
 """Application module."""
 
 import logging
+import os
 import signal
 import threading
 from contextlib import asynccontextmanager
@@ -18,6 +19,14 @@ from .routers import api, api_admin
 from .routers.static import static_router
 
 logger = logging.getLogger(f"{__name__}")
+
+
+def _create_basic_folders():
+    os.makedirs("media", exist_ok=True)
+    os.makedirs("userdata", exist_ok=True)
+    os.makedirs("log", exist_ok=True)
+    os.makedirs("config", exist_ok=True)
+    os.makedirs("tmp", exist_ok=True)
 
 
 @asynccontextmanager
@@ -48,6 +57,12 @@ async def lifespan(_: FastAPI):
 
 
 def _create_app() -> FastAPI:
+    try:
+        _create_basic_folders()
+    except Exception as exc:
+        logger.critical(f"cannot create data folders, error: {exc}")
+        raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
+
     container.logging_service.start()
 
     _app = FastAPI(
