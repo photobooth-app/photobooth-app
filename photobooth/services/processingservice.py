@@ -316,11 +316,6 @@ class ProcessingMachine(StateMachine):
         """_summary_"""
         logger.info("state idle entered.")
 
-        self._wled_service.preset_standby()
-
-        # switch backend to preview mode always when returning to idle.
-        self._aquisition_service.signalbackend_configure_optimized_for_idle()
-
     def on_enter_counting(self):
         """_summary_"""
         # wled signaling
@@ -558,4 +553,8 @@ class ProcessingMachine(StateMachine):
 
     def on_enter_finished(self):
         # final state, nothing to do. just for UI to have a dedicated state.
-        pass
+
+        self._wled_service.preset_standby()
+
+        # switch backend to preview mode always when returning to idle.
+        self._aquisition_service.signalbackend_configure_optimized_for_idle()

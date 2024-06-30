@@ -160,7 +160,7 @@ class AquisitionService(BaseService):
         if self._live_backend:
             self._live_backend._on_configure_optimized_for_idle()
 
-    def signalbackend__configure_optimized_for_video(self):
+    def signalbackend_configure_optimized_for_video(self):
         """set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already."""
         self.signalbackend_configure_optimized_for_idle()
 
