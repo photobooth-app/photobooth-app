@@ -145,8 +145,8 @@ class Picamera2Backend(AbstractBackend):
             ),
         )
 
-        # select preview mode on init
-        self._on_configure_optimized_for_idle()
+        # set preview mode on init
+        self._current_config = self._preview_config
 
         # configure; camera needs to be stopped before
         self._picamera2.configure(self._current_config)

@@ -160,6 +160,9 @@ class AbstractBackend(ABC):
                         logger.info("device is available")
                         self._device_start()
 
+                        # after start ensure idle mode is selected.
+                        self._on_configure_optimized_for_idle()
+
                         # clear the flag at this point
                         # if backend needs longer than the amount of time until wait_for_lores_image finally fails (example after 20 retries)
                         # the device could have set the flag in the meantime again during startup.
@@ -254,6 +257,8 @@ class AbstractBackend(ABC):
             # no error, service restart ok
             logger.info("ffmpeg loaded successfully")
             self._video_feature_available = True
+
+        self.signalbackend_configure_optimized_for_idle
 
     def stop(self):
         """To stop the backend to serve"""
