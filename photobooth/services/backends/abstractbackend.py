@@ -258,8 +258,6 @@ class AbstractBackend(ABC):
             logger.info("ffmpeg loaded successfully")
             self._video_feature_available = True
 
-        self.signalbackend_configure_optimized_for_idle
-
     def stop(self):
         """To stop the backend to serve"""
 
