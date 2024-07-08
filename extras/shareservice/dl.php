@@ -1,6 +1,6 @@
 <?php
 
-// documentation see https://photobooth-app.org/extras/shareservice/
+// documentation see https://photobooth-app.org/setup/shareservice/
 
 // configuration options
 $APIKEY = "changedefault!";                 // set apikey to a random value, of at least 8 chars. The same apikey needs to be set in photobooth app to pair both systems
