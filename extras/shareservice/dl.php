@@ -26,6 +26,10 @@ ini_set("log_errors", 1);
 ini_set("error_log", "php-error.log");
 error_reporting(E_ALL);
 
+// prevent nginx from additional buffering because the long running job would fail then
+// nginx has additional buffer to php, the php buffer is flushed, but nginx not
+header('X-Accel-Buffering: no'); // https://stackoverflow.com/a/25017347
+ob_implicit_flush(true);   // flush always after any write to buffer without additional call to flush needed.
 
 function text_to_image($text, $image_width = 400, $colour = array(0, 244, 34), $background = array(0, 0, 0))
 {
@@ -220,7 +224,7 @@ try {
 
                 // upload completed, deliver file now.
                 if (file_exists($file)) {
-                    header("Content-type: " . mime_content_type($file));
+                    header("Content-Type: " . mime_content_type($file));
                     header('Content-Disposition: inline; filename="' . $results["filename"] . '"');
 
                     echo file_get_contents($file);
