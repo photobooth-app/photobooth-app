@@ -218,14 +218,15 @@ try {
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE file_identifier= '$file_identifier'", true);
             if (!empty($results) && $results["status"] == "uploaded") {
             $file = $WORK_DIRECTORY . "/" . $results["filename"];
-            if (file_exists($file)) {
+             if (file_exists($file)) {
                 $mimetype = mime_content_type($file);
+                $fileData = file_get_contents($file);
                 echo "<!DOCTYPE html>
                 <html lang='en'>
                 <head>
                 <meta charset='UTF-8'>
                 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>Fotobox</title>
+                <title>Download Image</title>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
                     img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
@@ -234,10 +235,10 @@ try {
                 </style>
                 </head>
                 <body>
-                <h1>Photobooth</h1>
-                <img src='data:$mimetype;base64," . base64_encode(file_get_contents($file)) . "' alt='Image'>
+                <h1>Download or Share Your Image</h1>
+                <img src='data:$mimetype;base64," . base64_encode($fileData) . "' alt='Image'>
                 <br>
-                <a href='data:$mimetype;base64," . base64_encode(file_get_contents($file)) . "' download='" . $results["filename"] . "'><button>Download</button></a>
+                <a href='data:$mimetype;base64," . base64_encode($fileData) . "' download='" . $results["filename"] . "'><button>Download</button></a>
                 <button onclick='shareImage()'>Share</button>
                 <script>
                 function shareImage() {
@@ -245,10 +246,13 @@ try {
                         alert('Web share is not supported in your browser.');
                         return;
                     }
+
+                    const file = new File([Uint8Array.from(atob('" . base64_encode($fileData) . "'), c => c.charCodeAt(0))], '" . $results["filename"] . "', {type: '$mimetype'});
+
                     navigator.share({
+                        files: [file],
                         title: 'Photobooth Image',
-                        text: 'Check out this picture I took!',
-                        url: window.location.href
+                        text: 'Check out this picture I took!'
                     })
                     .then(() => console.log('Successful share'))
                     .catch((error) => console.log('Error sharing', error));
