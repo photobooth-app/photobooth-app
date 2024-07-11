@@ -216,23 +216,50 @@ try {
         do {
             //regular checks upload completed?
             $results = $db->querySingle("SELECT * FROM upload_requests WHERE file_identifier= '$file_identifier'", true);
-
             if (!empty($results) && $results["status"] == "uploaded") {
-                // non-empty results are indicator for finished upload, break and continue with file output.
-
-                $file = $WORK_DIRECTORY . "/" . $results["filename"];
-
-                // upload completed, deliver file now.
-                if (file_exists($file)) {
-                    header("Content-Type: " . mime_content_type($file));
-                    header('Content-Disposition: inline; filename="' . $results["filename"] . '"');
-
-                    echo file_get_contents($file);
-                    exit;
-                } else {
-
-                    throw new RuntimeException("error, cannot find uploaded file");
+            $file = $WORK_DIRECTORY . "/" . $results["filename"];
+            if (file_exists($file)) {
+                $mimetype = mime_content_type($file);
+                echo "<!DOCTYPE html>
+                <html lang='en'>
+                <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                <title>Fotobox</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
+                    img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
+                    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #0084ff; color: white; border: none; border-radius: 5px; margin-top: 10px; }
+                    button:hover { background-color: #0056b3; }
+                </style>
+                </head>
+                <body>
+                <h1>Photobooth</h1>
+                <img src='data:$mimetype;base64," . base64_encode(file_get_contents($file)) . "' alt='Image'>
+                <br>
+                <a href='data:$mimetype;base64," . base64_encode(file_get_contents($file)) . "' download='" . $results["filename"] . "'><button>Download</button></a>
+                <button onclick='shareImage()'>Share</button>
+                <script>
+                function shareImage() {
+                    if (!navigator.share) {
+                        alert('Web share is not supported in your browser.');
+                        return;
+                    }
+                    navigator.share({
+                        title: 'Photobooth Image',
+                        text: 'Check out this picture I took!',
+                        url: window.location.href
+                    })
+                    .then(() => console.log('Successful share'))
+                    .catch((error) => console.log('Error sharing', error));
                 }
+                </script>
+                </body>
+                </html>";
+                exit;
+            } else {
+                throw new RuntimeException("error, cannot find uploaded file");
+            }
             } elseif (!empty($results) && $results["status"] == "upload_failed") {
                 throw new RuntimeException("photobooth had problems uploading the file, check photobooth log for errors");
             }
