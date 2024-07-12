@@ -197,90 +197,90 @@ try {
             $time_processed += $LOOP_TIME;
         } while ($time_processed <= $LOOP_TIME_MAX);
     } elseif (($_GET["action"] ?? null) == "download" && ($_GET["id"] ?? null)) {
-    api_key_set();
-    $file_identifier = $_GET["id"];
+        api_key_set();
+        $file_identifier = $_GET["id"];
 
-    $db->exec("REPLACE INTO upload_requests (
+        $db->exec("REPLACE INTO upload_requests (
                 file_identifier, 
                 status
                 ) VALUES (
                 '$file_identifier',
                 'pending')");
 
-    $time_waited = 0;
-    do {
-        $results = $db->querySingle("SELECT * FROM upload_requests WHERE file_identifier= '$file_identifier'", true);
+        $time_waited = 0;
+        do {
+            $results = $db->querySingle("SELECT * FROM upload_requests WHERE file_identifier= '$file_identifier'", true);
 
-        if (!empty($results) && $results["status"] == "uploaded") {
-            $file = $WORK_DIRECTORY . "/" . $results["filename"];
-            if (file_exists($file)) {
-                $mimetype = mime_content_type($file);
-                $fileData = file_get_contents($file);
-                $base64EncodedData = base64_encode($fileData);
-                $isImage = in_array($mimetype, ['image/png', 'image/jpeg', 'image/gif']);
-                $isVideo = ($mimetype == 'video/mp4');
+            if (!empty($results) && $results["status"] == "uploaded") {
+                $file = $WORK_DIRECTORY . "/" . $results["filename"];
+                if (file_exists($file)) {
+                    $mimetype = mime_content_type($file);
+                    $fileData = file_get_contents($file);
+                    $base64EncodedData = base64_encode($fileData);
+                    $isImage = in_array($mimetype, ['image/png', 'image/jpeg', 'image/gif']);
+                    $isVideo = ($mimetype == 'video/mp4');
 
-                echo "<!DOCTYPE html>
-                <html lang='en'>
-                <head>
-                <meta charset='UTF-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>Download File</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
-                    img, video { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
-                    button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #0084ff; color: white; border: none; border-radius: 5px; margin-top: 10px; }
-                    button:hover { background-color: #0056b3; }
-                </style>
-                </head>
-                <body>
-                <h1>Download or Share Your File</h1>";
+                    echo "<!DOCTYPE html>
+                        <html lang='en'>
+                        <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                        <title>Download File</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
+                            img, video { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
+                            button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #0084ff; color: white; border: none; border-radius: 5px; margin-top: 10px; }
+                            button:hover { background-color: #0056b3; }
+                        </style>
+                        </head>
+                        <body>
+                        <h1>Download or Share Your File</h1>";
 
-                if ($isImage) {
-                    echo "<img src='data:$mimetype;base64,$base64EncodedData' alt='Image'>";
-                } elseif ($isVideo) {
-                    echo "<video controls loop autoplay muted>
+                    if ($isImage) {
+                        echo "<img src='data:$mimetype;base64,$base64EncodedData' alt='Image'>";
+                    } elseif ($isVideo) {
+                        echo "<video controls loop autoplay muted>
                             <source src='data:$mimetype;base64,$base64EncodedData' type='$mimetype'>
                             Your browser does not support the video tag.
                           </video>";
-                }
-
-                echo "<br>
-                <a href='data:$mimetype;base64,$base64EncodedData' download='" . $results["filename"] . "'><button>Download</button></a>
-                <button onclick='shareImage()'>Share</button>
-                <script>
-                function shareImage() {
-                    if (!navigator.share) {
-                        alert('Web share is not supported in your browser.');
-                        return;
                     }
 
-                    const file = new File([Uint8Array.from(atob('$base64EncodedData'), c => c.charCodeAt(0))], '" . $results["filename"] . "', {type: '$mimetype'});
+                    echo "<br>
+                        <a href='data:$mimetype;base64,$base64EncodedData' download='" . $results["filename"] . "'><button>Download</button></a>
+                        <button onclick='shareImage()'>Share</button>
+                        <script>
+                        function shareImage() {
+                            if (!navigator.share) {
+                                alert('Web share is not supported in your browser.');
+                                return;
+                            }
 
-                    navigator.share({
-                        files: [file],
-                        title: 'Photobooth File',
-                        text: 'Check out this file I took!'
-                    })
-                    .then(() => console.log('Successful share'))
-                    .catch((error) => console.log('Error sharing', error));
+                            const file = new File([Uint8Array.from(atob('$base64EncodedData'), c => c.charCodeAt(0))], '" . $results["filename"] . "', {type: '$mimetype'});
+
+                            navigator.share({
+                                files: [file],
+                                title: 'Photobooth File',
+                                text: 'Check out this file I took!'
+                            })
+                            .then(() => console.log('Successful share'))
+                            .catch((error) => console.log('Error sharing', error));
+                        }
+                        </script>
+                        </body>
+                        </html>";
+                    exit;
+                } else {
+                    throw new RuntimeException("error, cannot find uploaded file");
                 }
-                </script>
-                </body>
-                </html>";
-                exit;
-            } else {
-                throw new RuntimeException("error, cannot find uploaded file");
+            } elseif (!empty($results) && $results["status"] == "upload_failed") {
+                throw new RuntimeException("photobooth had problems uploading the file, check photobooth log for errors");
             }
-        } elseif (!empty($results) && $results["status"] == "upload_failed") {
-            throw new RuntimeException("photobooth had problems uploading the file, check photobooth log for errors");
-        }
-        usleep(500 * 1000);
-        $time_waited += 0.5;
-    } while ($time_waited <= $TIMEOUT_DOWNLOAD);
+            usleep(500 * 1000);
+            $time_waited += 0.5;
+        } while ($time_waited <= $TIMEOUT_DOWNLOAD);
 
-    throw new RuntimeException("photobooth did not upload the requested image within time :( no internet? service disabled?");
-} elseif (($_GET["action"] ?? null) == "list") {
+        throw new RuntimeException("photobooth did not upload the requested image within time :( no internet? service disabled?");
+    } elseif (($_GET["action"] ?? null) == "list") {
         api_key_set();
         echo "<pre>";
         $results = $db->query("SELECT * FROM upload_requests ORDER BY last_modified DESC");
