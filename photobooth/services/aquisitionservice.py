@@ -146,22 +146,45 @@ class AquisitionService(BaseService):
     def get_recorded_video(self):
         return self._get_video_backend().get_recorded_video()
 
-    def signalbackend_configure_optimized_for_hq_capture(self):
-        """set backends to capture mode (usually automatically switched as needed by processingservice)"""
-        if self._main_backend:
-            self._main_backend._on_configure_optimized_for_hq_capture()
-        if self._live_backend:
-            self._live_backend._on_configure_optimized_for_hq_capture()
-
     def signalbackend_configure_optimized_for_idle(self):
-        """set backends to preview mode (usually automatically switched as needed by processingservice)"""
+        print("signalbackend_configure_optimized_for_idle")
+        """
+        set backends to idle mode (called to switched as needed by processingservice)
+        called when job is finished
+        """
         if self._main_backend:
             self._main_backend._on_configure_optimized_for_idle()
         if self._live_backend:
             self._live_backend._on_configure_optimized_for_idle()
 
+    def signalbackend_configure_optimized_for_hq_preview(self):
+        print("signalbackend_configure_optimized_for_hq_preview")
+        """
+        set backends to preview mode preparing to hq capture (called to switched as needed by processingservice)
+        called on start of countdown
+        """
+        if self._main_backend:
+            self._main_backend._on_configure_optimized_for_hq_preview()
+        if self._live_backend:
+            self._live_backend._on_configure_optimized_for_hq_preview()
+
+    def signalbackend_configure_optimized_for_hq_capture(self):
+        print("signalbackend_configure_optimized_for_hq_capture")
+        """
+        set backends to hq capture mode (called to switched as needed by processingservice)
+        called right before capture hq still
+        """
+        if self._main_backend:
+            self._main_backend._on_configure_optimized_for_hq_capture()
+        if self._live_backend:
+            self._live_backend._on_configure_optimized_for_hq_capture()
+
     def signalbackend_configure_optimized_for_video(self):
-        """set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already."""
+        print("signalbackend_configure_optimized_for_video")
+        """
+        set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already.
+        called on start of countdown to recording job (as preview and actual video capture are expected to work same for preview and video capture)
+        """
         self.signalbackend_configure_optimized_for_idle()
 
     @staticmethod

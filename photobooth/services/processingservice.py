@@ -324,7 +324,10 @@ class ProcessingMachine(StateMachine):
         # set backends to capture mode; backends take their own actions if needed.
         if not self.model.jobtype_recording():
             # signal the backend we need hq still in every case, except video.
-            self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+            self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        else:
+            # signal the backend we need hq still in every case, except video.
+            self._aquisition_service.signalbackend_configure_optimized_for_video()
 
         self.model.start_countdown(appconfig.backends.countdown_camera_capture_offset)
         logger.info(f"started countdown, duration={self.model._duration_user}, offset_camera={appconfig.backends.countdown_camera_capture_offset}")
@@ -353,6 +356,9 @@ class ProcessingMachine(StateMachine):
 
         mediaitem = MediaItem.create(MetaDataDict(media_type=_type, hide=_hide, config=_config))
         logger.debug(f"capture to {mediaitem.path_original=}")
+
+        # signal to backend to switch to hq mode
+        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         start_time_capture = time.time()
         image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.

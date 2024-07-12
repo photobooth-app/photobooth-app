@@ -170,6 +170,9 @@ class DigicamcontrolBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _on_configure_optimized_for_hq_preview(self):
+        pass
+
     def _on_configure_optimized_for_idle(self):
         logger.debug("enable liveview and minimize windows")
         try:

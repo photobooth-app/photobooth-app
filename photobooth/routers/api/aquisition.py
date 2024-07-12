@@ -70,6 +70,10 @@ def api_cmd_aquisition_capturemode_get(
     if mode == "capture":
         container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
     elif mode == "preview":
+        container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+    elif mode == "video":
+        container.aquisition_service.signalbackend_configure_optimized_for_video()
+    elif mode == "idle":
         container.aquisition_service.signalbackend_configure_optimized_for_idle()
     else:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="illegal mode")

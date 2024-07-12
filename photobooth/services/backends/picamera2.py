@@ -277,15 +277,19 @@ class Picamera2Backend(AbstractBackend):
         else:
             raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
 
-    def _on_configure_optimized_for_hq_capture(self):
-        logger.debug("change to capture mode requested")
-        self._last_config = self._current_config
-        self._current_config = self._capture_config
-
     def _on_configure_optimized_for_idle(self):
         logger.debug("change to preview mode requested")
         self._last_config = self._current_config
         self._current_config = self._preview_config
+
+    def _on_configure_optimized_for_hq_preview(self):
+        logger.debug("change to capture mode requested")
+        self._last_config = self._current_config
+        self._current_config = self._capture_config
+
+    def _on_configure_optimized_for_hq_capture(self):
+        """switch to hq capture is done during hq preview call already because it avoids switch delay on the actual capture"""
+        pass
 
     def set_ae_exposure(self, newmode):
         """_summary_

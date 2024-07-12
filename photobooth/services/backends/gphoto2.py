@@ -47,7 +47,7 @@ class Gphoto2Backend(AbstractBackend):
 
         # if True signal to switch optimized, set none after switch again.
         self._configure_optimized_for_hq_capture_flag = None
-        self._configure_optimized_for_idle_flag = None
+        self._configure_optimized_for_idle_video_flag = None
 
         # generate dict for clear events clear text names
         # defined events http://www.gphoto.org/doc/api/gphoto2-camera_8h.html#a438ab2ac60ad5d5ced30e4201476800b
@@ -182,11 +182,16 @@ class Gphoto2Backend(AbstractBackend):
 
             return self._lores_data.data
 
+    def _on_configure_optimized_for_idle(self):
+        # idle and hq_preview are same settings for this backend.
+        self._configure_optimized_for_idle_video_flag = True
+
+    def _on_configure_optimized_for_hq_preview(self):
+        # idle and hq_preview are same settings for this backend.
+        self._configure_optimized_for_idle_video_flag = True
+
     def _on_configure_optimized_for_hq_capture(self):
         self._configure_optimized_for_hq_capture_flag = True
-
-    def _on_configure_optimized_for_idle(self):
-        self._configure_optimized_for_idle_flag = True
 
     def _configure_optimized_for_hq_capture(self):
         if self._configure_optimized_for_hq_capture_flag:
@@ -195,10 +200,10 @@ class Gphoto2Backend(AbstractBackend):
             self._iso(self._config.iso_capture)
             self._shutter_speed(self._config.shutter_speed_capture)
 
-    def _configure_optimized_for_idle(self):
-        if self._configure_optimized_for_idle_flag:
+    def _configure_optimized_for_idle_video(self):
+        if self._configure_optimized_for_idle_video_flag:
             logger.debug("configure camera optimized for idle/video")
-            self._configure_optimized_for_idle_flag = None
+            self._configure_optimized_for_idle_video_flag = None
             self._iso(self._config.iso_liveview)
             self._shutter_speed(self._config.shutter_speed_liveview)
 
@@ -255,7 +260,7 @@ class Gphoto2Backend(AbstractBackend):
             if not self._hires_data.request_hires_still.is_set():
                 if self.device_enable_lores_stream:
                     # check if flag is true and configure if so once.
-                    self._configure_optimized_for_idle()
+                    self._configure_optimized_for_idle_video()
 
                     try:
                         capture = self._camera.capture_preview()

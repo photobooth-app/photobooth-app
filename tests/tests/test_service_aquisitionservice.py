@@ -139,8 +139,9 @@ def test_switch_modes(_container: Container):
     _container.aquisition_service.stop()
     _container.aquisition_service.start()
 
-    _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
     _container.aquisition_service.signalbackend_configure_optimized_for_idle()
+    _container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+    _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
     _container.aquisition_service.signalbackend_configure_optimized_for_video()
 
 
