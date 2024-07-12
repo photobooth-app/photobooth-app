@@ -201,17 +201,28 @@ class MediacollectionService(BaseService):
                 os.rename(mediaitem.path_original, Path(RECYCLE_DIR, mediaitem.filename))
             else:
                 os.remove(mediaitem.path_original)
-
-            os.remove(mediaitem.metadata_filename)
-            os.remove(mediaitem.path_full_unprocessed)
-            os.remove(mediaitem.path_full)
-            os.remove(mediaitem.path_preview_unprocessed)
-            os.remove(mediaitem.path_preview)
-            os.remove(mediaitem.path_thumbnail_unprocessed)
-            os.remove(mediaitem.path_thumbnail)
+        except FileNotFoundError:
+            logger.warn(f"file {mediaitem.path_original} not found but ignore because shall be deleted anyways.")
         except Exception as exc:
             self._logger.exception(exc)
             raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
+
+        for file in [
+            mediaitem.metadata_filename,
+            mediaitem.path_full_unprocessed,
+            mediaitem.path_full,
+            mediaitem.path_preview_unprocessed,
+            mediaitem.path_preview,
+            mediaitem.path_thumbnail_unprocessed,
+            mediaitem.path_thumbnail,
+        ]:
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                logger.warn(f"file {file} not found but ignore because shall be deleted anyways.")
+            except Exception as exc:
+                self._logger.exception(exc)
+                raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
 
         self._logger.info(f"deleted files of {mediaitem}")
 
