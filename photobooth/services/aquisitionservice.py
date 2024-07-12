@@ -147,7 +147,6 @@ class AquisitionService(BaseService):
         return self._get_video_backend().get_recorded_video()
 
     def signalbackend_configure_optimized_for_idle(self):
-        print("signalbackend_configure_optimized_for_idle")
         """
         set backends to idle mode (called to switched as needed by processingservice)
         called when job is finished
@@ -158,7 +157,6 @@ class AquisitionService(BaseService):
             self._live_backend._on_configure_optimized_for_idle()
 
     def signalbackend_configure_optimized_for_hq_preview(self):
-        print("signalbackend_configure_optimized_for_hq_preview")
         """
         set backends to preview mode preparing to hq capture (called to switched as needed by processingservice)
         called on start of countdown
@@ -169,7 +167,6 @@ class AquisitionService(BaseService):
             self._live_backend._on_configure_optimized_for_hq_preview()
 
     def signalbackend_configure_optimized_for_hq_capture(self):
-        print("signalbackend_configure_optimized_for_hq_capture")
         """
         set backends to hq capture mode (called to switched as needed by processingservice)
         called right before capture hq still
@@ -180,7 +177,6 @@ class AquisitionService(BaseService):
             self._live_backend._on_configure_optimized_for_hq_capture()
 
     def signalbackend_configure_optimized_for_video(self):
-        print("signalbackend_configure_optimized_for_video")
         """
         set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already.
         called on start of countdown to recording job (as preview and actual video capture are expected to work same for preview and video capture)
