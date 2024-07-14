@@ -151,7 +151,7 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
     logger.info(f"post_folder_new requested, {new_folder_name=}")
 
     if not new_folder_name:
-        logger.warning(f"no new folder name provided {new_folder_name=}")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "no new_folder_name given")
 
     try:
         new_path = filenames_sanitize(new_folder_name)

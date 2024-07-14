@@ -30,3 +30,12 @@ def test_main_instance_create_dirs_permission_error():
         # emulate write access issue and ensure an exception is received to make the app fail starting.
         with pytest.raises(RuntimeError):
             _create_basic_folders()
+
+
+def test_main_instance_create_dirs_permission_error_reraisesandabortsstart():
+    import photobooth.application
+
+    with patch.object(os, "makedirs", side_effect=RuntimeError("effect: failed creating folder")):
+        # emulate write access issue and ensure an exception is received to make the app fail starting.
+        with pytest.raises(RuntimeError):
+            photobooth.application._create_app()

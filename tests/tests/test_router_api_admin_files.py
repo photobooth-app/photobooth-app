@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.routers.api_admin.files import PathListItem
+from photobooth.routers.api_admin.files import RECYCLE_DIR, PathListItem
 
 
 @pytest.fixture
@@ -166,6 +166,12 @@ def test_admin_files_upload_fails(client_authenticated: TestClient):
         assert response.status_code == 400
 
 
+def test_admin_files_new_folder_empty(client_authenticated: TestClient):
+    # make up a list - only filepath needs to be valid for this function.
+    response = client_authenticated.post("/admin/files/folder/new", json="")
+    assert response.status_code == 400
+
+
 def test_admin_files_new_folder(client_authenticated: TestClient):
     # make up a list - only filepath needs to be valid for this function.
     target_path = "./userdata"
@@ -201,3 +207,20 @@ def test_admin_files_delete(client_authenticated: TestClient):
 
     response = client_authenticated.post("/admin/files/delete", json=selected_files)
     assert response.status_code == 204
+
+
+def test_admin_files_clearrecycle(client_authenticated: TestClient):
+    testfile = Path(RECYCLE_DIR, "testfile.test")
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+    open(testfile, "a").close()
+
+    with patch.object(os, "remove", error_mock):
+        response = client_authenticated.get("/admin/files/clearrecycledir")
+        assert response.status_code == 500
+
+    # and the unpatched function deletes actually:
+    response = client_authenticated.get("/admin/files/clearrecycledir")
+    assert response.status_code == 204
+
+    assert not testfile.exists()
