@@ -7,14 +7,14 @@ from ...services.mediacollection.mediaitem import MediaItem
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
-    prefix="/printer",
-    tags=["printer"],
+    prefix="/share",
+    tags=["share"],
 )
 
 
-def _print(mediaitem, index: int):
+def _share(mediaitem: MediaItem, index: int):
     try:
-        container.printing_service.print(mediaitem, index)
+        container.share_service.share(mediaitem, index)
     except BlockingIOError:
         pass  # informed by sepearate sse event
     except ConnectionRefusedError:
@@ -27,21 +27,21 @@ def _print(mediaitem, index: int):
         ) from exc
 
 
-@router.get("/print/{index}")
-@router.get("/print/latest/{index}")
-def api_print_latest(index: int = 0):
+@router.get("/actions/{index}")
+@router.get("/actions/latest/{index}")
+def api_share_latest(index: int = 0):
     try:
         latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
 
-    _print(latest_mediaitem, index)
+    _share(latest_mediaitem, index)
 
 
-@router.get("/print/{id}/{index}")
-def api_print_item_id(id: str, index: int = 0):
+@router.get("/actions/{id}/{index}")
+def api_share_item_id(id: str, index: int = 0):
     try:
         requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
-    _print(requested_mediaitem, index)
+    _share(requested_mediaitem, index)

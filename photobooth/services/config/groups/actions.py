@@ -1,73 +1,8 @@
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
 from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PilgramFilter, TextsConfig
-
-
-class FrontpageTrigger(BaseModel):
-    """
-    Frontpage triggers configuration.
-    """
-
-    model_config = ConfigDict(title="Frontpage button configuration")
-
-    show_button: bool = Field(
-        default=True,
-        description="Show a button to trigger process on the main screen.",
-    )
-    title: str = Field(
-        default="",
-        description="Label used for the trigger button.",
-    )
-    icon: str = Field(
-        default="",
-        description="Icon used for the trigger button (any icon from material icons, see documentation).",
-    )
-
-
-class KeyboardTrigger(BaseModel):
-    """
-    Configure trigger the user can interact with. Sources are GPIO and keyboard.
-    """
-
-    model_config = ConfigDict(title="Keyboard triggers configuration")
-
-    keycode: str = Field(
-        default="",
-        description="Define keyboard keys to trigger actions.",
-    )
-
-
-class GpioTrigger(BaseModel):
-    """
-    Configure trigger the user can interact with. Sources are GPIO and keyboard.
-    """
-
-    model_config = ConfigDict(title="GPIO triggers configuration")
-
-    pin: str = Field(
-        default="",
-        description="GPIO the button is connected to.",
-    )
-
-    trigger_on: Literal["pressed", "released", "longpress"] = Field(
-        default="pressed",
-        description="Trigger action when button pressed (contact closed), released (contact open after closed) or longpress (hold for 0.6 seconds).",
-    )
-
-
-class Trigger(BaseModel):
-    """
-    Configure trigger the user can interact with. Sources are GPIO and keyboard.
-    """
-
-    model_config = ConfigDict(title="Trigger configuration")
-
-    frontpage_trigger: FrontpageTrigger = FrontpageTrigger()
-    keyboard_trigger: KeyboardTrigger = KeyboardTrigger()
-    gpio_trigger: GpioTrigger = GpioTrigger()
+from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
 
 
 class SingleImageJobControl(BaseModel):
@@ -288,21 +223,6 @@ class VideoProcessing(BaseModel):
     )
 
 
-class PrinterProcessing(BaseModel):
-    """Configure options to print images."""
-
-    model_config = ConfigDict(title="Printing Actions")
-
-    printing_command: str = Field(
-        # default="",
-        description="Command issued to print. Use {filename} as placeholder for the JPEG image to be printed.",
-    )
-    printing_blocked_time: int = Field(
-        # default=10,
-        description="Block queue print until time is passed. Time in seconds.",
-    )
-
-
 class SingleImageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
@@ -363,20 +283,6 @@ class VideoConfigurationSet(BaseModel):
     trigger: Trigger
 
 
-class PrintingConfigurationSet(BaseModel):
-    """Configure stages how to process mediaitem before printing on paper."""
-
-    model_config = ConfigDict(title="Process mediaitem before printing on paper")
-
-    name: str = Field(
-        default="default print settings",
-        description="Name to identify, only used for display in admin center.",
-    )
-
-    processing: PrinterProcessing
-    trigger: Trigger
-
-
 class GroupActions(BaseModel):
     """
     Configure actions like capture photo, video, collage and animations.
@@ -405,7 +311,7 @@ class GroupActions(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    frontpage_trigger=FrontpageTrigger(title="Image", icon="o_photo_camera"),
+                    ui_trigger=UiTrigger(title="Image", icon="o_photo_camera"),
                     gpio_trigger=GpioTrigger(pin="27"),
                     keyboard_trigger=KeyboardTrigger(keycode="i"),
                 ),
@@ -467,7 +373,7 @@ class GroupActions(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    frontpage_trigger=FrontpageTrigger(title="Collage", icon="o_auto_awesome_mosaic"),
+                    ui_trigger=UiTrigger(title="Collage", icon="o_auto_awesome_mosaic"),
                     gpio_trigger=GpioTrigger(pin="22"),
                     keyboard_trigger=KeyboardTrigger(keycode="c"),
                 ),
@@ -502,7 +408,7 @@ class GroupActions(BaseModel):
                     gallery_hide_individual_images=True,
                 ),
                 trigger=Trigger(
-                    frontpage_trigger=FrontpageTrigger(title="Animation", icon="o_gif_box"),
+                    ui_trigger=UiTrigger(title="Animation", icon="o_gif_box"),
                     gpio_trigger=GpioTrigger(pin="24"),
                     keyboard_trigger=KeyboardTrigger(keycode="g"),
                 ),
@@ -521,35 +427,11 @@ class GroupActions(BaseModel):
                     video_framerate=15,
                 ),
                 trigger=Trigger(
-                    frontpage_trigger=FrontpageTrigger(title="Video", icon="o_movie"),
+                    ui_trigger=UiTrigger(title="Video", icon="o_movie"),
                     gpio_trigger=GpioTrigger(pin="26"),
                     keyboard_trigger=KeyboardTrigger(keycode="v"),
                 ),
             ),
         ],
         description="Capture videos from live streaming backend.",
-    )
-
-
-class GroupPrinter(BaseModel):
-    """
-    Configure actions like capture photo, video, collage and animations.
-    """
-
-    model_config = ConfigDict(title="Printer configuration")
-
-    print: list[PrintingConfigurationSet] = Field(
-        default=[
-            PrintingConfigurationSet(
-                processing=PrinterProcessing(
-                    printing_command="mspaint /p {filename}",
-                    printing_blocked_time=10,
-                ),
-                trigger=Trigger(
-                    gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
-                    keyboard_trigger=KeyboardTrigger(keycode="p"),
-                ),
-            )
-        ],
-        description="Process media items before printing.",
     )

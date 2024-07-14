@@ -16,9 +16,9 @@ from .config import appconfig
 from .config.groups.actions import GpioTrigger
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
-from .printingservice import PrintingService
 from .processing.jobmodels import action_type_literal
 from .processingservice import ProcessingService
+from .shareservice import ShareService
 from .sseservice import SseService
 
 HOLD_TIME_SHUTDOWN = 2
@@ -51,14 +51,14 @@ class ActionButton(Button):
         return f"gpioservice.{self.__class__.__name__} triggers action_type={self.action_type}, action_index={self.action_index} {super().__repr__()}"
 
 
-class PrintButton(Button):
+class ShareButton(Button):
     def __init__(self, action_index: int, **kwargs):
         super().__init__(**kwargs)
 
         self.action_index: int = action_index
 
     def __repr__(self):
-        return f"gpioservice.{self.__class__.__name__} triggers printing action, action_index={self.action_index} {super().__repr__()}"
+        return f"gpioservice.{self.__class__.__name__} triggers share action, action_index={self.action_index} {super().__repr__()}"
 
 
 class GpioService(BaseService):
@@ -68,21 +68,20 @@ class GpioService(BaseService):
         self,
         sse_service: SseService,
         processing_service: ProcessingService,
-        printing_service: PrintingService,
+        share_service: ShareService,
         mediacollection_service: MediacollectionService,
     ):
         super().__init__(sse_service=sse_service)
 
         self._processing_service = processing_service
-        self._printing_service = printing_service
+        self._share_service = share_service
         self._mediacollection_service = mediacollection_service
 
         # input buttons
         self.shutdown_btn: Button = None
         self.reboot_btn: Button = None
         self.action_btns: list[ActionButton] = []
-        self.print_btns: list[PrintButton] = []
-        self.print_recent_item_btn: Button = None
+        self.share_btns: list[ShareButton] = []
 
         # output signals
         # none yet
@@ -112,14 +111,14 @@ class GpioService(BaseService):
             self._logger.exception(exc)
             self._logger.critical(exc)
 
-    def _handle_print_button(self, btn: PrintButton):
+    def _handle_share_button(self, btn: ShareButton):
         self._logger.debug(f"trigger callback for {btn}")
 
         try:
             mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
-            self._printing_service.print(mediaitem, btn.action_index)
+            self._share_service.share(mediaitem, btn.action_index)
         except BlockingIOError:
-            self._logger.warning(f"Wait {self._printing_service.remaining_time_blocked():.0f}s until next print is possible.")
+            self._logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")
         except Exception as exc:
             # other errors
             self._logger.critical(exc)
@@ -152,7 +151,7 @@ class GpioService(BaseService):
 
             self._logger.debug(f"finished setup: {btn}")
 
-    def _setup_print_button(self, gpio_trigger: GpioTrigger, index: int):
+    def _setup_share_button(self, gpio_trigger: GpioTrigger, index: int):
         try:
             pin = gpio_trigger.pin
             trigger_on = gpio_trigger.trigger_on
@@ -161,7 +160,7 @@ class GpioService(BaseService):
                 self._logger.info(f"skip register print config {index=} because pin empty")
                 return
 
-            btn = PrintButton(
+            btn = ShareButton(
                 action_index=index,
                 pin=pin,
                 hold_time=0.6,
@@ -173,13 +172,13 @@ class GpioService(BaseService):
 
         else:
             if trigger_on == "pressed":
-                btn.when_activated = self._handle_print_button
+                btn.when_activated = self._handle_share_button
             elif trigger_on == "longpress":
-                btn.when_held = self._handle_print_button
+                btn.when_held = self._handle_share_button
             elif trigger_on == "released":
-                btn.when_deactivated = self._handle_print_button
+                btn.when_deactivated = self._handle_share_button
 
-            self.print_btns.append(btn)
+            self.share_btns.append(btn)
 
             self._logger.debug(f"finished setup: {btn}")
 
@@ -210,8 +209,8 @@ class GpioService(BaseService):
         for index, config in enumerate(appconfig.actions.video):
             self._setup_action_button("video", config.trigger.gpio_trigger, index)
 
-        for index, config in enumerate(appconfig.printer.print):
-            self._setup_print_button(config.trigger.gpio_trigger, index)
+        for index, config in enumerate(appconfig.share.actions):
+            self._setup_share_button(config.trigger.gpio_trigger, index)
 
     def start(self):
         super().set_status_started()

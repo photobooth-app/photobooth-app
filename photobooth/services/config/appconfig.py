@@ -16,16 +16,15 @@ from pydantic import PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
-from .groups.actions import GroupActions, GroupPrinter
+from .groups.actions import GroupActions
 from .groups.backends import GroupBackends
 from .groups.common import GroupCommon
 from .groups.filetransfer import GroupFileTransfer
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
-from .groups.mediaprocessing import (
-    GroupMediaprocessing,
-)
+from .groups.mediaprocessing import GroupMediaprocessing
 from .groups.misc import GroupMisc
-from .groups.sharing import GroupSharing
+from .groups.qrshare import GroupQrShare
+from .groups.share import GroupShare
 from .groups.uisettings import GroupUiSettings
 
 logger = logging.getLogger(__name__)
@@ -91,8 +90,8 @@ class AppConfig(BaseSettings):
     # groups -> setting items
     common: GroupCommon = GroupCommon()
     actions: GroupActions = GroupActions()
-    printer: GroupPrinter = GroupPrinter()
-    sharing: GroupSharing = GroupSharing()
+    share: GroupShare = GroupShare()
+    qrshare: GroupQrShare = GroupQrShare()
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()

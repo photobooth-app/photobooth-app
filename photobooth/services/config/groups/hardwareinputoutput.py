@@ -42,9 +42,3 @@ class GroupHardwareInputOutput(BaseModel):
         default=18,
         description="GPIO pin to reboot after holding it for 2 seconds.",
     )
-
-    # PrintingService Config
-    printing_enabled: bool = Field(
-        default=False,
-        description="Enable printing in general.",
-    )

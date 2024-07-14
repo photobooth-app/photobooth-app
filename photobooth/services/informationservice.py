@@ -47,7 +47,7 @@ class StatsCounter:
     collages: int = 0
     animations: int = 0
     videos: int = 0
-    prints: int = 0
+    shares: int = 0
     last_reset: str = None
 
     stats_file: ClassVar = "stats.json"
@@ -55,12 +55,12 @@ class StatsCounter:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            images=data.get("images"),
-            collages=data.get("collages"),
-            animations=data.get("animations"),
-            videos=data.get("videos"),
-            prints=data.get("prints"),
-            last_reset=data.get("last_reset"),
+            images=data.get("images", 0),
+            collages=data.get("collages", 0),
+            animations=data.get("animations", 0),
+            videos=data.get("videos", 0),
+            shares=data.get("shares", 0),
+            last_reset=data.get("last_reset", None),
         )
 
     @classmethod

@@ -71,18 +71,18 @@ def test_button_action_buttons(_container: Container):
 
 @patch("subprocess.run")
 def test_button_print(mock_run, _container: Container):
-    appconfig.hardwareinputoutput.printing_enabled = True
+    appconfig.share.sharing_enabled = True
 
     # emulate gpio active low driven (simulates button press)
-    for print_button in _container.gpio_service.print_btns:
+    for print_button in _container.gpio_service.share_btns:
         print_button.pin.drive_low()
 
         # wait debounce time
         time.sleep(DEBOUNCE_TIME + 0.5)
 
         # emulate print finished, to avoid need to wait for blocking time.
-        _container.printing_service._last_print_time = None
+        _container.share_service._last_print_time = None
 
     mock_run.assert_called()
 
-    assert len(_container.gpio_service.print_btns) == mock_run.call_count
+    assert len(_container.gpio_service.share_btns) == mock_run.call_count

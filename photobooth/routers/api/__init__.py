@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from . import actions, aquisition, config, debug, mediacollection, mediaprocessing, print, sse, system
+from . import actions, aquisition, config, debug, mediacollection, mediaprocessing, share, sse, system
 
 __all__ = [
     "actions",
@@ -11,7 +11,7 @@ __all__ = [
     "debug",
     "mediacollection",
     "mediaprocessing",
-    "print",
+    "share",
     "sse",
     "system",
 ]
@@ -23,6 +23,6 @@ router.include_router(config.router)
 router.include_router(debug.router)
 router.include_router(mediacollection.router)
 router.include_router(mediaprocessing.router)
-router.include_router(print.router)
+router.include_router(share.router)
 router.include_router(sse.router)
 router.include_router(system.router)

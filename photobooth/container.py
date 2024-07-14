@@ -8,8 +8,8 @@ from .services.informationservice import InformationService
 from .services.loggingservice import LoggingService
 from .services.mediacollectionservice import MediacollectionService
 from .services.mediaprocessingservice import MediaprocessingService
-from .services.printingservice import PrintingService
 from .services.processingservice import ProcessingService
+from .services.qrshareservice import QrShareService
 from .services.shareservice import ShareService
 from .services.sseservice import SseService
 from .services.systemservice import SystemService
@@ -55,7 +55,7 @@ class Container:
     system_service = SystemService(
         sse_service,
     )
-    printing_service = PrintingService(
+    share_service = ShareService(
         sse_service,
         mediacollection_service,
         information_service,
@@ -63,10 +63,10 @@ class Container:
     gpio_service = GpioService(
         sse_service,
         processing_service,
-        printing_service,
+        share_service,
         mediacollection_service,
     )
-    share_service = ShareService(
+    qr_share_service = QrShareService(
         sse_service,
         mediacollection_service,
     )

@@ -6,14 +6,14 @@ AppConfig class providing central config
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class GroupSharing(BaseModel):
+class GroupQrShare(BaseModel):
     """Settings about shareing media"""
 
-    model_config = ConfigDict(title="🫶 Share Config")
+    model_config = ConfigDict(title="QR code share")
 
-    shareservice_enabled: bool = Field(
+    enabled: bool = Field(
         default=False,
-        description="Enable share service. To enable URL needs to be configured and dl.php script setup properly.",
+        description="Enable qr share service. To enable URL needs to be configured and dl.php script setup properly.",
     )
     shareservice_url: str = Field(
         default="https://photobooth-app.org/extras/shareservice-landing/",

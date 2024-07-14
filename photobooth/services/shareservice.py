@@ -1,184 +1,132 @@
 """
-https://photobooth-app.org/setup/shareservice/
+Handle all media collection related functions
 """
 
-import json
+import subprocess
 import time
 
-import requests
-
-from ..utils.stoppablethread import StoppableThread
 from .baseservice import BaseService
 from .config import appconfig
+from .informationservice import InformationService
+from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
-from .sseservice import SseService
+from .sseservice import SseEventFrontendNotification, SseService
+
+TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 
 
 class ShareService(BaseService):
-    """_summary_"""
+    """Handle all image related stuff"""
 
-    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService):
+    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService, information_service: InformationService):
         super().__init__(sse_service)
 
-        # objects
+        # common objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._initialized: bool = False
-        self._worker_thread: StoppableThread = None
+        self._information_service: InformationService = information_service
 
-    def _initialize(self):
-        self._initialized = False
-
-        self._logger.info("checking shareservice api endpoint")
-        try:
-            r = requests.get(appconfig.sharing.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
-        except Exception as exc:
-            self._logger.warning(f"error checking shareservice api endpoint: {exc}")
-        else:
-            if r.status_code == 200:
-                try:
-                    info = r.json()
-                    self._logger.info(f"{info=}")
-                except requests.exceptions.JSONDecodeError as exc:
-                    self._logger.error(f"api endpoint error: {exc}")
-
-                self._initialized = True
-                self._logger.info("api endpoint found, URL valid")
-            else:
-                self._logger.error("api endpoint check failed")
+        # custom service objects
+        self._last_print_time = None
+        self._last_printing_blocked_time = None
+        self._printing_queue = None  # TODO: could add queue later
 
     def start(self):
-        if not appconfig.sharing.shareservice_enabled:
-            self._logger.info("shareservice disabled, start aborted.")
-            return
-        self._initialize()
-        if self._initialized:
-            self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
-            self._worker_thread.start()
-
-            # short sleep until workerthread is started and likely to be connected to service or failed.
-            time.sleep(1)
-
-            self._logger.debug(f"{self.__module__} initialized and started")
-        else:
-            self._logger.error("shareservice init was not successful. start service aborted.")
+        # unblock after restart immediately
+        self._last_print_time = None
 
     def stop(self):
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
+        pass
 
-    def _worker_fun(self):
-        # init
-        self._logger.info("starting shareservice worker_thread")
+    def share(self, mediaitem: MediaItem, config_index: int = 0):
+        """print mediaitem"""
 
-        while not self._worker_thread.stopped():
-            payload = {"action": "upload_queue"}
-            try:
-                r = requests.get(
-                    appconfig.sharing.shareservice_url,
-                    params=payload,
-                    stream=True,
-                    timeout=8,
-                    allow_redirects=False,
+        if not appconfig.share.sharing_enabled:
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="negative",
+                    message="Share service is disabled! Enable in config first.",
+                    caption="Share Service Error",
                 )
-            except requests.exceptions.ReadTimeout as exc:
-                self._logger.warning(f"error connecting to service: {exc}")
-                time.sleep(5)
-                continue  # try again after wait time
-            except Exception as exc:
-                self._logger.error(f"unknown error occured: {exc}")
-                time.sleep(5)
-                continue  # try again after wait time
+            )
+            raise ConnectionRefusedError("Share service is disabled! Enable in config first.")
 
-            if r.encoding is None:
-                r.encoding = "utf-8"
+        # block queue new prints until configured time is over
+        if self.is_blocked():
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.",
+                    caption="Share Service Error",
+                )
+            )
+            raise BlockingIOError(f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.")
 
-            if r.status_code == 200:
-                self._logger.info("successfully connected to shareservice dl.php script")
-            else:
-                self._logger.error("problem connecting to shareservice dl.php script!")
-                break  # this is implied to be permanent error, break to exit worker fun
+        # get config
+        try:
+            action_config = appconfig.share.actions[config_index]
+        except Exception as exc:
+            self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
+            raise exc
 
-            iterator = r.iter_lines(chunk_size=24, decode_unicode=True)
+        # filename absolute to print, use in printing command
+        filename = mediaitem.path_full.absolute()
 
-            while not self._worker_thread.stopped():
-                try:
-                    line = next(iterator)
-                except StopIteration:
-                    self._logger.debug("dl.php script finished after some time. stopiteration issued-reconnect")
-                    break
-                except Exception as exc:
-                    self._logger.warning(f"encountered shareservice connection issue. retrying. error: {exc}")
-                    break
+        try:
+            # print command
+            self._logger.info(f"share/print {filename=}")
 
-                # filter out keep-alive new lines
-                if line:
-                    try:
-                        # if webserver not correctly setup, decoding might fail. catch exception mostly to inform user to debug
-                        decoded_line: dict = json.loads(line)
-                    except json.JSONDecodeError as exc:
-                        self._logger.exception(exc)
-                        self._logger.error("webserver response from dl.php malformed. please check webserver setup and webserver's logs.")
-                        break
+            completed_process = subprocess.run(
+                str(action_config.processing.share_command).format(filename=filename),
+                capture_output=True,
+                check=True,
+                timeout=TIMEOUT_PROCESS_RUN,
+                shell=True,  # needs to be shell so a string as command is accepted.
+            )
 
-                    if decoded_line.get("file_identifier", None) and decoded_line.get("status", None):
-                        # valid job check whether pending and upload
-                        self._logger.info(f"got share upload job, {decoded_line}")
+            self._logger.info(f"cmd={completed_process.args}")
+            self._logger.info(f"stdout={completed_process.stdout}")
+            self._logger.debug(f"stderr={completed_process.stderr}")
 
-                        # set the file to be uploaded
-                        request_upload_file = {}
-                        try:
-                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(decoded_line["file_identifier"])
-                            self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
-                        except FileNotFoundError as exc:
-                            self._logger.error(f"mediaitem not found, wrong id? {exc}")
-                            self._logger.info("sending upload request to dl.php anyway to signal failure")
-                        else:
-                            self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
-                            if appconfig.sharing.shareservice_share_original:
-                                filepath_to_upload = mediaitem_to_upload.path_original
-                            else:
-                                filepath_to_upload = mediaitem_to_upload.path_full
+            self._logger.info(f"command started successfully {mediaitem}")
 
-                            self._logger.debug(f"{filepath_to_upload=}")
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="positive",
+                    message=f"Process '{action_config.name}' started...",
+                    caption="Share Service",
+                    spinner=True,
+                )
+            )
 
-                            request_upload_file = {"upload_file": open(filepath_to_upload, "rb")}
+            # update last print time to calc block time on next run
+            self._start_time_blocked(action_config.processing.share_blocked_time)
+        except Exception as exc:
+            self._sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Share/Print Error"))
+            raise RuntimeError(f"Process failed, error {exc}") from exc
 
-                        ## send request
-                        start_time = time.time()
+        self._information_service.stats_counter_increment("shares")
 
-                        try:
-                            r = requests.post(
-                                appconfig.sharing.shareservice_url,
-                                files=request_upload_file,
-                                data={
-                                    "action": "upload",
-                                    "apikey": appconfig.sharing.shareservice_apikey,
-                                    "id": decoded_line["file_identifier"],
-                                },
-                                timeout=9,
-                                allow_redirects=False,
-                            )
-                        except Exception as exc:
-                            self._logger.warning(f"upload failed, err: {exc}")
-                            # try again?
+    def is_blocked(self):
+        return self.remaining_time_blocked() > 0.0
 
-                        else:
-                            self._logger.debug(f"response from dl.php script: {r.text}")
-                            self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
-                    elif decoded_line.get("ping", None):
-                        pass
-                    else:
-                        self._logger.error(f"invalid queue line, ignore: {line}")
+    def remaining_time_blocked(self) -> float:
+        if self._last_print_time is None:
+            return 0.0
 
-                # if a keepalive message is issued, we can check here also regularly for exit condition set
-                if self._worker_thread.stopped():
-                    self._logger.debug("stop workerthread requested")
-                    break
+        delta = time.time() - self._last_print_time
+        if delta >= self._last_printing_blocked_time:
+            # last print is longer than configured time in the past - return 0 to indicate no wait time
+            return 0.0
+        else:
+            # there is some time to wait left.
+            return self._last_printing_blocked_time - delta
 
-            self._logger.info("request timed out, error occured or shutdown requested")
-            if not self._worker_thread.stopped():
-                self._logger.info("restarting loop wait 1 second")
-                time.sleep(1)
+    def _start_time_blocked(self, printing_blocked_time: int):
+        self._last_print_time = time.time()
+        self._last_printing_blocked_time = printing_blocked_time
 
-        self._logger.info("leaving shareservice workerthread")
+        # TODO: add some timer/coroutine to send regular update to UI with current remaining time blocked
+
+    def _print_timer_fun(self):
+        ## thread to send updates to client about remaining blocked time
+        pass

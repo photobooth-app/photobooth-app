@@ -201,12 +201,12 @@ class MediaItem:
 
         # exception here for now to use appconfig like this not via container - maybe find better solution in future.
         # config changes are not reflected like this, always needs restart
-        if appconfig.sharing.shareservice_enabled:
+        if appconfig.qrshare.enabled:
             # if shareservice enabled, generate URL automatically as needed:
-            return f"{appconfig.sharing.shareservice_url}?action=download&id={self.id}"
+            return f"{appconfig.qrshare.shareservice_url}?action=download&id={self.id}"
         else:
             # if not, user can sync images on his own and provide a download URL:
-            return appconfig.sharing.share_custom_qr_url.format(filename=self.filename)
+            return appconfig.qrshare.share_custom_qr_url.format(filename=self.filename)
 
     @property
     def metadata_filename(self) -> Path:
