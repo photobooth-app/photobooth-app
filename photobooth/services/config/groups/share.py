@@ -48,7 +48,7 @@ class GroupShare(BaseModel):
     model_config = ConfigDict(title="Define Share and Print Actions")
 
     sharing_enabled: bool = Field(
-        default=True,
+        default=False,
         description="Enable sharing service in general.",
     )
 
