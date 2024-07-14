@@ -13,8 +13,8 @@ permissions:
 jobs:
   tests:
     env:
-      sharing__shareservice_apikey: "runnertestingpassword"
-      sharing__shareservice_url: "http://localhost:8082/dl.php"
+      qrshare__shareservice_apikey: "runnertestingpassword"
+      qrshare__shareservice_url: "http://localhost:8082/dl.php"
       PHP_CLI_SERVER_WORKERS: 6
     runs-on: ubuntu-latest
     continue-on-error: false
