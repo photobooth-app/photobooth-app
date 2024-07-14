@@ -26,7 +26,7 @@ class TokenData(BaseModel):
 class User(BaseModel):
     username: str
     full_name: Union[str, None] = None
-    disabled: Union[bool, None] = None
+    # disabled: Union[bool, None] = None # functionality not used currently.
 
 
 class UserInDB(User):
@@ -47,7 +47,6 @@ def get_users() -> dict[str, UserInDB]:
             username="admin",
             full_name="Admin",
             password=appconfig.common.admin_password.get_secret_value(),
-            disabled=False,
         )
     }
 
@@ -97,6 +96,4 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 
 
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
