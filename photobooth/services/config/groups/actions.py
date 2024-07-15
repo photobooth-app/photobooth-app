@@ -311,7 +311,7 @@ class GroupActions(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Image", icon="o_photo_camera"),
+                    ui_trigger=UiTrigger(title="Image", icon="photo_camera"),
                     gpio_trigger=GpioTrigger(pin="27"),
                     keyboard_trigger=KeyboardTrigger(keycode="i"),
                 ),
@@ -373,7 +373,7 @@ class GroupActions(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Collage", icon="o_auto_awesome_mosaic"),
+                    ui_trigger=UiTrigger(title="Collage", icon="auto_awesome_mosaic"),
                     gpio_trigger=GpioTrigger(pin="22"),
                     keyboard_trigger=KeyboardTrigger(keycode="c"),
                 ),
@@ -408,7 +408,7 @@ class GroupActions(BaseModel):
                     gallery_hide_individual_images=True,
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Animation", icon="o_gif_box"),
+                    ui_trigger=UiTrigger(title="Animation", icon="gif_box"),
                     gpio_trigger=GpioTrigger(pin="24"),
                     keyboard_trigger=KeyboardTrigger(keycode="g"),
                 ),
@@ -427,7 +427,7 @@ class GroupActions(BaseModel):
                     video_framerate=15,
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Video", icon="o_movie"),
+                    ui_trigger=UiTrigger(title="Video", icon="movie"),
                     gpio_trigger=GpioTrigger(pin="26"),
                     keyboard_trigger=KeyboardTrigger(keycode="v"),
                 ),

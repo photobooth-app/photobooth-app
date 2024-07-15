@@ -68,7 +68,7 @@ class GroupShare(BaseModel):
                     share_blocked_time=10,
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(show_button=True, title="Print", icon="o_print"),
+                    ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
                     gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
                     keyboard_trigger=KeyboardTrigger(keycode="p"),
                 ),
