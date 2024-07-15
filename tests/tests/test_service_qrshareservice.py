@@ -28,10 +28,6 @@ def _container() -> Container:
     appconfig.qrshare.enabled = True
 
     container.start()
-
-    # check that share_service was initialized properly, otherwise fail
-    assert container.qr_share_service._initialized
-
     yield container
     container.stop()
 
@@ -104,9 +100,6 @@ def test_shareservice_download_all_mediaitem_types(_mediaitem: MediaItem):
 
 def test_shareservice_download_nonexistant_image(_container: Container):
     """start service and try to download an image that does not exist"""
-
-    # check that share_service was initialized properly, otherwise fail
-    assert _container.qr_share_service._initialized
 
     r = requests.get(
         appconfig.qrshare.shareservice_url,

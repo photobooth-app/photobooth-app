@@ -22,45 +22,17 @@ class QrShareService(BaseService):
 
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._initialized: bool = False
         self._worker_thread: StoppableThread = None
-
-    def _initialize(self):
-        self._initialized = False
-
-        self._logger.info("checking shareservice api endpoint")
-        try:
-            r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "info"}, timeout=10, allow_redirects=False)
-        except Exception as exc:
-            self._logger.warning(f"error checking shareservice api endpoint: {exc}")
-        else:
-            if r.status_code == 200:
-                try:
-                    info = r.json()
-                    self._logger.info(f"{info=}")
-                except requests.exceptions.JSONDecodeError as exc:
-                    self._logger.error(f"api endpoint error: {exc}")
-
-                self._initialized = True
-                self._logger.info("api endpoint found, URL valid")
-            else:
-                self._logger.error("api endpoint check failed")
 
     def start(self):
         if not appconfig.qrshare.enabled:
             self._logger.info("shareservice disabled, start aborted.")
             return
-        self._initialize()
-        if self._initialized:
-            self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
-            self._worker_thread.start()
 
-            # short sleep until workerthread is started and likely to be connected to service or failed.
-            time.sleep(1)
+        self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
 
-            self._logger.debug(f"{self.__module__} initialized and started")
-        else:
-            self._logger.error("shareservice init was not successful. start service aborted.")
+        self._logger.debug(f"{self.__module__} started - it tries to connect to dl.php on regular basis now.")
 
     def stop(self):
         if self._worker_thread and self._worker_thread.is_alive():
@@ -81,23 +53,23 @@ class QrShareService(BaseService):
                     timeout=8,
                     allow_redirects=False,
                 )
+
+                if r.ok:
+                    self._logger.info("successfully connected to shareservice dl.php script")
+                else:
+                    raise RuntimeError(f"error connecting to shareservice dl.php, error {r.status_code} {r.text}")
+
             except requests.exceptions.ReadTimeout as exc:
                 self._logger.warning(f"error connecting to service: {exc}")
                 time.sleep(5)
                 continue  # try again after wait time
             except Exception as exc:
                 self._logger.error(f"unknown error occured: {exc}")
-                time.sleep(5)
+                time.sleep(10)
                 continue  # try again after wait time
 
             if r.encoding is None:
                 r.encoding = "utf-8"
-
-            if r.status_code == 200:
-                self._logger.info("successfully connected to shareservice dl.php script")
-            else:
-                self._logger.error("problem connecting to shareservice dl.php script!")
-                break  # this is implied to be permanent error, break to exit worker fun
 
             iterator = r.iter_lines(chunk_size=24, decode_unicode=True)
 
