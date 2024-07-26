@@ -108,8 +108,10 @@ class AquisitionService(BaseService):
     def _get_video_backend(self) -> AbstractBackend:
         if self._is_real_backend(self._live_backend):
             return self._live_backend
-        else:
+        elif self._is_real_backend(self._main_backend):
             return self._main_backend
+        else:
+            raise RuntimeError("Error: There is no backend available. Check logs, to find out why things broke.")
 
     def gen_stream(self):
         """
