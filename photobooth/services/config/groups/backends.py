@@ -87,11 +87,9 @@ class GroupBackendPicamera2(BaseModel):
         default=False,
         description="Apply vertical flip to image source to picamera2 backend",
     )
-    AE_EXPOSURE_MODE: int = Field(
-        default=1,
-        ge=0,
-        le=4,
-        description="Usually 0=normal exposure, 1=short, 2=long, 3=custom. Not all necessarily supported by camera!",
+    optimized_lowlight_short_exposure: bool = Field(
+        default=False,
+        description="Raise AnalogueGain(=ISO) preferred before longer shutter times to avoid unsharp capture of moving people.",
     )
     videostream_quality: Literal["VERY_LOW", "LOW", "MEDIUM", "HIGH", "VERY_HIGH"] = Field(
         default="MEDIUM",

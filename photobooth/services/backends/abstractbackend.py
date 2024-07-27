@@ -48,7 +48,8 @@ class BackendStats:
     fps: int = None
     exposure_time_ms: float = None
     lens_position: float = None
-    gain: float = None
+    again: float = None
+    dgain: float = None
     lux: float = None
     colour_temperature: int = None
     sharpness: int = None

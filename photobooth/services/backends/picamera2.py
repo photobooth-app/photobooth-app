@@ -86,6 +86,8 @@ class Picamera2Backend(AbstractBackend):
         self._current_config = None
         self._last_config = None
 
+        logger.info(f"global_camera_info {Picamera2.global_camera_info()}")
+
     def _device_start(self):
         """To start the backend, configure picamera2"""
         self._lores_data: __class__.PicamLoresData = __class__.PicamLoresData()
@@ -97,7 +99,15 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.close()
             del self._picamera2
 
-        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num)
+        tuning = None
+        if self._config.optimized_lowlight_short_exposure:
+            try:
+                tuning = self._get_optimized_short_lowlight_tuning()
+                logger.info("optimized tuningfile for low light loaded")
+            except Exception as exc:
+                logger.warn(f"error getting optimized lowlight tuning: {exc}")
+
+        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning)
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
@@ -159,7 +169,10 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"controls: {self._picamera2.controls}")
         logger.info(f"camera_properties: {self._picamera2.camera_properties}")
 
-        self.set_ae_exposure(self._config.AE_EXPOSURE_MODE)
+        if self._config.optimized_lowlight_short_exposure:
+            self._picamera2.set_controls({"AeExposureMode": controls.AeExposureMode.Short})
+            logger.info(f"selected short exposure mode ({controls.AeExposureMode.Short})")
+
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
 
         # start encoder
@@ -200,6 +213,30 @@ class Picamera2Backend(AbstractBackend):
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
         return True
+
+    def _load_default_tuning(self):
+        with Picamera2(camera_num=self._config.camera_num) as cam:
+            cp = cam.camera_properties
+            fname = f"{cp['Model']}.json"
+
+        return cam.load_tuning_file(fname)
+
+    def _get_optimized_short_lowlight_tuning(self):
+        """Every camera tuning file usually has at least "normal", "short" and "long" exposure modes.
+        We modify the short one and switch to this exposure mode after turning on the camera.
+        """
+        tuning = self._load_default_tuning()
+        algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
+
+        shutter = [100, 3000, 8000, 10000, 120000]
+        gain = [1.0, 6.0, 14.0, 15.0, 16.0]
+
+        if "channels" in algo:
+            algo["channels"][0]["exposure_modes"]["short"] = {"shutter": shutter, "gain": gain}
+        else:
+            algo["exposure_modes"]["short"] = {"shutter": shutter, "gain": gain}
+
+        return tuning
 
     def _wait_for_hq_image(self):
         """
@@ -291,21 +328,6 @@ class Picamera2Backend(AbstractBackend):
         """switch to hq capture is done during hq preview call already because it avoids switch delay on the actual capture"""
         pass
 
-    def set_ae_exposure(self, newmode):
-        """_summary_
-
-        Args:
-            newmode (_type_): _description_
-        """
-        logger.info(f"set_ae_exposure, try to set to {newmode}")
-        try:
-            self._picamera2.set_controls({"AeExposureMode": newmode})
-        except RuntimeError as exc:
-            # catch runtimeerror and no reraise, can fail and being logged but continue.
-            logger.error(f"set_ae_exposure failed! Mode {newmode} not available {exc}")
-
-        logger.info(f"current picamera2.controls.get_libcamera_controls():" f"{self._picamera2.controls.get_libcamera_controls()}")
-
     def _switch_mode(self):
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
 
@@ -381,7 +403,8 @@ class Picamera2Backend(AbstractBackend):
             exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
             self._backendstats.exposure_time_ms = self._round_none(exposure_time_ms_raw, 1)
             self._backendstats.lens_position = self._round_none(_metadata.get("LensPosition", None), 2)
-            self._backendstats.gain = self._round_none(_metadata.get("AnalogueGain", None), 1)
+            self._backendstats.again = self._round_none(_metadata.get("AnalogueGain", None), 1)
+            self._backendstats.dgain = self._round_none(_metadata.get("DigitalGain", None), 1)
             self._backendstats.lux = self._round_none(_metadata.get("Lux", None), 1)
             self._backendstats.colour_temperature = _metadata.get("ColourTemperature", None)
             self._backendstats.sharpness = _metadata.get("FocusFoM", None)
