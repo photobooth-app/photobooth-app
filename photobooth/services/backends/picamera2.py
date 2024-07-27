@@ -170,8 +170,8 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"camera_properties: {self._picamera2.camera_properties}")
 
         if self._config.optimized_lowlight_short_exposure:
-            self._picamera2.set_controls({"AeExposureMode": controls.AeExposureMode.Short})
-            logger.info(f"selected short exposure mode ({controls.AeExposureMode.Short})")
+            self._picamera2.set_controls({"AeExposureMode": controls.AeExposureModeEnum.Short})
+            logger.info(f"selected short exposure mode ({controls.AeExposureModeEnum.Short})")
 
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
 
