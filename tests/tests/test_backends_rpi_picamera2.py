@@ -36,7 +36,7 @@ def backend_picamera2():
     from photobooth.services.backends.picamera2 import Picamera2Backend
 
     # setup
-    backend = Picamera2Backend(GroupBackendPicamera2())
+    backend = Picamera2Backend(GroupBackendPicamera2(optimized_lowlight_short_exposure=True))
 
     # deliver
     backend.start()
