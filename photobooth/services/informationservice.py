@@ -8,11 +8,11 @@ import platform
 import socket
 import sys
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from threading import Timer
-from typing import ClassVar
+from typing import ClassVar, Dict
 
 import psutil
 
@@ -48,6 +48,7 @@ class StatsCounter:
     animations: int = 0
     videos: int = 0
     shares: int = 0
+    limites: Dict[str, int] = field(default_factory=dict)
     last_reset: str = None
 
     stats_file: ClassVar = "stats.json"
@@ -60,6 +61,7 @@ class StatsCounter:
             animations=data.get("animations", 0),
             videos=data.get("videos", 0),
             shares=data.get("shares", 0),
+            limites=data.get("limites", {}),
             last_reset=data.get("last_reset", None),
         )
 
@@ -75,9 +77,12 @@ class StatsCounter:
         except Exception as exc:
             raise RuntimeError(f"unknown error loading stats, error: {exc}") from exc
 
-    def reset(self):
+    def reset(self, varname=None, value=None):
         try:
-            self.__init__(last_reset=datetime.now().astimezone().strftime("%x %X"))  # ("%Y-%m-%d %H:%M:%S"))
+            if varname is None:
+                self.__init__(last_reset=datetime.now().astimezone().strftime("%x %X"))  # ("%Y-%m-%d %H:%M:%S"))
+            else:
+                setattr(self, varname, value)
             self.persist_stats()
         except Exception as exc:
             raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
@@ -90,6 +95,16 @@ class StatsCounter:
             raise RuntimeError(f"cannot increment {varname}, error: {exc}") from exc
         else:
             self.persist_stats()
+    
+    def increment_limite(self, key:str):
+        try:
+            if key in self.limites:
+                self.limites[key] += 1
+            else:
+                self.limites[key] = 1
+        except Exception as exc:
+            raise RuntimeError(f"cannot increment {index}, error: {exc}") from exc
+        self.persist_stats()
 
     @debounce(timeout=1)
     def persist_stats(self) -> None:
@@ -153,8 +168,14 @@ class InformationService(BaseService):
     def stats_counter_reset(self):
         self._stats_counter.reset()
 
+    def stats_counter_reset_field(self, varname, value):
+        self._stats_counter.reset(varname, value)
+
     def stats_counter_increment(self, varname):
         self._stats_counter.increment(varname)
+
+    def stats_counter_increment_limite(self, key:str):
+        self._stats_counter.increment_limite(key)
 
     def initial_emit(self):
         """_summary_"""
