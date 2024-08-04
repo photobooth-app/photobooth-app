@@ -171,6 +171,47 @@ class AppConfig(BaseSettings):
     def reset_defaults(self):
         self.__dict__.update(__class__())
 
+    def update_field(self, field_path: str, value: Any):
+        """
+        Update a specific field in the configuration JSON file.
+        Args:
+            field_path (str): The dotted path to the field to update (e.g., "share.max_shares" or "share.items[0].name").
+            value (Any): The new value to set for the field.
+        """
+        import re
+
+        # Regex to match array indices
+        array_index_pattern = re.compile(r"(\w+)\[(\d+)\]")
+
+        # Split the field path into parts, considering array indices
+        parts = []
+        for part in field_path.split("."):
+            match = array_index_pattern.match(part)
+            if match:
+                parts.append(match.group(1))
+                parts.append(int(match.group(2)))
+            else:
+                parts.append(part)
+
+        # Traverse the dictionary to find the specific field
+        config = self
+        for part in parts[:-1]:
+            if isinstance(part, int):  # If the part is an integer, it means it's an index in a list
+                config = config[part]
+            else:
+                config = getattr(config, part, None)
+                if config is None:
+                    raise KeyError(f"Field path '{field_path}' is invalid.")
+
+        # Update the field
+        if isinstance(parts[-1], int):
+            config[parts[-1]] = value
+        else:
+            setattr(config, parts[-1], value)
+
+        # Persist the updated configuration
+        self.persist()
+
     def persist(self):
         """Persist config to file"""
         logger.debug("persist config to json file")

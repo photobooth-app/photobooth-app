@@ -68,6 +68,19 @@ class ShareService(BaseService):
             self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
             raise exc
 
+        # check counter limit
+        max_shares = getattr(action_config.processing, "max_shares", 0)
+        current_shares = getattr(action_config.processing, "current_shares", 0)
+        if max_shares > 0 and current_shares >= max_shares:
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"Share/print limit exceeded ({max_shares} maximum)",
+                    caption="Share/Print Limit Exceeded",
+                )
+            )
+            raise BlockingIOError("Maximum number of impressions reached!")
+
         # filename absolute to print, use in printing command
         filename = mediaitem.path_full.absolute()
 
@@ -105,6 +118,8 @@ class ShareService(BaseService):
             raise RuntimeError(f"Process failed, error {exc}") from exc
 
         self._information_service.stats_counter_increment("shares")
+        if max_shares > 0:
+            appconfig.update_field(f"share.actions[{config_index}].processing.current_shares", current_shares + 1)
 
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
