@@ -74,9 +74,9 @@ class ShareService(BaseService):
         if max_shares > 0 and current_shares >= max_shares:
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
-                    color="info",
-                    message=f"Share/print limit exceeded ({max_shares} maximum)",
-                    caption="Share/Print Limit Exceeded",
+                    color="negative",
+                    message=f"Share/print quota exceeded ({max_shares} maximum)",
+                    caption="Share/Print quota",
                 )
             )
             raise BlockingIOError("Maximum number of impressions reached!")
@@ -119,7 +119,15 @@ class ShareService(BaseService):
 
         self._information_service.stats_counter_increment("shares")
         if max_shares > 0:
-            appconfig.update_field(f"share.actions[{config_index}].processing.current_shares", current_shares + 1)
+            current_shares = current_shares + 1
+            appconfig.update_field(f"share.actions[{config_index}].processing.current_shares", current_shares)
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"Share/print quota : {current_shares}/{max_shares}",
+                    caption="Share/Print quota",
+                )
+            )
 
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
