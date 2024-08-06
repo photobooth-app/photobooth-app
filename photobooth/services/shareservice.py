@@ -75,7 +75,7 @@ class ShareService(BaseService):
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="negative",
-                    message=f"Share/print quota exceeded ({max_shares} maximum)",
+                    message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({max_shares} maximum)",
                     caption="Share/Print quota",
                 )
             )
@@ -120,11 +120,12 @@ class ShareService(BaseService):
         self._information_service.stats_counter_increment("shares")
         if max_shares > 0:
             current_shares = current_shares + 1
-            appconfig.update_field(f"share.actions[{config_index}].processing.current_shares", current_shares)
+            appconfig.share.actions[config_index].processing.current_shares = current_shares
+            appconfig.persist()
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
-                    message=f"Share/print quota : {current_shares}/{max_shares}",
+                    message=f"{action_config.trigger.ui_trigger.title} quota : {current_shares}/{max_shares}",
                     caption="Share/Print quota",
                 )
             )
