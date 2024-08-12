@@ -14,7 +14,7 @@ from .mediacollection.mediaitem import (
     PATH_FULL_UNPROCESSED,
     PATH_ORIGINAL,
 )
-from .sseservice import SseService
+from .sseservice import SseEventFrontendNotification, SseService
 
 LIST_FOLDERS_TO_COPY = [PATH_ORIGINAL, PATH_FULL, PATH_FULL_UNPROCESSED]
 
