@@ -22,7 +22,7 @@ LIST_FOLDERS_TO_COPY = [PATH_ORIGINAL, PATH_FULL, PATH_FULL_UNPROCESSED]
 class FileTransferService(BaseService):
     def __init__(self, sse_service: SseService):
         super().__init__(sse_service)
-
+        self._sse_service = sse_service
         self._worker_thread: StoppableThread = None
 
     def start(self):
@@ -70,6 +70,13 @@ class FileTransferService(BaseService):
                 self.copy_folders_to_usb(device.mountpoint)
             else:
                 self._logger.warning(f"Not enough space on USB device at {device.mountpoint} to copy the folders.")
+                self._sse_service.dispatch_event(
+                    SseEventFrontendNotification(
+                        color="negative",
+                        message=f"Not enough space on USB device at {device.mountpoint} to copy the folders.",
+                        caption="USB Copy Error",
+                    )
+                )
         else:
             self._logger.error(f"USB device not correctly mounted {device}.")
 
@@ -78,7 +85,7 @@ class FileTransferService(BaseService):
 
     @staticmethod
     def get_current_removable_media():
-        """Returns set of removable drives detected on the  computer."""
+        """Returns set of removable drives detected on the computer."""
         return {device for device in psutil.disk_partitions(all=False)}
 
     def has_enough_space(self, device_path):
@@ -92,7 +99,7 @@ class FileTransferService(BaseService):
 
     def copy_folders_to_usb(self, usb_path):
         if not appconfig.filetransfer.target_folder_name:
-            self._logger.warning("Target USB parent foldername cannot be empty")
+            self._logger.warning("Target USB parent folder name cannot be empty")
             return
 
         destination_path = Path(usb_path, appconfig.filetransfer.target_folder_name)
@@ -100,15 +107,68 @@ class FileTransferService(BaseService):
         try:
             os.makedirs(destination_path, exist_ok=True)
         except Exception as exc:
-            self._logger.warning(f"Error creating folder {destination_path} on usb drive: {exc}")
+            self._logger.warning(f"Error creating folder {destination_path} on USB drive: {exc}")
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="negative",
+                    message=f"Error creating folder {destination_path} on USB drive: {exc}",
+                    caption="USB Copy Error",
+                )
+            )
+            return
 
         self._logger.info(f"Start copying data to {destination_path}")
+        total_size = sum(self.get_dir_size(Path(folder)) for folder in LIST_FOLDERS_TO_COPY) / (1024 * 1024)  # Convert to MB
+        copied_size = 0
+        start_time = time.time()
+
         for folder in LIST_FOLDERS_TO_COPY:
             try:
-                # TODO: improve to only copy modified files.
-                shutil.copytree(folder, Path(destination_path, folder), dirs_exist_ok=True)
+                for item in Path(folder).rglob("*"):
+                    if item.is_file():
+                        destination = Path(destination_path, item.relative_to(Path(folder)))
+                        destination.parent.mkdir(parents=True, exist_ok=True)
+                        file_size = item.stat().st_size / (1024 * 1024)  # Convert to MB
+                        shutil.copy2(item, destination)
+                        copied_size += file_size
+                        
+                        elapsed_time = time.time() - start_time
+                        estimated_total_time = (elapsed_time / copied_size) * total_size
+                        remaining_time = estimated_total_time - elapsed_time
+
+                        self._sse_service.dispatch_event(
+                            SseEventFrontendNotification(
+                                color="info",
+                                message=(
+                                    f"Copying files to USB: {copied_size:.2f}/{total_size:.2f} MB copied. "
+                                    f"Estimated time remaining: {self.format_time(remaining_time)}"
+                                ),
+                                caption="USB Copy Progress",
+                            )
+                        )
             except Exception as exc:
                 self._logger.warning(f"Error copying files: {exc}")
+                self._sse_service.dispatch_event(
+                    SseEventFrontendNotification(
+                        color="negative",
+                        message=f"Error copying files: {exc}",
+                        caption="USB Copy Error",
+                    )
+                )
                 return
 
         self._logger.info(f"Copy folders finished. Copied to {destination_path}")
+        self._sse_service.dispatch_event(
+            SseEventFrontendNotification(
+                color="positive",
+                message=f"Finished copying to {destination_path}. Total size copied: {copied_size:.2f}/{total_size:.2f} MB",
+                caption="USB Copy Completed",
+            )
+        )
+
+    @staticmethod
+    def format_time(seconds):
+        """Format time in seconds to a string in the form of H:M:S."""
+        hours, remainder = divmod(int(seconds), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours}h {minutes}m {seconds}s" if hours > 0 else f"{minutes}m {seconds}s"
