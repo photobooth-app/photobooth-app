@@ -105,8 +105,19 @@ function api_key_set()
 
 function isSecure()
 {
-    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || $_SERVER['SERVER_PORT'] == 443;
+    if (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || $_SERVER['SERVER_PORT'] == 443
+    ) {
+        return true;
+    }
+
+    // Check for HTTPS in the "X-Forwarded-Proto" header for reverse proxies
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        return true;
+    }
+
+    return false;
 }
 
 try {
