@@ -228,8 +228,14 @@ class Picamera2Backend(AbstractBackend):
         tuning = self._load_default_tuning()
         algo = Picamera2.find_tuning_algo(tuning, "rpi.agc")
 
-        shutter = [100, 3000, 8000, 10000, 120000]
-        gain = [1.0, 6.0, 14.0, 15.0, 16.0]
+        # lower boundary at (100,1.0)
+        # sequence raising exposure is raising shutter to 1000, then gain (here 1.0 also).
+        # so it will continue raising shutter time to 2000, then gain to 2.0
+        # 16000 == 1/63 is considered as reasonable max to capture stills from people in booth
+        # so before 16000 is reached, the gain is first set to 14.0 (which is not max but very noisy already)
+        # so during setup, one would try to achieve a shutter time in the range 2000-8000 with permanent lighting usually
+        shutter = [100, 1000, 2000, 4000, 8000, 16000, 120000]
+        gain = [1.0, 1.0, 2.0, 4.0, 8.0, 14.0, 14.0]
 
         if "channels" in algo:
             algo["channels"][0]["exposure_modes"]["short"] = {"shutter": shutter, "gain": gain}
