@@ -50,17 +50,6 @@ class ShareService(BaseService):
             )
             raise ConnectionRefusedError("Share service is disabled! Enable in config first.")
 
-        # block queue new prints until configured time is over
-        if self.is_blocked():
-            self._sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="info",
-                    message=f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.",
-                    caption="Share Service Error",
-                )
-            )
-            raise BlockingIOError(f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.")
-
         # get config
         try:
             action_config = appconfig.share.actions[config_index]
@@ -82,7 +71,18 @@ class ShareService(BaseService):
                     caption="Share/Print quota",
                 )
             )
-            raise BlockingIOError("Maximum number of impressions reached!")
+            raise BlockingIOError("Maximum number of Share/Print reached!")
+        
+        # block queue new prints until configured time is over
+        if self.is_blocked():
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.",
+                    caption="Share Service Error",
+                )
+            )
+            raise BlockingIOError(f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.")
 
         # filename absolute to print, use in printing command
         filename = mediaitem.path_full.absolute()
