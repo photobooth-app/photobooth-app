@@ -59,11 +59,7 @@ class ShareService(BaseService):
 
         # check counter limit
         max_shares = getattr(action_config.processing, "max_shares", 0)
-        limites = self._information_service._stats_counter.limites
-        current_shares = 0
-        if action_config.name in limites:
-            current_shares = limites[action_config.name]
-        if max_shares > 0 and current_shares >= max_shares:
+        if self.is_limited(max_shares, action_config):
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="negative",
@@ -123,7 +119,7 @@ class ShareService(BaseService):
         self._information_service.stats_counter_increment("shares")
         if max_shares > 0:
             self._information_service.stats_counter_increment_limite(action_config.name)
-            current_shares = limites[action_config.name]
+            current_shares = self._information_service._stats_counter.limites[action_config.name]
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
@@ -134,6 +130,15 @@ class ShareService(BaseService):
 
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
+    
+    def is_limited(self, max_shares: int, action_config) -> bool :
+        limites = self._information_service._stats_counter.limites
+        current_shares = 0
+        if action_config.name in limites:
+            current_shares = limites[action_config.name]
+        if max_shares > 0 and current_shares >= max_shares:
+            return True
+        return False
 
     def remaining_time_blocked(self) -> float:
         if self._last_print_time is None:
