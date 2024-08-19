@@ -82,3 +82,45 @@ def test_print_image_blocked(mock_run, _container: Container):
 
     # check subprocess.run was invoked
     mock_run.assert_called()
+
+
+@patch("subprocess.run")
+def test_is_limited(mock_run, _container: Container):
+    """enable service and try to share/print, check that it repsonds limited"""
+
+    config_index = 0
+    max_shares = 1
+    appconfig.share.sharing_enabled = True
+    action_config = appconfig.share.actions[config_index]
+
+    _container.stop()
+    _container.start()
+
+    _container.share_service._information_service._stats_counter.limites[action_config.name] = max_shares + 1
+    if _container.share_service.is_limited(max_shares, action_config):
+        logger.debug("share/print is limited")
+
+    mock_run.assert_called()
+
+@patch("subprocess.run")
+def test_is_not_limited(mock_run, _container: Container):
+    """enable service and try to share/print, check that it repsonds not limited"""
+
+    config_index = 0
+    appconfig.share.sharing_enabled = True
+    action_config = appconfig.share.actions[config_index]
+
+    _container.stop()
+    _container.start()
+
+    max_shares = 1
+    _container.share_service._information_service._stats_counter.limites[action_config.name] = 0
+    if _container.share_service.is_limited(max_shares, action_config) is False:
+        logger.debug("share/print is not limited")
+
+    max_shares = 0
+    _container.share_service._information_service._stats_counter.limites[action_config.name] = 100
+    if _container.share_service.is_limited(max_shares, action_config) is False:
+        logger.debug("share/print has no limit")
+
+    mock_run.assert_called()
