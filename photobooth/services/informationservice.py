@@ -12,7 +12,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from threading import Timer
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 import psutil
 
@@ -48,7 +48,7 @@ class StatsCounter:
     animations: int = 0
     videos: int = 0
     shares: int = 0
-    limites: Dict[str, int] = field(default_factory=dict)
+    limits: dict[str, int] = field(default_factory=dict)
     last_reset: str = None
 
     stats_file: ClassVar = "stats.json"
@@ -61,7 +61,7 @@ class StatsCounter:
             animations=data.get("animations", 0),
             videos=data.get("videos", 0),
             shares=data.get("shares", 0),
-            limites=data.get("limites", {}),
+            limits=data.get("limits", {}),
             last_reset=data.get("last_reset", None),
         )
 
@@ -95,15 +95,15 @@ class StatsCounter:
             raise RuntimeError(f"cannot increment {varname}, error: {exc}") from exc
         else:
             self.persist_stats()
-    
+
     def increment_limite(self, key:str):
         try:
-            if key in self.limites:
-                self.limites[key] += 1
+            if key in self.limits:
+                self.limits[key] += 1
             else:
-                self.limites[key] = 1
+                self.limits[key] = 1
         except Exception as exc:
-            raise RuntimeError(f"cannot increment {index}, error: {exc}") from exc
+            raise RuntimeError(f"cannot increment {key}, error: {exc}") from exc
         self.persist_stats()
 
     @debounce(timeout=1)
@@ -113,7 +113,6 @@ class StatsCounter:
                 json.dump(asdict(self), outfile, indent=2)
         except Exception as exc:
             raise RuntimeError(f"could not save statscounter file, error: {exc}") from exc
-
 
 class InformationService(BaseService):
     """_summary_"""

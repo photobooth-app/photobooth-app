@@ -68,7 +68,7 @@ class ShareService(BaseService):
                 )
             )
             raise BlockingIOError("Maximum number of Share/Print reached!")
-        
+
         # block queue new prints until configured time is over
         if self.is_blocked():
             self._sse_service.dispatch_event(
@@ -119,7 +119,7 @@ class ShareService(BaseService):
         self._information_service.stats_counter_increment("shares")
         if max_shares > 0:
             self._information_service.stats_counter_increment_limite(action_config.name)
-            current_shares = self._information_service._stats_counter.limites[action_config.name]
+            current_shares = self._information_service._stats_counter.limits[action_config.name]
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
@@ -130,12 +130,12 @@ class ShareService(BaseService):
 
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
-    
+
     def is_limited(self, max_shares: int, action_config) -> bool :
-        limites = self._information_service._stats_counter.limites
+        limits = self._information_service._stats_counter.limits
         current_shares = 0
-        if action_config.name in limites:
-            current_shares = limites[action_config.name]
+        if action_config.name in limits:
+            current_shares = limits[action_config.name]
         if max_shares > 0 and current_shares >= max_shares:
             return True
         return False
