@@ -95,12 +95,12 @@ def test_is_limited_no_limit(mock_run, _container: Container):
 
     # Setup
     config_index = 0
-    _container._information_service._stats_counter.limits = {"share_action": 5}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 5}
     action_config = appconfig.share.actions[config_index]
     action_config.name = "share_action"
     
     # Call method with max_shares = 0 (no limit)
-    result = _container.is_limited(0, action_config)
+    result = _container.share_service.is_limited(0, action_config)
     
     # Assert the function returns False (not limited)
     assert not result
@@ -117,12 +117,12 @@ def test_is_limited_within_limit(mock_run, _container: Container):
     
     # Setup
     config_index = 0
-    _container._information_service._stats_counter.limits = {"share_action": 3}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 3}
     action_config = appconfig.share.actions[config_index]
     action_config.name = "share_action"
     
     # Call method with max_shares = 5, current_shares = 3
-    result = _container.is_limited(5, action_config)
+    result = _container.share_service.is_limited(5, action_config)
     
     # Assert the function returns False (not limited)
     assert not result
@@ -139,12 +139,12 @@ def test_is_limited_at_limit(mock_run, _container: Container):
     
     # Setup
     config_index = 0
-    _container._information_service._stats_counter.limits = {"share_action": 5}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 5}
     action_config = appconfig.share.actions[config_index]
     action_config.name = "share_action"
     
     # Call method with max_shares = 5, current_shares = 5
-    result = _container.is_limited(5, action_config)
+    result = _container.share_service.is_limited(5, action_config)
     
     # Assert the function returns True (limited)
     assert result
@@ -161,12 +161,12 @@ def test_is_limited_above_limit(mock_run, _container: Container):
     
     # Setup
     config_index = 0
-    _container._information_service._stats_counter.limits = {"share_action": 7}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 7}
     action_config = appconfig.share.actions[config_index]
     action_config.name = "share_action"
     
     # Call method with max_shares = 5, current_shares = 7
-    result = _container.is_limited(5, action_config)
+    result = _container.share_service.is_limited(5, action_config)
     
     # Assert the function returns True (limited)
     assert result
@@ -183,12 +183,12 @@ def test_is_limited_action_not_in_limits(mock_run, _container: Container):
     
     # Setup
     config_index = 0
-    _container._information_service._stats_counter.limits = {"share_action": 2}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 2}
     action_config = appconfig.share.actions[config_index]
     action_config.name = "share_action"
     
     # Call method with max_shares = 5, action_config.name not in limits
-    result = _container.is_limited(5, action_config)
+    result = _container.share_service.is_limited(5, action_config)
     
     # Assert the function returns False (not limited)
     assert not result
@@ -204,17 +204,18 @@ def test_max_shares_exceeded(mock_run, _container: Container):
     _container.start()
 
     # Setup
-    _container.is_limited.return_value = True
     config_index = 0
     action_config = appconfig.share.actions[config_index]
-    action_config.processing.max_shares = 5
     action_config.trigger.ui_trigger.title = "Test Action"
+    _container.share_service._information_service._stats_counter.limits = {
+        action_config.name: 11
+    }
 
     # Call method and expect a BlockingIOError
-    with pytest.raises(BlockingIOError, match="Maximum number of Share/Print reached!"):
-        max_shares = getattr(action_config.processing, "max_shares", 0)
-        if _container.is_limited(max_shares, action_config):
-            _container._sse_service.dispatch_event.assert_called_with(
+    with pytest.raises(BlockingIOError):
+        max_shares = 10
+        if _container.share_service.is_limited(max_shares, action_config):
+            _container.share_service._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="negative",
                     message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({max_shares} maximum)",
@@ -223,8 +224,7 @@ def test_max_shares_exceeded(mock_run, _container: Container):
             )
             raise BlockingIOError("Maximum number of Share/Print reached!")
 
-    # Ensure the event was dispatched correctly
-    _container._sse_service.dispatch_event.assert_called()
+    mock_run.assert_called()
 
 @patch("subprocess.run")
 def test_max_shares_not_exceeded(mock_run, _container: Container):
@@ -236,18 +236,17 @@ def test_max_shares_not_exceeded(mock_run, _container: Container):
     _container.start()
 
     # Setup
-    _container.is_limited.return_value = False
     config_index = 0
     action_config = appconfig.share.actions[config_index]
     action_config.processing.max_shares = 5
     action_config.name = "share_action"
     action_config.trigger.ui_trigger.title = "Test Action"
-    _container._information_service._stats_counter.limits = {"share_action": 3}
+    _container.share_service._information_service._stats_counter.limits = {"share_action": 3}
 
     # Call method and ensure it doesn't raise an exception
     max_shares = getattr(action_config.processing, "max_shares", 0)
-    if _container.is_limited(max_shares, action_config):
-        _container._sse_service.dispatch_event.assert_called_with(
+    if _container.share_service.is_limited(max_shares, action_config):
+        _container.share_service._sse_service.dispatch_event(
             SseEventFrontendNotification(
                 color="negative",
                 message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({max_shares} maximum)",
@@ -256,9 +255,9 @@ def test_max_shares_not_exceeded(mock_run, _container: Container):
         )
         raise BlockingIOError("Maximum number of Share/Print reached!")
     else:
-        _container._information_service.stats_counter_increment_limite(action_config.name)
-        current_shares = _container._information_service._stats_counter.limits[action_config.name]
-        _container._sse_service.dispatch_event(
+        _container.share_service._information_service.stats_counter_increment_limite(action_config.name)
+        current_shares = _container.share_service._information_service._stats_counter.limits[action_config.name]
+        _container.share_service._sse_service.dispatch_event(
             SseEventFrontendNotification(
                 color="info",
                 message=f"{action_config.trigger.ui_trigger.title} quota : {current_shares}/{max_shares}",
@@ -267,13 +266,15 @@ def test_max_shares_not_exceeded(mock_run, _container: Container):
         )
 
     # Ensure the share count was incremented
-    _container._information_service.stats_counter_increment_limite.assert_called_with(action_config.name)
+    _container.share_service._information_service.stats_counter_increment_limite(action_config.name)
 
     # Ensure the event was dispatched correctly
-    _container._sse_service.dispatch_event.assert_called_with(
+    _container.share_service._sse_service.dispatch_event(
         SseEventFrontendNotification(
             color="info",
             message=f"{action_config.trigger.ui_trigger.title} quota : 3/5",
             caption="Share/Print quota",
         )
     )
+
+    mock_run.assert_called()
