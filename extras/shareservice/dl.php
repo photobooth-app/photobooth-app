@@ -1,6 +1,15 @@
 <?php
+/*
+ * IMPORTANT:
+ * 1. The API key ($APIKEY) must be changed to a random value. 
+ *    This key is used to pair the photobooth app with the server, and it needs to match the key set in the photobooth app configuration.
+ *    Leaving the API key as the default is a security risk, and the script will not function correctly until it is changed.
+ *
+ * 2. The Share button will only be visible if the page is accessed via a secure connection (HTTPS).
+ *    If you are not using HTTPS, the Share button will not appear.
+ */
 
-// documentation see https://photobooth-app.org/setup/shareservice/
+// documentation see https://photobooth-app.org/setup/qrshareservice/
 
 // configuration options
 $APIKEY = "changedefault!";                 // set apikey to a random value, of at least 8 chars. The same apikey needs to be set in photobooth app to pair both systems
@@ -8,6 +17,28 @@ $WORK_DIRECTORY = __DIR__ . "/uploads";     // __DIR__ is the directory of the c
 $ALLOWED_UPLOAD_MAX_SIZE = 25 * 2 ** 20;    // 25MB max file size to upload
 $TIMEOUT_DOWNLOAD = 15;                     // if photobooth-app upload is not completed within this timeout, it's considered as an error and error is displayed instead image
 
+// Translation variables
+$translations = [
+    'error_no_file_uploaded' => 'There is no file uploaded',
+    'error_processing_file' => 'Error processing uploaded file!',
+    'error_api_key' => 'APIKEY not correct! Check APIKEY in dl.php and photobooth config.',
+    'error_empty_file' => 'The file is empty.',
+    'error_large_file' => 'The file is too large',
+    'error_not_allowed' => 'File not allowed.',
+    'error_cannot_find_file' => 'Cannot find uploaded file',
+    'error_upload_failed' => 'Photobooth had problems uploading the file, check photobooth log for errors',
+    'download_or_share' => 'Download or Share Your File',
+    'download_button' => 'Download',
+    'share_button' => 'Share',
+    'share_title' => 'Photobooth File',
+    'share_text' => 'Check out this file I took!',
+    'successful_share' => 'Successful share',
+    'error_sharing' => 'Error sharing',
+    'error_runtime' => 'Runtime error: ',
+    'endpoint_not_exist' => 'Endpoint does not exist!',
+    'info_version' => 'version',
+    'info_name' => 'photobooth-app file upload extension',
+];
 
 // internal constants - do not change below this!
 $VERSION = 2;
@@ -72,6 +103,23 @@ function api_key_set()
     }
 }
 
+function isSecure()
+{
+    if (
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || $_SERVER['SERVER_PORT'] == 443
+    ) {
+        return true;
+    }
+
+    // Check for HTTPS in the "X-Forwarded-Proto" header for reverse proxies
+    if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        return true;
+    }
+
+    return false;
+}
+
 try {
     // db connection setup
     $db = new SQLite3($DB_FILENAME);
@@ -95,8 +143,6 @@ try {
         status TEXT NOT NULL DEFAULT 'pending'
     )");
 
-
-
     if (($_POST["action"] ?? null) == "upload" && ($_POST["id"] ?? null)) {
         // action: upload a file, identified by id.
         // once file uploaded, mark it as "uploaded" in db
@@ -109,17 +155,17 @@ try {
         // sanity check for apikey
         if ($_POST["apikey"] !== $APIKEY) {
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
-            throw new RuntimeException("APIKEY not correct! Check APIKEY in dl.php and photobooth config.");
+            throw new RuntimeException($translations['error_api_key']);
         }
 
         // file upload sanity checks
         if (!isset($_FILES["upload_file"])) {
             # set status to fail so ongoing download can stop waiting
             $db->exec("UPDATE upload_requests SET status = 'upload_failed' WHERE file_identifier = '" . $file_identifier . "'");
-            throw new RuntimeException("There is no file uploaded ($file_identifier)");
+            throw new RuntimeException($translations['error_no_file_uploaded'] . " ($file_identifier)");
         }
         if ($_FILES['upload_file']['error'] != UPLOAD_ERR_OK) {
-            throw new RuntimeException("Error processing uploaded file! Errorcode=" . $_FILES['upload_file']['error']);
+            throw new RuntimeException($translations['error_processing_file'] . " Errorcode=" . $_FILES['upload_file']['error']);
         }
 
         $filepath = $_FILES['upload_file']['tmp_name'];
@@ -134,13 +180,13 @@ try {
         }
 
         if (filesize($filepath) === 0) {
-            throw new RuntimeException("The file is empty.");
+            throw new RuntimeException($translations['error_empty_file']);
         }
         if (filesize($filepath) > $ALLOWED_UPLOAD_MAX_SIZE) {
-            throw new RuntimeException("The file is too large");
+            throw new RuntimeException($translations['error_large_file']);
         }
         if (!in_array($mimetype, array_keys($ALLOWED_UPLOAD_TYPES))) {
-            throw new RuntimeException("File not allowed.");
+            throw new RuntimeException($translations['error_not_allowed']);
         }
 
         // filename to store the uploaded file to in work directory
@@ -225,7 +271,7 @@ try {
                         <head>
                         <meta charset='UTF-8'>
                         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                        <title>Download File</title>
+                        <title>{$translations['download_or_share']}</title>
                         <style>
                             body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
                             img, video { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
@@ -234,7 +280,7 @@ try {
                         </style>
                         </head>
                         <body>
-                        <h1>Download or Share Your File</h1>";
+                        <h1>{$translations['download_or_share']}</h1>";
 
                     if ($isImage) {
                         echo "<img src='data:$mimetype;base64,$base64EncodedData' alt='Image'>";
@@ -246,8 +292,11 @@ try {
                     }
 
                     echo "<br>
-                        <a href='data:$mimetype;base64,$base64EncodedData' download='" . $results["filename"] . "'><button>Download</button></a>
-                        <button onclick='shareImage()'>Share</button>
+                        <a href='data:$mimetype;base64,$base64EncodedData' download='" . $results["filename"] . "'><button>{$translations['download_button']}</button></a>";
+
+                    // Show share button only if the page is accessed via HTTPS
+                    if (isSecure()) {
+                        echo "<button onclick='shareImage()'>{$translations['share_button']}</button>
                         <script>
                         function shareImage() {
                             if (!navigator.share) {
@@ -259,21 +308,23 @@ try {
 
                             navigator.share({
                                 files: [file],
-                                title: 'Photobooth File',
-                                text: 'Check out this file I took!'
+                                title: '{$translations['share_title']}',
+                                text: '{$translations['share_text']}'
                             })
-                            .then(() => console.log('Successful share'))
-                            .catch((error) => console.log('Error sharing', error));
+                            .then(() => console.log('{$translations['successful_share']}'))
+                            .catch((error) => console.log('{$translations['error_sharing']}', error));
                         }
-                        </script>
-                        </body>
+                        </script>";
+                    }
+
+                    echo "</body>
                         </html>";
                     exit;
                 } else {
-                    throw new RuntimeException("error, cannot find uploaded file");
+                    throw new RuntimeException($translations['error_cannot_find_file']);
                 }
             } elseif (!empty($results) && $results["status"] == "upload_failed") {
-                throw new RuntimeException("photobooth had problems uploading the file, check photobooth log for errors");
+                throw new RuntimeException($translations['error_upload_failed']);
             }
             usleep(500 * 1000);
             $time_waited += 0.5;
@@ -292,11 +343,11 @@ try {
         // endpoint can be used by photobooth-app to check it's communicating with the correct URL
         echo json_encode([
             "version" => $VERSION,
-            "name" => "photobooth-app fileupload extension",
+            "name" => $translations['info_name'],
         ]);
     } else {
         http_response_code(406);
-        error_log("endpoint does not exist!");
+        error_log($translations['endpoint_not_exist']);
         error_log(json_encode($_GET));
     }
 } catch (RuntimeException $e) {
@@ -304,12 +355,12 @@ try {
 
     if (!(($_GET["action"] ?? null) == "download")) {
         # if download action, output exception as image, otherwise as text
-        echo "runtime error: {$e->getMessage()}";
+        echo $translations['error_runtime'] . $e->getMessage();
     } else {
-        text_to_image("runtime error: {$e->getMessage()}");
+        text_to_image($translations['error_runtime'] . $e->getMessage());
     }
 
-    error_log("runtime error: {$e->getMessage()}");
+    error_log($translations['error_runtime'] . $e->getMessage());
     error_log(json_encode($_GET));
     error_log(json_encode($_POST));
     error_log(json_encode($_FILES));
