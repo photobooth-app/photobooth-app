@@ -289,7 +289,7 @@ class AbstractBackend(ABC):
             logger.info("set flag to indicate fault in device despite backend shall be in running mode")
             self._device_status_fault_flag = True
         else:
-            logger.info("ignored to flag device as faulty because not in running mode")
+            logger.info(f"ignored to flag device as faulty because not in running mode, mode is {self.device_status}")
 
     def wait_for_hq_image(self, retries: int = 3) -> bytes:
         """
@@ -518,13 +518,13 @@ class AbstractBackend(ABC):
     @abstractmethod
     def _device_stop(self):
         """
-        start the device ()
+        stop the device ()
         """
 
     @abstractmethod
     def _device_available(self) -> bool:
         """
-        start the device ()
+        available device ()
         """
 
     @abstractmethod
