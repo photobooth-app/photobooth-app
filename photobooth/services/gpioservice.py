@@ -86,15 +86,22 @@ class GpioService(BaseService):
         # output signals
         # none yet
 
+        # TODO: better move following to start/stop because start/stop is within try catch during service start
+        # and changes in config are respected by service restart.
         if appconfig.hardwareinputoutput.gpio_enabled:
             if is_rpi():
-                self.init_io()
+                try:
+                    self.init_io()
+                except Exception as exc:
+                    self._logger.exception(exc)
+                    self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
+
                 self._logger.info("gpio enabled - listeners installed")
             else:
                 self._logger.info("platform is not raspberry pi - gpio library is not supported")
         else:
             if is_rpi():
-                self._logger.info("gpio not enabled - enable for gpio support on raspberry pi")
+                self._logger.info("gpio disabled - enable for gpio support on raspberry pi")
 
     def _handle_action_button(self, btn: ActionButton):
         self._logger.debug(f"trigger callback for {btn}")
