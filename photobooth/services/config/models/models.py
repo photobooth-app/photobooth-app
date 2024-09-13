@@ -81,7 +81,7 @@ class SinglePictureDefinition(BaseModel):
     img_background_enable: bool = False
     img_background_file: str = "backgrounds/pink-7761356_1920.jpg"
     img_frame_enable: bool = False
-    img_frame_file: str = "frames/pixabay-holidays-1798208_1920.png"
+    img_frame_file: str = "frames/frame_image_photobooth-app.png"
     texts_enable: bool = False
     texts: list[TextsConfig] = []
 

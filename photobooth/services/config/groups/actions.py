@@ -298,7 +298,7 @@ class GroupActions(BaseModel):
                     img_background_enable=True,
                     img_background_file="backgrounds/pink-7761356_1920.jpg",
                     img_frame_enable=True,
-                    img_frame_file="frames/pixabay-holidays-1798208_1920.png",
+                    img_frame_file="frames/frame_image_photobooth-app.png",
                     texts_enable=True,
                     texts=[
                         TextsConfig(
