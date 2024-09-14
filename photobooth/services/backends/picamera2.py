@@ -401,7 +401,22 @@ class Picamera2Backend(AbstractBackend):
                     self._hires_data.condition.notify_all()
 
             # capture metadata blocks until new metadata is avail
-            _metadata = self._picamera2.capture_metadata()
+            try:
+                _metadata = self._picamera2.capture_metadata(wait=1.5)
+                # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
+                # stalling
+            except TimeoutError as exc:
+                # if camera runs out of Cma during switch_config, the camera stops delivering images and so also no metadata.
+                # the supervisor thread detects that no images come in and would try to restarting the picamera2 backend to recover.
+                # wait=1.5 was added to avoid stalling the _worker_fun thread raising a timeout after 1.5 seconds without images/metadata latest.
+                # inform about the error, no need to reraise the issue actually again.
+
+                logger.error(f"camera stopped delivering frames, error {exc}")
+                # mark as faulty to restart in case it was not detected by supervisor already.
+                self.device_set_status_fault_flag()
+
+                # leave worker function
+                break
 
             # update backendstats (optional for backends, but this one has so many information that are easy to display)
             # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
