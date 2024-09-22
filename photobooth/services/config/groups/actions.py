@@ -428,7 +428,7 @@ class GroupActions(BaseModel):
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(title="Video", icon="movie"),
-                    gpio_trigger=GpioTrigger(pin="26"),
+                    gpio_trigger=GpioTrigger(pin="25"),
                     keyboard_trigger=KeyboardTrigger(keycode="v"),
                 ),
             ),
