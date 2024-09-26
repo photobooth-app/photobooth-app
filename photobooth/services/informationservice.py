@@ -191,6 +191,7 @@ class InformationService(BaseService):
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
                 stats_counter=asdict(self._stats_counter),
+                battery_percent=self._gather_battery_stats(),
             ),
         )
 
@@ -246,3 +247,15 @@ class InformationService(BaseService):
                 self._logger.info("cannot detect computer model")
 
         return model
+
+    def _gather_battery_stats(self) -> int:
+        battery_percent = None
+
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
+        # None if not determinable otherwise named tuple.
+        # clamp to 0...100%
+        battery = psutil.sensors_battery()
+        if battery:
+            battery_percent = max(min(100, round(battery.percent, None)), 0)
+
+        return battery_percent
