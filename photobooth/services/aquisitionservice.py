@@ -130,11 +130,13 @@ class AquisitionService(BaseService):
 
         self._wled_service.preset_shoot()
 
-        image_bytes = self._main_backend.wait_for_hq_image(appconfig.backends.retry_capture)
-
-        self._wled_service.preset_standby()
-
-        return image_bytes
+        try:
+            return self._main_backend.wait_for_hq_image(appconfig.backends.retry_capture)
+        except Exception as exc:
+            raise exc
+        finally:
+            # ensure even if failed, the wled is set to standby again
+            self._wled_service.preset_standby()
 
     def start_recording(self, video_framerate: int = 25):
         self._get_video_backend().start_recording(video_framerate)
