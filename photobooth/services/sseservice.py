@@ -192,6 +192,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     printer: dict[str, Any] = None
     stats_counter: dict[str, Any] = None
     battery_percent: int = None
+    temperatures: dict[str, Any] = None
 
     @property
     def data(self) -> str:
@@ -205,6 +206,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 printer=self.printer,
                 stats_counter=self.stats_counter,
                 battery_percent=self.battery_percent,
+                temperatures=self.temperatures,
             )
         )
 

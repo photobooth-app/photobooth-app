@@ -12,9 +12,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from threading import Timer
-from typing import ClassVar
+from typing import Any, ClassVar, Union
 
 import psutil
+from psutil._common import sbattery
 
 from ..__version__ import __version__
 from ..utils.repeatedtimer import RepeatedTimer
@@ -191,7 +192,8 @@ class InformationService(BaseService):
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
                 stats_counter=asdict(self._stats_counter),
-                battery_percent=self._gather_battery_stats(),
+                battery_percent=self._gather_battery(),
+                temperatures=self._gather_temperatures(),
             ),
         )
 
@@ -248,14 +250,24 @@ class InformationService(BaseService):
 
         return model
 
-    def _gather_battery_stats(self) -> int:
+    def _gather_battery(self) -> int:
         battery_percent = None
 
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
         # None if not determinable otherwise named tuple.
         # clamp to 0...100%
-        battery = psutil.sensors_battery()
+        battery: Union[sbattery, None] = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
         if battery:
             battery_percent = max(min(100, round(battery.percent, None)), 0)
 
         return battery_percent
+
+    def _gather_temperatures(self) -> dict[str, Any]:
+        temperatures = {}
+
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_temperatures
+        psutil_temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
+        for name, entry in psutil_temperatures.items():
+            temperatures[name] = entry[0].current  # there could be multiple sensors to one zone, we just use the first.
+
+        return temperatures
