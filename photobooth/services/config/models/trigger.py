@@ -12,15 +12,15 @@ class UiTrigger(BaseModel):
 
     show_button: bool = Field(
         default=True,
-        description="Show a button to trigger process on the main screen.",
+        description="Show the button to trigger the process.",
     )
     title: str = Field(
         default="",
-        description="Label used for the trigger button.",
+        description="Label used for the button.",
     )
     icon: str = Field(
         default="",
-        description="Icon used for the trigger button (any icon from material icons, see documentation).",
+        description="Icon used for the button (any icon from material icons, see documentation).",
     )
 
 
