@@ -7,7 +7,6 @@ import json
 import platform
 import socket
 import sys
-import threading
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -178,7 +177,6 @@ class InformationService(BaseService):
         self._sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
                 cpu1_5_15=self._gather_cpu1_5_15(),
-                active_threads=self._gather_active_threads(),
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
@@ -190,9 +188,6 @@ class InformationService(BaseService):
 
     def _gather_cpu1_5_15(self):
         return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]
-
-    def _gather_active_threads(self):
-        return threading.active_count()
 
     def _gather_memory(self):
         return psutil.virtual_memory()._asdict()
