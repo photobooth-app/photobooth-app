@@ -50,6 +50,25 @@ class ShareService(BaseService):
             )
             raise ConnectionRefusedError("Share service is disabled! Enable in config first.")
 
+        # get config
+        try:
+            action_config = appconfig.share.actions[config_index]
+        except Exception as exc:
+            self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
+            raise exc
+
+        # check counter limit
+        max_shares = getattr(action_config.processing, "max_shares", 0)
+        if self.is_limited(max_shares, action_config):
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="negative",
+                    message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({max_shares} maximum)",
+                    caption="Share/Print quota",
+                )
+            )
+            raise BlockingIOError("Maximum number of Share/Print reached!")
+
         # block queue new prints until configured time is over
         if self.is_blocked():
             self._sse_service.dispatch_event(
@@ -60,13 +79,6 @@ class ShareService(BaseService):
                 )
             )
             raise BlockingIOError(f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.")
-
-        # get config
-        try:
-            action_config = appconfig.share.actions[config_index]
-        except Exception as exc:
-            self._logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
-            raise exc
 
         # filename absolute to print, use in printing command
         filename = mediaitem.path_full.absolute()
@@ -105,9 +117,28 @@ class ShareService(BaseService):
             raise RuntimeError(f"Process failed, error {exc}") from exc
 
         self._information_service.stats_counter_increment("shares")
+        if max_shares > 0:
+            self._information_service.stats_counter_increment_limite(action_config.name)
+            current_shares = self._information_service._stats_counter.limits[action_config.name]
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="info",
+                    message=f"{action_config.trigger.ui_trigger.title} quota : {current_shares}/{max_shares}",
+                    caption="Share/Print quota",
+                )
+            )
 
     def is_blocked(self):
         return self.remaining_time_blocked() > 0.0
+
+    def is_limited(self, max_shares: int, action_config) -> bool :
+        limits = self._information_service._stats_counter.limits
+        current_shares = 0
+        if action_config.name in limits:
+            current_shares = limits[action_config.name]
+        if max_shares > 0 and current_shares >= max_shares:
+            return True
+        return False
 
     def remaining_time_blocked(self) -> float:
         if self._last_print_time is None:
