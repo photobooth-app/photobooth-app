@@ -124,18 +124,9 @@ class InformationService(BaseService):
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
-        if platform.system() in ["Linux", "Darwin"]:
-            self._logger.info(f"{psutil.disk_usage('/')=}")
-        elif platform.system() == "Windows":
-            self._logger.info(f"{psutil.disk_usage('C:')=}")
+        self._logger.info(f"{psutil.disk_usage(Path.cwd())=}")
         self._logger.info(
-            [
-                (
-                    name,
-                    [addr.address for addr in addrs if addr.family == socket.AF_INET],
-                )
-                for name, addrs in psutil.net_if_addrs().items()
-            ]
+            [(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()]
         )
         self._logger.info(f"{psutil.virtual_memory()=}")
         # run python with -O (optimized) sets debug to false and disables asserts from bytecode
@@ -221,21 +212,11 @@ class InformationService(BaseService):
 
         return cma
 
-    def _gather_printing_stats(self):
-        return self._printing_service.stats()
-
     def _gather_backends_stats(self):
         return self._aquisition_service.stats()
 
     def _gather_disk(self):
-        if platform.system() in ["Linux", "Darwin"]:
-            disk = psutil.disk_usage("/")._asdict()
-        elif platform.system() == "Windows":
-            disk = psutil.disk_usage("C:")._asdict()
-        else:
-            raise RuntimeError("platform not supported")
-
-        return disk
+        return psutil.disk_usage(Path.cwd())._asdict()
 
     def _gather_model(self) -> str:
         model = "unknown"
