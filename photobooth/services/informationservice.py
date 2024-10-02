@@ -48,6 +48,7 @@ class StatsCounter:
     animations: int = 0
     videos: int = 0
     shares: int = 0
+    limites: dict[str, int] = field(default_factory=dict)
     last_reset: str = None
 
     stats_file: ClassVar = "stats.json"
@@ -90,6 +91,16 @@ class StatsCounter:
             raise RuntimeError(f"cannot increment {varname}, error: {exc}") from exc
         else:
             self.persist_stats()
+
+    def increment_limite(self, key: str):
+        try:
+            if key in self.limites:
+                self.limites[key] += 1
+            else:
+                self.limites[key] = 1
+        except Exception as exc:
+            raise RuntimeError(f"cannot increment {key}, error: {exc}") from exc
+        self.persist_stats()
 
     @debounce(timeout=1)
     def persist_stats(self) -> None:
@@ -146,6 +157,9 @@ class InformationService(BaseService):
 
     def stats_counter_increment(self, varname):
         self._stats_counter.increment(varname)
+
+    def stats_counter_increment_limite(self, key: str):
+        self._stats_counter.increment_limite(key)
 
     def initial_emit(self):
         """_summary_"""
