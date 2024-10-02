@@ -302,11 +302,12 @@ class GroupActions(BaseModel):
                     texts_enable=True,
                     texts=[
                         TextsConfig(
-                            text="Made with the photobooth-app",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
-                            pos_x=100,
-                            pos_y=1300,
+                            text="Visit photobooth-app.org and build yours!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
+                            pos_x=1300,
+                            pos_y=1250,
                             rotate=0,
-                            color=Color("#ccc").as_hex(),
+                            font_size=30,
+                            color=Color("#333").as_hex(),
                         )
                     ],
                 ),
