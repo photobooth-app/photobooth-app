@@ -22,6 +22,13 @@ class ShareProcessing(BaseModel):
         description="Block queue print until time is passed. Time in seconds.",
     )
 
+    max_shares: int = Field(
+        default=0,
+        ge=0,
+        le=1000,
+        description="Limit max shares (0 = no limit).",
+    )
+
 
 class ShareConfigurationSet(BaseModel):
     """Configure stages how to process mediaitem before printing on paper."""
