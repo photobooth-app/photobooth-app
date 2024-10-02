@@ -268,6 +268,6 @@ class InformationService(BaseService):
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_temperatures
         psutil_temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
         for name, entry in psutil_temperatures.items():
-            temperatures[name] = entry[0].current  # there could be multiple sensors to one zone, we just use the first.
+            temperatures[name] = round(entry[0].current, 1)  # there could be multiple sensors to one zone, we just use the first.
 
         return temperatures
