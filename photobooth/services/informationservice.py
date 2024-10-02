@@ -123,7 +123,7 @@ class InformationService(BaseService):
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
-        self._logger.info(f"{psutil.disk_usage(Path.cwd())=}")
+        self._logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
         self._logger.info(
             [(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()]
         )
@@ -211,7 +211,7 @@ class InformationService(BaseService):
         return self._aquisition_service.stats()
 
     def _gather_disk(self):
-        return psutil.disk_usage(Path.cwd())._asdict()
+        return psutil.disk_usage(str(Path.cwd().absolute()))._asdict()
 
     def _gather_model(self) -> str:
         model = "unknown"
