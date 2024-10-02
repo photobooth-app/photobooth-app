@@ -12,6 +12,7 @@ from threading import Condition, Event
 
 from libcamera import Transform, controls
 from picamera2 import Picamera2
+from picamera2.allocators import PersistentAllocator
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality
 from picamera2.outputs import FfmpegOutput, FileOutput
 
@@ -107,7 +108,7 @@ class Picamera2Backend(AbstractBackend):
             except Exception as exc:
                 logger.warn(f"error getting optimized lowlight tuning: {exc}")
 
-        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning)
+        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
