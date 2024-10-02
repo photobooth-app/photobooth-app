@@ -77,34 +77,38 @@ class StatsCounter:
         except Exception as exc:
             raise RuntimeError(f"unknown error loading stats, error: {exc}") from exc
 
-    def reset(self, varname=None, value=None):
+    def reset(self, field=None):
         try:
-            if varname is None:
+            if not field:
+                # reset all
                 self.__init__(last_reset=datetime.now().astimezone().strftime("%x %X"))  # ("%Y-%m-%d %H:%M:%S"))
             else:
-                setattr(self, varname, value)
+                # reset specific field only
+                setattr(self, field, getattr(StatsCounter(), field))
+
             self.persist_stats()
         except Exception as exc:
             raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
 
-    def increment(self, varname):
+    def increment(self, field):
         try:
-            current_value = getattr(self, varname)
-            setattr(self, varname, current_value + 1)
+            current_value = getattr(self, field)
+            setattr(self, field, current_value + 1)
         except Exception as exc:
-            raise RuntimeError(f"cannot increment {varname}, error: {exc}") from exc
+            raise RuntimeError(f"cannot increment {field}, error: {exc}") from exc
         else:
             self.persist_stats()
 
-    def increment_limite(self, key: str):
+    def increment_limits(self, field: str):
         try:
-            if key in self.limites:
-                self.limites[key] += 1
+            if field in self.limits:
+                self.limits[field] += 1
             else:
-                self.limites[key] = 1
+                self.limits[field] = 1
         except Exception as exc:
-            raise RuntimeError(f"cannot increment {key}, error: {exc}") from exc
-        self.persist_stats()
+            raise RuntimeError(f"cannot increment {field}, error: {exc}") from exc
+        else:
+            self.persist_stats()
 
     @debounce(timeout=1)
     def persist_stats(self) -> None:
@@ -156,17 +160,14 @@ class InformationService(BaseService):
         """_summary_"""
         self._stats_interval_timer.stop()
 
-    def stats_counter_reset(self):
-        self._stats_counter.reset()
-
-    def stats_counter_reset_field(self, varname, value):
-        self._stats_counter.reset(varname, value)
+    def stats_counter_reset(self, field: str = ""):
+        self._stats_counter.reset(field)
 
     def stats_counter_increment(self, varname):
         self._stats_counter.increment(varname)
 
-    def stats_counter_increment_limite(self, key: str):
-        self._stats_counter.increment_limite(key)
+    def stats_counter_increment_limits(self, field: str):
+        self._stats_counter.increment_limits(field)
 
     def initial_emit(self):
         """_summary_"""

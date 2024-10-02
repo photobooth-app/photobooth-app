@@ -25,7 +25,6 @@ class ShareProcessing(BaseModel):
     max_shares: int = Field(
         default=0,
         ge=0,
-        le=1000,
         description="Limit max shares (0 = no limit).",
     )
 

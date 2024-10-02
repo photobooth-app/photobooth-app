@@ -72,7 +72,7 @@ def test_print_image_blocked(mock_run, _container: Container):
     # two prints issued
 
     _container.share_service.share(latest_mediaitem)
-    while _container.share_service.is_blocked():
+    while _container.share_service.is_time_blocked():
         logger.debug("waiting for printer to unblock")
         time.sleep(1)
 
@@ -83,6 +83,7 @@ def test_print_image_blocked(mock_run, _container: Container):
 
     # check subprocess.run was invoked
     mock_run.assert_called()
+
 
 @patch("subprocess.run")
 def test_is_limited_no_limit(mock_run, _container: Container):
@@ -106,6 +107,7 @@ def test_is_limited_no_limit(mock_run, _container: Container):
     assert not result
     mock_run.assert_called()
 
+
 @patch("subprocess.run")
 def test_is_limited_within_limit(mock_run, _container: Container):
     """Test is_limited when current_shares is less than max_shares."""
@@ -127,6 +129,7 @@ def test_is_limited_within_limit(mock_run, _container: Container):
     # Assert the function returns False (not limited)
     assert not result
     mock_run.assert_called()
+
 
 @patch("subprocess.run")
 def test_is_limited_at_limit(mock_run, _container: Container):
@@ -150,6 +153,7 @@ def test_is_limited_at_limit(mock_run, _container: Container):
     assert result
     mock_run.assert_called()
 
+
 @patch("subprocess.run")
 def test_is_limited_above_limit(mock_run, _container: Container):
     """Test is_limited when current_shares is more than max_shares."""
@@ -171,6 +175,7 @@ def test_is_limited_above_limit(mock_run, _container: Container):
     # Assert the function returns True (limited)
     assert result
     mock_run.assert_called()
+
 
 @patch("subprocess.run")
 def test_is_limited_action_not_in_limits(mock_run, _container: Container):
@@ -194,6 +199,7 @@ def test_is_limited_action_not_in_limits(mock_run, _container: Container):
     assert not result
     mock_run.assert_called()
 
+
 @patch("subprocess.run")
 def test_max_shares_exceeded(mock_run, _container: Container):
     """Test behavior when max_shares is exceeded."""
@@ -207,9 +213,7 @@ def test_max_shares_exceeded(mock_run, _container: Container):
     config_index = 0
     action_config = appconfig.share.actions[config_index]
     action_config.trigger.ui_trigger.title = "Test Action"
-    _container.share_service._information_service._stats_counter.limits = {
-        action_config.name: 11
-    }
+    _container.share_service._information_service._stats_counter.limits = {action_config.name: 11}
 
     # Call method and expect a BlockingIOError
     with pytest.raises(BlockingIOError):
@@ -225,6 +229,7 @@ def test_max_shares_exceeded(mock_run, _container: Container):
             raise BlockingIOError("Maximum number of Share/Print reached!")
 
     mock_run.assert_called()
+
 
 @patch("subprocess.run")
 def test_max_shares_not_exceeded(mock_run, _container: Container):
@@ -253,9 +258,9 @@ def test_max_shares_not_exceeded(mock_run, _container: Container):
                 caption="Share/Print quota",
             )
         )
-        raise BlockingIOError("Maximum number of Share/Print reached!")
+        raise BlockingIOError("Maximum shares/prints reached!")
     else:
-        _container.share_service._information_service.stats_counter_increment_limite(action_config.name)
+        _container.share_service._information_service.stats_counter_increment_limits(action_config.name)
         current_shares = _container.share_service._information_service._stats_counter.limits[action_config.name]
         _container.share_service._sse_service.dispatch_event(
             SseEventFrontendNotification(
@@ -266,7 +271,7 @@ def test_max_shares_not_exceeded(mock_run, _container: Container):
         )
 
     # Ensure the share count was incremented
-    _container.share_service._information_service.stats_counter_increment_limite(action_config.name)
+    _container.share_service._information_service.stats_counter_increment_limits(action_config.name)
 
     # Ensure the event was dispatched correctly
     _container.share_service._sse_service.dispatch_event(

@@ -58,19 +58,19 @@ class ShareService(BaseService):
             raise exc
 
         # check counter limit
-        max_shares = getattr(action_config.processing, "max_shares", 0)
-        if self.is_limited(max_shares, action_config):
+        current_shares = self._information_service._stats_counter.limits.get(action_config.name, 0)
+        if self.is_quota_exceeded(current_shares, action_config.processing.max_shares):
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="negative",
-                    message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({max_shares} maximum)",
+                    message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({action_config.processing.max_shares} maximum)",
                     caption="Share/Print quota",
                 )
             )
             raise BlockingIOError("Maximum number of Share/Print reached!")
 
         # block queue new prints until configured time is over
-        if self.is_blocked():
+        if self.is_time_blocked():
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
@@ -117,28 +117,27 @@ class ShareService(BaseService):
             raise RuntimeError(f"Process failed, error {exc}") from exc
 
         self._information_service.stats_counter_increment("shares")
-        if max_shares > 0:
-            self._information_service.stats_counter_increment_limite(action_config.name)
-            current_shares = self._information_service._stats_counter.limits[action_config.name]
+        if action_config.processing.max_shares > 0:
+            # quota is enabled.
+            self._information_service.stats_counter_increment_limits(action_config.name)
+            current_shares = self._information_service._stats_counter.limits.get(action_config.name, 0)
+
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
-                    message=f"{action_config.trigger.ui_trigger.title} quota : {current_shares}/{max_shares}",
+                    message=f"{action_config.trigger.ui_trigger.title} quota is {current_shares} of {action_config.processing.max_shares}",
                     caption="Share/Print quota",
                 )
             )
 
-    def is_blocked(self):
+    def is_time_blocked(self) -> bool:
         return self.remaining_time_blocked() > 0.0
 
-    def is_limited(self, max_shares: int, action_config) -> bool :
-        limits = self._information_service._stats_counter.limits
-        current_shares = 0
-        if action_config.name in limits:
-            current_shares = limits[action_config.name]
+    def is_quota_exceeded(self, current_shares: int, max_shares: int) -> bool:
         if max_shares > 0 and current_shares >= max_shares:
             return True
-        return False
+        else:
+            return False
 
     def remaining_time_blocked(self) -> float:
         if self._last_print_time is None:
