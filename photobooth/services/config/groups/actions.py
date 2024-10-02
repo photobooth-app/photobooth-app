@@ -298,15 +298,16 @@ class GroupActions(BaseModel):
                     img_background_enable=True,
                     img_background_file="backgrounds/pink-7761356_1920.jpg",
                     img_frame_enable=True,
-                    img_frame_file="frames/pixabay-holidays-1798208_1920.png",
+                    img_frame_file="frames/frame_image_photobooth-app.png",
                     texts_enable=True,
                     texts=[
                         TextsConfig(
-                            text="Made with the photobooth-app",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
-                            pos_x=100,
-                            pos_y=1300,
+                            text="Visit photobooth-app.org and build yours!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
+                            pos_x=1300,
+                            pos_y=1250,
                             rotate=0,
-                            color=Color("#ccc").as_hex(),
+                            font_size=30,
+                            color=Color("#333").as_hex(),
                         )
                     ],
                 ),
@@ -428,7 +429,7 @@ class GroupActions(BaseModel):
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(title="Video", icon="movie"),
-                    gpio_trigger=GpioTrigger(pin="26"),
+                    gpio_trigger=GpioTrigger(pin="25"),
                     keyboard_trigger=KeyboardTrigger(keycode="v"),
                 ),
             ),

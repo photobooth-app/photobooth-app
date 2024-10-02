@@ -86,7 +86,8 @@ class ProcessingService(BaseService):
             )
             self._sse_service.dispatch_event(SseEventProcessStateinfo(None))
 
-            raise exc
+            # removed raising exception because it's in a thread and reraising it will just create an uncaught exception but adds no value
+            # raise exc
 
         finally:
             self._state_machine = None

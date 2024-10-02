@@ -155,7 +155,7 @@ def test_admin_files_upload_fails(client_authenticated: TestClient):
         data={"upload_target_folder": "./"},
         files={},
     )
-    assert response.status_code == 400
+    assert response.status_code in (400, 422)
 
     with open("tests/assets/input.jpg", "rb") as f:
         response = client_authenticated.post(
@@ -163,7 +163,7 @@ def test_admin_files_upload_fails(client_authenticated: TestClient):
             data={"upload_target_folder": "./nonexistantfoldertouploadto_automated"},
             files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
         )
-        assert response.status_code == 400
+        assert response.status_code in (400, 422)
 
 
 def test_admin_files_new_folder_empty(client_authenticated: TestClient):

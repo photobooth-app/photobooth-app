@@ -12,9 +12,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from threading import Timer
-from typing import ClassVar
+from typing import Any, ClassVar, Union
 
 import psutil
+from psutil._common import sbattery
 
 from ..__version__ import __version__
 from ..utils.repeatedtimer import RepeatedTimer
@@ -137,18 +138,9 @@ class InformationService(BaseService):
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
-        if platform.system() in ["Linux", "Darwin"]:
-            self._logger.info(f"{psutil.disk_usage('/')=}")
-        elif platform.system() == "Windows":
-            self._logger.info(f"{psutil.disk_usage('C:')=}")
+        self._logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
         self._logger.info(
-            [
-                (
-                    name,
-                    [addr.address for addr in addrs if addr.family == socket.AF_INET],
-                )
-                for name, addrs in psutil.net_if_addrs().items()
-            ]
+            [(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()]
         )
         self._logger.info(f"{psutil.virtual_memory()=}")
         # run python with -O (optimized) sets debug to false and disables asserts from bytecode
@@ -206,19 +198,17 @@ class InformationService(BaseService):
         self._sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
                 cpu1_5_15=self._gather_cpu1_5_15(),
-                active_threads=self._gather_active_threads(),
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
                 stats_counter=asdict(self._stats_counter),
+                battery_percent=self._gather_battery(),
+                temperatures=self._gather_temperatures(),
             ),
         )
 
     def _gather_cpu1_5_15(self):
         return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]
-
-    def _gather_active_threads(self):
-        return threading.active_count()
 
     def _gather_memory(self):
         return psutil.virtual_memory()._asdict()
@@ -238,21 +228,11 @@ class InformationService(BaseService):
 
         return cma
 
-    def _gather_printing_stats(self):
-        return self._printing_service.stats()
-
     def _gather_backends_stats(self):
         return self._aquisition_service.stats()
 
     def _gather_disk(self):
-        if platform.system() in ["Linux", "Darwin"]:
-            disk = psutil.disk_usage("/")._asdict()
-        elif platform.system() == "Windows":
-            disk = psutil.disk_usage("C:")._asdict()
-        else:
-            raise RuntimeError("platform not supported")
-
-        return disk
+        return psutil.disk_usage(str(Path.cwd().absolute()))._asdict()
 
     def _gather_model(self) -> str:
         model = "unknown"
@@ -266,3 +246,25 @@ class InformationService(BaseService):
                 self._logger.info("cannot detect computer model")
 
         return model
+
+    def _gather_battery(self) -> int:
+        battery_percent = None
+
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
+        # None if not determinable otherwise named tuple.
+        # clamp to 0...100%
+        battery: Union[sbattery, None] = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
+        if battery:
+            battery_percent = max(min(100, round(battery.percent, None)), 0)
+
+        return battery_percent
+
+    def _gather_temperatures(self) -> dict[str, Any]:
+        temperatures = {}
+
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_temperatures
+        psutil_temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
+        for name, entry in psutil_temperatures.items():
+            temperatures[name] = round(entry[0].current, 1)  # there could be multiple sensors to one zone, we just use the first.
+
+        return temperatures

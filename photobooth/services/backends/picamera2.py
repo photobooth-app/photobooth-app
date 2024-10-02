@@ -12,6 +12,7 @@ from threading import Condition, Event
 
 from libcamera import Transform, controls
 from picamera2 import Picamera2
+from picamera2.allocators import PersistentAllocator
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality
 from picamera2.outputs import FfmpegOutput, FileOutput
 
@@ -107,7 +108,7 @@ class Picamera2Backend(AbstractBackend):
             except Exception as exc:
                 logger.warn(f"error getting optimized lowlight tuning: {exc}")
 
-        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning)
+        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
@@ -376,6 +377,8 @@ class Picamera2Backend(AbstractBackend):
     #
 
     def _worker_fun(self):
+        _metadata = None
+
         while not self._worker_thread.stopped():  # repeat until stopped
             if self._hires_data.request_hires_still.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
@@ -392,27 +395,51 @@ class Picamera2Backend(AbstractBackend):
             if self._hires_data.request_hires_still.is_set():
                 # only capture one pic and return to lores streaming afterwards
                 self._hires_data.request_hires_still.clear()
+
                 # capture hq picture
-                data = io.BytesIO()
-                self._picamera2.capture_file(data, format="jpeg")
-                self._hires_data.data = data.getbuffer()
+                with self._picamera2.captured_request(wait=1.5) as request:
+                    # call captured_request instead direct call to capture_file because it seems
+                    # the get_metadata leaks CmaMemory otherwise. Reference:
+                    # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
+                    data = io.BytesIO()
+                    request.save("main", data, format="jpeg")
+                    _metadata = request.get_metadata()
+                    self._hires_data.data = data.getbuffer()
 
                 with self._hires_data.condition:
                     self._hires_data.condition.notify_all()
+            else:
+                # capture metadata blocks until new metadata is avail
+                try:
+                    _metadata = self._picamera2.capture_metadata(wait=1.5)
+                    # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
+                    # stalling
+                except TimeoutError as exc:
+                    # if camera runs out of Cma during switch_config, the camera stops delivering images and so also no metadata.
+                    # the supervisor thread detects that no images come in and would try to restarting the picamera2 backend to recover.
+                    # wait=1.5 was added to avoid stalling the _worker_fun thread raising a timeout after 1.5 seconds without images/metadata latest.
+                    # inform about the error, no need to reraise the issue actually again.
 
-            # capture metadata blocks until new metadata is avail
-            _metadata = self._picamera2.capture_metadata()
+                    logger.error(f"camera stopped delivering frames, error {exc}")
+                    # mark as faulty to restart in case it was not detected by supervisor already.
+                    self.device_set_status_fault_flag()
+
+                    # leave worker function
+                    break
 
             # update backendstats (optional for backends, but this one has so many information that are easy to display)
             # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
-            exposure_time = _metadata.get("ExposureTime", None)
-            exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
-            self._backendstats.exposure_time_ms = self._round_none(exposure_time_ms_raw, 1)
-            self._backendstats.lens_position = self._round_none(_metadata.get("LensPosition", None), 2)
-            self._backendstats.again = self._round_none(_metadata.get("AnalogueGain", None), 1)
-            self._backendstats.dgain = self._round_none(_metadata.get("DigitalGain", None), 1)
-            self._backendstats.lux = self._round_none(_metadata.get("Lux", None), 1)
-            self._backendstats.colour_temperature = _metadata.get("ColourTemperature", None)
-            self._backendstats.sharpness = _metadata.get("FocusFoM", None)
+            if _metadata:
+                exposure_time = _metadata.get("ExposureTime", None)
+                exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
+                self._backendstats.exposure_time_ms = self._round_none(exposure_time_ms_raw, 1)
+                self._backendstats.lens_position = self._round_none(_metadata.get("LensPosition", None), 2)
+                self._backendstats.again = self._round_none(_metadata.get("AnalogueGain", None), 1)
+                self._backendstats.dgain = self._round_none(_metadata.get("DigitalGain", None), 1)
+                self._backendstats.lux = self._round_none(_metadata.get("Lux", None), 1)
+                self._backendstats.colour_temperature = _metadata.get("ColourTemperature", None)
+                self._backendstats.sharpness = _metadata.get("FocusFoM", None)
+            else:
+                logger.warning("no metadata available!")
 
         logger.info("_generate_images_fun left")

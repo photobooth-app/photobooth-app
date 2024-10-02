@@ -39,7 +39,6 @@ def test_login(client: TestClient, test_user):
     assert response.status_code == 200
     token = response.json()["access_token"]
     assert token is not None
-    return token
 
 
 def test_login_wrong_user(client: TestClient, test_user_nonexistant_username):
