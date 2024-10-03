@@ -124,6 +124,7 @@ test = [
   "pytest-httpserver>=1.0.8",
   "pyvips>=2.2.2",
   "pydot>=2.0.0",
+  "simplejpeg>=1.7.0",
 ]
 lint = ["ruff>=0.1.8"]
 

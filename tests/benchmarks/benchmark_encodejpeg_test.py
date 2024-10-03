@@ -4,6 +4,7 @@ import logging
 import cv2
 import pytest
 import pyvips
+import simplejpeg
 from PIL import Image
 from turbojpeg import TurboJPEG
 
@@ -52,7 +53,18 @@ def cv2_encode(frame_from_camera):
     return encimg
 
 
-@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "pyvips_encode"])
+def simplejpeg_encode(frame_from_camera):
+    # picamera2 uses simplejpeg under the hood. so if this is fast on a PI,
+    # we might be able to remove turbojpeg from dependencies on win/other linux because scaling could be done in PIL sufficiently fast
+    # encoding BGR array to output.jpg with default settings.
+    # 85=default quality
+    # simplejpeg uses turbojpeg as lib, but pyturbojpeg also has scaling
+    bytes = simplejpeg.encode_jpeg(frame_from_camera, quality=85, fastdct=True)
+
+    return bytes
+
+
+@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode", "pyvips_encode"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
@@ -81,18 +93,14 @@ def image_hires():
 
 
 # needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="encode_lores",
-)
+@pytest.mark.benchmark(group="encode_lores")
 def test_libraries_encode_lores(library, image_lores, benchmark):
     benchmark(eval(library), frame_from_camera=image_lores)
     assert True
 
 
 # needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="encode_hires",
-)
+@pytest.mark.benchmark(group="encode_hires")
 def test_libraries_encode_hires(library, image_hires, benchmark):
     benchmark(eval(library), frame_from_camera=image_hires)
     assert True
