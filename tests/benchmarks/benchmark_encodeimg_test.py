@@ -54,7 +54,7 @@ def cv2_encode(frame_from_camera):
 
 
 def simplejpeg_encode(frame_from_camera):
-    # picamera2 uses simplejpeg under the hood. so if this is fast on a PI,
+    # picamera2 uses PIL under the hood. so if this is fast on a PI,
     # we might be able to remove turbojpeg from dependencies on win/other linux because scaling could be done in PIL sufficiently fast
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
@@ -64,7 +64,17 @@ def simplejpeg_encode(frame_from_camera):
     return bytes
 
 
-@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode", "pyvips_encode"])
+def pillow_encode_png(frame_from_camera):
+    # compress_level=1 saves pngs much faster, and still gets most of the compression.
+    image = Image.fromarray(frame_from_camera.astype("uint8"), "RGB")
+    byte_io = io.BytesIO()
+    image.save(byte_io, format="PNG", quality=85, compress_level=1)
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
+@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode", "pyvips_encode", "pillow_encode_png"])
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
