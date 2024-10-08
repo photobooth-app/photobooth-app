@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
@@ -26,7 +26,7 @@ class JobModelBase:
 
     def __init__(
         self,
-        configuration_set: Union[SingleImageConfigurationSet, CollageConfigurationSet, AnimationConfigurationSet, VideoConfigurationSet],
+        configuration_set: SingleImageConfigurationSet | CollageConfigurationSet | AnimationConfigurationSet | VideoConfigurationSet,
     ):
         self._typ: __class__.Typ = __class__.Typ.undefined
         self._configuration_set = configuration_set
@@ -42,7 +42,7 @@ class JobModelBase:
         self._countdown_timer: CountdownTimer = CountdownTimer()
 
     @staticmethod
-    def _get_number_of_captures_from_merge_definition(merge_definition: Union[list[CollageMergeDefinition], list[AnimationMergeDefinition]]) -> int:
+    def _get_number_of_captures_from_merge_definition(merge_definition: list[CollageMergeDefinition] | list[AnimationMergeDefinition]) -> int:
         # item.predefined_image None or "" are considered as to capture aka not predefined
         predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
         for predefined_image in predefined_images:

@@ -1,6 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Union
+from typing import Annotated
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -20,12 +20,12 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: Union[str, None] = None
+    username: str | None = None
 
 
 class User(BaseModel):
     username: str
-    full_name: Union[str, None] = None
+    full_name: str | None = None
     # disabled: Union[bool, None] = None # functionality not used currently.
 
 

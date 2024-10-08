@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 import cv2
 import numpy as np
@@ -167,7 +166,7 @@ def image_fill_background_stage(image: Image.Image, color: Color) -> Image.Image
     return background_img
 
 
-def image_img_background_stage(image: Image.Image, background_file: Union[Path, str], reverse: bool = False) -> Image.Image:
+def image_img_background_stage(image: Image.Image, background_file: Path | str, reverse: bool = False) -> Image.Image:
     """ """
     logger.info(f"image_img_background_stage to apply, {background_file=} {reverse=}")
 
@@ -205,7 +204,7 @@ def image_img_background_stage(image: Image.Image, background_file: Union[Path, 
         return background_img_adjusted
 
 
-def image_frame_stage(image: Image.Image, frame_file: Union[Path, str]) -> Image.Image:
+def image_frame_stage(image: Image.Image, frame_file: Path | str) -> Image.Image:
     """optimized function for use on single images.
     resulting size is derived from the frame, since frame is considered as the "master"
     detects transparent area in frame and fits captured image best as possible

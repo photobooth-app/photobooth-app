@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from threading import Timer
-from typing import Any, ClassVar, Union
+from typing import Any, ClassVar
 
 import psutil
 from psutil._common import sbattery
@@ -254,7 +254,7 @@ class InformationService(BaseService):
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
         # None if not determinable otherwise named tuple.
         # clamp to 0...100%
-        battery: Union[sbattery, None] = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
+        battery: sbattery | None = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
         if battery:
             battery_percent = max(min(100, round(battery.percent, None)), 0)
 

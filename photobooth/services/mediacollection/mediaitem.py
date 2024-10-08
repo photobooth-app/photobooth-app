@@ -15,7 +15,6 @@ from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from typing import Union
 
 from PIL import Image, ImageSequence, UnidentifiedImageError
 from pydantic import BaseModel
@@ -221,7 +220,7 @@ class MediaItem:
         return self._metadata.config
 
     @_config.setter
-    def _config(self, value: Union[dict, BaseModel]):
+    def _config(self, value: dict | BaseModel):
         self._metadata.config = value
         self.persist_metadata()
 

@@ -5,7 +5,6 @@ Utilities
 import os
 import platform
 from pathlib import Path
-from typing import Union
 
 
 def filenames_sanitize(path_str: str) -> Path:
@@ -29,7 +28,7 @@ def filenames_sanitize(path_str: str) -> Path:
     return Path(fullpath)
 
 
-def get_user_file(filepath: Union[Path, str]) -> Path:
+def get_user_file(filepath: Path | str) -> Path:
     # check font is avail, otherwise send pipelineerror - so we can recover and continue
     # default font Roboto comes with app, fallback to that one if avail
     file_user_path = Path(filepath)
