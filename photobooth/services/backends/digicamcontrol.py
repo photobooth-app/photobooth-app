@@ -176,6 +176,7 @@ class DigicamcontrolBackend(AbstractBackend):
     def _on_configure_optimized_for_idle(self):
         if not self.device_enable_lores_stream:
             logger.debug("livestream disabled on this backend, skipped optimization")
+            return
 
         logger.debug("enable liveview and minimize windows")
         try:
