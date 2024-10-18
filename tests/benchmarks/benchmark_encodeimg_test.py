@@ -46,9 +46,16 @@ def pillow_encode_jpg(frame_from_camera):
     return bytes_full
 
 
-def cv2_encode(frame_from_camera):
+def cv2_encode_jpg(frame_from_camera):
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, encimg = cv2.imencode(".jpg", frame_from_camera, encode_param)
+
+    return encimg
+
+
+def cv2_encode_webp(frame_from_camera):
+    encode_param = [int(cv2.IMWRITE_WEBP_QUALITY), 90]
+    result, encimg = cv2.imencode(".webp", frame_from_camera, encode_param)
 
     return encimg
 
@@ -88,7 +95,8 @@ def pillow_encode_webp(frame_from_camera):
     params=[
         "turbojpeg_encode",
         "pillow_encode_jpg",
-        "cv2_encode",
+        "cv2_encode_jpg",
+        "cv2_encode_webp",
         "simplejpeg_encode",
         "pyvips_encode",
         "pillow_encode_png",
