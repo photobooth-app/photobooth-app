@@ -37,7 +37,7 @@ def turbojpeg_encode(frame_from_camera):
     return bytes
 
 
-def pillow_encode(frame_from_camera):
+def pillow_encode_jpg(frame_from_camera):
     image = Image.fromarray(frame_from_camera.astype("uint8"), "RGB")
     byte_io = io.BytesIO()
     image.save(byte_io, format="JPEG", quality=85)
@@ -74,7 +74,27 @@ def pillow_encode_png(frame_from_camera):
     return bytes_full
 
 
-@pytest.fixture(params=["turbojpeg_encode", "pillow_encode", "cv2_encode", "simplejpeg_encode", "pyvips_encode", "pillow_encode_png"])
+def pillow_encode_webp(frame_from_camera):
+    # compress_level=1 saves pngs much faster, and still gets most of the compression.
+    image = Image.fromarray(frame_from_camera.astype("uint8"), "RGB")
+    byte_io = io.BytesIO()
+    image.save(byte_io, format="webp", quality=80, lossless=False)
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
+@pytest.fixture(
+    params=[
+        "turbojpeg_encode",
+        "pillow_encode_jpg",
+        "cv2_encode",
+        "simplejpeg_encode",
+        "pyvips_encode",
+        "pillow_encode_png",
+        "pillow_encode_webp",
+    ]
+)
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
