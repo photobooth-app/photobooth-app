@@ -372,63 +372,31 @@ class MediaItem:
 
         ## full version
         with open(self.path_full_unprocessed, "wb") as file:
-            file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.HIRES_STILL_QUALITY,
-                    appconfig.mediaprocessing.FULL_STILL_WIDTH,
-                )
-            )
+            file.write(self.resize_jpeg(buffer_in, appconfig.mediaprocessing.HIRES_STILL_QUALITY, appconfig.mediaprocessing.full_still_length))
 
         ## preview version
         with open(self.path_preview_unprocessed, "wb") as file:
-            file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
-                    appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
-                )
-            )
+            file.write(self.resize_jpeg(buffer_in, appconfig.mediaprocessing.PREVIEW_STILL_QUALITY, appconfig.mediaprocessing.preview_still_length))
 
         ## thumbnail version
         with open(self.path_thumbnail_unprocessed, "wb") as file:
             file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
-                    appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
-                )
+                self.resize_jpeg(buffer_in, appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY, appconfig.mediaprocessing.thumbnail_still_length)
             )
 
     def _create_fileset_processed_jpg(self, buffer_in: bytes):
         ## full version
         with open(self.path_full, "wb") as file:
-            file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.HIRES_STILL_QUALITY,
-                    appconfig.mediaprocessing.FULL_STILL_WIDTH,
-                )
-            )
+            file.write(self.resize_jpeg(buffer_in, appconfig.mediaprocessing.HIRES_STILL_QUALITY, appconfig.mediaprocessing.full_still_length))
 
         ## preview version
         with open(self.path_preview, "wb") as file:
-            file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.PREVIEW_STILL_QUALITY,
-                    appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
-                )
-            )
+            file.write(self.resize_jpeg(buffer_in, appconfig.mediaprocessing.PREVIEW_STILL_QUALITY, appconfig.mediaprocessing.preview_still_length))
 
         ## thumbnail version
         with open(self.path_thumbnail, "wb") as file:
             file.write(
-                self.resize_jpeg(
-                    buffer_in,
-                    appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY,
-                    appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
-                )
+                self.resize_jpeg(buffer_in, appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY, appconfig.mediaprocessing.thumbnail_still_length)
             )
 
     def _create_fileset_unprocessed_gif(self):
@@ -445,19 +413,11 @@ class MediaItem:
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy original to full_unprocessed")
 
         tms = time.time()
-        self.resize_gif(
-            filename=self.path_preview_unprocessed,
-            gif_image=gif_sequence,
-            scaled_min_width=appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
-        )
+        self.resize_gif(self.path_preview_unprocessed, gif_sequence, appconfig.mediaprocessing.preview_still_length)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale preview_unprocessed")
 
         tms = time.time()
-        self.resize_gif(
-            filename=self.path_thumbnail_unprocessed,
-            gif_image=gif_sequence,
-            scaled_min_width=appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
-        )
+        self.resize_gif(self.path_thumbnail_unprocessed, gif_sequence, appconfig.mediaprocessing.thumbnail_still_length)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale thumbnail_unprocessed")
 
     def _create_fileset_unprocessed_mp4(self):
@@ -469,19 +429,11 @@ class MediaItem:
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to copy original to full_unprocessed")
 
         tms = time.time()
-        self.resize_mp4(
-            video_in=self.path_original,
-            video_out=self.path_preview_unprocessed,
-            scaled_min_width=appconfig.mediaprocessing.PREVIEW_STILL_WIDTH,
-        )
+        self.resize_mp4(self.path_original, self.path_preview_unprocessed, appconfig.mediaprocessing.preview_still_length)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale preview_unprocessed")
 
         tms = time.time()
-        self.resize_mp4(
-            video_in=self.path_preview_unprocessed,
-            video_out=self.path_thumbnail_unprocessed,
-            scaled_min_width=appconfig.mediaprocessing.THUMBNAIL_STILL_WIDTH,
-        )
+        self.resize_mp4(self.path_preview_unprocessed, self.path_thumbnail_unprocessed, appconfig.mediaprocessing.thumbnail_still_length)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to scale thumbnail_unprocessed")
 
     def copy_fileset_processed(self):
@@ -490,13 +442,14 @@ class MediaItem:
         shutil.copy2(self.path_thumbnail_unprocessed, self.path_thumbnail)
 
     @staticmethod
-    def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_width: int):
+    def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_length: int):
         """scale a jpeg buffer to another buffer using turbojpeg"""
         # get original size
         with Image.open(io.BytesIO(buffer_in)) as img:
-            width, _ = img.size
+            width, height = img.size
 
-        scaling_factor = scaled_min_width / width
+        original_length = max(width, height)  # scale for the max length
+        scaling_factor = scaled_min_length / original_length
 
         # TurboJPEG only allows for decent factors.
         # To keep it simple, config allows freely to adjust the size from 10...100% and
@@ -528,23 +481,19 @@ class MediaItem:
         factor_list = [item[0] / item[1] for item in allowed_list]
         (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
 
-        logger.debug(f"scaling img by factor {factor}, " f"width input={width} -> target={scaled_min_width}")
+        logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
         if factor > 1:
             logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
 
-        buffer_out = turbojpeg.scale_with_quality(
-            buffer_in,
-            scaling_factor=allowed_list[index],
-            quality=quality,
-        )
+        buffer_out = turbojpeg.scale_with_quality(buffer_in, scaling_factor=allowed_list[index], quality=quality)
         return buffer_out
 
     @staticmethod
-    def resize_gif(filename: Path, gif_image: Image.Image, scaled_min_width: int):
+    def resize_gif(filename: Path, gif_image: Image.Image, scaled_min_length: int):
         """scale a gif image sequence to another buffer using PIL"""
 
         # Wrap on-the-fly thumbnail generator
-        def thumbnails(frames: list[Image.Image]):
+        def thumbnails(frames: list[Image.Image], target_size: tuple[float, float]):
             for frame in frames:
                 thumbnail = frame.copy()
                 thumbnail.thumbnail(size=target_size, resample=Image.Resampling.LANCZOS)
@@ -557,13 +506,9 @@ class MediaItem:
             duration = gif_image.info.get("duration", 1000)  # fallback 1sec if info not avail.
             durations.append(duration)
 
-        # determine target size
-        scaling_factor = scaled_min_width / gif_image.width
-        target_size = tuple(int(dim * scaling_factor) for dim in gif_image.size)
-
         # Get sequence iterator
         frames = ImageSequence.Iterator(gif_image)
-        resized_frames = thumbnails(frames)
+        resized_frames = thumbnails(frames, [scaled_min_length, scaled_min_length])
 
         # Save output
         om = next(resized_frames)  # Handle first frame separately
@@ -581,7 +526,7 @@ class MediaItem:
         return om
 
     @staticmethod
-    def resize_mp4(video_in: Path, video_out: Path, scaled_min_width: int):
+    def resize_mp4(video_in: Path, video_out: Path, scaled_min_length: int):
         """ """
 
         command_general_options = [
@@ -595,8 +540,9 @@ class MediaItem:
             str(video_in),
         ]
         command_video_output = [
+            # no upscaling, divisible by 2 for further codec processing
             "-filter:v",
-            f"scale=min'({scaled_min_width},iw)':-2,setsar=1:1",  # no upscaling
+            f"scale=w={scaled_min_length}:h={scaled_min_length}:force_original_aspect_ratio=decrease:force_divisible_by=2",
             "-sws_flags",
             "fast_bilinear",
             "-movflags",
@@ -612,4 +558,5 @@ class MediaItem:
             )
         except Exception as exc:
             logger.exception(exc)
+            logger.warning("please check logfile /log/ffmpeg-resize-last.log for additional errors")
             raise RuntimeError(f"error resizing video, error: {exc}") from exc
