@@ -112,48 +112,22 @@ class Picamera2Backend(AbstractBackend):
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
-            main={
-                "size": (
-                    self._config.CAPTURE_CAM_RESOLUTION_WIDTH,
-                    self._config.CAPTURE_CAM_RESOLUTION_HEIGHT,
-                )
-            },
-            lores={
-                "size": (
-                    self._config.LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.LIVEVIEW_RESOLUTION_HEIGHT,
-                )
-            },
+            main={"size": (self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT)},
+            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
             encode="lores",
             buffer_count=3,
             display="lores",
-            transform=Transform(
-                hflip=self._config.CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.CAMERA_TRANSFORM_VFLIP,
-            ),
+            transform=Transform(hflip=self._config.CAMERA_TRANSFORM_HFLIP, vflip=self._config.CAMERA_TRANSFORM_VFLIP),
         )
 
         # config preview mode (used for permanent live view)
         self._preview_config = self._picamera2.create_video_configuration(
-            main={
-                "size": (
-                    self._config.PREVIEW_CAM_RESOLUTION_WIDTH,
-                    self._config.PREVIEW_CAM_RESOLUTION_HEIGHT,
-                )
-            },
-            lores={
-                "size": (
-                    self._config.LIVEVIEW_RESOLUTION_WIDTH,
-                    self._config.LIVEVIEW_RESOLUTION_HEIGHT,
-                )
-            },
+            main={"size": (self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT)},
+            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
             encode="lores",
             buffer_count=3,
             display="lores",
-            transform=Transform(
-                hflip=self._config.CAMERA_TRANSFORM_HFLIP,
-                vflip=self._config.CAMERA_TRANSFORM_VFLIP,
-            ),
+            transform=Transform(hflip=self._config.CAMERA_TRANSFORM_HFLIP, vflip=self._config.CAMERA_TRANSFORM_VFLIP),
         )
 
         # set preview mode on init
@@ -204,16 +178,24 @@ class Picamera2Backend(AbstractBackend):
             logger.debug("joined")
 
         logger.debug("stop encoder")
-        self._picamera2.stop_encoder()
-        self._picamera2.stop()
-        self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+        # https://github.com/raspberrypi/picamera2/issues/576
+        if self._picamera2:
+            self._picamera2.stop_encoder()
+            self._picamera2.stop()
+            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+            del self._picamera2
+
         logger.debug("closed")
 
         logger.debug(f"{self.__module__} stopped,  {self._worker_thread.is_alive()=}")
 
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
-        return True
+        if len(Picamera2.global_camera_info()) > 0:
+            return True
+        else:
+            logger.warning("no camera found, device not available!")
+            return False
 
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
