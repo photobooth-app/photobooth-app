@@ -36,8 +36,6 @@ You need inspiration first, have a look what others did:
 - [Example projects](https://photobooth-app.org/projects/)
 - [Find screenshots in the documentation](https://photobooth-app.org/screenshots)
 
-## Installation
-
 ### ©️ License
 
 The software is licensed under the MIT license.

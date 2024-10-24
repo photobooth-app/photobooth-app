@@ -60,6 +60,16 @@ def cv2_encode_webp(frame_from_camera):
     return encimg
 
 
+def cv2_encode_png(frame_from_camera):
+    encode_param = [int(cv2.IMWRITE_PNG_COMPRESSION), 1]
+    # For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time.
+    # If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY).
+    # Default value is 1 (best speed setting).
+    result, encimg = cv2.imencode(".png", frame_from_camera, encode_param)
+
+    return encimg
+
+
 def simplejpeg_encode(frame_from_camera):
     # picamera2 uses PIL under the hood. so if this is fast on a PI,
     # we might be able to remove turbojpeg from dependencies on win/other linux because scaling could be done in PIL sufficiently fast
@@ -97,6 +107,7 @@ def pillow_encode_webp(frame_from_camera):
         "pillow_encode_jpg",
         "cv2_encode_jpg",
         "cv2_encode_webp",
+        "cv2_encode_png",
         "simplejpeg_encode",
         "pyvips_encode",
         "pillow_encode_png",
