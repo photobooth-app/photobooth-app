@@ -1,8 +1,7 @@
 import logging
 
-from wigglecam_connector.models import ConfigPool as GroupBackendWigglecam
-from wigglecam_connector.node import Node
-from wigglecam_connector.pool import Pool
+from wigglecam.connector import CameraNode, CameraPool
+from wigglecam.connector.models import ConfigCameraPool
 
 from .abstractbackend import AbstractBackend
 
@@ -12,19 +11,19 @@ logger = logging.getLogger(__name__)
 class WigglecamBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self, config: GroupBackendWigglecam):
-        self._config: GroupBackendWigglecam = config
+    def __init__(self, config: ConfigCameraPool):
+        self._config: ConfigCameraPool = config
         super().__init__()
 
-        self._camera_pool: Pool = None
+        self._camera_pool: CameraPool = None
 
     def _device_start(self):
         nodes = []
         for config_node in self._config.nodes:
-            node = Node(config=config_node)
+            node = CameraNode(config=config_node)
             nodes.append(node)
 
-        self._camera_pool: Pool = Pool(nodes=nodes)
+        self._camera_pool: CameraPool = CameraPool(nodes=nodes)
 
         logger.debug(f"{self.__module__} started")
 
@@ -32,7 +31,8 @@ class WigglecamBackend(AbstractBackend):
         logger.debug(f"{self.__module__} stopped")
 
     def _device_available(self) -> bool:
-        raise NotImplementedError
+        return True
+        # TODO: need something to check? Like:  return self._camera_pool.is_healthy()
 
     def _wait_for_hq_image(self):
         raise NotImplementedError
