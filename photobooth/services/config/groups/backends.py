@@ -7,8 +7,9 @@ import platform
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from wigglecam_connector.models import ConfigPool as GroupBackendWigglecam
 
-backends_main_base = Literal["VirtualCamera", "WebcamCv2"]
+backends_main_base = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
 backends_main_linux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 backends_main_win = Literal["Digicamcontrol"]
 backends_main_concat = Literal[backends_main_base]
@@ -201,6 +202,7 @@ class GroupMainBackend(BaseModel):
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
+    wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
     if platform.system() == "Linux":
         picamera2: GroupBackendPicamera2 = GroupBackendPicamera2()
