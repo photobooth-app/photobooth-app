@@ -1,6 +1,30 @@
-"""_summary_"""
-
 import threading
+
+# use like this is preferred:
+#
+# class MyTask(StoppableThread):
+#     def run(self):
+#         while not self.stopped():
+#             time.sleep(1)
+#             print("Hello")
+#
+# testthread = MyTask()
+# testthread.start()
+# time.sleep(5)
+# testthread.stop()
+#
+# otherwise:
+#
+# def funct():
+#     while not current_thread().stopped():
+#         time.sleep(1)
+#         print("Hello")
+
+
+# testthread = StoppableThread(target=funct)
+# testthread.start()
+# sleep(5)
+# testthread.stop()
 
 
 class StoppableThread(threading.Thread):
