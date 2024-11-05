@@ -185,6 +185,17 @@ class GroupBackendDigicamcontrol(BaseModel):
     )
 
 
+class GroupBackendWigglecam(ConfigCameraPool):
+    model_config = ConfigDict(title="Wigglecam Connector")
+
+    nodes = (
+        [
+            ConfigCameraNode(description="TestNode", is_primary=True),
+        ],
+    )
+    pass
+
+
 class GroupMainBackend(BaseModel):
     """
     Choose backends for still images/high quality images captured on main backend.
@@ -202,11 +213,7 @@ class GroupMainBackend(BaseModel):
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
-    wigglecam: ConfigCameraPool = ConfigCameraPool(
-        nodes=[
-            ConfigCameraNode(description="TestNode", is_primary=True),
-        ],
-    )
+    wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
     if platform.system() == "Linux":
         picamera2: GroupBackendPicamera2 = GroupBackendPicamera2()
