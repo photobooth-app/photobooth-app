@@ -35,6 +35,8 @@ class WigglecamBackend(AbstractBackend):
         # TODO: need something to check? Like:  return self._camera_pool.is_healthy()
 
     def _wait_for_hq_image(self):
+        # TODO: here we stitch the nodes images already and create a gif/mp4/whatever is best. because the system expects just one system
+
         raise NotImplementedError
 
     #
