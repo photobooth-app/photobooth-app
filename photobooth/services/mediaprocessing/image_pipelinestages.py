@@ -63,10 +63,7 @@ def text_stage(image: Image.Image, textstageconfig: list[TextsConfig]) -> Image.
             logger.exception(exc)
             raise PipelineError(f"font {str(textconfig.font)} not found!") from exc
 
-        img_font = ImageFont.truetype(
-            font=str(font_path),
-            size=textconfig.font_size,
-        )
+        img_font = ImageFont.truetype(font=str(font_path), size=textconfig.font_size)
 
         draw_rotated_text(
             image=image,

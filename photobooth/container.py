@@ -98,7 +98,7 @@ class Container:
                 logger.info(f"stopped {service.__class__.__name__}")
             except Exception as exc:
                 logger.exception(exc)
-                logger.critical("could not start service")
+                logger.critical("could not stop service")
 
 
 container = Container()

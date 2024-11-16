@@ -291,6 +291,12 @@ class Gphoto2Backend(AbstractBackend):
                     with self._lores_data.condition:
                         self._lores_data.data = img_bytes
                         self._lores_data.condition.notify_all()
+
+                    # Pi5 seems too fast for the old fashioned gphoto lib, permanently producing
+                    # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)
+                    # in the logs. to avoid that, we just sleep a bit here effectively frame limiting and
+                    # giving gphoto2 time to settle and avoid flooded logs.
+                    time.sleep(0.02)
                 else:
                     time.sleep(0.05)
             else:
