@@ -188,7 +188,7 @@ class GroupBackendDigicamcontrol(BaseModel):
 class GroupBackendWigglecam(ConfigCameraPool):
     model_config = ConfigDict(title="Wigglecam Connector")
 
-    nodes = (
+    nodes: list[ConfigCameraNode] = (
         [
             ConfigCameraNode(description="TestNode", is_primary=True),
         ],
