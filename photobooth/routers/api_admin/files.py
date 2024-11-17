@@ -109,7 +109,7 @@ async def get_file(file: str = ""):
     if not path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"{file} is not a file/does not exist!")
 
-    return FileResponse(path)
+    return FileResponse(path, filename=path.name)
 
 
 @router.post("/file/upload", status_code=status.HTTP_201_CREATED)
