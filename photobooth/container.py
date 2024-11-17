@@ -37,7 +37,6 @@ class Container:
     )
     mediacollection_service: MediacollectionService = MediacollectionService(
         sse_service,
-        mediaprocessing_service,
     )
     information_service: InformationService = InformationService(
         sse_service,

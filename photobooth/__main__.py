@@ -3,20 +3,31 @@
 Photobooth Application start script
 """
 
+import argparse
 import logging
+import sys
 from pathlib import Path
 
 import uvicorn
 
 from .__version__ import __version__
-from .application import app
-from .container import container
-from .services.config import appconfig
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--host", action="store", type=str, default="0.0.0.0", help="Host the server is bound to (default: %(default)s).")
+parser.add_argument("--port", action="store", type=int, default=8000, help="Port the server listens to (default: %(default)s).")
 
 logger = logging.getLogger(f"{__name__}")
 
 
-def main(run_server: bool = True):
+def main(args=None, run_server: bool = True):
+    args = parser.parse_args(args)  # parse here, not above because pytest system exit 2
+
+    from .application import app
+    from .container import container
+
+    host = args.host
+    port = args.port
+
     # use to construct paths in app referring to assets
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
     # use to construct paths to user data
@@ -30,8 +41,8 @@ def main(run_server: bool = True):
     server = uvicorn.Server(
         uvicorn.Config(
             app=app,
-            host=appconfig.common.webserver_bind_ip,
-            port=appconfig.common.webserver_port,
+            host=host,
+            port=port,
             log_level="debug",
         )
     )
@@ -62,4 +73,4 @@ def main(run_server: bool = True):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(args=sys.argv[1:]))  # for testing
