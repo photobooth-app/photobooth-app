@@ -201,8 +201,22 @@ class GpioService(BaseService):
         for index, config in enumerate(appconfig.share.actions):
             self._setup_share_button(config.trigger.gpio_trigger, index)
 
+    def uninit_io(self):
+        if self.shutdown_btn:
+            self.shutdown_btn.close()
+        if self.reboot_btn:
+            self.reboot_btn.close()
+        if self.action_btns:
+            for btn in self.action_btns:
+                btn.close()
+        if self.share_btns:
+            for btn in self.share_btns:
+                btn.close()
+
     def start(self):
         super().start()
+
+        self.uninit_io()
 
         self.shutdown_btn: Button = None
         self.reboot_btn: Button = None
@@ -225,16 +239,7 @@ class GpioService(BaseService):
     def stop(self):
         super().stop()
 
-        if self.shutdown_btn:
-            self.shutdown_btn.close()
-        if self.reboot_btn:
-            self.reboot_btn.close()
-        if self.action_btns:
-            for btn in self.action_btns:
-                btn.close()
-        if self.share_btns:
-            for btn in self.share_btns:
-                btn.close()
+        self.uninit_io()
 
         super().stopped()
 
