@@ -68,7 +68,7 @@ class WebcamCv2Backend(AbstractBackend):
 
     def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""
-        with NamedTemporaryFile(mode="wb", delete=False, delete_on_close=False, dir="tmp", prefix="webcamcv2_") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamcv2_") as f:
             f.write(self._wait_for_lores_image())
             return Path(f.name)
 

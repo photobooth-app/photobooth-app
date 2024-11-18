@@ -67,7 +67,7 @@ class VirtualCameraBackend(AbstractBackend):
 
         time.sleep(self._config.emulate_camera_delay_still_capture)
 
-        with NamedTemporaryFile(mode="wb", delete=False, delete_on_close=False, dir="tmp", prefix="virtualcamera_") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="virtualcamera_") as f:
             f.write(self._wait_for_lores_image())
 
             return Path(f.name)
