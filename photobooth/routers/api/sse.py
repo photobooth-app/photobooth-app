@@ -1,6 +1,6 @@
 import logging
 from asyncio import Queue
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
 from sse_starlette import EventSourceResponse, ServerSentEvent
@@ -41,5 +41,5 @@ async def subscribe(request: Request):
     return EventSourceResponse(
         container.sse_service.event_iterator(client=client),
         ping=1,
-        ping_message_factory=lambda: ServerSentEvent(datetime.utcnow(), event="ping").encode(),
+        ping_message_factory=lambda: ServerSentEvent(datetime.now(timezone.utc), event="ping").encode(),
     )
