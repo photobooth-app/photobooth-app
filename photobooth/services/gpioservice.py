@@ -10,7 +10,6 @@ import subprocess
 from gpiozero import Button as ZeroButton
 
 from ..utils.exceptions import ProcessMachineOccupiedError
-from ..utils.helper import is_rpi
 from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.actions import GpioTrigger
@@ -212,9 +211,6 @@ class GpioService(BaseService):
 
         if not appconfig.hardwareinputoutput.gpio_enabled:
             super().disabled()
-
-        if not is_rpi():
-            self._logger.info("platform is not raspberry pi - gpio library is not supported")
 
         try:
             self.init_io()
