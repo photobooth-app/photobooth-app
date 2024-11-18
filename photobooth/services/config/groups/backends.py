@@ -221,7 +221,7 @@ class GroupBackend(BaseModel):
 
     enabled: bool = Field(
         title="Load and start backend",
-        default=False,
+        default=True,
         description="Selected device will be loaded and started.",
     )
 

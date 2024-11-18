@@ -153,12 +153,14 @@ class InformationService(BaseService):
         self._logger.info("initialized information service")
 
     def start(self):
-        """_summary_"""
+        super().start()
         self._stats_interval_timer.start()
+        super().started()
 
     def stop(self):
-        """_summary_"""
+        super().start()
         self._stats_interval_timer.stop()
+        super().started()
 
     def stats_counter_reset(self, field: str = ""):
         self._stats_counter.reset(field)

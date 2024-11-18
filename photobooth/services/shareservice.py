@@ -31,11 +31,15 @@ class ShareService(BaseService):
         self._printing_queue = None  # TODO: could add queue later
 
     def start(self):
+        super().start()
         # unblock after restart immediately
         self._last_print_time = None
+        super().started()
 
     def stop(self):
+        super().start()
         pass
+        super().started()
 
     def share(self, mediaitem: MediaItem, config_index: int = 0):
         """print mediaitem"""

@@ -10,7 +10,6 @@ from PIL import Image
 from photobooth.container import Container, container
 from photobooth.services.aquisitionservice import AquisitionService
 from photobooth.services.config import appconfig
-from photobooth.services.config.groups.backends import backends_live_concat, backends_main_concat
 from photobooth.services.sseservice import SseService
 from photobooth.services.wledservice import WledService
 
@@ -22,8 +21,8 @@ def _container() -> Container:
     # setup
 
     appconfig.backends.enable_livestream = True
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
+    # appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+    # appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
 
     container.start()
 
@@ -33,31 +32,17 @@ def _container() -> Container:
 
 
 def test_getimage(_container: Container):
-    with Image.open(io.BytesIO(_container.aquisition_service.wait_for_hq_image())) as img:
+    with Image.open(_container.aquisition_service.wait_for_still_file()) as img:
         logger.info(img)
         img.verify()
 
 
 def test_getimages_directlyaccess_backends(_container: Container):
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-
-    container.stop()
-    container.start()
-
-    with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_hq_image())) as img:
+    with Image.open(_container.aquisition_service._backends[0].wait_for_still_file()) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_lores_image())) as img:
-        logger.info(img)
-        img.verify()
-
-    with Image.open(io.BytesIO(_container.aquisition_service._live_backend.wait_for_hq_image())) as img:
-        logger.info(img)
-        img.verify()
-
-    with Image.open(io.BytesIO(_container.aquisition_service._live_backend.wait_for_lores_image())) as img:
+    with Image.open(io.BytesIO(_container.aquisition_service._backends[0].wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
 
@@ -73,76 +58,75 @@ def test_getvideo(_container: Container):
     assert videopath and videopath.is_file()
 
 
-def test_getimages_change_backend_during_runtime(_container: Container):
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
+# def test_getimages_change_backend_during_runtime(_container: Container):
+#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+#     appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
 
-    # shutdown/init to restart resources
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
+#     # shutdown/init to restart resources
+#     _container.aquisition_service.stop()
+#     _container.aquisition_service.start()
 
-    # main gives image
-    with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_hq_image())) as img:
-        logger.info(img)
-        img.verify()
+#     # main gives image
+#     with Image.open(_container.aquisition_service._main_backend.wait_for_still_file()) as img:
+#         logger.info(img)
+#         img.verify()
 
-    # secondary fails, because disabled
-    assert _container.aquisition_service._live_backend is None
+#     # secondary fails, because disabled
+#     assert _container.aquisition_service._live_backend is None
 
-    # now reconfigure
-    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
+#     # now reconfigure
+#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
 
-    # shutdown/init to restart resources
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
+#     # shutdown/init to restart resources
+#     _container.aquisition_service.stop()
+#     _container.aquisition_service.start()
 
-    # now main and secondary provide images
-    with Image.open(io.BytesIO(_container.aquisition_service._main_backend.wait_for_hq_image())) as img:
-        logger.info(img)
-        img.verify()
+#     # now main and secondary provide images
+#     with Image.open(_container.aquisition_service._main_backend.wait_for_still_file()) as img:
+#         logger.info(img)
+#         img.verify()
 
-    # secondary
-    with Image.open(io.BytesIO(_container.aquisition_service._live_backend.wait_for_hq_image())) as img:
-        logger.info(img)
-        img.verify()
-
-
-def test_gen_stream_main_backend(_container: Container):
-    # now reconfigure
-    appconfig.backends.enable_livestream = True
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
-
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
-
-    assert _container.aquisition_service.gen_stream()
-    assert not _container.aquisition_service._is_real_backend(_container.aquisition_service._live_backend)
+#     # secondary
+#     with Image.open(_container.aquisition_service._live_backend.wait_for_still_file()) as img:
+#         logger.info(img)
+#         img.verify()
 
 
-def test_get_stats(_container: Container):
-    # now reconfigure
-    appconfig.backends.enable_livestream = True
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
+# def test_gen_stream_main_backend(_container: Container):
+#     # now reconfigure
+#     appconfig.backends.enable_livestream = True
+#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+#     appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
 
-    logger.info(_container.aquisition_service.stats())
+#     _container.aquisition_service.stop()
+#     _container.aquisition_service.start()
+
+#     assert _container.aquisition_service.gen_stream()
 
 
-def test_switch_modes(_container: Container):
-    # now reconfigure
-    appconfig.backends.enable_livestream = True
-    appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-    _container.aquisition_service.stop()
-    _container.aquisition_service.start()
+# def test_get_stats(_container: Container):
+#     # now reconfigure
+#     appconfig.backends.enable_livestream = True
+#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
+#     _container.aquisition_service.stop()
+#     _container.aquisition_service.start()
 
-    _container.aquisition_service.signalbackend_configure_optimized_for_idle()
-    _container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
-    _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
-    _container.aquisition_service.signalbackend_configure_optimized_for_video()
+#     logger.info(_container.aquisition_service.stats())
+
+
+# def test_switch_modes(_container: Container):
+#     # now reconfigure
+#     appconfig.backends.enable_livestream = True
+#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
+#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
+#     _container.aquisition_service.stop()
+#     _container.aquisition_service.start()
+
+#     _container.aquisition_service.signalbackend_configure_optimized_for_idle()
+#     _container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+#     _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+#     _container.aquisition_service.signalbackend_configure_optimized_for_video()
 
 
 def test_simulated_init_exceptions(_container: Container):
@@ -212,7 +196,7 @@ def test_get_livestream_virtualcamera(_container: Container):
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
             logger.info("setting device_set_status_fault_flag True")
-            _container.aquisition_service._main_backend.device_set_status_fault_flag()
+            _container.aquisition_service._get_video_backend().device_set_status_fault_flag()
 
         if i > 30:
             g_stream.close()

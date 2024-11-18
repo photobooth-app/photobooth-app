@@ -33,49 +33,58 @@ class AquisitionService(BaseService):
         self._wled_service: WledService = wled_service
 
         self._backends: list[AbstractBackend] = None
-        self._running: bool = None
 
     def start(self):
         """start backends"""
+        super().start()
 
         self._backends: list[AbstractBackend] = []
-        self._running = True
 
         # get backend obj and instanciate
         for backend_config in appconfig.backends.group_backends:
-            backend: AbstractBackend = self._import_backend(backend_config.selected_device)(
-                getattr(backend_config, str(backend_config.selected_device).lower())
-            )
+            if backend_config.enabled:
+                backend: AbstractBackend = self._import_backend(backend_config.selected_device)(
+                    getattr(backend_config, str(backend_config.selected_device).lower())
+                )
 
-            self._backends.append(backend)
+                self._backends.append(backend)
+            else:
+                logger.info(f"skipped starting backend {backend_config} because not enabled")
+
+        if not self._backends:
+            raise RuntimeError("no backend enabled!")
+
+        # validate during startup that all indexes are in valid range. TODO: move to pydantic config logic at any point?
+        max_index = max(appconfig.backends.index_backend_stills, appconfig.backends.index_backend_video, appconfig.backends.index_backend_multicam)
+        if max_index > len(self._backends) - 1:
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas len(backends)={len(self._backends)}")
 
         logger.info(f"loaded backends: {self._backends}")
 
         try:
             for backend in self._backends:
-                if backend_config.enabled:
-                    backend.start()
-                else:
-                    logger.info(f"skipped starting backend {backend} because not enabled")
+                backend.start()
         except Exception as exc:
             logger.exception(exc)
             logger.critical("could not init/start backend")
 
-            self.set_status_fault()
+            self.faulty()
 
             return
 
-        super().set_status_started()
+        super().started()
 
     def stop(self):
         """stop backends"""
+        super().stop()
 
-        self._running = False
+        if not self._backends:
+            return
 
         for backend in self._backends:
             backend.stop()
 
-        super().set_status_stopped()
+        super().stopped()
 
     def stats(self):
         """
@@ -97,21 +106,21 @@ class AquisitionService(BaseService):
         try:
             return self._backends[index]
         except IndexError as exc:
-            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
+            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
 
     def _get_video_backend(self) -> AbstractBackend:
         index = appconfig.backends.index_backend_video
         try:
             return self._backends[index]
         except IndexError as exc:
-            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
+            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
 
     def _get_multicam_backend(self) -> AbstractBackend:
         index = appconfig.backends.index_backend_multicam
         try:
             return self._backends[index]
         except IndexError as exc:
-            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
+            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
 
     def gen_stream(self):
         """
@@ -218,7 +227,7 @@ class AquisitionService(BaseService):
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
         backend_to_stream_from.device_enable_lores_stream = True
 
-        while self._running:
+        while self.is_running():
             try:
                 output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
             except StopIteration:

@@ -30,10 +30,14 @@ class SystemService(BaseService):
         self._logger.info("initialized systemservice")
 
     def start(self):
-        """_summary_"""
+        super().start()
+        pass
+        super().started()
 
     def stop(self):
-        """_summary_"""
+        super().start()
+        pass
+        super().started()
 
     def util_systemd_control(self, state):
         # will return 0 for active else inactive.

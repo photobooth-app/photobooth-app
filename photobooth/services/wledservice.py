@@ -32,13 +32,11 @@ class WledService(BaseService):
         self._reconnect_interval_timer: RepeatedTimer = RepeatedTimer(RECONNECT_INTERVAL_TIMER, self.connect)
 
     def start(self):
-        """_summary_
+        super().start()
 
-        Returns:
-            _type_: _description_
-        """
         if not self._enabled:
             self._logger.info("WledService disabled")
+            super().disabled()
             return
 
         self.connect()
@@ -47,13 +45,18 @@ class WledService(BaseService):
 
         self._logger.info(f"WledService enabled and initialized, using port {self._serial_port}")
 
+        super().started()
+
     def stop(self):
-        """close serial port connection"""
+        super().start()
+
         self._reconnect_interval_timer.stop()
 
         if self._serial:
             self._logger.info("close port to WLED module")
             self._serial.close()
+
+        super().started()
 
     def is_connected(self) -> bool:
         return self._serial and self._serial.is_open

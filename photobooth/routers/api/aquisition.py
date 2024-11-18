@@ -42,7 +42,7 @@ def api_still_get():
         Response: Returns jpeg image to download
     """
     try:
-        file = container.aquisition_service.wait_for_still_file()[0]
+        file = container.aquisition_service.wait_for_still_file()
         return FileResponse(file, filename=file.name)
     except Exception as exc:
         logger.exception(exc)

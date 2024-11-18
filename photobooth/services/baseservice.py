@@ -1,7 +1,7 @@
 """Base service and resources module."""
 
 import logging
-from enum import Enum, auto
+from enum import Enum
 
 from .sseservice import SseService
 
@@ -9,13 +9,17 @@ from .sseservice import SseService
 class EnumStatus(Enum):
     """enum for status"""
 
-    uninitialized = auto()
-    initialized = auto()
-    started = auto()
-    stopped = auto()
-    active = auto()
-    fault = auto()
-    disabled = auto()
+    uninitialized = 10
+    initialized = 11
+    disabled = 12
+    faulty = 13
+
+    stopped = 21
+    stopping = 22
+
+    starting = 30
+
+    started = 40
 
 
 class BaseService:
@@ -23,40 +27,37 @@ class BaseService:
     logger and eventbus are set here
     """
 
-    _status = EnumStatus.uninitialized
-
     def __init__(self, sse_service: SseService) -> None:
-        self._logger = logging.getLogger(
-            f"{__name__}.{self.__class__.__name__}",
-        )
-
+        self._status: EnumStatus = EnumStatus.uninitialized
+        self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self._sse_service = sse_service
 
-        self.set_status_initialized()
-
-    def set_status_initialized(self):
         self._set_status(EnumStatus.initialized)
 
-    def set_status_started(self):
+    def disabled(self):
+        self._set_status(EnumStatus.disabled)
+
+    def start(self):
+        self._set_status(EnumStatus.starting)
+
+    def stop(self):
+        self._set_status(EnumStatus.stopping)
+
+    def started(self):
         self._set_status(EnumStatus.started)
 
-    def set_status_stopped(self):
+    def stopped(self):
         self._set_status(EnumStatus.stopped)
 
-    def set_status_active(self):
-        self._set_status(EnumStatus.active)
+    def faulty(self):
+        self._set_status(EnumStatus.faulty)
 
-    def set_status_fault(self):
-        self._set_status(EnumStatus.fault)
+    def is_running(self):
+        return True if self._status.value >= EnumStatus.started.value else False
 
     def get_status(self) -> EnumStatus:
         return self._status
 
     def _set_status(self, new_status: EnumStatus):
         self._status = new_status
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
+        self._logger.info(f"service {self.__class__.__name__} now {self._status}")

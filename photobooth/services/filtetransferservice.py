@@ -26,8 +26,12 @@ class FileTransferService(BaseService):
         self._worker_thread: StoppableThread = None
 
     def start(self):
+        super().start()
+
         if not appconfig.filetransfer.enabled:
             self._logger.info("FileTransferService disabled, start aborted.")
+            super().disabled()
+
             return
 
         self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
@@ -35,12 +39,17 @@ class FileTransferService(BaseService):
 
         self._logger.info("FileTransferService started.")
 
+        super().started()
+
     def stop(self):
+        super().stop()
+
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
         self._logger.info("FileTransferService stopped.")
+        super().stopped()
 
     def _worker_fun(self):
         # init worker, get devices first time

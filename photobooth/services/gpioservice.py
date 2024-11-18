@@ -80,28 +80,11 @@ class GpioService(BaseService):
         # input buttons
         self.shutdown_btn: Button = None
         self.reboot_btn: Button = None
-        self.action_btns: list[ActionButton] = []
-        self.share_btns: list[ShareButton] = []
+        self.action_btns: list[ActionButton] = None
+        self.share_btns: list[ShareButton] = None
 
         # output signals
         # none yet
-
-        # TODO: better move following to start/stop because start/stop is within try catch during service start
-        # and changes in config are respected by service restart.
-        if appconfig.hardwareinputoutput.gpio_enabled:
-            if is_rpi():
-                try:
-                    self.init_io()
-                except Exception as exc:
-                    self._logger.exception(exc)
-                    self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
-
-                self._logger.info("gpio enabled - listeners installed")
-            else:
-                self._logger.info("platform is not raspberry pi - gpio library is not supported")
-        else:
-            if is_rpi():
-                self._logger.info("gpio disabled - enable for gpio support on raspberry pi")
 
     def _handle_action_button(self, btn: ActionButton):
         self._logger.debug(f"trigger callback for {btn}")
@@ -220,10 +203,44 @@ class GpioService(BaseService):
             self._setup_share_button(config.trigger.gpio_trigger, index)
 
     def start(self):
-        super().set_status_started()
+        super().start()
+
+        self.shutdown_btn: Button = None
+        self.reboot_btn: Button = None
+        self.action_btns: list[ActionButton] = []
+        self.share_btns: list[ShareButton] = []
+
+        if not appconfig.hardwareinputoutput.gpio_enabled:
+            super().disabled()
+
+        if not is_rpi():
+            self._logger.info("platform is not raspberry pi - gpio library is not supported")
+
+        try:
+            self.init_io()
+        except Exception as exc:
+            self._logger.exception(exc)
+            self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
+
+        self._logger.info("gpio enabled - listeners installed")
+
+        super().started()
 
     def stop(self):
-        super().set_status_stopped()
+        super().stop()
+
+        if self.shutdown_btn:
+            self.shutdown_btn.close()
+        if self.reboot_btn:
+            self.reboot_btn.close()
+        if self.action_btns:
+            for btn in self.action_btns:
+                btn.close()
+        if self.share_btns:
+            for btn in self.share_btns:
+                btn.close()
+
+        super().stopped()
 
     def _shutdown(self):
         self._logger.info("trigger _shutdown")

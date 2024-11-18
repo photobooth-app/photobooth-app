@@ -25,8 +25,11 @@ class QrShareService(BaseService):
         self._worker_thread: StoppableThread = None
 
     def start(self):
+        super().start()
+
         if not appconfig.qrshare.enabled:
             self._logger.info("shareservice disabled, start aborted.")
+            super().disabled()
             return
 
         self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
@@ -34,10 +37,16 @@ class QrShareService(BaseService):
 
         self._logger.debug(f"{self.__module__} started - it tries to connect to dl.php on regular basis now.")
 
+        super().started()
+
     def stop(self):
+        super().start()
+
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
+
+        super().started()
 
     def _worker_fun(self):
         # init
