@@ -4,28 +4,18 @@ AppConfig class providing central config
 """
 
 import platform
-from typing import Literal
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
-backends_main_base = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
-backends_main_linux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
-backends_main_win = Literal["Digicamcontrol"]
-backends_main_concat = Literal[backends_main_base]
+BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
+BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
+BackendsWindows = Literal["Digicamcontrol"]
 if platform.system() == "Linux":
-    backends_main_concat = Literal[backends_main_concat, backends_main_linux]
+    BackendsPlatform: TypeAlias = BackendsBase | BackendsLinux
 if platform.system() == "Windows":
-    backends_main_concat = Literal[backends_main_concat, backends_main_win]
-
-
-backends_live_base = Literal["Disabled", "VirtualCamera", "WebcamCv2"]
-backends_live_linux = Literal["Picamera2", "WebcamV4l"]
-backends_live_concat = Literal[backends_live_base]
-if platform.system() == "Linux":
-    backends_live_concat = Literal[backends_live_concat, backends_live_linux]
-if platform.system() == "Windows":
-    pass
+    BackendsPlatform: TypeAlias = BackendsBase | BackendsWindows
 
 
 class GroupBackendVirtualcamera(BaseModel):
@@ -38,6 +28,18 @@ class GroupBackendVirtualcamera(BaseModel):
         ge=0,
         le=5,
         description="Emulate the delay of a camera. Time between camera is requested to deliver a still and actual delivery to the app.",
+    )
+    framerate: int = Field(
+        default=15,
+        ge=5,
+        le=30,
+        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+    )
+    emulate_multicam_capture_devices: int = Field(
+        default=4,
+        ge=2,
+        le=20,
+        description="Number of emulated cameras when asking for synchronized capture for wigglegrams.",
     )
 
 
@@ -157,6 +159,12 @@ class GroupBackendOpenCv2(BaseModel):
         default=False,
         description="Apply vertical flip to image source to opencv2 backend",
     )
+    framerate: int = Field(
+        default=15,
+        ge=5,
+        le=30,
+        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+    )
 
 
 class GroupBackendV4l2(BaseModel):
@@ -188,15 +196,21 @@ class GroupBackendDigicamcontrol(BaseModel):
 class GroupBackendWigglecam(ConfigCameraPool):
     model_config = ConfigDict(title="Wigglecam Connector")
 
-    nodes: list[ConfigCameraNode] = (
-        [
-            ConfigCameraNode(description="TestNode", is_primary=True),
-        ],
+    index_backend_stills: int = Field(
+        default=0,
+        description="Index of one node below to capture stills.",
     )
-    pass
+    index_backend_video: int = Field(
+        default=0,
+        description="Index of one backend below to capture live preview and video.",
+    )
+
+    nodes: list[ConfigCameraNode] = [
+        ConfigCameraNode(description="TestNode", is_primary=True),
+    ]
 
 
-class GroupMainBackend(BaseModel):
+class GroupBackend(BaseModel):
     """
     Choose backends for still images/high quality images captured on main backend.
     If the livepreview is enabled, the video is captured from live backend (if configured)
@@ -205,11 +219,30 @@ class GroupMainBackend(BaseModel):
 
     model_config = ConfigDict(title="Main Backend Configuration")
 
-    active_backend: backends_main_concat = Field(
-        title="Active Backend for stills",
-        default="VirtualCamera",
-        description="Main backend to use for high quality still captures. Also used for livepreview if backend is capable of.",
+    enabled: bool = Field(
+        title="Load and start backend",
+        default=False,
+        description="Selected device will be loaded and started.",
     )
+
+    if platform.system() == "Linux":
+        selected_device: Literal[BackendsBase, BackendsLinux] = Field(
+            title="Configure device",
+            default="VirtualCamera",
+            description="Select backend and configure the device below",
+        )
+    elif platform.system() == "Windows":
+        selected_device: Literal[BackendsBase, BackendsWindows] = Field(
+            title="Configure device",
+            default="VirtualCamera",
+            description="Select backend and configure the device below",
+        )
+    else:
+        selected_device: Literal[BackendsBase] = Field(
+            title="Configure device",
+            default="VirtualCamera",
+            description="Select backend and configure the device below",
+        )
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
@@ -222,26 +255,6 @@ class GroupMainBackend(BaseModel):
 
     if platform.system() == "Windows":
         digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
-
-
-class GroupLiveBackend(BaseModel):
-    model_config = ConfigDict(title="Live Backend Configuration")
-
-    active_backend: backends_live_concat = Field(
-        title="Active Backend for Live-View and Video",
-        default="Disabled",
-        description="Secondary backend used for live streaming and video only. Useful to stream from webcam if DSLR camera has no livestream capability.",
-    )
-
-    virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
-    webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
-
-    if platform.system() == "Linux":
-        picamera2: GroupBackendPicamera2 = GroupBackendPicamera2()
-        webcamv4l: GroupBackendV4l2 = GroupBackendV4l2()
-
-    if platform.system() == "Windows":
-        pass
 
 
 class GroupBackends(BaseModel):
@@ -257,12 +270,6 @@ class GroupBackends(BaseModel):
         default=True,
         description="Enable livestream (if possible)",
     )
-    livestream_framerate: int = Field(
-        default=15,
-        ge=5,
-        le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
-    )
     retry_capture: int = Field(
         default=3,
         ge=1,
@@ -277,5 +284,17 @@ class GroupBackends(BaseModel):
         description="Trigger camera capture by offset earlier (in seconds). 0 trigger exactly when countdown is 0. Use to compensate for delay in camera processing for better UX.",
     )
 
-    group_main: GroupMainBackend = GroupMainBackend()
-    group_live: GroupLiveBackend = GroupLiveBackend()
+    index_backend_stills: int = Field(
+        default=0,
+        description="Index of one backend below to capture stills.",
+    )
+    index_backend_video: int = Field(
+        default=0,
+        description="Index of one backend below to capture live preview and video.",
+    )
+    index_backend_multicam: int = Field(
+        default=0,
+        description="Index of one backend below used for multicamera images (wigglegrams).",
+    )
+
+    group_backends: list[GroupBackend] = [GroupBackend()]

@@ -2,7 +2,6 @@
 abstract for the photobooth-app backends
 """
 
-import dataclasses
 import logging
 import os
 import subprocess
@@ -10,8 +9,8 @@ import threading
 import time
 import uuid
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum, auto
-from multiprocessing import Condition, Lock, shared_memory
 from pathlib import Path
 
 from ...utils.stoppablethread import StoppableThread
@@ -37,7 +36,7 @@ class EnumDeviceStatus(Enum):
 #
 
 
-@dataclasses.dataclass
+@dataclass
 class BackendStats:
     """
     defines some common stats - if backend supports, they return these properties,
@@ -55,6 +54,79 @@ class BackendStats:
     sharpness: int = None
 
 
+# @dataclass
+# class Capabilities:
+# https://stackoverflow.com/questions/69090253/how-to-iterate-over-attributes-of-dataclass-in-python
+#     image: bool = False
+#     multiimage: bool = False
+#     livepreview: bool = False
+#     video: bool = False
+
+#     def has(self,other:"Capabilities") -> bool:
+#         cls_fields: Tuple[Field, ...] = fields(self.__class__)
+#         for field in fields(self.__class__):
+#             print(field.name, getattr(YourDataclass, field.name))
+#         return other.
+
+
+@dataclass
+class GeneralBytesResult:
+    # jpeg data as bytes
+    data: bytes = None
+    # condition when frame is avail
+    condition: threading.Condition = None
+
+
+@dataclass
+class GeneralFileResult:
+    # jpeg data file for hires
+    filepath: Path = None
+    # signal to producer that requesting thread is ready to be notified
+    request: threading.Event = None
+    # condition when frame is avail
+    condition: threading.Condition = None
+
+
+@dataclass
+class GeneralMultifileResult:
+    # jpeg data file for hires
+    filepath: list[Path] = None
+    # signal to producer that requesting thread is ready to be notified
+    request: threading.Event = None
+    # condition when frame is avail
+    condition: threading.Condition = None
+
+
+@dataclass
+class Framerate:
+    """helps calculating the current framerate of backend.
+    init empty and on every frame delivered, set current_timestamp with monotonic_ns() value
+    when two timestamps are avail, the fps can be read from .fps
+
+    Returns:
+        int: Framerate
+    """
+
+    _last_timestamp: int = None
+    _current_timestamp: int = None
+
+    @property
+    def current_timestamp(self) -> int:
+        return self._current_timestamp
+
+    @current_timestamp.setter
+    def current_timestamp(self, v: int) -> None:
+        self._last_timestamp = self._current_timestamp
+        self._current_timestamp = v
+
+    @property
+    def fps(self) -> int:
+        if self._last_timestamp and self._current_timestamp:
+            return round(1.0 / ((self._current_timestamp - self._last_timestamp) * 1.0e-9), 0)
+        else:
+            return 0
+
+
 class AbstractBackend(ABC):
     """
     photobooth-app abstract to create backends.
@@ -64,8 +136,7 @@ class AbstractBackend(ABC):
     def __init__(self):
         # statisitics attributes
         self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
-        self._fps = 0
-        self._stats_thread: StoppableThread = None
+        self._framerate: Framerate = Framerate()
 
         # (re)connect supervisor attributes
         self._device_status: EnumDeviceStatus = EnumDeviceStatus.initialized
@@ -95,24 +166,12 @@ class AbstractBackend(ABC):
         return f"{self.__class__}"
 
     def stats(self) -> BackendStats:
-        self._backendstats.fps = int(round(self._fps, 0))
+        self._backendstats.fps = self._framerate.fps
         return self._backendstats
 
-    def _stats_fun(self):
-        # FPS = 1 / time to process loop
-        last_calc_time = time.time()  # start time of the loop
-
-        # to calc frames per second every second
-        while not self._stats_thread.stopped():
-            try:
-                self._wait_for_lores_image()  # blocks until new image is avail, we do not ready it here, only calc fps
-                self._fps = 1.0 / (time.time() - last_calc_time)
-            except Exception:
-                # suffer in silence. If any issue occured assume the FPS is 0
-                self._fps = 0
-
-            # store last time
-            last_calc_time = time.time()
+    def _frame_tick(self):
+        """call by backends implementation when frame is delivered, so the fps can be calculated..."""
+        self._framerate.current_timestamp = time.monotonic_ns()
 
     @property
     def device_status(self) -> EnumDeviceStatus:
@@ -222,10 +281,6 @@ class AbstractBackend(ABC):
         # disable video feature avail
         self._video_feature_available = False
 
-        # statistics
-        self._stats_thread = StoppableThread(name="_statsThread", target=self._stats_fun, daemon=True)
-        self._stats_thread.start()
-
         # (re)connect supervisor
         self._connect_thread = StoppableThread(name="_connect_thread", target=self._connect_fun, daemon=True)
         self._connect_thread.start()
@@ -268,10 +323,6 @@ class AbstractBackend(ABC):
             self._connect_thread.stop()
             self._connect_thread.join()
 
-        if self._stats_thread and self._stats_thread.is_alive():
-            self._stats_thread.stop()
-            self._stats_thread.join()
-
     def block_until_device_is_running(self):
         """Mostly used for testing to ensure the device is up.
 
@@ -291,14 +342,33 @@ class AbstractBackend(ABC):
         else:
             logger.info(f"ignored to flag device as faulty because not in running mode, mode is {self.device_status}")
 
-    def wait_for_hq_image(self, retries: int = 3) -> bytes:
+    def wait_for_multicam_files(self, retries: int = 3) -> list[Path]:
         """
         function blocks until high quality image is available
         """
 
         for attempt in range(1, retries + 1):
             try:
-                return self._wait_for_hq_image()
+                return self._wait_for_multicam_files()
+            except Exception as exc:
+                logger.exception(exc)
+                logger.error(f"error capture image. {attempt=}/{retries}, retrying")
+                continue
+
+        else:
+            # we failed finally all the attempts - deal with the consequences.
+            self.device_set_status_fault_flag()
+            logger.critical(f"finally failed after {retries} attempts to capture image!")
+            raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
+
+    def wait_for_still_file(self, retries: int = 3) -> Path:
+        """
+        function blocks until high quality image is available
+        """
+
+        for attempt in range(1, retries + 1):
+            try:
+                return self._wait_for_still_file()
             except Exception as exc:
                 logger.exception(exc)
                 logger.error(f"error capture image. {attempt=}/{retries}, retrying")
@@ -331,7 +401,7 @@ class AbstractBackend(ABC):
             except TimeoutError:
                 # if timeout occured it will retry several attempts more before finally fail (else of for below)
                 # logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")  # removed to avoid too many log entries.
-                if self._connect_thread.stopped():
+                if self._connect_thread and self._connect_thread.stopped():
                     raise StopIteration("backend is shutting down") from None  # allows calling function to stop requesting images if app shuts down
                 else:
                     continue
@@ -528,13 +598,19 @@ class AbstractBackend(ABC):
         """
 
     @abstractmethod
-    def _wait_for_hq_image(self):
+    def _wait_for_multicam_files(self) -> list[Path]:
         """
         function blocks until image still is available
         """
 
     @abstractmethod
-    def _wait_for_lores_image(self):
+    def _wait_for_still_file(self) -> Path:
+        """
+        function blocks until image still is available
+        """
+
+    @abstractmethod
+    def _wait_for_lores_image(self) -> bytes:
         """
         function blocks until frame is available for preview stream
         """
@@ -550,64 +626,3 @@ class AbstractBackend(ABC):
     @abstractmethod
     def _on_configure_optimized_for_hq_capture(self):
         """called externally via events and used to change to a capture mode if necessary"""
-
-
-#
-# INTERNAL FUNCTIONS to operate on the shared memory exchanged between processes.
-#
-
-
-@dataclasses.dataclass
-class SharedMemoryDataExch:
-    """
-    bundle data array and it's condition.
-    1) save some instance attributes and
-    2) bundle as it makes sense
-    """
-
-    sharedmemory: shared_memory.SharedMemory = None
-    condition: Condition = None
-    lock: Lock = None
-
-
-def decompile_buffer(shm: memoryview) -> bytes:
-    """
-    decompile buffer holding jpeg buffer for transport between processes
-    in shared memory
-    constructed as
-    INT(4bytes)+JPEG of length the int describes
-
-    Args:
-        shm (memoryview): shared memory buffer
-
-    Returns:
-        bytes: concat(length of jpeg+jpegbuffer)
-    """
-    # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
-    # means for this app in consequence: here is the place to make a copy
-    # of the image for further processing
-    # ATTENTION2: this function needs to be called with lock aquired
-    length = int.from_bytes(shm.buf[0:4], "big")
-    ret: memoryview = shm.buf[4 : length + 4]
-    return ret.tobytes()
-
-
-def compile_buffer(shm: memoryview, jpeg_buffer: bytes) -> bytes:
-    """
-    compile buffer holding jpeg buffer for transport between processes
-    in shared memory
-    constructed as
-    INT(4bytes)+JPEG of length the int describes
-
-    Args:
-        shm (bytes): shared memory buffer
-        jpeg_buffer (bytes): jpeg image
-    """
-    # ATTENTION: shm is a memoryview; sliced variables are also a reference only.
-    # means for this app in consequence: here is the place to make a copy
-    # of the image for further processing
-    # ATTENTION2: this function needs to be called with lock aquired
-    length: int = len(jpeg_buffer)
-    length_bytes = length.to_bytes(4, "big")
-    shm.buf[0:4] = length_bytes
-    shm.buf[4 : length + 4] = jpeg_buffer

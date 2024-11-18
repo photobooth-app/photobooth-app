@@ -2,16 +2,16 @@
 Virtual Camera backend for testing.
 """
 
-import dataclasses
 import logging
 import mmap
 import time
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Condition
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendVirtualcamera
-from .abstractbackend import AbstractBackend
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 FPS_TARGET = 25
 
@@ -21,28 +21,12 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    @dataclasses.dataclass
-    class VirtualcameraDataBytes:
-        """
-        bundle data bytes and it's condition.
-        1) save some instance attributes and
-        2) bundle as it makes sense
-        """
-
-        # jpeg data as bytes
-        data: bytes = None
-        # condition when frame is avail
-        condition: Condition = None
-
     def __init__(self, config: GroupBackendVirtualcamera):
         self._config: GroupBackendVirtualcamera = config
         super().__init__()
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
 
-        self._lores_data: __class__.VirtualcameraDataBytes = __class__.VirtualcameraDataBytes(
-            data=None,
-            condition=Condition(),
-        )
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
 
         # worker threads
         self._worker_thread: StoppableThread = None
@@ -70,16 +54,23 @@ class VirtualCameraBackend(AbstractBackend):
         """virtual camera to be available always"""
         return True
 
-    def _wait_for_hq_image(self):
+    def _wait_for_multicam_files(self) -> list[Path]:
+        files: list[Path] = []
+
+        for _ in range(self._config.emulate_multicam_capture_devices):
+            files.append(self._wait_for_still_file())
+
+        return files
+
+    def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""
 
         time.sleep(self._config.emulate_camera_delay_still_capture)
 
-        return self._wait_for_lores_image()
+        with NamedTemporaryFile(mode="wb", delete=False, delete_on_close=False, dir="tmp", prefix="virtualcamera_") as f:
+            f.write(self._wait_for_lores_image())
 
-    #
-    # INTERNAL FUNCTIONS
-    #
+            return Path(f.name)
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
@@ -106,8 +97,6 @@ class VirtualCameraBackend(AbstractBackend):
     def _worker_fun(self):
         logger.info("virtualcamera thread function starts")
 
-        last_time_frame = time.time_ns()
-
         jpeg_chunks = []  # offset, len --> seek(offset), read(len)
         last_chunk = 0
         last_offset = 0
@@ -127,11 +116,12 @@ class VirtualCameraBackend(AbstractBackend):
 
                 logger.info(f"found {len(jpeg_chunks)} images in virtualcamera video")
 
+                last_time_frame = time.time()
                 while not self._worker_thread.stopped():  # repeat until stopped
-                    now_time = time.time_ns()
-                    if (now_time - last_time_frame) / 1000**3 <= (1 / FPS_TARGET):
+                    now_time = time.time()
+                    if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
                         # limit max framerate to every ~2ms
-                        time.sleep(0.002)
+                        time.sleep(0.005)
                         continue
                     last_time_frame = now_time
 
@@ -145,5 +135,7 @@ class VirtualCameraBackend(AbstractBackend):
                     with self._lores_data.condition:
                         self._lores_data.data = jpeg_bytes
                         self._lores_data.condition.notify_all()
+
+                    self._frame_tick()
 
         logger.info("virtualcamera thread finished")

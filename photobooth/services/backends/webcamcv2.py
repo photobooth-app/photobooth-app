@@ -5,15 +5,16 @@ backend opencv2 for webcameras
 import logging
 import platform
 import time
-from multiprocessing import Condition, Event, Lock, Process, shared_memory
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from threading import Condition
 
 import cv2
 from turbojpeg import TurboJPEG
 
+from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendOpenCv2
-from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer
-
-SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 turbojpeg = TurboJPEG()
@@ -25,54 +26,18 @@ class WebcamCv2Backend(AbstractBackend):
     """
 
     def __init__(self, config: GroupBackendOpenCv2):
-        self._config: GroupBackendOpenCv2 = config
         super().__init__()
 
+        self._config: GroupBackendOpenCv2 = config
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
-
-        self._img_buffer = SharedMemoryDataExch(
-            sharedmemory=shared_memory.SharedMemory(
-                create=True,
-                size=SHARED_MEMORY_BUFFER_BYTES,
-            ),
-            condition=Condition(),
-            lock=Lock(),
-        )
-
-        self._event_proc_shutdown: Event = Event()
-
-        self._cv2_process: Process = None
-
-    def __del__(self):
-        try:
-            if self._img_buffer:
-                self._img_buffer.sharedmemory.close()
-                self._img_buffer.sharedmemory.unlink()
-        except Exception as exc:
-            # cant use logger any more, just to have some logs to debug if exception
-            print(exc)
-            print("error deconstructing shared memory")
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
+        self._worker_thread: StoppableThread = None
 
     def _device_start(self):
         """To start the cv2 acquisition process"""
 
-        self._event_proc_shutdown.clear()
-
-        self._cv2_process = Process(
-            target=cv2_img_aquisition,
-            name="WebcamCv2AquisitionProcess",
-            args=(
-                self._img_buffer.sharedmemory.name,
-                self._img_buffer.lock,
-                self._img_buffer.condition,
-                self._config,
-                self._event_proc_shutdown,
-            ),
-            daemon=True,
-        )
-        self._cv2_process.start()
-
-        time.sleep(1)
+        self._worker_thread = StoppableThread(name="webcamcv2_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
 
         # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
         self._block_until_delivers_lores_images()
@@ -80,13 +45,10 @@ class WebcamCv2Backend(AbstractBackend):
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
-        # signal process to shutdown properly
-        self._event_proc_shutdown.set()
-
         # wait until shutdown finished
-        if self._cv2_process and self._cv2_process.is_alive():
-            self._cv2_process.join()
-            self._cv2_process.close()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -101,24 +63,23 @@ class WebcamCv2Backend(AbstractBackend):
 
         return ret
 
-    def _wait_for_hq_image(self):
-        """for other threads to receive a hq JPEG image"""
-        return self._wait_for_lores_image()
+    def _wait_for_multicam_files(self) -> list[Path]:
+        raise RuntimeError("backend does not support multicam files")
 
-    #
-    # INTERNAL FUNCTIONS
-    #
+    def _wait_for_still_file(self) -> Path:
+        """for other threads to receive a hq JPEG image"""
+        with NamedTemporaryFile(mode="wb", delete=False, delete_on_close=False, dir="tmp", prefix="webcamcv2_") as f:
+            f.write(self._wait_for_lores_image())
+            return Path(f.name)
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
 
-        with self._img_buffer.condition:
-            if not self._img_buffer.condition.wait(timeout=0.5):
+        with self._lores_data.condition:
+            if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
-            with self._img_buffer.lock:
-                img = decompile_buffer(self._img_buffer.sharedmemory)
-            return img
+            return self._lores_data.data
 
     def _on_configure_optimized_for_idle(self):
         pass
@@ -129,84 +90,70 @@ class WebcamCv2Backend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    #
+    # INTERNAL IMAGE GENERATOR
+    #
 
-#
-# INTERNAL IMAGE GENERATOR
-#
+    def _worker_fun(self):
+        logger.info("_worker_fun starts")
 
+        if platform.system() == "Windows":
+            logger.info("force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
+            _video = cv2.VideoCapture(self._config.device_index, cv2.CAP_DSHOW)
+        else:
+            _video = cv2.VideoCapture(self._config.device_index)
 
-def cv2_img_aquisition(
-    shm_buffer_name,
-    _img_buffer_lock,
-    _condition_img_buffer_ready: Condition,
-    # need to pass config, because unittests can change config,
-    # if not passed, the config are not available in the separate process!
-    _config: GroupBackendOpenCv2,
-    _event_proc_shutdown: Event,
-):
-    """
-    process function to gather webcam images
-    """
-    # init
-    ## Create a logger. INFO: this logger is in separate process and just logs to console.
-    # Could be replaced in future by a more sophisticated solution
-    logger = logging.getLogger()
-    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
-    logging.basicConfig(level=logging.DEBUG, format=fmt)
+        # activate preview mode on init
+        _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
+        _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, self._config.CAM_RESOLUTION_WIDTH)
+        _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, self._config.CAM_RESOLUTION_HEIGHT)
 
-    shm = shared_memory.SharedMemory(shm_buffer_name)
+        if not _video.isOpened():
+            raise OSError(f"cannot open camera index {self._config.device_index}")
 
-    if platform.system() == "Windows":
-        logger.info("force VideoCapture to DSHOW backend on windows (MSMF is buggy and crashes app)")
-        _video = cv2.VideoCapture(_config.device_index, cv2.CAP_DSHOW)
-    else:
-        _video = cv2.VideoCapture(_config.device_index)
+        if not _video.read()[0]:
+            raise OSError(f"cannot read camera index {self._config.device_index}")
 
-    # activate preview mode on init
-    _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
-    _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, _config.CAM_RESOLUTION_WIDTH)
-    _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, _config.CAM_RESOLUTION_HEIGHT)
+        logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
+        logger.info(f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x" f"{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
 
-    if not _video.isOpened():
-        raise OSError(f"cannot open camera index {_config.device_index}")
+        # read first five frames and send to void
+        for _ in range(5):
+            _, _ = _video.read()
 
-    if not _video.read()[0]:
-        raise OSError(f"cannot read camera index {_config.device_index}")
+        last_time_frame = time.time()
+        while not self._worker_thread.stopped():  # repeat until stopped
+            now_time = time.time()
+            if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
+                # limit max framerate to every ~5ms
+                time.sleep(0.005)
+                continue
 
-    logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
-    logger.info(f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x" f"{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+            last_time_frame = now_time
+            # print(time.monotonic())
+            ret, array = _video.read()
+            # ret=True successful read, otherwise False?
+            if not ret:
+                raise OSError("error reading camera frame")
 
-    # read first five frames and send to void
-    for _ in range(5):
-        _, _ = _video.read()
+            # apply flip image to stream only:
+            if self._config.CAMERA_TRANSFORM_HFLIP:
+                array = cv2.flip(array, 1)
+            if self._config.CAMERA_TRANSFORM_VFLIP:
+                array = cv2.flip(array, 0)
 
-    while not _event_proc_shutdown.is_set():
-        ret, array = _video.read()
-        # ret=True successful read, otherwise False?
-        if not ret:
-            raise OSError("error reading camera frame")
+            jpeg_buffer = turbojpeg.encode(array, quality=90)
+            with self._lores_data.condition:
+                self._lores_data.data = jpeg_buffer
+                self._lores_data.condition.notify_all()
 
-        # apply flip image to stream only:
-        if _config.CAMERA_TRANSFORM_HFLIP:
-            array = cv2.flip(array, 1)
-        if _config.CAMERA_TRANSFORM_VFLIP:
-            array = cv2.flip(array, 0)
+            self._frame_tick()
 
-        # preview livestream
-        jpeg_buffer = turbojpeg.encode(array, quality=90)
-        # put jpeg on queue until full. If full this function blocks until queue empty
-        with _img_buffer_lock:
-            compile_buffer(shm, jpeg_buffer)
+        # release camera on process shutdown
+        _video.release()
 
-        with _condition_img_buffer_ready:
-            # wait to be notified
-            _condition_img_buffer_ready.notify_all()
-
-    # release camera on process shutdown
-    _video.release()
-
-    logger.info("cv2_img_aquisition finished, exit")
+        logger.info("worker_fun finished, exit")
 
 
 def _video_set_check(_video, prop, value):

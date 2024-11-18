@@ -1,8 +1,10 @@
 import logging
+from pathlib import Path
 
 from wigglecam.connector import CameraNode, CameraPool
-from wigglecam.connector.models import ConfigCameraPool
+from wigglecam.connector.dto import ConnectorJobRequest
 
+from ..config.groups.backends import GroupBackendWigglecam
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -11,8 +13,8 @@ logger = logging.getLogger(__name__)
 class WigglecamBackend(AbstractBackend):
     """Virtual camera backend to test photobooth"""
 
-    def __init__(self, config: ConfigCameraPool):
-        self._config: ConfigCameraPool = config
+    def __init__(self, config: GroupBackendWigglecam):
+        self._config: GroupBackendWigglecam = config
         super().__init__()
 
         self._camera_pool: CameraPool = None
@@ -25,6 +27,9 @@ class WigglecamBackend(AbstractBackend):
 
         self._camera_pool: CameraPool = CameraPool(nodes=nodes)
 
+        logger.info(self._camera_pool.get_nodes_status())
+        logger.info(self._camera_pool.is_healthy())
+
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
@@ -34,14 +39,29 @@ class WigglecamBackend(AbstractBackend):
         return True
         # TODO: need something to check? Like:  return self._camera_pool.is_healthy()
 
-    def _wait_for_hq_image(self):
-        # TODO: here we stitch the nodes images already and create a gif/mp4/whatever is best. because the system expects just one system
+    def _wait_for_multicam_files(self) -> list[Path]:
+        camerapooljobrequest = ConnectorJobRequest(number_captures=1)
 
+        try:
+            connectorjobitem = self._camera_pool.setup_and_trigger_pool(camerapooljobrequest=camerapooljobrequest)
+            self._camera_pool.wait_until_all_finished_ok(connectorjobitem)
+
+            downloadresult = self._camera_pool.download_all(connectorjobitem)
+            logger.info(downloadresult)
+            logger.info(f"this is from node[0], first item: {downloadresult.node_mediaitems[0].mediaitems[0].filepath}")
+
+        except Exception as exc:
+            logger.error(f"Error processing: {exc}")
+            logger.info(self._camera_pool.print_nodes_status())
+
+        # currently only number_captures=1 supported, so we just take the first index from result
+        out = [x.mediaitems[0].filepath for x in downloadresult.node_mediaitems]
+
+        return out
+
+    def _wait_for_still_file(self) -> Path:
+        """for other threads to receive a hq JPEG image"""
         raise NotImplementedError
-
-    #
-    # INTERNAL FUNCTIONS
-    #
 
     def _wait_for_lores_image(self):
         raise NotImplementedError

@@ -20,7 +20,6 @@ from .mediacollection.mediaitem import (
     MediaItem,
     MediaItemAllowedFileendings,
 )
-from .mediaprocessingservice import MediaprocessingService
 from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
 
 logger = logging.getLogger(__name__)
@@ -34,11 +33,8 @@ class MediacollectionService(BaseService):
     def __init__(
         self,
         sse_service: SseService,
-        mediaprocessing_service: MediaprocessingService,
     ):
         super().__init__(sse_service=sse_service)
-
-        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
 
         # the database ;)
         # sorted list containing type MediaItem. always newest image first in list.

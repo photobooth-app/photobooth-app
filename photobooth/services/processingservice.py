@@ -3,6 +3,7 @@ _summary_
 """
 
 import logging
+import os
 import time
 from queue import Empty, Queue
 from threading import Thread
@@ -362,10 +363,9 @@ class ProcessingMachine(StateMachine):
         self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         start_time_capture = time.time()
-        image_bytes = self._aquisition_service.wait_for_hq_image()  # this function repeats to get images if one capture fails.
+        filepath = self._aquisition_service.wait_for_still_file()  # this function repeats to get images if one capture fails.
 
-        with open(mediaitem.path_original, "wb") as file:
-            file.write(image_bytes)
+        os.rename(filepath, mediaitem.path_original)
 
         # populate image item for further processing:
         self.model.set_last_capture(mediaitem)

@@ -57,9 +57,9 @@ def test_get_images_virtualcamera_force_hqstillfail_ensure_recovery(backend_virt
     error_mock = mock.MagicMock()
     error_mock.side_effect = TimeoutError("mock timeouterror during hq capture")
 
-    with patch.object(VirtualCameraBackend, "_wait_for_hq_image", error_mock):
+    with patch.object(VirtualCameraBackend, "_wait_for_still_file", error_mock):
         with pytest.raises(RuntimeError):
-            backend_virtual.wait_for_hq_image()
+            backend_virtual.wait_for_still_file()
 
     logger.info("trying to get images again after provoked fail and backend restart.")
     get_images(backend_virtual)

@@ -4,7 +4,6 @@ manage up to two photobooth-app backends in this module
 
 import dataclasses
 import logging
-import time
 from functools import cache
 from importlib import import_module
 from io import BytesIO
@@ -29,45 +28,35 @@ class AquisitionService(BaseService):
           (can be used additionally if MAIN is not capable to deliver video)
     """
 
-    def __init__(
-        self,
-        sse_service: SseService,
-        wled_service: WledService,
-    ):
+    def __init__(self, sse_service: SseService, wled_service: WledService):
         super().__init__(sse_service=sse_service)
         self._wled_service: WledService = wled_service
-        self._running: bool = None
 
-        # public
-        self._main_backend: AbstractBackend = None
-        self._live_backend: AbstractBackend = None
+        self._backends: list[AbstractBackend] = None
+        self._running: bool = None
 
     def start(self):
         """start backends"""
 
+        self._backends: list[AbstractBackend] = []
         self._running = True
 
         # get backend obj and instanciate
-
-        self._main_backend: AbstractBackend = self._import_backend(appconfig.backends.group_main.active_backend)(
-            getattr(appconfig.backends.group_main, str(appconfig.backends.group_main.active_backend).lower())
-        )
-
-        if appconfig.backends.group_live.active_backend != "Disabled":
-            self._live_backend: AbstractBackend = self._import_backend(appconfig.backends.group_live.active_backend)(
-                getattr(appconfig.backends.group_live, str(appconfig.backends.group_live.active_backend).lower())
+        for backend_config in appconfig.backends.group_backends:
+            backend: AbstractBackend = self._import_backend(backend_config.selected_device)(
+                getattr(backend_config, str(backend_config.selected_device).lower())
             )
-        else:
-            self._live_backend: AbstractBackend = None
 
-        logger.info(f"aquisition main backend: {self._main_backend}")
-        logger.info(f"aquisition live backend: {self._live_backend}")
+            self._backends.append(backend)
+
+        logger.info(f"loaded backends: {self._backends}")
 
         try:
-            if self._main_backend:
-                self._main_backend.start()
-            if self._live_backend:
-                self._live_backend.start()
+            for backend in self._backends:
+                if backend_config.enabled:
+                    backend.start()
+                else:
+                    logger.info(f"skipped starting backend {backend} because not enabled")
         except Exception as exc:
             logger.exception(exc)
             logger.critical("could not init/start backend")
@@ -83,10 +72,8 @@ class AquisitionService(BaseService):
 
         self._running = False
 
-        if self._main_backend:
-            self._main_backend.stop()
-        if self._live_backend:
-            self._live_backend.stop()
+        for backend in self._backends:
+            backend.stop()
 
         super().set_status_stopped()
 
@@ -98,20 +85,33 @@ class AquisitionService(BaseService):
         Returns:
             _type_: _description_
         """
-        stats_primary = dataclasses.asdict(self._main_backend.stats()) if self._is_real_backend(self._main_backend) else {}
-        stats_secondary = dataclasses.asdict(self._live_backend.stats()) if self._is_real_backend(self._live_backend) else {}
-
-        aquisition_stats = {"primary": stats_primary, "secondary": stats_secondary}
+        aquisition_stats = {}
+        for backend in self._backends:
+            stats = dataclasses.asdict(backend.stats())
+            aquisition_stats |= {str(backend): stats}
 
         return aquisition_stats
 
+    def _get_stills_backend(self) -> AbstractBackend:
+        index = appconfig.backends.index_backend_stills
+        try:
+            return self._backends[index]
+        except IndexError as exc:
+            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
+
     def _get_video_backend(self) -> AbstractBackend:
-        if self._is_real_backend(self._live_backend):
-            return self._live_backend
-        elif self._is_real_backend(self._main_backend):
-            return self._main_backend
-        else:
-            raise RuntimeError("Error: There is no backend available. Check logs, to find out why things broke.")
+        index = appconfig.backends.index_backend_video
+        try:
+            return self._backends[index]
+        except IndexError as exc:
+            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
+
+    def _get_multicam_backend(self) -> AbstractBackend:
+        index = appconfig.backends.index_backend_multicam
+        try:
+            return self._backends[index]
+        except IndexError as exc:
+            raise RuntimeError(f"illegal configuration, cannot get backend {index=}") from exc
 
     def gen_stream(self):
         """
@@ -123,7 +123,7 @@ class AquisitionService(BaseService):
 
         raise ConnectionRefusedError("livepreview not enabled")
 
-    def wait_for_hq_image(self):
+    def wait_for_still_file(self):
         """
         function blocks until high quality image is available
         """
@@ -131,7 +131,24 @@ class AquisitionService(BaseService):
         self._wled_service.preset_shoot()
 
         try:
-            return self._main_backend.wait_for_hq_image(appconfig.backends.retry_capture)
+            still_backend = self._get_stills_backend()
+            return still_backend.wait_for_still_file(appconfig.backends.retry_capture)
+        except Exception as exc:
+            raise exc
+        finally:
+            # ensure even if failed, the wled is set to standby again
+            self._wled_service.preset_standby()
+
+    def wait_for_multicam_files(self):
+        """
+        function blocks until high quality image is available
+        """
+
+        self._wled_service.preset_shoot()
+
+        try:
+            multicam_backend = self._get_multicam_backend()
+            return multicam_backend.wait_for_multicam_files(appconfig.backends.retry_capture)
         except Exception as exc:
             raise exc
         finally:
@@ -155,30 +172,24 @@ class AquisitionService(BaseService):
         set backends to idle mode (called to switched as needed by processingservice)
         called when job is finished
         """
-        if self._main_backend:
-            self._main_backend._on_configure_optimized_for_idle()
-        if self._live_backend:
-            self._live_backend._on_configure_optimized_for_idle()
+        for backend in self._backends:
+            backend._on_configure_optimized_for_idle()
 
     def signalbackend_configure_optimized_for_hq_preview(self):
         """
         set backends to preview mode preparing to hq capture (called to switched as needed by processingservice)
         called on start of countdown
         """
-        if self._main_backend:
-            self._main_backend._on_configure_optimized_for_hq_preview()
-        if self._live_backend:
-            self._live_backend._on_configure_optimized_for_hq_preview()
+        for backend in self._backends:
+            backend._on_configure_optimized_for_hq_preview()
 
     def signalbackend_configure_optimized_for_hq_capture(self):
         """
         set backends to hq capture mode (called to switched as needed by processingservice)
         called right before capture hq still
         """
-        if self._main_backend:
-            self._main_backend._on_configure_optimized_for_hq_capture()
-        if self._live_backend:
-            self._live_backend._on_configure_optimized_for_hq_capture()
+        for backend in self._backends:
+            backend._on_configure_optimized_for_hq_capture()
 
     def signalbackend_configure_optimized_for_video(self):
         """
@@ -207,31 +218,23 @@ class AquisitionService(BaseService):
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
         backend_to_stream_from.device_enable_lores_stream = True
 
-        last_time = time.time_ns()
         while self._running:
-            now_time = time.time_ns()
-            if (now_time - last_time) / 1000**3 >= (1 / appconfig.backends.livestream_framerate):
-                last_time = now_time
+            try:
+                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
+            except StopIteration:
+                logger.info("stream ends due to shutdown aquisitionservice")
+                return
+            except Exception as exc:
+                # this error probably cannot recover.
+                logger.exception(exc)
+                logger.error(f"streaming exception: {exc}")
+                output_jpeg_bytes = __class__._substitute_image(
+                    "Oh no - stream error :(",
+                    f"{type(exc).__name__}, no preview from cam. retrying.",
+                    appconfig.uisettings.livestream_mirror_effect,
+                )
 
-                try:
-                    output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
-                except StopIteration:
-                    logger.info("stream ends due to shutdown aquisitionservice")
-                    return
-                except Exception as exc:
-                    # this error probably cannot recover.
-                    logger.exception(exc)
-                    logger.error(f"streaming exception: {exc}")
-                    output_jpeg_bytes = __class__._substitute_image(
-                        "Oh no - stream error :(",
-                        f"{type(exc).__name__}, no preview from cam. retrying.",
-                        appconfig.uisettings.livestream_mirror_effect,
-                    )
-
-                yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
-
-            # sleep otherwise 100% cpu even if no frame is asked for.
-            time.sleep(0.01)
+            yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
 
     @staticmethod
     @cache
@@ -265,7 +268,3 @@ class AquisitionService(BaseService):
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
-
-    @staticmethod
-    def _is_real_backend(backend):
-        return backend is not None

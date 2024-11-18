@@ -20,7 +20,7 @@ def test_app():
 def test_main_instance():
     from photobooth.__main__ import main
 
-    main(False)
+    main(run_server=False)
 
 
 def test_main_instance_create_dirs_permission_error():

@@ -3,14 +3,15 @@ v4l webcam implementation backend
 """
 
 import logging
-from multiprocessing import Condition, Event, Lock, Process, shared_memory
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from threading import Condition
 
 from linuxpy.video.device import Device, VideoCapture  # type: ignore
 
+from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendV4l2
-from .abstractbackend import AbstractBackend, SharedMemoryDataExch, compile_buffer, decompile_buffer
-
-SHARED_MEMORY_BUFFER_BYTES = 15 * 1024**2
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -23,49 +24,18 @@ class WebcamV4lBackend(AbstractBackend):
     """
 
     def __init__(self, config: GroupBackendV4l2):
-        self._config: GroupBackendV4l2 = config
         super().__init__()
+
+        self._config: GroupBackendV4l2 = config
         self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
-
-        self._img_buffer: SharedMemoryDataExch = SharedMemoryDataExch(
-            sharedmemory=shared_memory.SharedMemory(create=True, size=SHARED_MEMORY_BUFFER_BYTES),
-            condition=Condition(),
-            lock=Lock(),
-        )
-        self._event_proc_shutdown: Event = Event()
-        self._v4l_process: Process = None
-
-    def __del__(self):
-        try:
-            if self._img_buffer:
-                self._img_buffer.sharedmemory.close()
-                self._img_buffer.sharedmemory.unlink()
-        except Exception as exc:
-            # cant use logger any more, just to have some logs to debug if exception
-            print(exc)
-            print("error deconstructing shared memory")
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
+        self._worker_thread: StoppableThread = None
 
     def _device_start(self):
-        """To start the v4l acquisition process"""
-        # start camera
-        self._event_proc_shutdown.clear()
-
         logger.info(f"starting webcam process, {self._config.device_index=}")
 
-        self._v4l_process = Process(
-            target=v4l_img_aquisition,
-            name="WebcamV4lAquisitionProcess",
-            args=(
-                self._img_buffer.sharedmemory.name,
-                self._img_buffer.condition,
-                self._img_buffer.lock,
-                self._config,
-                self._event_proc_shutdown,
-            ),
-            daemon=True,
-        )
-
-        self._v4l_process.start()
+        self._worker_thread = StoppableThread(name="webcamv4l_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
 
         # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
         self._block_until_delivers_lores_images()
@@ -73,13 +43,10 @@ class WebcamV4lBackend(AbstractBackend):
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
-        # signal process to shutdown properly
-        self._event_proc_shutdown.set()
-
         # wait until shutdown finished
-        if self._v4l_process and self._v4l_process.is_alive():
-            self._v4l_process.join()
-            self._v4l_process.close()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
 
@@ -89,23 +56,23 @@ class WebcamV4lBackend(AbstractBackend):
         """
         return is_valid_camera_index(self._config.device_index)
 
-    def _wait_for_hq_image(self):
-        """for other threads to receive a hq JPEG image"""
-        return self._wait_for_lores_image()
+    def _wait_for_multicam_files(self) -> list[Path]:
+        raise RuntimeError("backend does not support multicam files")
 
-    #
-    # INTERNAL FUNCTIONS
-    #
+    def _wait_for_still_file(self) -> Path:
+        """for other threads to receive a hq JPEG image"""
+        with NamedTemporaryFile(mode="wb", delete=False, delete_on_close=False, dir="tmp", prefix="webcamv4l2_") as f:
+            f.write(self._wait_for_lores_image())
+            return Path(f.name)
+
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
 
-        with self._img_buffer.condition:
-            if not self._img_buffer.condition.wait(timeout=0.5):
+        with self._lores_data.condition:
+            if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
-            with self._img_buffer.lock:
-                img = decompile_buffer(self._img_buffer.sharedmemory)
-            return img
+            return self._lores_data.data
 
     def _on_configure_optimized_for_idle(self):
         pass
@@ -116,61 +83,33 @@ class WebcamV4lBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
+    def _worker_fun(self):
+        logger.info("_worker_fun starts")
 
+        with Device.from_id(self._config.device_index) as device:
+            logger.info(f"webcam devices index {self._config.device_index} opened")
+            logger.info(f"webcam info: {device.info.card}")
 
-def v4l_img_aquisition(
-    shm_buffer_name,
-    _condition_img_buffer_ready: Condition,
-    _img_buffer_lock: Lock,
-    _config: GroupBackendV4l2,
-    _event_proc_shutdown: Event,
-):
-    """_summary_
+            try:
+                capture = VideoCapture(device)
+                capture.set_format(self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT, "MJPG")
+            except (AttributeError, FileNotFoundError) as exc:
+                logger.error(f"cannot open camera {self._config.device_index} properly.")
+                logger.exception(exc)
+                raise exc
 
-    Raises:
-        exc: _description_
+            for frame in device:  # forever
+                with self._lores_data.condition:
+                    self._lores_data.data = bytes(frame)
+                    self._lores_data.condition.notify_all()
 
-    Returns:
-        _type_: _description_
-    """
-    # init
-    ## Create a logger. INFO: this logger is in separate process and just logs to console.
-    # Could be replaced in future by a more sophisticated solution
-    logger = logging.getLogger()
-    fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s) proc%(process)d"
-    logging.basicConfig(level=logging.DEBUG, format=fmt)
+                self._frame_tick()
 
-    shm = shared_memory.SharedMemory(shm_buffer_name)
+                # abort streaming on shutdown so process can join and close
+                if self._worker_thread.stopped():
+                    break
 
-    with Device.from_id(_config.device_index) as device:
-        logger.info(f"webcam devices index {_config.device_index} opened")
-        logger.info(f"webcam info: {device.info.card}")
-
-        try:
-            capture = VideoCapture(device)
-            capture.set_format(_config.CAM_RESOLUTION_WIDTH, _config.CAM_RESOLUTION_HEIGHT, "MJPG")
-        except (AttributeError, FileNotFoundError) as exc:
-            logger.error(f"cannot open camera {_config.device_index} properly.")
-            logger.exception(exc)
-            raise exc
-
-        for frame in device:  # forever
-            # put jpeg on queue until full. If full this function blocks until queue empty
-            with _img_buffer_lock:
-                compile_buffer(shm, bytes(frame))
-
-            with _condition_img_buffer_ready:
-                # wait to be notified
-                _condition_img_buffer_ready.notify_all()
-
-            # abort streaming on shutdown so process can join and close
-            if _event_proc_shutdown.is_set():
-                break
-
-    logger.info("v4l_img_aquisition finished, exit")
+        logger.info("v4l_img_aquisition finished, exit")
 
 
 def available_camera_indexes():

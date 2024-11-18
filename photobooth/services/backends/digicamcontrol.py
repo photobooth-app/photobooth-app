@@ -1,41 +1,3 @@
-r"""
-Digicamcontrol backend implementation
-
-Quirks:
-    - using webfrontend only possible via IPv4! Sending requests first to localhost(IPV6) results in timeout,
-      retry and a delay of 2 seconds on every request
-
-How to use Livestream
-    - URL: http://localhost:5513/liveview.jpg
-    - URL to simple digicamcontrol remoteapp: localhost:5513
-    - start liveview:
-    - http://localhost:5513/?CMD=LiveViewWnd_Show
-    - http://localhost:5513/?CMD=All_Minimize  (issue at least one time to hide live preview, window should not popup on further liveview-starts)
-    - stop liveview:
-    - http://localhost:5513/?CMD=LiveViewWnd_Hide
-    - capture from liveview (bad quality):
-    - http://localhost:5513/?CMD=LiveView_Capture
-
-Capture photo
-
-via webinterface:
-    - capture regular photo:
-    http://localhost:5513/?slc=set&param1=session.folder&param2=c:\pictures
-    http://localhost:5513/?slc=set&param1=session.filenametemplate&param2=capture1
-    http://localhost:5513/?slc=capture&param1=&param2=
-    - get session data for debugging:
-    - http://localhost:5513/session.json
-    - download photos:
-    - specific file: http://localhost:5513/image/DSC_0001.jpg
-    - last pic taken: http://localhost:5513/?slc=get&param1=lastcaptured&param2= ("returns a character if capture in progress")
-
-via remotecmd
-    - capture regular photo:
-    CameraControlRemoteCmd.exe /c capture c:\pictures\capture1.jpg
-
-"""
-
-import dataclasses
 import logging
 import tempfile
 import time
@@ -47,44 +9,55 @@ import requests
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendDigicamcontrol
-from .abstractbackend import AbstractBackend
+from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
 
 logger = logging.getLogger(__name__)
 
 
 class DigicamcontrolBackend(AbstractBackend):
-    """
-    The backend implementation using gphoto2
-    """
+    r"""
+    Digicamcontrol backend implementation
 
-    @dataclasses.dataclass
-    class DigicamcontrolDataBytes:
-        """
-        bundle data bytes and it's condition.
-        1) save some instance attributes and
-        2) bundle as it makes sense
-        """
+    Quirks:
+        - using webfrontend only possible via IPv4! Sending requests first to localhost(IPV6) results in timeout,
+          retry and a delay of 2 seconds on every request
 
-        # jpeg data as bytes
-        data: bytes = None
-        # signal to producer that requesting thread is ready to be notified
-        request_hires_still: Event = None
-        # condition when frame is avail
-        condition: Condition = None
+    How to use Livestream
+        - URL: http://localhost:5513/liveview.jpg
+        - URL to simple digicamcontrol remoteapp: localhost:5513
+        - start liveview:
+        - http://localhost:5513/?CMD=LiveViewWnd_Show
+        - http://localhost:5513/?CMD=All_Minimize  (issue at least one time to hide live preview, window should not popup on further liveview-starts)
+        - stop liveview:
+        - http://localhost:5513/?CMD=LiveViewWnd_Hide
+        - capture from liveview (bad quality):
+        - http://localhost:5513/?CMD=LiveView_Capture
+
+    Capture photo
+
+    via webinterface:
+        - capture regular photo:
+        http://localhost:5513/?slc=set&param1=session.folder&param2=c:\pictures
+        http://localhost:5513/?slc=set&param1=session.filenametemplate&param2=capture1
+        http://localhost:5513/?slc=capture&param1=&param2=
+        - get session data for debugging:
+        - http://localhost:5513/session.json
+        - download photos:
+        - specific file: http://localhost:5513/image/DSC_0001.jpg
+        - last pic taken: http://localhost:5513/?slc=get&param1=lastcaptured&param2= ("returns a character if capture in progress")
+
+    via remotecmd
+        - capture regular photo:
+        CameraControlRemoteCmd.exe /c capture c:\pictures\capture1.jpg
+
+    """
 
     def __init__(self, config: GroupBackendDigicamcontrol):
         self._config: GroupBackendDigicamcontrol = config
         super().__init__()
 
-        self._hires_data: __class__.DigicamcontrolDataBytes = __class__.DigicamcontrolDataBytes(
-            data=None,
-            request_hires_still=Event(),
-            condition=Condition(),
-        )
-        self._lores_data: __class__.DigicamcontrolDataBytes = __class__.DigicamcontrolDataBytes(
-            data=None,
-            condition=Condition(),
-        )
+        self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
 
         # worker threads
         self._worker_thread: StoppableThread = None
@@ -131,7 +104,10 @@ class DigicamcontrolBackend(AbstractBackend):
         """
         return len(self.available_camera_indexes()) > 0
 
-    def _wait_for_hq_image(self):
+    def _wait_for_multicam_files(self) -> list[Path]:
+        raise RuntimeError("backend does not support multicam files")
+
+    def _wait_for_still_file(self) -> Path:
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
@@ -139,13 +115,13 @@ class DigicamcontrolBackend(AbstractBackend):
         raise TimeoutError if no frame was received
         """
         with self._hires_data.condition:
-            self._hires_data.request_hires_still.set()
+            self._hires_data.request.set()
 
             if not self._hires_data.condition.wait(timeout=8):
-                self._hires_data.request_hires_still.clear()  # clear hq request even if failed, parent class might retry again
+                self._hires_data.request.clear()  # clear hq request even if failed, parent class might retry again
                 raise TimeoutError("timeout receiving frames")
 
-        return self._hires_data.data
+            return self._hires_data.filepath
 
     #
     # INTERNAL FUNCTIONS
@@ -154,7 +130,7 @@ class DigicamcontrolBackend(AbstractBackend):
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
         flag_logmsg_emitted_once = False
-        while self._hires_data.request_hires_still.is_set():
+        while self._hires_data.request.is_set():
             if not flag_logmsg_emitted_once:
                 logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
                 flag_logmsg_emitted_once = True  # avoid flooding logs
@@ -204,7 +180,7 @@ class DigicamcontrolBackend(AbstractBackend):
         preview_failcounter = 0
 
         while not self._worker_thread.stopped():  # repeat until stopped
-            if self._hires_data.request_hires_still.is_set():
+            if self._hires_data.request.is_set():
                 logger.debug("triggered capture")
 
                 try:
@@ -252,13 +228,9 @@ class DigicamcontrolBackend(AbstractBackend):
                         logger.critical("finally failed after 5 attempts to capture image!")
                         raise RuntimeError("finally failed after 5 attempts to capture image!")
 
-                    logger.info(f"trying to open captured file {captured_filepath}")
-                    with open(captured_filepath, "rb") as fh:
-                        img_bytes = fh.read()
-
                     # success
                     with self._hires_data.condition:
-                        self._hires_data.data = img_bytes
+                        self._hires_data.filepath = captured_filepath
                         self._hires_data.condition.notify_all()
 
                 except Exception as exc:
@@ -266,7 +238,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
                 finally:
                     # only capture one pic and return to lores streaming afterwards
-                    self._hires_data.request_hires_still.clear()
+                    self._hires_data.request.clear()
 
             else:
                 if self.device_enable_lores_stream:
@@ -300,6 +272,8 @@ class DigicamcontrolBackend(AbstractBackend):
                     with self._lores_data.condition:
                         self._lores_data.data = r.content
                         self._lores_data.condition.notify_all()
+
+                    self._frame_tick()
 
                     # limit fps to a reasonable amount. otherwise getting liveview.jpg would lead to 100% cpu as it's getting images way too often.
                     time.sleep(0.1)
