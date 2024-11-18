@@ -8,6 +8,6 @@ logger = logging.getLogger(name=None)
 
 
 def test_main_instance():
-    from photobooth.__main__ import main
+    import photobooth.__main__
 
-    main(run_server=False)
+    photobooth.__main__.main([], run_server=False)

@@ -20,9 +20,6 @@ def _container() -> Container:
     # setup
     container.start()
 
-    # force register listener for testing purposes
-    container.gpio_service.init_io()
-
     # deliver
     yield container
     container.stop()

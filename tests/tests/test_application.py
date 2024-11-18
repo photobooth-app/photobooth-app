@@ -17,12 +17,6 @@ def test_app():
     photobooth.application._create_app()
 
 
-def test_main_instance():
-    from photobooth.__main__ import main
-
-    main(run_server=False)
-
-
 def test_main_instance_create_dirs_permission_error():
     from photobooth.application import _create_basic_folders
 
