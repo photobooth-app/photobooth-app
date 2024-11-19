@@ -5,6 +5,7 @@ from ...utils.helper import get_user_file
 from ..config.groups.actions import (
     AnimationConfigurationSet,
     CollageConfigurationSet,
+    MulticameraConfigurationSet,
     MultiImageJobControl,
     SingleImageConfigurationSet,
     VideoConfigurationSet,
@@ -13,7 +14,7 @@ from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinit
 from ..mediacollection.mediaitem import MediaItem
 from .countdowntimer import CountdownTimer
 
-action_type_literal = Literal["image", "collage", "animation", "video"]
+action_type_literal = Literal["image", "collage", "animation", "video", "multicamera"]
 
 
 class JobModelBase:
@@ -23,6 +24,7 @@ class JobModelBase:
         collage = "collage"
         animation = "animation"
         video = "video"
+        multicamera = "multicamera"
 
     def __init__(
         self,
@@ -195,6 +197,16 @@ class JobModelVideo(JobModelBase):
     def __init__(self, configuration_set: VideoConfigurationSet):
         super().__init__(configuration_set)
         self._typ: __class__.Typ = __class__.Typ.video
+
+        self._total_captures_to_take = 1
+
+        # self._validate_job()
+
+
+class JobModelMulticamera(JobModelBase):
+    def __init__(self, configuration_set: MulticameraConfigurationSet):
+        super().__init__(configuration_set)
+        self._typ: __class__.Typ = __class__.Typ.multicamera
 
         self._total_captures_to_take = 1
 

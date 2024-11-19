@@ -14,7 +14,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import AnimationProcessing, CollageProcessing
+from .config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing
 from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .informationservice import InformationService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
@@ -25,7 +25,15 @@ from .mediaprocessing.processes import (
     process_image_collageimage_animationimage,
     process_video,
 )
-from .processing.jobmodels import JobModelAnimation, JobModelBase, JobModelCollage, JobModelImage, JobModelVideo, action_type_literal
+from .processing.jobmodels import (
+    JobModelAnimation,
+    JobModelBase,
+    JobModelCollage,
+    JobModelImage,
+    JobModelMulticamera,
+    JobModelVideo,
+    action_type_literal,
+)
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
 
@@ -36,6 +44,7 @@ JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE = {
     JobModelBase.Typ.image: MediaItemTypes.image,
     JobModelBase.Typ.collage: MediaItemTypes.collageimage,
     JobModelBase.Typ.animation: MediaItemTypes.animationimage,
+    JobModelBase.Typ.multicamera: MediaItemTypes.multicameraimage,
 }
 
 
@@ -166,6 +175,10 @@ class ProcessingService(BaseService):
                 configurationset = self._get_config_by_index(appconfig.actions.video, action_index)
                 self._start_job(JobModelVideo(configurationset))
                 self._information_service.stats_counter_increment("videos")
+        elif action_type == "multicamera":
+            configurationset = self._get_config_by_index(appconfig.actions.multicamera, action_index)
+            self._start_job(JobModelMulticamera(configurationset))
+            self._information_service.stats_counter_increment("multicamera")
         else:
             raise RuntimeError(f"illegal {action_type=}")
 
@@ -264,7 +277,6 @@ class ProcessingMachine(StateMachine):
 
     @staticmethod
     def create_config_animationimage(configuration_set_processing: AnimationProcessing, index: int = None) -> SinglePictureDefinition:
-        # list only captured_images from merge_definition (excludes predefined)
         captured_images = [item for item in configuration_set_processing.merge_definition if not item.predefined_image]
 
         config_singleimage_captures_for_animation = SinglePictureDefinition(
@@ -272,6 +284,12 @@ class ProcessingMachine(StateMachine):
             img_frame_enable=False,
             filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
         )
+        return config_singleimage_captures_for_animation
+
+    @staticmethod
+    def create_config_multicameraimage(configuration_set_processing: MulticameraProcessing, index: int = None) -> SinglePictureDefinition:
+        # until now just a very basic filter avail applied over all images
+        config_singleimage_captures_for_animation = SinglePictureDefinition(filter=configuration_set_processing.filter.value)
 
         return config_singleimage_captures_for_animation
 
@@ -282,6 +300,8 @@ class ProcessingMachine(StateMachine):
             configuration_set_processing_single = __class__.create_config_collageimage(self.model._configuration_set.processing, index)
         elif media_type is MediaItemTypes.animationimage:
             configuration_set_processing_single = __class__.create_config_animationimage(self.model._configuration_set.processing, index)
+        elif media_type is MediaItemTypes.multicameraimage:
+            configuration_set_processing_single = __class__.create_config_multicameraimage(self.model._configuration_set.processing, index)
         else:
             raise RuntimeError(f"illegal mediatype to process. type {media_type} cant be handled by {__name__}")
 

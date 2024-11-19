@@ -50,6 +50,8 @@ class MediaItemTypes(str, Enum):
     animation = "animation"  # canvas image that was made out of several animation_image
     animationimage = "animationimage"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
     video = "video"  # captured video - h264, mp4 is currently well supported in browsers it seems
+    multicamera = "multicamera"  #  video - h264, mp4, result of multicamera image, example the wigglegram
+    multicameraimage = "multicameraimage"  # captured image that is part of the multicamera item.
 
 
 class MediaItemAllowedFileendings(str, Enum):
@@ -70,6 +72,8 @@ MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
     MediaItemTypes.animation: MediaItemAllowedFileendings.gif,
     MediaItemTypes.animationimage: MediaItemAllowedFileendings.jpg,
     MediaItemTypes.video: MediaItemAllowedFileendings.mp4,
+    MediaItemTypes.multicamera: MediaItemAllowedFileendings.mp4,
+    MediaItemTypes.multicameraimage: MediaItemAllowedFileendings.jpg,
 }
 
 

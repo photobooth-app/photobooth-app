@@ -47,6 +47,7 @@ class StatsCounter:
     collages: int = 0
     animations: int = 0
     videos: int = 0
+    multicamera: int = 0
     shares: int = 0
     limits: dict[str, int] = field(default_factory=dict)
     last_reset: str = None
@@ -60,6 +61,7 @@ class StatsCounter:
             collages=data.get("collages", 0),
             animations=data.get("animations", 0),
             videos=data.get("videos", 0),
+            multicamera=data.get("multicamera", 0),
             shares=data.get("shares", 0),
             limits=data.get("limits", {}),
             last_reset=data.get("last_reset", None),
