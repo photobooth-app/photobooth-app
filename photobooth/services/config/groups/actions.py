@@ -334,6 +334,7 @@ class GroupActions(BaseModel):
                     canvas_height=1280,
                     merge_definition=[
                         CollageMergeDefinition(
+                            description="left",
                             pos_x=160,
                             pos_y=220,
                             width=510,
@@ -342,6 +343,7 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.earlybird,
                         ),
                         CollageMergeDefinition(
+                            description="middle predefined",
                             pos_x=705,
                             pos_y=66,
                             width=510,
@@ -351,6 +353,7 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.original,
                         ),
                         CollageMergeDefinition(
+                            description="right",
                             pos_x=1245,
                             pos_y=220,
                             width=510,

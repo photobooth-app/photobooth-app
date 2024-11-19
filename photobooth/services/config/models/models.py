@@ -87,6 +87,7 @@ class SinglePictureDefinition(BaseModel):
 
 
 class CollageMergeDefinition(BaseModel):
+    description: str = ""
     pos_x: NonNegativeInt = 50
     pos_y: NonNegativeInt = 50
     width: NonNegativeInt = 600

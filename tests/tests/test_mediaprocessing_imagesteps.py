@@ -8,9 +8,18 @@ import pytest
 from PIL import Image
 from pydantic_extra_types.color import Color
 
-import photobooth.services.mediaprocessing.image_pipelinestages as image_stages
 from photobooth.services.config import AppConfig
 from photobooth.services.config.groups.actions import TextsConfig
+from photobooth.services.mediaprocessing.context import ImageContext
+from photobooth.services.mediaprocessing.pipeline import Pipeline
+from photobooth.services.mediaprocessing.steps.image import (
+    FillBackgroundStep,
+    ImageFrameStep,
+    ImageMountStep,
+    Pilgram2Step,
+    RemoveChromakeyStep,
+    TextStep,
+)
 from photobooth.utils.exceptions import PipelineError
 
 from .utils import is_same
@@ -52,7 +61,11 @@ def test_validate_test_method_different():
 
 
 def test_pilgram_stage(pil_image: Image.Image):
-    stage_output = image_stages.pilgram_stage(pil_image, "aden")
+    context = ImageContext(pil_image)
+    steps = [Pilgram2Step("aden")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert pil_image.mode == "RGB"
     assert stage_output.mode == pil_image.mode
@@ -63,9 +76,12 @@ def test_pilgram_stage(pil_image: Image.Image):
 
 def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
-    logger.info(pil_image.mode)
 
-    stage_output = image_stages.pilgram_stage(pil_image, "aden")
+    context = ImageContext(pil_image)
+    steps = [Pilgram2Step("aden")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert pil_image.mode == "RGBA"
     assert stage_output.mode == pil_image.mode
@@ -76,40 +92,57 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
 
 def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
     with pytest.raises(PipelineError):
-        _ = image_stages.pilgram_stage(pil_image, "original")
         # yes right! original is no filter ;)
+        context = ImageContext(pil_image)
+        steps = [Pilgram2Step("original")]
+        pipeline = Pipeline[ImageContext](*steps)
+        pipeline(context)
 
 
 def test_text_stage(pil_image: Image.Image):
     textconfig = [TextsConfig(text="apply text")]
+    context = ImageContext(pil_image)
+    steps = [TextStep(textconfig)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
-    stage_output = image_stages.text_stage(pil_image, textconfig)
-
-    assert pil_image is stage_output  # original IS modified
+    assert pil_image is not stage_output
 
 
 def test_text_stage_fontnotavail(pil_image: Image.Image):
     textconfig = [TextsConfig(text="asdf", font="fontNoFile")]
 
     with pytest.raises(PipelineError):
-        _ = image_stages.text_stage(pil_image, textconfig)
+        context = ImageContext(pil_image)
+        steps = [TextStep(textconfig)]
+        pipeline = Pipeline[ImageContext](*steps)
+        pipeline(context)
 
 
 def test_text_stage_empty_emptyarray_skips(pil_image: Image.Image):
     textconfig = []
 
-    stage_output = image_stages.text_stage(pil_image.copy(), textconfig)
+    context = ImageContext(pil_image)
+    steps = [TextStep(textconfig)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
-    assert pil_image is not stage_output  # original copied here, so not equal
+    assert pil_image is not stage_output  # original copied, so not equal
     assert is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
 
 
 def test_text_stage_empty_emptytext_skips(pil_image: Image.Image):
     textconfig = [TextsConfig(text=""), TextsConfig(pos_x=1), TextsConfig(pos_y=1), TextsConfig(font_size=100)]
 
-    stage_output = image_stages.text_stage(pil_image.copy(), textconfig)
+    context = ImageContext(pil_image)
+    steps = [TextStep(textconfig)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
-    assert pil_image is not stage_output  # original copied here, so not equal
+    assert pil_image is not stage_output  # original copied, so not equal
     assert is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
 
 
@@ -119,7 +152,11 @@ def test_removechromakey_stage(pil_image: Image.Image):
 
     assert pil_image.mode == "RGB"  # before process it's RGB
 
-    stage_output = image_stages.removechromakey_stage(pil_image, keycolor, tolerance)
+    context = ImageContext(pil_image)
+    steps = [RemoveChromakeyStep(keycolor, tolerance)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # after process always RGBA
     assert pil_image is not stage_output  # original copied here, so not equal
@@ -133,7 +170,11 @@ def test_fill_background_stage(pil_image: Image.Image):
     # emulate that some parts of the image are transparent - otherwise background cannot shine through and image data equals.
     pil_image.putalpha(100)
 
-    stage_output = image_stages.image_fill_background_stage(pil_image, Color("yellow"))
+    context = ImageContext(pil_image)
+    steps = [FillBackgroundStep(Color("yellow"))]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -144,7 +185,11 @@ def test_fill_background_stage_notransparency(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
     assert pil_image.mode == "RGBA"  # before process it's RGBA
 
-    stage_output = image_stages.image_fill_background_stage(pil_image, Color("yellow"))
+    context = ImageContext(pil_image)
+    steps = [FillBackgroundStep(Color("yellow"))]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -158,7 +203,11 @@ def test_fill_background_stage_accept_str(pil_image: Image.Image):
     # emulate that some parts of the image are transparent - otherwise background cannot shine through and image data equals.
     pil_image.putalpha(100)
 
-    stage_output = image_stages.image_fill_background_stage(pil_image, "yellow")
+    context = ImageContext(pil_image)
+    steps = [FillBackgroundStep("yellow")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -172,7 +221,11 @@ def test_img_background_stage(pil_image: Image.Image):
     # emulate that some parts of the image are transparent - otherwise background cannot shine through and image data equals.
     pil_image.putalpha(100)
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.jpg")
+    context = ImageContext(pil_image)
+    steps = [ImageMountStep("./backgrounds/pink-7761356_1920.jpg")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -183,9 +236,13 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
     pil_image = pil_image
     assert pil_image.mode == "RGB"  # before process it's RGB
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./backgrounds/pink-7761356_1920.jpg")
+    context = ImageContext(pil_image)
+    steps = [ImageMountStep("./backgrounds/pink-7761356_1920.jpg")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
-    assert stage_output.mode == "RGB"  # ensure it keeps RGBA
+    assert stage_output.mode == "RGB"  # ensure it keeps RGB
     assert pil_image is stage_output  # original is not changed
     assert is_same(pil_image, stage_output)  # pixel are diff because background shines through
 
@@ -194,14 +251,21 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
 
     with pytest.raises(PipelineError):
-        _ = image_stages.image_img_background_stage(pil_image, "./backgrounds/nonexistentfile")
+        context = ImageContext(pil_image)
+        steps = [ImageMountStep("./backgrounds/nonexistentfile")]
+        pipeline = Pipeline[ImageContext](*steps)
+        pipeline(context)
 
 
 def test_img_background_stage_reverse(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
     assert pil_image.mode == "RGBA"  # before process it's RGBA
 
-    stage_output = image_stages.image_img_background_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic-transparency.png", reverse=True)
+    context = ImageContext(pil_image)
+    steps = [ImageMountStep("./tests/assets/frames/polaroid-6125402_1pic-transparency.png", reverse=True)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -209,8 +273,11 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
 
 def test_img_frame_stage(pil_image: Image.Image):
-    stage_output = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic-transparency.png")
-    # stage_output.show()
+    context = ImageContext(pil_image)
+    steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic-transparency.png")]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
 
     assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
     assert pil_image is not stage_output  # original is not changed
@@ -219,16 +286,17 @@ def test_img_frame_stage(pil_image: Image.Image):
 
 def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
     with pytest.raises(PipelineError):
-        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic-notransparency.png")
+        context = ImageContext(pil_image)
+        steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic-notransparency.png")]
+        pipeline = Pipeline[ImageContext](*steps)
+        pipeline(context)
+        _ = context.image
 
 
 def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
     with pytest.raises(PipelineError):
-        _ = image_stages.image_frame_stage(pil_image, "./tests/assets/frames/polaroid-6125402_1pic.jpg")
-
-
-def test_nonexistant_pipelines(pil_image: Image.Image):
-    with pytest.raises(PipelineError):
-        _ = image_stages.beauty_stage(pil_image)
-    with pytest.raises(PipelineError):
-        _ = image_stages.rembg_stage(pil_image)
+        context = ImageContext(pil_image)
+        steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic.jpg")]
+        pipeline = Pipeline[ImageContext](*steps)
+        pipeline(context)
+        _ = context.image

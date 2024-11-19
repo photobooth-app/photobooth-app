@@ -18,6 +18,10 @@ logger = logging.getLogger(name=None)
 @pytest.fixture(scope="module")
 def _container() -> Container:
     # setup
+
+    # tests fail if not enabled
+    appconfig.hardwareinputoutput.gpio_enabled = True
+
     container.start()
 
     # deliver
@@ -67,12 +71,12 @@ def test_button_action_buttons(_container: Container):
 
 
 @patch("subprocess.run")
-def test_button_print(mock_run, _container: Container):
+def test_button_share(mock_run, _container: Container):
     appconfig.share.sharing_enabled = True
 
     # emulate gpio active low driven (simulates button press)
-    for print_button in _container.gpio_service.share_btns:
-        print_button.pin.drive_low()
+    for share_button in _container.gpio_service.share_btns:
+        share_button.pin.drive_low()
 
         # wait debounce time
         time.sleep(DEBOUNCE_TIME + 0.5)

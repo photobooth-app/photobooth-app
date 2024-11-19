@@ -7,7 +7,6 @@ from .services.gpioservice import GpioService
 from .services.informationservice import InformationService
 from .services.loggingservice import LoggingService
 from .services.mediacollectionservice import MediacollectionService
-from .services.mediaprocessingservice import MediaprocessingService
 from .services.processingservice import ProcessingService
 from .services.qrshareservice import QrShareService
 from .services.shareservice import ShareService
@@ -32,9 +31,6 @@ class Container:
         sse_service,
         wled_service,
     )
-    mediaprocessing_service: MediaprocessingService = MediaprocessingService(
-        sse_service,
-    )
     mediacollection_service: MediacollectionService = MediacollectionService(
         sse_service,
     )
@@ -47,7 +43,6 @@ class Container:
         sse_service,
         aquisition_service,
         mediacollection_service,
-        mediaprocessing_service,
         wled_service,
         information_service,
     )

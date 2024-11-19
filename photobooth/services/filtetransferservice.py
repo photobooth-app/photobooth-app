@@ -31,7 +31,6 @@ class FileTransferService(BaseService):
         if not appconfig.filetransfer.enabled:
             self._logger.info("FileTransferService disabled, start aborted.")
             super().disabled()
-
             return
 
         self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)

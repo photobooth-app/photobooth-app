@@ -45,7 +45,7 @@ def is_same(img1: Image.Image, img2: Image.Image):
     return not bool(diff.getbbox())
 
 
-def video_duration(input_video):
+def video_duration(input_video: str):
     result = subprocess.run(
         [
             "ffprobe",

@@ -19,7 +19,12 @@ from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .informationservice import InformationService
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
-from .mediaprocessingservice import MediaprocessingService
+from .mediaprocessing.processes import (
+    process_and_generate_animation,
+    process_and_generate_collage,
+    process_image_collageimage_animationimage,
+    process_video,
+)
 from .processing.jobmodels import JobModelAnimation, JobModelBase, JobModelCollage, JobModelImage, JobModelVideo, action_type_literal
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
@@ -42,14 +47,12 @@ class ProcessingService(BaseService):
         sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
-        mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
         information_service: InformationService,
     ):
         super().__init__(sse_service)
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
         self._wled_service: WledService = wled_service
         self._information_service: InformationService = information_service
 
@@ -110,7 +113,6 @@ class ProcessingService(BaseService):
             self._sse_service,
             self._aquisition_service,
             self._mediacollection_service,
-            self._mediaprocessing_service,
             self._wled_service,
             self._external_cmd_queue,
             job_model,
@@ -222,7 +224,6 @@ class ProcessingMachine(StateMachine):
         sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
-        mediaprocessing_service: MediaprocessingService,
         wled_service: WledService,
         _external_cmd_queue: Queue,
         jobmodel: JobModelBase,
@@ -230,7 +231,6 @@ class ProcessingMachine(StateMachine):
         self._sse_service: SseService = sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._mediaprocessing_service: MediaprocessingService = mediaprocessing_service
         self._wled_service: WledService = wled_service
         self._external_cmd_queue: Queue = _external_cmd_queue
 
@@ -398,7 +398,7 @@ class ProcessingMachine(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        self._mediaprocessing_service.process_image_collageimage_animationimage(mediaitem)
+        process_image_collageimage_animationimage(mediaitem)
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         if not mediaitem.fileset_valid():
@@ -493,7 +493,7 @@ class ProcessingMachine(StateMachine):
                     config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
-            self._mediaprocessing_service.create_collage(self.model._confirmed_captures_collection, phase2_mediaitem)
+            process_and_generate_collage(self.model._confirmed_captures_collection, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
 
@@ -508,7 +508,7 @@ class ProcessingMachine(StateMachine):
                     config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
-            self._mediaprocessing_service.create_animation(self.model._confirmed_captures_collection, phase2_mediaitem)
+            process_and_generate_animation(self.model._confirmed_captures_collection, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
 
@@ -528,7 +528,7 @@ class ProcessingMachine(StateMachine):
                     config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
-            self._mediaprocessing_service.process_video(temp_videofilepath, phase2_mediaitem)
+            process_video(temp_videofilepath, phase2_mediaitem)
 
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
 
