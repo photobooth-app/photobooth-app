@@ -43,10 +43,10 @@ def debounce(timeout: float):
 
 @dataclass
 class StatsCounter:
-    images: int = 0
-    collages: int = 0
-    animations: int = 0
-    videos: int = 0
+    image: int = 0  # these are actually action types - can this be populated automatically?
+    collage: int = 0
+    animation: int = 0
+    video: int = 0
     multicamera: int = 0
     shares: int = 0
     limits: dict[str, int] = field(default_factory=dict)
@@ -57,10 +57,10 @@ class StatsCounter:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            images=data.get("images", 0),
-            collages=data.get("collages", 0),
-            animations=data.get("animations", 0),
-            videos=data.get("videos", 0),
+            image=data.get("image", 0),
+            collage=data.get("collage", 0),
+            animation=data.get("animation", 0),
+            video=data.get("video", 0),
             multicamera=data.get("multicamera", 0),
             shares=data.get("shares", 0),
             limits=data.get("limits", {}),

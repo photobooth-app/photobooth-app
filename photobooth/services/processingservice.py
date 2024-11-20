@@ -14,38 +14,23 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .config import appconfig
-from .config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing
-from .config.models.models import PilgramFilter, SinglePictureDefinition
 from .informationservice import InformationService
+from .jobmodels.animation import JobModelAnimation
+from .jobmodels.base import JobModelBase, action_type_literal
+from .jobmodels.collage import JobModelCollage
+from .jobmodels.image import JobModelImage
+from .jobmodels.multicamera import JobModelMulticamera
+from .jobmodels.video import JobModelVideo
 from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
 from .mediaprocessing.processes import (
-    process_and_generate_animation,
-    process_and_generate_collage,
     process_image_collageimage_animationimage,
     process_video,
-)
-from .processing.jobmodels import (
-    JobModelAnimation,
-    JobModelBase,
-    JobModelCollage,
-    JobModelImage,
-    JobModelMulticamera,
-    JobModelVideo,
-    action_type_literal,
 )
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
 
 logger = logging.getLogger(__name__)
-
-
-JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE = {
-    JobModelBase.Typ.image: MediaItemTypes.image,
-    JobModelBase.Typ.collage: MediaItemTypes.collageimage,
-    JobModelBase.Typ.animation: MediaItemTypes.animationimage,
-    JobModelBase.Typ.multicamera: MediaItemTypes.multicameraimage,
-}
 
 
 class ProcessingService(BaseService):
@@ -139,14 +124,16 @@ class ProcessingService(BaseService):
         if self._state_machine:
             self._state_machine._emit_model_state_update()
 
-    def _get_config_by_index(self, type_actions, index: int = 0):
-        if not type_actions or len(type_actions) == 0:
-            raise RuntimeError("error: empty configuration!")
+    def _get_config_by_index(self, action_type: action_type_literal, index: int = 0):
+        configurationsets = getattr(appconfig.actions, action_type, None)
+        assert configurationsets is not None  # programming error, not raised but test in pytest
+        if len(configurationsets) == 0:  # user config error, raised
+            raise RuntimeError(f"Configuration error: {action_type} has no actions defined!")
 
         try:
-            return type_actions[index]
+            return configurationsets[index]
         except Exception as exc:
-            logger.critical(f"could not find action configuration with index {index}, error {exc}")
+            logger.critical(f"could not find action configuration with index {index} in {configurationsets}, error {exc}")
             raise exc
 
     ### external functions to start processes
@@ -154,33 +141,27 @@ class ProcessingService(BaseService):
     def trigger_action(self, action_type: action_type_literal, action_index: int = 0):
         logger.info(f"trigger {action_type=}, {action_index=}")
 
+        configurationset = self._get_config_by_index(action_type, action_index)
+
         if action_type == "image":
-            configurationset = self._get_config_by_index(appconfig.actions.image, action_index)
             self._start_job(JobModelImage(configurationset))
-            self._information_service.stats_counter_increment("images")
         elif action_type == "collage":
-            configurationset = self._get_config_by_index(appconfig.actions.collage, action_index)
             self._start_job(JobModelCollage(configurationset))
-            self._information_service.stats_counter_increment("collages")
         elif action_type == "animation":
-            configurationset = self._get_config_by_index(appconfig.actions.animation, action_index)
             self._start_job(JobModelAnimation(configurationset))
-            self._information_service.stats_counter_increment("animations")
         elif action_type == "video":
             if self._state_machine is not None:
                 # stop_recording set the counter to 0 and doesn't affect other jobs somehow, so we can just set 0 in else.
                 logger.info("running job, sending stop recording info")
                 self.stop_recording()
             else:
-                configurationset = self._get_config_by_index(appconfig.actions.video, action_index)
                 self._start_job(JobModelVideo(configurationset))
-                self._information_service.stats_counter_increment("videos")
         elif action_type == "multicamera":
-            configurationset = self._get_config_by_index(appconfig.actions.multicamera, action_index)
             self._start_job(JobModelMulticamera(configurationset))
-            self._information_service.stats_counter_increment("multicamera")
         else:
             raise RuntimeError(f"illegal {action_type=}")
+
+        self._information_service.stats_counter_increment(action_type)
 
     def wait_until_job_finished(self):
         if self._process_thread is None:
@@ -223,7 +204,8 @@ class ProcessingMachine(StateMachine):
     ## TRANSITIONS
 
     start = idle.to(counting)
-    _counted = counting.to(capture, unless="jobtype_recording") | counting.to(record, cond="jobtype_recording")
+    _counted_capture = counting.to(capture)
+    _counted_record = counting.to(record)
     _captured = capture.to(approve_capture)
     confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
     reject = approve_capture.to(counting)
@@ -251,61 +233,6 @@ class ProcessingMachine(StateMachine):
 
         # # call StateMachine init fun
         super().__init__(model=jobmodel)
-
-    @staticmethod
-    def create_config_image(configuration_set_processing: SinglePictureDefinition) -> SinglePictureDefinition:
-        config_singleimage = SinglePictureDefinition(**configuration_set_processing.model_dump())
-
-        return config_singleimage
-
-    @staticmethod
-    def create_config_collageimage(configuration_set_processing: CollageProcessing, index: int = None) -> SinglePictureDefinition:
-        # list only captured_images from merge_definition (excludes predefined)
-        captured_images = [item for item in configuration_set_processing.merge_definition if not item.predefined_image]
-
-        config_singleimage_captures_for_collage = SinglePictureDefinition(
-            fill_background_enable=configuration_set_processing.capture_fill_background_enable,
-            fill_background_color=configuration_set_processing.capture_fill_background_color,
-            img_background_enable=configuration_set_processing.capture_img_background_enable,
-            img_background_file=configuration_set_processing.capture_img_background_file,
-            texts_enable=False,
-            img_frame_enable=False,
-            filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
-        )
-
-        return config_singleimage_captures_for_collage
-
-    @staticmethod
-    def create_config_animationimage(configuration_set_processing: AnimationProcessing, index: int = None) -> SinglePictureDefinition:
-        captured_images = [item for item in configuration_set_processing.merge_definition if not item.predefined_image]
-
-        config_singleimage_captures_for_animation = SinglePictureDefinition(
-            texts_enable=False,
-            img_frame_enable=False,
-            filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
-        )
-        return config_singleimage_captures_for_animation
-
-    @staticmethod
-    def create_config_multicameraimage(configuration_set_processing: MulticameraProcessing, index: int = None) -> SinglePictureDefinition:
-        # until now just a very basic filter avail applied over all images
-        config_singleimage_captures_for_animation = SinglePictureDefinition(filter=configuration_set_processing.filter.value)
-
-        return config_singleimage_captures_for_animation
-
-    def get_configurationset_singlepicturedefinition_for_media_type(self, media_type: MediaItemTypes, index: int = None) -> SinglePictureDefinition:
-        if media_type is MediaItemTypes.image:
-            configuration_set_processing_single = __class__.create_config_image(self.model._configuration_set.processing)
-        elif media_type is MediaItemTypes.collageimage:
-            configuration_set_processing_single = __class__.create_config_collageimage(self.model._configuration_set.processing, index)
-        elif media_type is MediaItemTypes.animationimage:
-            configuration_set_processing_single = __class__.create_config_animationimage(self.model._configuration_set.processing, index)
-        elif media_type is MediaItemTypes.multicameraimage:
-            configuration_set_processing_single = __class__.create_config_multicameraimage(self.model._configuration_set.processing, index)
-        else:
-            raise RuntimeError(f"illegal mediatype to process. type {media_type} cant be handled by {__name__}")
-
-        return configuration_set_processing_single
 
     ## state actions
 
@@ -344,12 +271,12 @@ class ProcessingMachine(StateMachine):
         self._wled_service.preset_thrill()
 
         # set backends to capture mode; backends take their own actions if needed.
-        if not self.model.jobtype_recording():
-            # signal the backend we need hq still in every case, except video.
-            self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
-        else:
+        if isinstance(self.model, JobModelVideo):
             # signal the backend we need hq still in every case, except video.
             self._aquisition_service.signalbackend_configure_optimized_for_video()
+        else:
+            # signal the backend we need hq still in every case, except video.
+            self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         self.model.start_countdown(appconfig.backends.countdown_camera_capture_offset)
         logger.info(f"started countdown, duration={self.model._duration_user}, offset_camera={appconfig.backends.countdown_camera_capture_offset}")
@@ -361,7 +288,10 @@ class ProcessingMachine(StateMachine):
         self.model.wait_countdown_finished()  # blocking call
 
         # and now go on
-        self._counted()
+        if isinstance(self.model, JobModelVideo):
+            self._counted_record()
+        else:
+            self._counted_capture()
 
     def on_enter_capture(self):
         """_summary_"""
@@ -373,18 +303,22 @@ class ProcessingMachine(StateMachine):
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
         _hide = getattr(self.model._configuration_set.jobcontrol, "gallery_hide_individual_images", False)
-        _type = JOBTYPE_TO_MEDIAITEM_MAP_CAPTURE_PHASE[self.model._typ]
-        _config = self.get_configurationset_singlepicturedefinition_for_media_type(_type, self.model.number_captures_taken()).model_dump(mode="json")
+        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.number_captures_taken()).model_dump(mode="json")
 
-        mediaitem = MediaItem.create(MetaDataDict(media_type=_type, hide=_hide, config=_config))
+        mediaitem = MediaItem.create(
+            MetaDataDict(
+                media_type=MediaItemTypes.image,  # it is always image here, even if create gif, during capture it's jpg image
+                hide=_hide,
+                config=_config,
+            )
+        )
         logger.debug(f"capture to {mediaitem.path_original=}")
 
-        # signal to backend to switch to hq mode
         self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         start_time_capture = time.time()
-        filepath = self._aquisition_service.wait_for_still_file()  # this function repeats to get images if one capture fails.
 
+        filepath = self._aquisition_service.wait_for_still_file()
         os.rename(filepath, mediaitem.path_original)
 
         # populate image item for further processing:
@@ -400,7 +334,6 @@ class ProcessingMachine(StateMachine):
 
         if not self.model.last_capture_successful():
             logger.critical("on_exit_capture no valid image taken! abort processing")
-            # TODO:self._reset()
             return
 
         ## PHASE 1:
@@ -495,6 +428,27 @@ class ProcessingMachine(StateMachine):
 
         self._aquisition_service.stop_recording()
 
+        # get video in h264 format for further processing.
+        temp_videofilepath = self._aquisition_service.get_recorded_video()
+        logger.debug(f"recorded to {temp_videofilepath=}")
+
+        mediaitem = MediaItem.create(
+            MetaDataDict(
+                media_type=self.model._media_type,
+                hide=False,
+                config=self.model._configuration_set.processing.model_dump(mode="json"),
+            )
+        )
+
+        # apply video phase2 pipeline:
+        tms = time.time()
+        process_video(temp_videofilepath, mediaitem)
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
+
+        # add to collection
+        self.model.set_last_capture(mediaitem)
+        self.model.add_confirmed_capture_to_collection(mediaitem)
+
     def on_enter_captures_completed(self):
         ## PHASE 2:
         # postprocess job as whole, create collage of single images, video...
@@ -502,59 +456,17 @@ class ProcessingMachine(StateMachine):
 
         phase2_mediaitem: MediaItem = None
 
-        if self.model._typ is JobModelBase.Typ.collage:
-            # apply collage phase2 pipeline:
-            tms = time.time()
-
+        if isinstance(self.model, JobModelCollage | JobModelAnimation | JobModelMulticamera):
             phase2_mediaitem = MediaItem.create(
                 MetaDataDict(
-                    media_type=MediaItemTypes.collage,
+                    media_type=self.model._media_type,
                     hide=False,
                     config=self.model._configuration_set.processing.model_dump(mode="json"),
                 )
             )
-            process_and_generate_collage(self.model._confirmed_captures_collection, phase2_mediaitem)
-
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create collage")
-
-        elif self.model._typ is JobModelBase.Typ.animation:
-            # apply animation phase2 pipeline:
             tms = time.time()
-
-            phase2_mediaitem = MediaItem.create(
-                MetaDataDict(
-                    media_type=MediaItemTypes.animation,
-                    hide=False,
-                    config=self.model._configuration_set.processing.model_dump(mode="json"),
-                )
-            )
-            process_and_generate_animation(self.model._confirmed_captures_collection, phase2_mediaitem)
-
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create animation")
-
-        elif self.model._typ is JobModelBase.Typ.video:
-            # apply video phase2 pipeline:
-            tms = time.time()
-
-            # get video in h264 format for further processing.
-            temp_videofilepath = self._aquisition_service.get_recorded_video()
-            logger.debug(f"recorded to {temp_videofilepath=}")
-
-            # populate image item for further processing:
-            phase2_mediaitem = MediaItem.create(
-                MetaDataDict(
-                    media_type=MediaItemTypes.video,
-                    hide=False,
-                    config=self.model._configuration_set.processing.model_dump(mode="json"),
-                )
-            )
-            process_video(temp_videofilepath, phase2_mediaitem)
-
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
-
-        else:
-            pass
-            # nothing to do for other job type
+            self.model.do_phase2_process_and_generate(phase2_mediaitem)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s for phase 2")
 
         # resulting collage mediaitem will be added to the collection as most recent item
         if phase2_mediaitem:

@@ -29,11 +29,6 @@ def process_image_collageimage_animationimage(mediaitem: MediaItem):
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
     the config has to be determined externally.
-
-    Performs following steps:
-    - determine type of image by mediatype media_type (singleimage, collageimage, animationimage), otherwise -> fail!
-    - get config for that type.
-    - process it (all processes are the same, just config is different source)
     """
 
     image = Image.open(mediaitem.path_full_unprocessed)
@@ -216,7 +211,7 @@ def process_and_generate_animation(captured_mediaitems: list[MediaItem], mediait
 
 def get_filter_preview(mediaitem: MediaItem, filter: str = None) -> io.BytesIO:
     # check for type. only specific types can have a filter applied by user
-    if mediaitem.media_type not in (MediaItemTypes.image, MediaItemTypes.collageimage, MediaItemTypes.animationimage):
+    if mediaitem.media_type not in (MediaItemTypes.image,):
         raise ValueError(f"Filter can't be applied for media_type={mediaitem.media_type}!")
 
     image = Image.open(mediaitem.path_thumbnail_unprocessed)

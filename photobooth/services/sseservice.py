@@ -16,8 +16,8 @@ from typing import Any
 from fastapi import Request
 from sse_starlette import ServerSentEvent
 
+from .jobmodels.base import JobModelBase
 from .mediacollection.mediaitem import MediaItem
-from .processing.jobmodels import JobModelBase
 
 logger = logging.getLogger(__name__)
 

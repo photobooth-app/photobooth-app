@@ -1,6 +1,7 @@
-from enum import Enum
+from abc import ABC, abstractmethod
 from typing import Literal
 
+from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
     AnimationConfigurationSet,
@@ -10,27 +11,22 @@ from ..config.groups.actions import (
     SingleImageConfigurationSet,
     VideoConfigurationSet,
 )
-from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
-from ..mediacollection.mediaitem import MediaItem
-from .countdowntimer import CountdownTimer
+from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition, SinglePictureDefinition
+from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
 
 action_type_literal = Literal["image", "collage", "animation", "video", "multicamera"]
 
 
-class JobModelBase:
-    class Typ(str, Enum):
-        undefined = "undefined"
-        image = "image"
-        collage = "collage"
-        animation = "animation"
-        video = "video"
-        multicamera = "multicamera"
-
+class JobModelBase(ABC):
     def __init__(
         self,
-        configuration_set: SingleImageConfigurationSet | CollageConfigurationSet | AnimationConfigurationSet | VideoConfigurationSet,
+        configuration_set: SingleImageConfigurationSet
+        | CollageConfigurationSet
+        | AnimationConfigurationSet
+        | VideoConfigurationSet
+        | MulticameraConfigurationSet,
     ):
-        self._typ: __class__.Typ = __class__.Typ.undefined
+        self._media_type: MediaItemTypes = None
         self._configuration_set = configuration_set
 
         self._total_captures_to_take: int = 0
@@ -63,7 +59,7 @@ class JobModelBase:
 
     def __repr__(self):
         return (
-            f"typ={self._typ}, total_captures_to_take={self._total_captures_to_take}, "
+            f"{self.__class__.__name__}, total_captures_to_take={self._total_captures_to_take}, "
             f"confirmed_captures_collection={self._confirmed_captures_collection}, last_capture={self._last_captured_mediaitem}"
         )
 
@@ -83,7 +79,7 @@ class JobModelBase:
 
         out = dict(
             state=self.state,
-            typ=self._typ,
+            typ=self._media_type.value,
             total_captures_to_take=self.total_captures_to_take(),
             remaining_captures_to_take=self.remaining_captures_to_take(),
             number_captures_taken=self.number_captures_taken(),
@@ -124,13 +120,6 @@ class JobModelBase:
         # display only for collage (multistep process if configured, otherwise always false)
         return self._ask_approval_each_capture
 
-    def jobtype_recording(self) -> bool:
-        # to check if mode is video or HQ captures request
-        if self._typ is __class__.Typ.video:
-            return True
-        else:
-            return False
-
     # external countdown controls
     def start_countdown(self, offset: float = 0.0):
         """Countdown until camera shall trigger
@@ -160,54 +149,10 @@ class JobModelBase:
         self._countdown_timer.wait_countdown_finished()
         self._duration_user = 0
 
+    @abstractmethod
+    def get_phase1_singlepicturedefinition_per_index(index: int = None) -> SinglePictureDefinition:
+        pass
 
-class JobModelImage(JobModelBase):
-    def __init__(self, configuration_set: SingleImageConfigurationSet):
-        super().__init__(configuration_set)
-        self._typ: __class__.Typ = __class__.Typ.image
-
-        self._total_captures_to_take = 1
-
-        # self._validate_job()
-
-
-class JobModelCollage(JobModelBase):
-    def __init__(self, configuration_set: CollageConfigurationSet):
-        super().__init__(configuration_set)
-        self._typ: __class__.Typ = __class__.Typ.collage
-
-        self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
-        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
-
-        # self._validate_job()
-
-
-class JobModelAnimation(JobModelBase):
-    def __init__(self, configuration_set: AnimationConfigurationSet):
-        super().__init__(configuration_set)
-        self._typ: __class__.Typ = __class__.Typ.animation
-
-        self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
-        self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
-
-        # self._validate_job()
-
-
-class JobModelVideo(JobModelBase):
-    def __init__(self, configuration_set: VideoConfigurationSet):
-        super().__init__(configuration_set)
-        self._typ: __class__.Typ = __class__.Typ.video
-
-        self._total_captures_to_take = 1
-
-        # self._validate_job()
-
-
-class JobModelMulticamera(JobModelBase):
-    def __init__(self, configuration_set: MulticameraConfigurationSet):
-        super().__init__(configuration_set)
-        self._typ: __class__.Typ = __class__.Typ.multicamera
-
-        self._total_captures_to_take = 1
-
-        # self._validate_job()
+    @abstractmethod
+    def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
+        pass

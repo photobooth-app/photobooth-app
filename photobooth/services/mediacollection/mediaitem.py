@@ -46,18 +46,14 @@ PATH_THUMBNAIL = "".join([PATH_PROCESSED, "thumbnail/"])
 class MediaItemTypes(str, Enum):
     image = "image"  # captured single image that is NOT part of a collage (normal process)
     collage = "collage"  # canvas image that was made out of several collage_image
-    collageimage = "collageimage"  # captured image that is part of a collage (so it can be treated differently in UI than other images)
     animation = "animation"  # canvas image that was made out of several animation_image
-    animationimage = "animationimage"  # captured image that is part of a animation (so it can be treated differently in UI than other images)
     video = "video"  # captured video - h264, mp4 is currently well supported in browsers it seems
     multicamera = "multicamera"  #  video - h264, mp4, result of multicamera image, example the wigglegram
-    multicameraimage = "multicameraimage"  # captured image that is part of the multicamera item.
 
 
 class MediaItemAllowedFileendings(str, Enum):
     """Define allowed fileendings here so it can be imported from everywhere
     Used in mediacollectionservice to initially import all existing items.
-
     """
 
     jpg = "jpg"  # images
@@ -68,12 +64,9 @@ class MediaItemAllowedFileendings(str, Enum):
 MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
     MediaItemTypes.image: MediaItemAllowedFileendings.jpg,
     MediaItemTypes.collage: MediaItemAllowedFileendings.jpg,
-    MediaItemTypes.collageimage: MediaItemAllowedFileendings.jpg,
     MediaItemTypes.animation: MediaItemAllowedFileendings.gif,
-    MediaItemTypes.animationimage: MediaItemAllowedFileendings.jpg,
     MediaItemTypes.video: MediaItemAllowedFileendings.mp4,
     MediaItemTypes.multicamera: MediaItemAllowedFileendings.mp4,
-    MediaItemTypes.multicameraimage: MediaItemAllowedFileendings.jpg,
 }
 
 

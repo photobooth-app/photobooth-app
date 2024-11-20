@@ -2,7 +2,8 @@ import logging
 import time
 
 from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
-from photobooth.services.processing.jobmodels import CountdownTimer, JobModelImage
+from photobooth.services.jobmodels.base import CountdownTimer
+from photobooth.services.jobmodels.image import JobModelImage
 
 logger = logging.getLogger(name=None)
 

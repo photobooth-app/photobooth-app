@@ -14,9 +14,9 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.actions import GpioTrigger
+from .jobmodels.base import action_type_literal
 from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
-from .processing.jobmodels import action_type_literal
 from .processingservice import ProcessingService
 from .shareservice import ShareService
 from .sseservice import SseService
