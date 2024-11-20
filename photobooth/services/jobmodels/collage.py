@@ -4,9 +4,7 @@ from ..config.groups.actions import (
 )
 from ..config.models.models import PilgramFilter, SinglePictureDefinition
 from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
-from ..mediaprocessing.processes import (
-    process_and_generate_collage,
-)
+from ..mediaprocessing.processes import process_and_generate_collage
 from .base import JobModelBase
 
 

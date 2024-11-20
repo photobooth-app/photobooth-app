@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from wigglecam.connector import CameraNode, CameraPool
 from wigglecam.connector.dto import ConnectorJobRequest
@@ -53,18 +54,21 @@ class WigglecamBackend(AbstractBackend):
         except Exception as exc:
             logger.error(f"Error processing: {exc}")
             logger.info(self._camera_pool.print_nodes_status())
+            raise exc
+        else:
+            # currently only number_captures=1 supported, so we just take the first index from result
+            out = [x.mediaitems[0].filepath for x in downloadresult.node_mediaitems]
 
-        # currently only number_captures=1 supported, so we just take the first index from result
-        out = [x.mediaitems[0].filepath for x in downloadresult.node_mediaitems]
-
-        return out
+            return out
 
     def _wait_for_still_file(self) -> Path:
-        """for other threads to receive a hq JPEG image"""
-        raise NotImplementedError
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="wigglecam_", suffix=".jpg") as f:
+            f.write(self._camera_pool._nodes[self._config.index_backend_stills].camera_still())
+
+            return Path(f.name)
 
     def _wait_for_lores_image(self):
-        raise NotImplementedError
+        return self._camera_pool._nodes[self._config.index_backend_stills].camera_still()
 
     def _on_configure_optimized_for_idle(self):
         pass

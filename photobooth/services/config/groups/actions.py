@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
 from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PilgramFilter, TextsConfig
@@ -246,7 +246,21 @@ class MulticameraProcessing(BaseModel):
 
     model_config = ConfigDict(title="Wigglegram-multicamera processing")
 
-    filter: PilgramFilter = Field(default=PilgramFilter.original)
+    canvas_width: int = Field(
+        default=1500,
+        description="Width (X) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    canvas_height: int = Field(
+        default=900,
+        description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    duration: NonNegativeInt = Field(
+        default=125,
+        description="Duration of each frame in milliseconds. Wigglegrams look good usually between 100-200ms duration.",
+    )
+    filter: PilgramFilter = Field(
+        default=PilgramFilter.original,
+    )
 
 
 class SingleImageConfigurationSet(BaseModel):

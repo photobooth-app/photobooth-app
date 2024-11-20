@@ -24,3 +24,8 @@ class AnimationContext:
 class VideoContext:
     video_in: Path = None
     video_processed: Path = None
+
+
+@dataclass
+class MulticameraContext:
+    images: list[Image.Image] = field(default_factory=list)

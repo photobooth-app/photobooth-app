@@ -4,6 +4,9 @@ from ..config.groups.actions import (
 )
 from ..config.models.models import SinglePictureDefinition
 from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
+from ..mediaprocessing.processes import (
+    process_and_generate_wigglegram,
+)
 from .base import JobModelBase
 
 
@@ -26,5 +29,4 @@ class JobModelMulticamera(JobModelBase):
         )
 
     def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
-        raise NotImplementedError("not yet implemented.")
-        # process_and_generate_multicamera(self._confirmed_captures_collection, phase2_mediaitem)
+        process_and_generate_wigglegram(self._confirmed_captures_collection, phase2_mediaitem)

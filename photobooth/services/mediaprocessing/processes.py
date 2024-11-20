@@ -10,10 +10,10 @@ from pathlib import Path
 from PIL import Image
 
 from ..config import appconfig
-from ..config.groups.actions import AnimationProcessing, CollageProcessing, VideoProcessing
+from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, VideoProcessing
 from ..config.models.models import SinglePictureDefinition
 from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
-from .context import AnimationContext, CollageContext, ImageContext, VideoContext
+from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
@@ -195,10 +195,47 @@ def process_and_generate_animation(captured_mediaitems: list[MediaItem], mediait
         mediaitem.path_original,
         format="gif",
         save_all=True,
-        append_images=sequence_images[1:] if len(sequence_images) > 1 else None,
+        append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
         optimize=True,
         # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
         duration=[definition.duration for definition in config.merge_definition],
+        loop=0,  # loop forever
+    )
+
+    # create scaled versions (unprocessed and processed are same here for now
+    tms = time.time()
+    mediaitem.create_fileset_unprocessed()
+    mediaitem.copy_fileset_processed()
+    logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
+
+
+def process_and_generate_wigglegram(captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
+    # get config from mediaitem, that is passed as json dict (model_dump) along with it
+    config = MulticameraProcessing(**mediaitem._config)
+
+    ## prepare: create canvas
+    canvas_size = (config.canvas_width, config.canvas_height)
+
+    ## stage: merge captured images and predefined to one image with transparency
+    multicamera_images: list[Image.Image] = [Image.open(_captured_mediaitems.path_full) for _captured_mediaitems in captured_mediaitems]
+
+    context = MulticameraContext(multicamera_images)
+    steps = []
+    steps.append(AlignSizesStep(canvas_size))
+    pipeline = Pipeline[MulticameraContext](*steps)
+    pipeline(context)
+
+    sequence_images = context.images
+
+    ## create mediaitem
+    sequence_images[0].save(
+        mediaitem.path_original,
+        format="gif",
+        save_all=True,
+        append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
+        optimize=True,
+        # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
+        duration=125,
         loop=0,  # loop forever
     )
 

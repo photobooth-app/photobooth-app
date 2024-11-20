@@ -66,7 +66,7 @@ MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
     MediaItemTypes.collage: MediaItemAllowedFileendings.jpg,
     MediaItemTypes.animation: MediaItemAllowedFileendings.gif,
     MediaItemTypes.video: MediaItemAllowedFileendings.mp4,
-    MediaItemTypes.multicamera: MediaItemAllowedFileendings.mp4,
+    MediaItemTypes.multicamera: MediaItemAllowedFileendings.gif,
 }
 
 

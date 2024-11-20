@@ -98,10 +98,10 @@ class JobModelBase(ABC):
     def last_capture_successful(self) -> bool:
         return self._last_captured_mediaitem is not None
 
-    def set_last_capture(self, last_mediaitem: MediaItem):
+    def set_last_capture(self, last_mediaitem: MediaItem | list[MediaItem]):
         self._last_captured_mediaitem = last_mediaitem
 
-    def get_last_capture(self) -> MediaItem:
+    def get_last_capture(self) -> MediaItem | list[MediaItem]:
         return self._last_captured_mediaitem
 
     def total_captures_to_take(self) -> int:

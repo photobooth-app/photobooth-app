@@ -196,6 +196,7 @@ class ProcessingMachine(StateMachine):
     idle = State(initial=True)
     counting = State()  # countdown before capture
     capture = State()  # capture from camera include postprocess single img postproc
+    multicapture = State()  # capture from multicapture backend
     record = State()  # record from camera
     approve_capture = State()  # waiting state to approve. transition by confirm,reject or autoconfirm
     captures_completed = State()  # final postproc (mostly to create collage/gif)
@@ -206,7 +207,8 @@ class ProcessingMachine(StateMachine):
     start = idle.to(counting)
     _counted_capture = counting.to(capture)
     _counted_record = counting.to(record)
-    _captured = capture.to(approve_capture)
+    _counted_multicapture = counting.to(multicapture)
+    _captured = capture.to(approve_capture) | multicapture.to(approve_capture)
     confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
     reject = approve_capture.to(counting)
     abort = approve_capture.to(finished)
@@ -290,6 +292,8 @@ class ProcessingMachine(StateMachine):
         # and now go on
         if isinstance(self.model, JobModelVideo):
             self._counted_record()
+        elif isinstance(self.model, JobModelMulticamera):
+            self._counted_multicapture()
         else:
             self._counted_capture()
 
@@ -361,6 +365,67 @@ class ProcessingMachine(StateMachine):
 
         # add to collection
         self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
+
+    def on_enter_multicapture(self):
+        # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
+        # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
+        _hide = getattr(self.model._configuration_set.jobcontrol, "gallery_hide_individual_images", False)
+        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.number_captures_taken()).model_dump(mode="json")
+
+        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+
+        start_time_capture = time.time()
+
+        filepaths = self._aquisition_service.wait_for_multicam_files()
+
+        mediaitems = []
+        for filepath in filepaths:
+            mediaitem = MediaItem.create(MetaDataDict(media_type=MediaItemTypes.image, hide=_hide, config=_config))
+            logger.debug(f"capture to {mediaitem.path_original=}")
+
+            os.rename(filepath, mediaitem.path_original)
+
+            mediaitems.append(mediaitem)
+
+        logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
+
+        self.model.set_last_capture(mediaitems)
+
+        # capture finished, go to next state
+        self._captured()
+
+    def on_exit_multicapture(self):
+        if not self.model.last_capture_successful():
+            logger.critical("on_exit_capture no valid image taken! abort processing")
+            return
+
+        # postprocess each capture individually
+        logger.info("start postprocessing phase 1")
+
+        # load last mediaitem for further processing
+        mediaitems: list[MediaItem] = self.model.get_last_capture()
+        logger.info(f"postprocessing last captures: {mediaitems=}")
+
+        # always create unprocessed versions for later usage
+        tms = time.time()
+        for mediaitem in mediaitems:
+            mediaitem.create_fileset_unprocessed()
+
+            process_image_collageimage_animationimage(mediaitem)
+
+            if not mediaitem.fileset_valid():
+                raise RuntimeError("created fileset invalid! check logs for additional errors")
+
+            # add to collection
+            self.model.add_confirmed_capture_to_collection(mediaitem)
+
+        # this does not make sense actually. it's the last item of a time-sync capture sequence.
+        # since we do not show it anywhere, we just set it like all other jobs but it's not used anyways.
+        self.model.set_last_capture(mediaitem)
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process")
+
+        logger.info(f"capture {mediaitem=} successful")
 
     def on_enter_approve_capture(self):
         logger.info("finished capture")
