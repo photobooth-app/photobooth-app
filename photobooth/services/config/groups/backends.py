@@ -3,7 +3,7 @@ AppConfig class providing central config
 
 """
 
-import platform
+import sys
 from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,10 +12,13 @@ from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
-if platform.system() == "Linux":
-    BackendsPlatform: TypeAlias = BackendsBase | BackendsLinux
-if platform.system() == "Windows":
+
+if sys.platform == "win32":
     BackendsPlatform: TypeAlias = BackendsBase | BackendsWindows
+elif sys.platform == "linux":
+    BackendsPlatform: TypeAlias = BackendsBase | BackendsLinux
+else:
+    BackendsPlatform = BackendsBase
 
 
 class GroupBackendVirtualcamera(BaseModel):
@@ -224,36 +227,22 @@ class GroupBackend(BaseModel):
         default=True,
         description="Selected device will be loaded and started.",
     )
-
-    if platform.system() == "Linux":
-        selected_device: Literal[BackendsBase, BackendsLinux] = Field(
-            title="Configure device",
-            default="VirtualCamera",
-            description="Select backend and configure the device below",
-        )
-    elif platform.system() == "Windows":
-        selected_device: Literal[BackendsBase, BackendsWindows] = Field(
-            title="Configure device",
-            default="VirtualCamera",
-            description="Select backend and configure the device below",
-        )
-    else:
-        selected_device: Literal[BackendsBase] = Field(
-            title="Configure device",
-            default="VirtualCamera",
-            description="Select backend and configure the device below",
-        )
+    selected_device: BackendsPlatform = Field(
+        title="Configure device",
+        default="VirtualCamera",
+        description="Select backend and configure the device below",
+    )
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
     wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
-    if platform.system() == "Linux":
+    if sys.platform == "linux":
         picamera2: GroupBackendPicamera2 = GroupBackendPicamera2()
         webcamv4l: GroupBackendV4l2 = GroupBackendV4l2()
         gphoto2: GroupBackendGphoto2 = GroupBackendGphoto2()
 
-    if platform.system() == "Windows":
+    if sys.platform == "win32":
         digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
 
 
