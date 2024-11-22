@@ -4,6 +4,7 @@ from tempfile import NamedTemporaryFile
 
 from wigglecam.connector import CameraNode, CameraPool
 from wigglecam.connector.dto import ConnectorJobRequest
+from wigglecam.connector.models import ConfigCameraPool
 
 from ..config.groups.backends import GroupBackendWigglecam
 from .abstractbackend import AbstractBackend
@@ -16,6 +17,7 @@ class WigglecamBackend(AbstractBackend):
 
     def __init__(self, config: GroupBackendWigglecam):
         self._config: GroupBackendWigglecam = config
+
         super().__init__()
 
         self._camera_pool: CameraPool = None
@@ -26,7 +28,8 @@ class WigglecamBackend(AbstractBackend):
             node = CameraNode(config=config_node)
             nodes.append(node)
 
-        self._camera_pool: CameraPool = CameraPool(nodes=nodes)
+        self._config_camera_pool = ConfigCameraPool(**self._config.model_dump())  # extract the campoolconfig from wiggle element
+        self._camera_pool: CameraPool = CameraPool(ConfigCameraPool, nodes=nodes)
 
         logger.info(self._camera_pool.get_nodes_status())
         logger.info(self._camera_pool.is_healthy())
@@ -53,7 +56,7 @@ class WigglecamBackend(AbstractBackend):
 
         except Exception as exc:
             logger.error(f"Error processing: {exc}")
-            logger.info(self._camera_pool.print_nodes_status())
+            logger.info(self._camera_pool.get_nodes_status_formatted())
             raise exc
         else:
             # currently only number_captures=1 supported, so we just take the first index from result
