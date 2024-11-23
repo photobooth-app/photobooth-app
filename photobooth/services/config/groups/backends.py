@@ -4,7 +4,7 @@ AppConfig class providing central config
 """
 
 import sys
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
@@ -14,9 +14,9 @@ BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
 
 if sys.platform == "win32":
-    BackendsPlatform: TypeAlias = BackendsBase | BackendsWindows
+    BackendsPlatform = Literal[BackendsBase, BackendsWindows]
 elif sys.platform == "linux":
-    BackendsPlatform: TypeAlias = BackendsBase | BackendsLinux
+    BackendsPlatform = Literal[BackendsBase, BackendsLinux]
 else:
     BackendsPlatform = BackendsBase
 
