@@ -1,6 +1,5 @@
 import logging
 
-import httpx
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -11,17 +10,6 @@ router = APIRouter(
     prefix="/aquisition",
     tags=["aquisition"],
 )
-
-
-@router.get("/stream_proxy.mjpg")
-def video_stream_proxy():
-    async def iterfile():
-        async with httpx.AsyncClient() as client:
-            async with client.stream("GET", "http://wigglecam-dev3:8010/api/camera/stream.mjpg") as r:
-                async for chunk in r.aiter_bytes():
-                    yield chunk
-
-    return StreamingResponse(iterfile(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
 @router.get("/stream.mjpg")

@@ -199,11 +199,11 @@ class GroupBackendDigicamcontrol(BaseModel):
 class GroupBackendWigglecam(ConfigCameraPool):
     model_config = ConfigDict(title="Wigglecam Connector")
 
-    index_backend_stills: int = Field(
+    index_cam_stills: int = Field(
         default=0,
         description="Index of one node below to capture stills.",
     )
-    index_backend_video: int = Field(
+    index_cam_video: int = Field(
         default=0,
         description="Index of one backend below to capture live preview and video.",
     )

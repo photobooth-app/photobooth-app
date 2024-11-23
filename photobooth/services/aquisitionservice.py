@@ -57,7 +57,7 @@ class AquisitionService(BaseService):
         # validate during startup that all indexes are in valid range. TODO: move to pydantic config logic at any point?
         max_index = max(appconfig.backends.index_backend_stills, appconfig.backends.index_backend_video, appconfig.backends.index_backend_multicam)
         if max_index > len(self._backends) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas len(backends)={len(self._backends)}")
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends)-1}")
 
         logger.info(f"loaded backends: {self._backends}")
 

@@ -32,6 +32,11 @@ class WigglecamBackend(AbstractBackend):
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
 
     def _device_start(self):
+        # quick sanity check.
+        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
+        if max_index > len(self._config.nodes) - 1:
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes)-1}")
+
         nodes = []
         for config_node in self._config.nodes:
             node = CameraNode(config=config_node)
@@ -41,7 +46,7 @@ class WigglecamBackend(AbstractBackend):
         self._camera_pool: CameraPool = CameraPool(ConfigCameraPool, nodes=nodes)
 
         logger.info(self._camera_pool.get_nodes_status())
-        logger.info(self._camera_pool.is_healthy())
+        logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
 
         self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -82,18 +87,30 @@ class WigglecamBackend(AbstractBackend):
 
     def _wait_for_still_file(self) -> Path:
         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="wigglecam_", suffix=".jpg") as f:
-            f.write(self._camera_pool._nodes[self._config.index_backend_stills].camera_still())
+            f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
 
             return Path(f.name)
 
     def _wait_for_lores_image(self):
-        return self._camera_pool._nodes[self._config.index_backend_video].camera_still()
-        # """for other threads to receive a lores JPEG image"""
-        # with self._lores_data.condition:
-        #     if not self._lores_data.condition.wait(timeout=0.5):
-        #         raise TimeoutError("timeout receiving frames")
+        """for other threads to receive a lores JPEG image"""
 
-        #     return self._lores_data.data
+        # alternative could be some kind of streaming proxy, but I did not find out yet how to prevent server from
+        # stalling if a request is still open to the stream...
+        # @router.get("/stream_proxy.mjpg")
+        # def video_stream_proxy():
+        #     async def iterfile():
+        #         async with httpx.AsyncClient() as client:
+        #             async with client.stream("GET", "http://wigglecam-dev3:8010/api/camera/stream.mjpg") as r:
+        #                 async for chunk in r.aiter_bytes():
+        #                     yield chunk
+
+        #     return StreamingResponse(iterfile(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+        with self._lores_data.condition:
+            if not self._lores_data.condition.wait(timeout=0.5):
+                raise TimeoutError("timeout receiving frames")
+
+            return self._lores_data.data
 
     def _on_configure_optimized_for_idle(self):
         pass
@@ -107,17 +124,34 @@ class WigglecamBackend(AbstractBackend):
     #
     # INTERNAL IMAGE GENERATOR
     #
+
     def _worker_fun(self):
-        logger.debug("starting digicamcontrol worker function")
+        logger.info("_worker_fun starts")
 
-        # start in preview mode
-        self._on_configure_optimized_for_idle()
-
-        session_live = requests.Session()
-        preview_failcounter = 0
-
-        while not self._worker_thread.stopped():  # repeat until stopped
+        r = requests.get(f"{self._config.nodes[self._config.index_cam_video].base_url}/api/camera/stream.mjpg", stream=True, timeout=(2, 5))
+        try:
+            r.raise_for_status()
+        except Exception as exc:
             time.sleep(1)
-            # TODO: maybe maybe.
+            logger.error(f"error requesting stream, keep trying. error: {exc}")
 
-        logger.warning("_worker_fun exits")
+        bytes = b""
+        for chunk in r.iter_content(chunk_size=1024):
+            bytes += chunk
+            a = bytes.find(b"\xff\xd8")
+            b = bytes.find(b"\xff\xd9")
+            if a != -1 and b != -1:
+                jpeg_bytes = bytes[a : b + 2]
+                bytes = bytes[b + 2 :]
+
+                # notify about jpg
+                with self._lores_data.condition:
+                    self._lores_data.data = jpeg_bytes
+                    self._lores_data.condition.notify_all()
+
+                self._frame_tick()
+
+            if self._worker_thread.stopped():
+                break
+
+        logger.info("_worker_fun left")
