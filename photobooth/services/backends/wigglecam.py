@@ -1,13 +1,17 @@
 import logging
+import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from threading import Condition
 
+import requests
 from wigglecam.connector import CameraNode, CameraPool
 from wigglecam.connector.dto import ConnectorJobRequest
 from wigglecam.connector.models import ConfigCameraPool
 
+from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendWigglecam
-from .abstractbackend import AbstractBackend
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,11 @@ class WigglecamBackend(AbstractBackend):
 
         self._camera_pool: CameraPool = None
 
+        # worker threads
+        self._worker_thread: StoppableThread = None
+
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
+
     def _device_start(self):
         nodes = []
         for config_node in self._config.nodes:
@@ -34,9 +43,16 @@ class WigglecamBackend(AbstractBackend):
         logger.info(self._camera_pool.get_nodes_status())
         logger.info(self._camera_pool.is_healthy())
 
+        self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
+
         logger.debug(f"{self.__module__} started")
 
     def _device_stop(self):
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
+
         logger.debug(f"{self.__module__} stopped")
 
     def _device_available(self) -> bool:
@@ -72,6 +88,12 @@ class WigglecamBackend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         return self._camera_pool._nodes[self._config.index_backend_video].camera_still()
+        # """for other threads to receive a lores JPEG image"""
+        # with self._lores_data.condition:
+        #     if not self._lores_data.condition.wait(timeout=0.5):
+        #         raise TimeoutError("timeout receiving frames")
+
+        #     return self._lores_data.data
 
     def _on_configure_optimized_for_idle(self):
         pass
@@ -81,3 +103,21 @@ class WigglecamBackend(AbstractBackend):
 
     def _on_configure_optimized_for_hq_capture(self):
         pass
+
+    #
+    # INTERNAL IMAGE GENERATOR
+    #
+    def _worker_fun(self):
+        logger.debug("starting digicamcontrol worker function")
+
+        # start in preview mode
+        self._on_configure_optimized_for_idle()
+
+        session_live = requests.Session()
+        preview_failcounter = 0
+
+        while not self._worker_thread.stopped():  # repeat until stopped
+            time.sleep(1)
+            # TODO: maybe maybe.
+
+        logger.warning("_worker_fun exits")
