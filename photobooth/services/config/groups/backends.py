@@ -209,7 +209,7 @@ class GroupBackendWigglecam(ConfigCameraPool):
     )
 
     nodes: list[ConfigCameraNode] = [
-        ConfigCameraNode(description="TestNode", is_primary=True),
+        ConfigCameraNode(description="TestNode"),
     ]
 
 
