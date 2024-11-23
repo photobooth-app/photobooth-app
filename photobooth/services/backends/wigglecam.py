@@ -71,7 +71,7 @@ class WigglecamBackend(AbstractBackend):
             return Path(f.name)
 
     def _wait_for_lores_image(self):
-        return self._camera_pool._nodes[self._config.index_backend_stills].camera_still()
+        return self._camera_pool._nodes[self._config.index_backend_video].camera_still()
 
     def _on_configure_optimized_for_idle(self):
         pass
