@@ -1,4 +1,7 @@
 import logging
+import os
+
+os.environ["OPENCV_LOG_LEVEL"] = "DEBUG"
 
 import cv2
 import numpy as np
