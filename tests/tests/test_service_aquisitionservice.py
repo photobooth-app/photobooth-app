@@ -142,7 +142,7 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            _container.aquisition_service._get_video_backend().stop()
+            _container.aquisition_service._get_video_backend().is_marked_faulty.set()
 
         if i >= 30:
             g_stream.close()

@@ -107,7 +107,7 @@ class AquisitionService(BaseService):
         flag_stopped_orphaned_already = False
 
         while not current_thread().stopped():
-            if not self._device_alive() or any([backend.is_marked_faulty() for backend in self._backends]):
+            if not self._device_alive() or any([backend.is_marked_faulty.is_set() for backend in self._backends]):
                 logger.info("starting devices...")
                 if not flag_stopped_orphaned_already:
                     # to ensure after device was not alive (means just 1 thread stopped), we stop all threads
