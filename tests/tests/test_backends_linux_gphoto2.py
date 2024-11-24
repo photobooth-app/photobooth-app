@@ -2,6 +2,7 @@ import io
 import logging
 import os
 import platform
+import time
 
 import pytest
 from PIL import Image
@@ -99,6 +100,10 @@ def backend_gphoto2():
 ## tests
 
 
+def test_assert_is_alive(backend_gphoto2):
+    assert backend_gphoto2._device_alive()
+
+
 def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 
@@ -112,7 +117,11 @@ def test_get_images_gphoto2(backend_gphoto2):
 
 def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_configure_optimized_for_hq_capture()
+    time.sleep(1)
+    backend_gphoto2._on_configure_optimized_for_hq_preview()
+    time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
+    time.sleep(1)
 
     # change some values
     backend_gphoto2._config.iso_capture = "auto"
@@ -120,15 +129,23 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._config.shutter_speed_capture = "1/20"
     backend_gphoto2._config.shutter_speed_liveview = "1/30"
     backend_gphoto2._on_configure_optimized_for_hq_capture()
+    time.sleep(1)
+    backend_gphoto2._on_configure_optimized_for_hq_preview()
+    time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
+    time.sleep(1)
 
     # and try illegal values that raise exception
     backend_gphoto2._config.iso_capture = "illegal"
     backend_gphoto2._config.iso_liveview = "illegal"
     backend_gphoto2._config.shutter_speed_capture = "illegal"
     backend_gphoto2._config.shutter_speed_liveview = "illegal"
-    backend_gphoto2._on_configure_optimized_for_hq_capture()  # should log an error but ignore and continue
-    backend_gphoto2._on_configure_optimized_for_idle()  # should log an error but ignore and continue
+    backend_gphoto2._on_configure_optimized_for_hq_capture()
+    time.sleep(1)
+    backend_gphoto2._on_configure_optimized_for_hq_preview()
+    time.sleep(1)
+    backend_gphoto2._on_configure_optimized_for_idle()
+    time.sleep(1)
 
 
 def test_get_gphoto2_camera_info(backend_gphoto2):

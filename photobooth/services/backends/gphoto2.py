@@ -67,13 +67,9 @@ class Gphoto2Backend(AbstractBackend):
     def start(self):
         super().start()
 
-        try:
-            self._camera = gp.Camera()  # better use fresh object.
-            self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
-        except gp.GPhoto2Error as exc:
-            logger.exception(exc)
-            logger.critical("camera failed to initialize. no power? no connection? cam on standby?")
-            raise RuntimeError("failed to start up backend") from exc
+        # try open cam. if fails it raises an exception and the supvervisor tries to restart.
+        self._camera = gp.Camera()  # better use fresh object.
+        self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
 
         try:
             logger.info(str(self._camera.get_summary()))

@@ -61,6 +61,10 @@ def backend_v4l():
 ## tests
 
 
+def test_assert_is_alive(backend_v4l):
+    assert backend_v4l._device_alive()
+
+
 def test_get_images_webcamv4l(backend_v4l):
     # get lores and hires images from backend and assert
     get_images(backend_v4l)

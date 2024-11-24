@@ -43,5 +43,9 @@ def backend_wigglecam() -> Generator[WigglecamBackend, None, None]:
     backend.stop()
 
 
+def test_assert_is_alive(emulated_node, backend_wigglecam):
+    assert backend_wigglecam._device_alive()
+
+
 def test_read_still(emulated_node, backend_wigglecam):
     get_images(backend_wigglecam)

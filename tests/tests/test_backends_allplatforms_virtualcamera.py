@@ -28,6 +28,10 @@ def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     backend.stop()
 
 
+def test_assert_is_alive(backend_virtual: VirtualCameraBackend):
+    assert backend_virtual._device_alive()
+
+
 def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
     get_images(backend_virtual)

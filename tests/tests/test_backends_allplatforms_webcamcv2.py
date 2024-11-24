@@ -41,6 +41,10 @@ def backend_cv2() -> WebcamCv2Backend:
     backend.stop()
 
 
+def test_assert_is_alive(backend_cv2):
+    assert backend_cv2._device_alive()
+
+
 def test_get_images_webcamcv2(backend_cv2: WebcamCv2Backend):
     """get lores and hires images from backend and assert"""
     get_images(backend_cv2)

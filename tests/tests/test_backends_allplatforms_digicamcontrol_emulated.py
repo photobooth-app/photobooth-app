@@ -75,6 +75,10 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     httpserver.check_assertions()  # this will raise AssertionError and make the test failing
 
 
+def test_assert_is_alive(backend_digicamcontrol_emulated: DigicamcontrolBackend):
+    assert backend_digicamcontrol_emulated._device_alive()
+
+
 def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol_emulated: DigicamcontrolBackend):
     # ensure its working fine.
     get_images(backend_digicamcontrol_emulated)

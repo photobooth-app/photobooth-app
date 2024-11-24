@@ -1,5 +1,6 @@
 import io
 import logging
+import subprocess
 import time
 from unittest import mock
 from unittest.mock import patch
@@ -45,6 +46,22 @@ def test_getimages_directlyaccess_backends(_container: Container):
     with Image.open(io.BytesIO(_container.aquisition_service._backends[0].wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
+
+
+def test_preload_ffmpeg():
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception("mock error")
+
+    with patch.object(subprocess, "run", error_mock):
+        # no error is raised if load fails.
+        AquisitionService._load_ffmpeg()
+
+
+def test_get_multicam_files(_container: Container):
+    for image in _container.aquisition_service.wait_for_multicam_files():
+        with Image.open(image) as img:
+            logger.info(img)
+            img.verify()
 
 
 def test_getvideo(_container: Container):
