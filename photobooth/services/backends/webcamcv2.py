@@ -63,7 +63,7 @@ class WebcamCv2Backend(AbstractBackend):
         return ret
 
     def _wait_for_multicam_files(self) -> list[Path]:
-        raise RuntimeError("backend does not support multicam files")
+        raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""

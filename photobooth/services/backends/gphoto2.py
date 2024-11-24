@@ -112,7 +112,7 @@ class Gphoto2Backend(AbstractBackend):
         return len(available_camera_indexes()) > 0
 
     def _wait_for_multicam_files(self) -> list[Path]:
-        raise RuntimeError("backend does not support multicam files")
+        raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
         """

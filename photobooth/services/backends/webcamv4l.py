@@ -54,7 +54,7 @@ class WebcamV4lBackend(AbstractBackend):
         return is_valid_camera_index(self._config.device_index)
 
     def _wait_for_multicam_files(self) -> list[Path]:
-        raise RuntimeError("backend does not support multicam files")
+        raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""

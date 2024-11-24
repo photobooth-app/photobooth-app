@@ -205,7 +205,7 @@ class Picamera2Backend(AbstractBackend):
         return tuning
 
     def _wait_for_multicam_files(self) -> list[Path]:
-        raise RuntimeError("backend does not support multicam files")
+        raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
         """
@@ -307,7 +307,7 @@ class Picamera2Backend(AbstractBackend):
         except Exception as exc:
             logger.exception(exc)
             logger.critical(f"error switching mode in picamera due to {exc}")
-            self.stop()  # stop device requested, so supvervisor can restart
+            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
         else:
             self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
             logger.info("switchmode finished successfully")

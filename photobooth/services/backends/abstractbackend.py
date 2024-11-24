@@ -124,6 +124,7 @@ class AbstractBackend(ABC):
         # flat that the actual backend implementation sets via set_is_ready_to_deliver, when the backend can deliver safely
         # images within a usual timeout period.
         self.is_ready_to_deliver: Event = Event()
+        self.is_marked_faulty: Event = Event()
 
         # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
         # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
@@ -160,6 +161,7 @@ class AbstractBackend(ABC):
         # reset the request for this backend to deliver lores frames
         self._device_enable_lores_flag = False
         self._device_set_is_ready_to_deliver(False)
+        self.is_marked_faulty.clear()
 
     @abstractmethod
     def stop(self):
@@ -167,6 +169,7 @@ class AbstractBackend(ABC):
         logger.debug(f"{self.__module__} stop called")
 
         self._device_set_is_ready_to_deliver(False)
+        self.is_marked_faulty.clear()
         self.stop_recording()
 
     @abstractmethod
@@ -204,6 +207,9 @@ class AbstractBackend(ABC):
         for attempt in range(1, retries + 1):
             try:
                 return self._wait_for_multicam_files()
+            except NotImplementedError:
+                # backend does not support, immediately reraise and done.
+                raise
             except Exception as exc:
                 logger.exception(exc)
                 logger.error(f"error capture image. {attempt=}/{retries}, retrying")
@@ -211,7 +217,7 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
+            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
@@ -230,7 +236,7 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
+            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
@@ -275,8 +281,8 @@ class AbstractBackend(ABC):
             logger.critical(f"finally failed after {retries} attempts to capture lores image!")
 
             if self._failing_wait_for_lores_image_is_error:
+                self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
                 logger.error("failing to get lores images from device is considered as error, stopping backend to recover")
-                self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
 
             raise RuntimeError("device raised exception") from exc
 
