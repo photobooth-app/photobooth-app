@@ -34,35 +34,38 @@ class PathListItem:
 
 
 def zipfiles(paths: list[Path]):
+    # TODO: this needs to be a stream object, otherwise everything is in memory at once and likely to fail.
     zip_filename = f"photobooth_archive_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}.zip"
 
-    # create in memory zip file. TODO: improve to lower memory consumption use zip streaming.
-    zip_io = io.BytesIO()
-    zip_file = zipfile.ZipFile(zip_io, "w")
+    # create in memory zip file.
+    zip_bytes_io = io.BytesIO()
+    with zipfile.ZipFile(zip_bytes_io, "w", zipfile.ZIP_STORED) as zip_file:
+        for path in paths:
+            if path.is_dir():
+                files = [f for f in path.rglob("*")]  # walks also through subdirs to get all files
 
-    for path in paths:
-        if path.is_dir():
-            files = [f for f in path.rglob("*")]  # walks also through subdirs to get all files
+                for file in files:
+                    zip_file.write(file.relative_to(Path.cwd()))
 
-            for file in files:
-                zip_file.write(file.relative_to(Path.cwd()))
-
-        else:
-            # is file
-            zip_file.write(path.relative_to(Path.cwd()))
+            else:
+                # is file
+                zip_file.write(path.relative_to(Path.cwd()))
 
     # Must close zip for all contents to be written
-    zip_file.close()
+    # zip_file.close()
 
-    logger.info(f"created {zip_filename}, added {len(zip_file.filelist)}, size {round(len(zip_io.getvalue())/1024**2,2)} MB")
+    logger.info(f"created {zip_filename}, added {len(zip_file.filelist)}, size {round(len(zip_bytes_io.getvalue())/1024**2,2)} MB")
     # logger.debug(zip.namelist())
 
     # Grab ZIP file from in-memory, make response with correct MIME-type
-    return StreamingResponse(
-        iter([zip_io.getvalue()]),
+    response = StreamingResponse(
+        iter([zip_bytes_io.getvalue()]),
         media_type="application/x-zip-compressed",
         headers={"Content-Disposition": f"attachment; filename={zip_filename}.zip"},
     )
+    zip_bytes_io.close()
+
+    return response
 
 
 @router.get("/list/{dir:path}")
