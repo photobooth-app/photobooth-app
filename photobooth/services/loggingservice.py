@@ -137,6 +137,7 @@ class LoggingService(BaseService):
             "PIL.TiffImagePlugin",
             "multipart",
             "v4l2py",
+            "linuxpy",
             "requests",
             "urllib3",
         ]:
