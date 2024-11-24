@@ -304,11 +304,10 @@ class Picamera2Backend(AbstractBackend):
             # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
             # if this happens, backend signals error and shall be restarted.
             self._picamera2.switch_mode(self._current_config)
-        except RuntimeError as exc:
+        except Exception as exc:
             logger.exception(exc)
             logger.critical(f"error switching mode in picamera due to {exc}")
-            # mark as faulty to restart.
-            self.device_set_status_fault_flag()
+            self.stop()  # stop device requested, so supvervisor can restart
         else:
             self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
             logger.info("switchmode finished successfully")
@@ -385,8 +384,8 @@ class Picamera2Backend(AbstractBackend):
 
                     logger.error(f"camera stopped delivering frames, error {exc}")
                     # mark as faulty to restart in case it was not detected by supervisor already.
-                    self.device_set_status_fault_flag()
 
+                    # stop device requested by leaving worker loop, so supvervisor can restart
                     # leave worker function
                     break
 

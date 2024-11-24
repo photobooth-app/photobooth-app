@@ -251,7 +251,7 @@ class Gphoto2Backend(AbstractBackend):
                             except Exception as exc:
                                 pass  # fail in silence, because things got already wrong. this one is just to try to cleanup, might help or not...
 
-                            self.device_set_status_fault_flag()
+                            # stop device requested by leaving worker loop, so supvervisor can restart
                             break
                     else:
                         preview_failcounter = 0
