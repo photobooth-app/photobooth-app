@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import logging
-import os
+import shutil
 import time
 import traceback
 from pathlib import Path
@@ -113,7 +113,7 @@ def process_video(video_in: Path, mediaitem: MediaItem):
 
     # create final video
     tms = time.time()
-    os.rename(video_processed, mediaitem.path_original)
+    shutil.move(video_processed, mediaitem.path_original)
     mediaitem.create_fileset_unprocessed()
     mediaitem.copy_fileset_processed()
     logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")

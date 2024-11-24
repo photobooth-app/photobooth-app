@@ -3,7 +3,7 @@ _summary_
 """
 
 import logging
-import os
+import shutil
 import time
 from queue import Empty, Queue
 from threading import Thread
@@ -323,7 +323,7 @@ class ProcessingMachine(StateMachine):
         start_time_capture = time.time()
 
         filepath = self._aquisition_service.wait_for_still_file()
-        os.rename(filepath, mediaitem.path_original)
+        shutil.move(filepath, mediaitem.path_original)
 
         # populate image item for further processing:
         self.model.set_last_capture(mediaitem)
@@ -383,7 +383,7 @@ class ProcessingMachine(StateMachine):
             mediaitem = MediaItem.create(MetaDataDict(media_type=MediaItemTypes.image, hide=_hide, config=_config))
             logger.debug(f"capture to {mediaitem.path_original=}")
 
-            os.rename(filepath, mediaitem.path_original)
+            shutil.move(filepath, mediaitem.path_original)
 
             mediaitems.append(mediaitem)
 

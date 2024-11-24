@@ -56,6 +56,7 @@ class DigicamcontrolBackend(AbstractBackend):
         self._config: GroupBackendDigicamcontrol = config
         super().__init__(failing_wait_for_lores_image_is_error=False)
 
+        self._enabled_liveview: bool = False
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
@@ -65,6 +66,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
         if not self._device_available():
             raise RuntimeError("empty camera list")
+
+        self._enabled_liveview: bool = False
 
         self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -145,10 +148,9 @@ class DigicamcontrolBackend(AbstractBackend):
         pass
 
     def _on_configure_optimized_for_idle(self):
-        if not self._device_enable_lores_flag:
-            logger.debug("livestream disabled on this backend, skipped optimization")
-            return
+        pass
 
+    def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
         try:
             session = requests.Session()
@@ -161,6 +163,8 @@ class DigicamcontrolBackend(AbstractBackend):
             logger.error("fail set preview mode! no power? no connection?")
         else:
             logger.debug(f"{self.__module__} set preview mode successful")
+
+        self._enabled_liveview = True
 
     #
     # INTERNAL IMAGE GENERATOR
@@ -238,7 +242,11 @@ class DigicamcontrolBackend(AbstractBackend):
                     self._hires_data.request.clear()
 
             else:
-                if self._device_enable_lores_flag:
+                # one time enable liveview
+                if self._device_enable_lores_flag and not self._enabled_liveview:
+                    self._enable_liveview()
+
+                if self._enabled_liveview:
                     try:
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
                         r = session.get(f"{self._config.base_url}/liveview.jpg")

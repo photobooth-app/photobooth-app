@@ -254,7 +254,11 @@ class AbstractBackend(ABC):
             try:
                 return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
             except TimeoutError:
-                continue
+                if self._device_alive():
+                    continue
+                else:
+                    logger.debug("device not alive any more, stopping early lores image delivery.")
+                    break
             except Exception as exc:
                 # other exceptions fail immediately
                 logger.warning("device raised exception (maybe lost connection to device?)")

@@ -4,6 +4,7 @@ Handle all media collection related functions
 
 import logging
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -194,7 +195,7 @@ class MediacollectionService(BaseService):
         try:
             if appconfig.common.users_delete_to_recycle_dir:
                 self._logger.info(f"moving {mediaitem} to recycle directory")
-                os.rename(mediaitem.path_original, Path(RECYCLE_DIR, mediaitem.filename))
+                shutil.move(mediaitem.path_original, Path(RECYCLE_DIR, mediaitem.filename))
             else:
                 os.remove(mediaitem.path_original)
         except FileNotFoundError:
