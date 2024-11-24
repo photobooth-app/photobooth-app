@@ -10,30 +10,13 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum, auto
 from pathlib import Path
+from threading import Event
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
 
 logger = logging.getLogger(__name__)
-
-
-class EnumDeviceStatus(Enum):
-    """enum for device status"""
-
-    initialized = auto()
-    starting = auto()
-    running = auto()
-    stopping = auto()
-    stopped = auto()
-    fault = auto()
-    # halt = auto()
-
-
-#
-# Dataclass for stats
-#
 
 
 @dataclass
@@ -128,31 +111,27 @@ class Framerate:
 
 
 class AbstractBackend(ABC):
-    """
-    photobooth-app abstract to create backends.
-    """
-
     @abstractmethod
-    def __init__(self):
+    def __init__(self, failing_wait_for_lores_image_is_error: bool):
+        # only for (webcam, picam and virtualcamera) error can detected by missing lores img
+        # missing lores images is automatically considered as error
+        self._failing_wait_for_lores_image_is_error: bool = failing_wait_for_lores_image_is_error
+
         # statisitics attributes
         self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
         self._framerate: Framerate = Framerate()
 
-        # (re)connect supervisor attributes
-        self._device_status: EnumDeviceStatus = EnumDeviceStatus.initialized
-        # concrete backend implementation can signal using this flag there is an error and it needs restart.
-        self._device_status_fault_flag: bool = False
+        # flat that the actual backend implementation sets via set_is_ready_to_deliver, when the backend can deliver safely
+        # images within a usual timeout period.
+        self.is_ready_to_deliver: Event = Event()
+
         # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
         # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
         # the backend-implementation has to decide how to handle this once True.
         self._device_enable_lores_flag: bool = False
-        # only for (webcam, picam and virtualcamera) error can detected by missing lores img
-        self._failing_wait_for_lores_image_is_error: bool = False
-        self._connect_thread: StoppableThread = None
 
         # video feature
-        self._video_worker_capture_started = threading.Event()
-        self._video_feature_available: bool = False
+        self._video_worker_capture_started: Event = Event()
         self._video_worker_thread: StoppableThread = None
         self._video_recorded_videofilepath: Path = None
         self._video_framerate: int = None
@@ -165,7 +144,7 @@ class AbstractBackend(ABC):
     def __repr__(self):
         return f"{self.__class__}"
 
-    def stats(self) -> BackendStats:
+    def get_stats(self) -> BackendStats:
         self._backendstats.fps = self._framerate.fps
         return self._backendstats
 
@@ -173,155 +152,38 @@ class AbstractBackend(ABC):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
         self._framerate.current_timestamp = time.monotonic_ns()
 
-    @property
-    def device_status(self) -> EnumDeviceStatus:
-        return self._device_status
-
-    @device_status.setter
-    def device_status(self, value: EnumDeviceStatus):
-        logger.info(f"setting device status from {self._device_status.name} to {value.name}")
-        self._device_status = value
-
-    @property
-    def device_enable_lores_stream(self) -> bool:
-        return self._device_enable_lores_flag
-
-    @device_enable_lores_stream.setter
-    def device_enable_lores_stream(self, value: bool):
-        logger.info(f"setting device enable_lores_flag from {self._device_enable_lores_flag} to {value} on backend {self.__class__.__name__}")
-        self._device_enable_lores_flag = value
-
-    def _connect_fun(self):
-        while not self._connect_thread.stopped():  # repeat until stopped # try to reconnect
-            # is running but problem detected!
-            if self.device_status is EnumDeviceStatus.running and self._device_status_fault_flag is True:
-                logger.info("implementation signaled a fault during run! set status to fault and try to recover.")
-                self.device_status = EnumDeviceStatus.fault
-                try:
-                    self._device_stop()
-                except Exception as exc:
-                    logger.error(f"error stopping faulty backend {exc}, still trying to recover")
-
-            # if running or stopping, busy waiting
-            if self.device_status in (EnumDeviceStatus.running, EnumDeviceStatus.stopping):
-                time.sleep(1)  # abort processing in these states, still need to delay
-                continue
-
-            if self.device_status in (EnumDeviceStatus.initialized, EnumDeviceStatus.stopped, EnumDeviceStatus.fault):
-                logger.info(f"connect_thread device status={self.device_status}, so trying to start")
-                self.device_status = EnumDeviceStatus.starting
-
-            # if not connected, check for device availability as long as not requested to shut down.
-            if self.device_status is EnumDeviceStatus.starting and not self._connect_thread.stopped():
-                logger.info("trying to start backend")
-                try:
-                    # device available, start the backends local functions
-                    if self._device_available():
-                        logger.info("device is available")
-                        self._device_start()
-
-                        # after start ensure idle mode is selected.
-                        self._on_configure_optimized_for_idle()
-
-                        # clear the flag at this point
-                        # if backend needs longer than the amount of time until wait_for_lores_image finally fails (example after 20 retries)
-                        # the device could have set the flag in the meantime again during startup.
-                        self._device_status_fault_flag = False
-
-                        # when _device_start is finished, the device needs to be up and running, access allowed.
-                        # signal that the device can be used externally in general.
-                        self.device_status = EnumDeviceStatus.running
-                        logger.info("device started, set status running")
-                    else:
-                        logger.error("device not available to (re)connect to, retrying")
-                        # status remains starting, so in next loop it retries.
-                        try:
-                            self._device_stop()
-                        except Exception as exc:
-                            logger.error(f"error stopping faulty backend {exc}, still trying to recover")
-
-                except Exception as exc:
-                    logger.exception(exc)
-                    logger.critical("device failed to initialize!")
-                    self.device_status = EnumDeviceStatus.fault
-                    try:
-                        self._device_stop()
-                    except Exception as exc:
-                        logger.error(f"error stopping faulty backend {exc}, still trying to recover")
-
-            time.sleep(1)
-            # next after wait is to check if connect_thread is stopped - in this case no further actions.
-            # means: sleep has to be last statement in while loop
-
-        # supervising connection thread was asked to stop - so we ask device to do the sam
-        logger.info("exit connection supervisor function, stopping device")
-        self._device_stop()
-
-    def _block_until_delivers_lores_images(self):
-        # block until startup completed, this ensures tests work well and backend for sure delivers images if requested
-        for _ in range(1, 20):
-            try:
-                self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
-                break  # stop trying we got an image can leave without hitting else.
-            except TimeoutError:
-                # if timeout occured it will retry several attempts more before finally fail
-                continue
-            except Exception as exc:
-                raise RuntimeError("failed to start up backend due to error") from exc
-        else:
-            # didn't make it within (, xx) retries
-            raise RuntimeError("giving up waiting for backend to start")
-
+    @abstractmethod
     def start(self):
         """To start the backend to serve"""
+        logger.debug(f"{self.__module__} start called")
 
         # reset the request for this backend to deliver lores frames
-        self.device_enable_lores_stream = False
+        self._device_enable_lores_flag = False
+        self._device_set_is_ready_to_deliver(False)
 
-        # disable video feature avail
-        self._video_feature_available = False
-
-        # (re)connect supervisor
-        self._connect_thread = StoppableThread(name="_connect_thread", target=self._connect_fun, daemon=True)
-        self._connect_thread.start()
-
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            # in pytest we need to wait for the connect thread properly set up the device.
-            # if we do not wait, the test is over before the backend is acutually ready to deliver frames and might fail.
-            # in reality this is not an issue
-            logger.info("test environment detected, blocking until backend started")
-            self.block_until_device_is_running()
-            logger.info("backend started, finished blocking")
-
-        # load ffmpeg once to have it in memory. otherwise first video might fail because startup time is not respected by implementation
-        logger.info("running ffmpeg once to have it in memory later for video use")
-        try:
-            subprocess.run(
-                args=["ffmpeg", "-version"],
-                timeout=10,
-                check=True,
-                stdout=subprocess.DEVNULL,
-            )
-        except FileNotFoundError:
-            logger.warning("ffmpeg not found on system. this is not a problem if video functions are not used.")
-        except subprocess.CalledProcessError as exc:
-            # non zero returncode
-            logger.error(f"ffmpeg returned an error: {exc}")
-        except subprocess.TimeoutExpired as exc:
-            logger.error(f"ffmpeg took too long to load, timeout {exc}")
-        else:
-            # no error, service restart ok
-            logger.info("ffmpeg loaded successfully")
-            self._video_feature_available = True
-
+    @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
+        logger.debug(f"{self.__module__} stop called")
 
+        self._device_set_is_ready_to_deliver(False)
         self.stop_recording()
 
-        if self._connect_thread and self._connect_thread.is_alive():
-            self._connect_thread.stop()
-            self._connect_thread.join()
+    @abstractmethod
+    def _device_alive(self) -> bool:
+        # no threads to supervise here.
+        return True
+
+    def _device_set_is_ready_to_deliver(self, flag: bool = True):
+        """
+        called by backend, when ready to deliver frames or not any more
+        """
+        if flag:
+            self.is_ready_to_deliver.set()
+        else:
+            self.is_ready_to_deliver.clear()
+
+        logger.info(f"device signals is ready to deliver now={flag}")
 
     def block_until_device_is_running(self):
         """Mostly used for testing to ensure the device is up.
@@ -329,18 +191,10 @@ class AbstractBackend(ABC):
         Returns:
             _type_: _description_
         """
-        while self.device_status is not EnumDeviceStatus.running:
-            logger.debug("waiting")
-            time.sleep(0.2)
-
-        logger.info("device status is running now")
-
-    def device_set_status_fault_flag(self):
-        if self.device_status is EnumDeviceStatus.running:
-            logger.info("set flag to indicate fault in device despite backend shall be in running mode")
-            self._device_status_fault_flag = True
-        else:
-            logger.info(f"ignored to flag device as faulty because not in running mode, mode is {self.device_status}")
+        timeout = 10
+        logger.info(f"waiting for device to be ready to deliver until timeout={timeout}")
+        self.is_ready_to_deliver.wait(timeout=timeout)
+        logger.debug("continue, device signaled is ready to deliver")
 
     def wait_for_multicam_files(self, retries: int = 3) -> list[Path]:
         """
@@ -357,7 +211,7 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.device_set_status_fault_flag()
+            self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
@@ -376,7 +230,7 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.device_set_status_fault_flag()
+            self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
@@ -394,17 +248,13 @@ class AbstractBackend(ABC):
         Returns:
             _type_: _description_
         """
+        self._device_enable_lores_flag = True
 
         for _ in range(1, retries):
             try:
                 return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
             except TimeoutError:
-                # if timeout occured it will retry several attempts more before finally fail (else of for below)
-                # logger.debug(f"device timed out deliver lores image ({attempt}/{retries}).")  # removed to avoid too many log entries.
-                if self._connect_thread and self._connect_thread.stopped():
-                    raise StopIteration("backend is shutting down") from None  # allows calling function to stop requesting images if app shuts down
-                else:
-                    continue
+                continue
             except Exception as exc:
                 # other exceptions fail immediately
                 logger.warning("device raised exception (maybe lost connection to device?)")
@@ -421,15 +271,12 @@ class AbstractBackend(ABC):
             logger.critical(f"finally failed after {retries} attempts to capture lores image!")
 
             if self._failing_wait_for_lores_image_is_error:
-                logger.error("failing to get lores images from device is considered as error, set fault flag to recover.")
-                self.device_set_status_fault_flag()
+                logger.error("failing to get lores images from device is considered as error, stopping backend to recover")
+                self.stop()  # right now we stop the backend, so it will be not alive and restarted from outer service
 
             raise RuntimeError("device raised exception") from exc
 
     def start_recording(self, video_framerate: int):
-        if not self._video_feature_available:
-            raise RuntimeError("video feature is not available. check logs for more information. maybe ffmpeg missing?")
-
         self._video_worker_capture_started.clear()
         self._video_framerate = video_framerate
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
@@ -519,15 +366,19 @@ class AbstractBackend(ABC):
             + [str(mp4_output_filepath)]
         )
 
-        ffmpeg_subprocess = subprocess.Popen(
-            ffmpeg_command,
-            stdin=subprocess.PIPE,
-            # following report is workaround to avoid deadlock by pushing too much output in stdout/err
-            # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
-            env=dict(os.environ, FFREPORT="file=./log/ffmpeg-last.log:level=32"),
-            # stdout=subprocess.PIPE,
-            # stderr=subprocess.STDOUT,
-        )
+        try:
+            ffmpeg_subprocess = subprocess.Popen(
+                ffmpeg_command,
+                stdin=subprocess.PIPE,
+                # following report is workaround to avoid deadlock by pushing too much output in stdout/err
+                # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
+                env=dict(os.environ, FFREPORT="file=./log/ffmpeg-last.log:level=32"),
+                # stdout=subprocess.PIPE,
+                # stderr=subprocess.STDOUT,
+            )
+        except Exception as exc:
+            logger.error(f"starting ffmpeg failed: {exc}")
+            return
 
         logger.info("writing to ffmpeg stdin")
         tms = time.time()
@@ -578,18 +429,6 @@ class AbstractBackend(ABC):
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
     #
-
-    @abstractmethod
-    def _device_start(self):
-        """
-        start the device ()
-        """
-
-    @abstractmethod
-    def _device_stop(self):
-        """
-        stop the device ()
-        """
 
     @abstractmethod
     def _device_available(self) -> bool:

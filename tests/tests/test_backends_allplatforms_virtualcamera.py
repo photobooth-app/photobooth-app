@@ -4,8 +4,7 @@ Testing VIRTUALCAMERA Backend
 
 import logging
 import time
-from unittest import mock
-from unittest.mock import patch
+from collections.abc import Generator
 
 import pytest
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def backend_virtual() -> VirtualCameraBackend:
+def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     # setup
     backend = VirtualCameraBackend(GroupBackendVirtualcamera())
 
@@ -34,41 +33,10 @@ def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
     get_images(backend_virtual)
 
 
-def test_get_images_virtualcamera_force_processexit_ensure_recovery(backend_virtual: VirtualCameraBackend):
-    """get lores and hires images from backend and assert"""
-    get_images(backend_virtual)
-
-    # force process to exit, which equals a device failing.
-    logger.info("killing virtualcamera process to simulate failing device")
-    backend_virtual._device_stop()
-
-    with pytest.raises(RuntimeError):
-        # lores stream is used to detect if a backend failed.
-        backend_virtual.wait_for_lores_image(1)
-
-    logger.info("trying to get images again, fails if not restarted by supervisor")
-    get_images(backend_virtual)
-
-
-def test_get_images_virtualcamera_force_hqstillfail_ensure_recovery(backend_virtual: VirtualCameraBackend):
-    """get lores and hires images from backend and assert"""
-    get_images(backend_virtual)
-
-    error_mock = mock.MagicMock()
-    error_mock.side_effect = TimeoutError("mock timeouterror during hq capture")
-
-    with patch.object(VirtualCameraBackend, "_wait_for_still_file", error_mock):
-        with pytest.raises(RuntimeError):
-            backend_virtual.wait_for_still_file()
-
-    logger.info("trying to get images again after provoked fail and backend restart.")
-    get_images(backend_virtual)
-
-
 def test_get_video_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
     backend_virtual.start_recording(video_framerate=5)
-    time.sleep(6)
+    time.sleep(2)
     backend_virtual.stop_recording()
 
     videopath = backend_virtual.get_recorded_video()

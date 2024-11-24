@@ -43,15 +43,9 @@ class PicamLoresData(io.BufferedIOBase):
 
 
 class Picamera2Backend(AbstractBackend):
-    """
-    The backend implementation using picamera2
-    """
-
     def __init__(self, config: GroupBackendPicamera2):
         self._config: GroupBackendPicamera2 = config
-        super().__init__()
-        # public props (defined in abstract class also)
-        self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
+        super().__init__(failing_wait_for_lores_image_is_error=True)
 
         # private props
         self._picamera2: Picamera2 = None
@@ -75,8 +69,9 @@ class Picamera2Backend(AbstractBackend):
 
         logger.info(f"global_camera_info {Picamera2.global_camera_info()}")
 
-    def _device_start(self):
-        """To start the backend, configure picamera2"""
+    def start(self):
+        super().start()
+
         self._lores_data: PicamLoresData = PicamLoresData()
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
 
@@ -144,25 +139,18 @@ class Picamera2Backend(AbstractBackend):
         self._worker_thread = StoppableThread(name="_picamera2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
-        self._block_until_delivers_lores_images()
-
         self._init_autofocus()
 
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
-        """To stop the FrameServer, first stop any client threads (that might be
-        blocked in wait_for_frame), then call this stop method. Don't stop the
-        Picamera2 object until the FrameServer has been stopped."""
-        if self._worker_thread and self._worker_thread.is_alive():
-            logger.debug("stopping")
-            self._worker_thread.stop()
-            logger.debug("stopped")
-            self._worker_thread.join()
-            logger.debug("joined")
+    def stop(self):
+        super().stop()
 
-        logger.debug("stop encoder")
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
+
+        logger.debug("stopping encoder")
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
             self._picamera2.stop_encoder()
@@ -170,9 +158,13 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
             del self._picamera2
 
-        logger.debug("closed")
+        logger.debug(f"{self.__module__} stopped")
 
-        logger.debug(f"{self.__module__} stopped,  {self._worker_thread.is_alive()=}")
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
@@ -346,6 +338,8 @@ class Picamera2Backend(AbstractBackend):
     def _worker_fun(self):
         _metadata = None
 
+        self._device_set_is_ready_to_deliver()
+
         while not self._worker_thread.stopped():  # repeat until stopped
             if self._hires_data.request.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
@@ -413,4 +407,5 @@ class Picamera2Backend(AbstractBackend):
 
             self._frame_tick()
 
+        self._device_set_is_ready_to_deliver(False)
         logger.info("_generate_images_fun left")

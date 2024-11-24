@@ -54,8 +54,8 @@ def test_getImages(backend_picamera2):
 
 def test_get_video_picamera2(backend_picamera2):
     """get lores and hires images from backend and assert"""
-    backend_picamera2.start_recording(5)
-    time.sleep(6)
+    backend_picamera2.start_recording(video_framerate=5)
+    time.sleep(2)
     backend_picamera2.stop_recording()
 
     videopath = backend_picamera2.get_recorded_video()

@@ -17,38 +17,35 @@ logger = logging.getLogger(__name__)
 
 
 class WebcamV4lBackend(AbstractBackend):
-    """_summary_
-
-    Args:
-        AbstractBackend (_type_): _description_
-    """
-
     def __init__(self, config: GroupBackendV4l2):
-        super().__init__()
-
         self._config: GroupBackendV4l2 = config
-        self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
+        super().__init__(failing_wait_for_lores_image_is_error=True)
+
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
 
-    def _device_start(self):
-        logger.info(f"starting webcam process, {self._config.device_index=}")
+    def start(self):
+        super().start()
 
         self._worker_thread = StoppableThread(name="webcamv4l_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
-        self._block_until_delivers_lores_images()
-
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
-        # wait until shutdown finished
+    def stop(self):
+        super().stop()
+
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self):
         """
@@ -85,6 +82,7 @@ class WebcamV4lBackend(AbstractBackend):
 
     def _worker_fun(self):
         logger.info("_worker_fun starts")
+        logger.info(f"trying to open camera index={self._config.device_index=}")
 
         with Device.from_id(self._config.device_index) as device:
             logger.info(f"webcam devices index {self._config.device_index} opened")
@@ -98,6 +96,8 @@ class WebcamV4lBackend(AbstractBackend):
                 logger.exception(exc)
                 raise exc
 
+            self._device_set_is_ready_to_deliver()
+
             for frame in device:  # forever
                 with self._lores_data.condition:
                     self._lores_data.data = bytes(frame)
@@ -109,6 +109,7 @@ class WebcamV4lBackend(AbstractBackend):
                 if self._worker_thread.stopped():
                     break
 
+        self._device_set_is_ready_to_deliver(False)
         logger.info("v4l_img_aquisition finished, exit")
 
 

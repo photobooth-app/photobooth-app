@@ -58,77 +58,6 @@ def test_getvideo(_container: Container):
     assert videopath and videopath.is_file()
 
 
-# def test_getimages_change_backend_during_runtime(_container: Container):
-#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-#     appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
-
-#     # shutdown/init to restart resources
-#     _container.aquisition_service.stop()
-#     _container.aquisition_service.start()
-
-#     # main gives image
-#     with Image.open(_container.aquisition_service._main_backend.wait_for_still_file()) as img:
-#         logger.info(img)
-#         img.verify()
-
-#     # secondary fails, because disabled
-#     assert _container.aquisition_service._live_backend is None
-
-#     # now reconfigure
-#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-
-#     # shutdown/init to restart resources
-#     _container.aquisition_service.stop()
-#     _container.aquisition_service.start()
-
-#     # now main and secondary provide images
-#     with Image.open(_container.aquisition_service._main_backend.wait_for_still_file()) as img:
-#         logger.info(img)
-#         img.verify()
-
-#     # secondary
-#     with Image.open(_container.aquisition_service._live_backend.wait_for_still_file()) as img:
-#         logger.info(img)
-#         img.verify()
-
-
-# def test_gen_stream_main_backend(_container: Container):
-#     # now reconfigure
-#     appconfig.backends.enable_livestream = True
-#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-#     appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
-
-#     _container.aquisition_service.stop()
-#     _container.aquisition_service.start()
-
-#     assert _container.aquisition_service.gen_stream()
-
-
-# def test_get_stats(_container: Container):
-#     # now reconfigure
-#     appconfig.backends.enable_livestream = True
-#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-#     _container.aquisition_service.stop()
-#     _container.aquisition_service.start()
-
-#     logger.info(_container.aquisition_service.stats())
-
-
-# def test_switch_modes(_container: Container):
-#     # now reconfigure
-#     appconfig.backends.enable_livestream = True
-#     appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-#     appconfig.backends.group_live.active_backend: backends_live_concat = "VirtualCamera"
-#     _container.aquisition_service.stop()
-#     _container.aquisition_service.start()
-
-#     _container.aquisition_service.signalbackend_configure_optimized_for_idle()
-#     _container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
-#     _container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
-#     _container.aquisition_service.signalbackend_configure_optimized_for_video()
-
-
 def test_simulated_init_exceptions(_container: Container):
     # test to ensure a failing backend doesnt break the whole system due to uncatched exceptions
     from photobooth.services.backends.virtualcamera import VirtualCameraBackend
@@ -187,6 +116,7 @@ def test_get_livestream_virtualcamera(_container: Container):
 
     i = 0
     for frame in g_stream:  # frame is bytes
+        i = i + 1
         frame: bytes
 
         # ensure we always receive a valid jpeg frame, nothing else.
@@ -195,13 +125,10 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            logger.info("setting device_set_status_fault_flag True")
-            _container.aquisition_service._get_video_backend().device_set_status_fault_flag()
+            _container.aquisition_service._get_video_backend().stop()
 
-        if i > 30:
+        if i >= 30:
             g_stream.close()
-
-        i = i + 1
 
 
 def test_get_substitute_image(_container: Container):

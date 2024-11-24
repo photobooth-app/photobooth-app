@@ -17,21 +17,18 @@ logger = logging.getLogger(__name__)
 
 
 class WigglecamBackend(AbstractBackend):
-    """Virtual camera backend to test photobooth"""
-
     def __init__(self, config: GroupBackendWigglecam):
         self._config: GroupBackendWigglecam = config
-
-        super().__init__()
+        super().__init__(failing_wait_for_lores_image_is_error=False)
 
         self._camera_pool: CameraPool = None
 
-        # worker threads
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
+    def start(self):
+        super().start()
 
-    def _device_start(self):
         # quick sanity check.
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
         if max_index > len(self._config.nodes) - 1:
@@ -48,17 +45,25 @@ class WigglecamBackend(AbstractBackend):
         logger.info(self._camera_pool.get_nodes_status())
         logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
 
-        self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread = StoppableThread(name="wigglecam_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
+    def stop(self):
+        super().stop()
+
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self) -> bool:
         return True
@@ -128,30 +133,39 @@ class WigglecamBackend(AbstractBackend):
     def _worker_fun(self):
         logger.info("_worker_fun starts")
 
-        r = requests.get(f"{self._config.nodes[self._config.index_cam_video].base_url}/api/camera/stream.mjpg", stream=True, timeout=(2, 5))
-        try:
-            r.raise_for_status()
-        except Exception as exc:
-            time.sleep(1)
-            logger.error(f"error requesting stream, keep trying. error: {exc}")
+        self._device_set_is_ready_to_deliver()
 
-        bytes = b""
-        for chunk in r.iter_content(chunk_size=1024):
-            bytes += chunk
-            a = bytes.find(b"\xff\xd8")
-            b = bytes.find(b"\xff\xd9")
-            if a != -1 and b != -1:
-                jpeg_bytes = bytes[a : b + 2]
-                bytes = bytes[b + 2 :]
+        while not self._worker_thread.stopped():
+            if self._device_enable_lores_flag:
+                try:
+                    r = requests.get(
+                        f"{self._config.nodes[self._config.index_cam_video].base_url}/api/camera/stream.mjpg", stream=True, timeout=(2, 5)
+                    )
+                    r.raise_for_status()
+                except Exception as exc:
+                    time.sleep(1)
+                    logger.error(f"error requesting stream, keep trying. error: {exc}")
 
-                # notify about jpg
-                with self._lores_data.condition:
-                    self._lores_data.data = jpeg_bytes
-                    self._lores_data.condition.notify_all()
+                bytes = b""
+                for chunk in r.iter_content(chunk_size=1024):
+                    bytes += chunk
+                    a = bytes.find(b"\xff\xd8")
+                    b = bytes.find(b"\xff\xd9")
+                    if a != -1 and b != -1:
+                        jpeg_bytes = bytes[a : b + 2]
+                        bytes = bytes[b + 2 :]
 
-                self._frame_tick()
+                        # notify about jpg
+                        with self._lores_data.condition:
+                            self._lores_data.data = jpeg_bytes
+                            self._lores_data.condition.notify_all()
 
-            if self._worker_thread.stopped():
-                break
+                        self._frame_tick()
 
+                    if self._worker_thread.stopped():
+                        break
+            else:
+                time.sleep(0.1)
+
+        self._device_set_is_ready_to_deliver(False)
         logger.info("_worker_fun left")

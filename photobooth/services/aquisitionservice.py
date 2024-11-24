@@ -4,13 +4,17 @@ manage up to two photobooth-app backends in this module
 
 import dataclasses
 import logging
+import subprocess
+import time
 from functools import cache
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
+from threading import current_thread
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
 from .baseservice import BaseService
 from .config import appconfig
@@ -21,21 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 class AquisitionService(BaseService):
-    """
-    Class managing photobooth-app backends
-    MAIN: used for high quality still pictures
-    LIVE: used for streams and live previews
-          (can be used additionally if MAIN is not capable to deliver video)
-    """
-
     def __init__(self, sse_service: SseService, wled_service: WledService):
         super().__init__(sse_service=sse_service)
         self._wled_service: WledService = wled_service
 
         self._backends: list[AbstractBackend] = None
+        self._supervisor_thread: StoppableThread = None
 
     def start(self):
-        """start backends"""
         super().start()
 
         self._backends: list[AbstractBackend] = []
@@ -61,6 +58,26 @@ class AquisitionService(BaseService):
 
         logger.info(f"loaded backends: {self._backends}")
 
+        self._load_ffmpeg()
+
+        self._supervisor_thread = StoppableThread(name="_supervisor_thread", target=self._supervisor_fun, args=(), daemon=True)
+        self._supervisor_thread.start()
+
+        super().started()
+
+    def stop(self):
+        """stop backends"""
+        super().stop()
+
+        if self._supervisor_thread and self._supervisor_thread.is_alive():
+            self._supervisor_thread.stop()
+            self._supervisor_thread.join()
+
+        super().stopped()
+
+    def _device_start(self):
+        logger.info("starting device")
+
         try:
             for backend in self._backends:
                 backend.start()
@@ -72,19 +89,52 @@ class AquisitionService(BaseService):
 
             return
 
-        super().started()
+        logger.info("device started")
 
-    def stop(self):
-        """stop backends"""
-        super().stop()
-
+    def _device_stop(self):
         if not self._backends:
             return
 
         for backend in self._backends:
             backend.stop()
 
-        super().stopped()
+    def _device_alive(self):
+        backends_are_alive = all([backend._device_alive() for backend in self._backends])
+        return backends_are_alive and True
+
+    def _supervisor_fun(self):
+        logger.info("device supervisor started, checking for clock, then starting device")
+        flag_stopped_orphaned_already = False
+
+        while not current_thread().stopped():
+            if not self._device_alive():
+                logger.info("starting devices...")
+                if not flag_stopped_orphaned_already:
+                    # to ensure after device was not alive (means just 1 thread stopped), we stop all threads
+                    self._device_stop()
+                    flag_stopped_orphaned_already = True
+
+                flag_stopped_orphaned_already = False
+
+                try:
+                    self._device_start()
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.error(f"error starting device: {exc}")
+
+                    self._device_stop()
+
+            # wait up to 3 seconds but in smaller increments so if service is stopped,
+            # break out of the sleep loop. since .stopped is true, the outer while is also left.
+            for _ in range(30):
+                time.sleep(0.1)
+                if current_thread().stopped():
+                    break
+
+        logger.info("device supervisor exit, stopping devices")
+        self._device_stop()  # safety first, maybe it's double stopped, but prevent any stalling of device-threads
+
+        logger.info("left _supervisor_fun")
 
     def stats(self):
         """
@@ -96,7 +146,7 @@ class AquisitionService(BaseService):
         """
         aquisition_stats = {}
         for backend in self._backends:
-            stats = dataclasses.asdict(backend.stats())
+            stats = dataclasses.asdict(backend.get_stats())
             aquisition_stats |= {str(backend): stats}
 
         return aquisition_stats
@@ -225,14 +275,10 @@ class AquisitionService(BaseService):
         relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
         logger.info(f"livestream started on backend {backend_to_stream_from=}")
-        backend_to_stream_from.device_enable_lores_stream = True
 
         while self.is_running():
             try:
                 output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
-            except StopIteration:
-                logger.info("stream ends due to shutdown aquisitionservice")
-                return
             except Exception as exc:
                 # this error probably cannot recover.
                 logger.exception(exc)
@@ -277,3 +323,25 @@ class AquisitionService(BaseService):
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
+
+    @staticmethod
+    def _load_ffmpeg():
+        # load ffmpeg once to have it in memory. otherwise first video might fail because startup time is not respected by implementation
+        logger.info("running ffmpeg once to have it in memory later for video use")
+        try:
+            subprocess.run(
+                args=["ffmpeg", "-version"],
+                timeout=10,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+        except FileNotFoundError:
+            logger.warning("ffmpeg not found on system. this is not a problem if video functions are not used.")
+        except subprocess.CalledProcessError as exc:
+            # non zero returncode
+            logger.error(f"ffmpeg returned an error: {exc}")
+        except subprocess.TimeoutExpired as exc:
+            logger.error(f"ffmpeg took too long to load, timeout {exc}")
+        else:
+            # no error, service restart ok
+            logger.info("ffmpeg loaded successfully")

@@ -19,13 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class Gphoto2Backend(AbstractBackend):
-    """
-    The backend implementation using gphoto2
-    """
-
     def __init__(self, config: GroupBackendGphoto2):
         self._config: GroupBackendGphoto2 = config
-        super().__init__()
+        super().__init__(failing_wait_for_lores_image_is_error=False)
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
@@ -49,8 +45,6 @@ class Gphoto2Backend(AbstractBackend):
 
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-
-        # worker threads
         self._worker_thread: StoppableThread = None
 
         logger.info(f"python-gphoto2: {gp.__version__}")
@@ -70,12 +64,9 @@ class Gphoto2Backend(AbstractBackend):
             )
         )
 
-    def _block_until_delivers_lores_images(self):
-        # backend doesn't support reliable preview delivery (depends on dslr), so this check is removed by overriding the parent class function
-        pass
+    def start(self):
+        super().start()
 
-    def _device_start(self):
-        # start camera
         try:
             self._camera = gp.Camera()  # better use fresh object.
             self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
@@ -97,18 +88,12 @@ class Gphoto2Backend(AbstractBackend):
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # short sleep until backend started.
-        time.sleep(0.5)
-
-        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
-        # this backend doesn't support this, the function is overridden in this class and does just nothing
-        self._block_until_delivers_lores_images()
-
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
-        # supervising connection thread was asked to stop - so we ask to stop worker fun also
-        if self._worker_thread:
+    def stop(self):
+        super().stop()
+
+        if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
@@ -116,6 +101,12 @@ class Gphoto2Backend(AbstractBackend):
             self._camera.exit()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self):
         """
@@ -233,9 +224,11 @@ class Gphoto2Backend(AbstractBackend):
     def _worker_fun(self):
         preview_failcounter = 0
 
+        self._device_set_is_ready_to_deliver()
+
         while not self._worker_thread.stopped():  # repeat until stopped
             if not self._hires_data.request.is_set():
-                if self.device_enable_lores_stream:
+                if self._device_enable_lores_flag:
                     # check if flag is true and configure if so once.
                     self._configure_optimized_for_idle_video()
 
@@ -362,6 +355,7 @@ class Gphoto2Backend(AbstractBackend):
                     self._hires_data.filepath = filepath
                     self._hires_data.condition.notify_all()
 
+        self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")
 
 

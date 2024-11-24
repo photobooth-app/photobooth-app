@@ -21,36 +21,35 @@ turbojpeg = TurboJPEG()
 
 
 class WebcamCv2Backend(AbstractBackend):
-    """
-    opencv2 backend implementation for webcameras
-    """
-
     def __init__(self, config: GroupBackendOpenCv2):
-        super().__init__()
-
         self._config: GroupBackendOpenCv2 = config
-        self._failing_wait_for_lores_image_is_error = True  # missing lores images is automatically considered as error
+        super().__init__(failing_wait_for_lores_image_is_error=True)
+
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
 
-    def _device_start(self):
-        """To start the cv2 acquisition process"""
+    def start(self):
+        super().start()
 
         self._worker_thread = StoppableThread(name="webcamcv2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
-        self._block_until_delivers_lores_images()
-
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
-        # wait until shutdown finished
+    def stop(self):
+        super().stop()
+
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self):
         """
@@ -122,6 +121,8 @@ class WebcamCv2Backend(AbstractBackend):
         for _ in range(5):
             _, _ = _video.read()
 
+        self._device_set_is_ready_to_deliver()
+
         last_time_frame = time.time()
         while not self._worker_thread.stopped():  # repeat until stopped
             now_time = time.time()
@@ -153,6 +154,7 @@ class WebcamCv2Backend(AbstractBackend):
         # release camera on process shutdown
         _video.release()
 
+        self._device_set_is_ready_to_deliver(False)
         logger.info("worker_fun finished, exit")
 
 

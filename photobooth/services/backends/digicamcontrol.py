@@ -54,37 +54,26 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def __init__(self, config: GroupBackendDigicamcontrol):
         self._config: GroupBackendDigicamcontrol = config
-        super().__init__()
+        super().__init__(failing_wait_for_lores_image_is_error=False)
 
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-
-        # worker threads
         self._worker_thread: StoppableThread = None
 
-    def _block_until_delivers_lores_images(self):
-        # backend doesn't support reliable preview delivery (depends on dslr), so this check is removed by overriding the parent class function
-        pass
+    def start(self):
+        super().start()
 
-    def _device_start(self):
-        # first start common tasks
-        if not self.available_camera_indexes():
+        if not self._device_available():
             raise RuntimeError("empty camera list")
 
         self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        # short sleep until backend started.
-        time.sleep(0.5)
-
-        # wait until threads are up and deliver images actually. raises exceptions if fails after several retries
-        # this backend doesn't support this, the function is overridden in this class and does just nothing
-        self._block_until_delivers_lores_images()
-
-        logger.debug(f"{self.__module__} camera found, starting to work")
         logger.debug(f"{self.__module__} started")
 
-    def _device_stop(self):
+    def stop(self):
+        super().stop()
+
         # when stopping the backend also stop the livestream by following command.
         # if livestream is stopped, the camera is available to other processes again.
         session = requests.Session()
@@ -96,6 +85,12 @@ class DigicamcontrolBackend(AbstractBackend):
             self._worker_thread.join()
 
         logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+
+        return super_alive and worker_alive
 
     def _device_available(self) -> bool:
         """
@@ -150,7 +145,7 @@ class DigicamcontrolBackend(AbstractBackend):
         pass
 
     def _on_configure_optimized_for_idle(self):
-        if not self.device_enable_lores_stream:
+        if not self._device_enable_lores_flag:
             logger.debug("livestream disabled on this backend, skipped optimization")
             return
 
@@ -178,6 +173,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
         session = requests.Session()
         preview_failcounter = 0
+
+        self._device_set_is_ready_to_deliver()
 
         while not self._worker_thread.stopped():  # repeat until stopped
             if self._hires_data.request.is_set():
@@ -241,7 +238,7 @@ class DigicamcontrolBackend(AbstractBackend):
                     self._hires_data.request.clear()
 
             else:
-                if self.device_enable_lores_stream:
+                if self._device_enable_lores_flag:
                     try:
                         # r = session.get("http://127.0.0.1:5514/live") #different port also!
                         r = session.get(f"{self._config.base_url}/liveview.jpg")
@@ -281,6 +278,7 @@ class DigicamcontrolBackend(AbstractBackend):
             # wait for trigger...
             time.sleep(0.05)
 
+        self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")
 
     def available_camera_indexes(self):
