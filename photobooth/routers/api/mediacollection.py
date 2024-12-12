@@ -13,7 +13,8 @@ router = APIRouter(
 
 
 @router.get("/getitems")
-def api_getitems():
+def api_getitems() -> list:
+    # TODO: improve to deliver a clean MediaItem DTO that can be used by the client automatically typed
     try:
         return container.mediacollection_service.db_get_images_as_dict()
     except Exception as exc:
@@ -22,7 +23,7 @@ def api_getitems():
 
 
 @router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete(image_id: Annotated[str, Body(embed=True)]):
+def api_gallery_delete(image_id: Annotated[str, Body(embed=True)]) -> None:
     logger.info(f"gallery_delete requested, id={image_id}")
     try:
         container.mediacollection_service.delete_image_by_id(image_id)
@@ -32,7 +33,7 @@ def api_gallery_delete(image_id: Annotated[str, Body(embed=True)]):
 
 
 @router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete_all():
+def api_gallery_delete_all() -> None:
     """Warning: deletes all files permanently without any further confirmation
 
     Raises:
