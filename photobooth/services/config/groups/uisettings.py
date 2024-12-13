@@ -36,12 +36,24 @@ class GroupUiSettings(BaseModel):
         description="Show button to admin center, usually only during setup.",
     )
 
+    enable_automatic_slideshow: bool = Field(
+        default=True,
+        description="Enable a random slideshow after some time without any user interaction.",
+    )
     show_automatic_slideshow_timeout: NonNegativeInt = Field(
         default=300,
         ge=30,
-        description="Timeout (seconds) after which a random order slideshow of all images is started. Set to 0 to disable.",
+        description="Timeout in seconds after which the slideshow starts.",
     )
 
+    enable_livestream_when_idle: bool = Field(
+        default=True,
+        description="When idle, the cameras livestream is displayed permanently.",
+    )
+    enable_livestream_when_active: bool = Field(
+        default=True,
+        description="When countdown or capture is active, the cameras livestream is displayed.",
+    )
     livestream_mirror_effect: bool = Field(
         default=True,
         description="Flip livestream horizontally to create a mirror effect feeling more natural to users.",
