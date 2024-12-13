@@ -1,0 +1,1 @@
+import{Q as t,a as n}from"./QLayout-B4Uar507.js";import{_ as r,r as s,f as _,k as c,l as e,m as a}from"./index-DqblR8XI.js";const l={};function f(u,i){const o=s("router-view");return _(),c(n,{id:"standalone-layout",view:"hHh lpR fFf"},{default:e(()=>[a(t,null,{default:e(()=>[a(o)]),_:1})]),_:1})}const p=r(l,[["render",f],["__file","StandaloneLayout.vue"]]);export{p as default};
