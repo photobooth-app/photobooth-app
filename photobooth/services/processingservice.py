@@ -562,3 +562,7 @@ class ProcessingMachine(StateMachine):
 
         # switch backend to preview mode always when returning to idle.
         self._aquisition_service.signalbackend_configure_optimized_for_idle()
+
+        # TODO: send image to share service. the shareservice checks if any share is configured for autoshare and executes all of these
+        # mediaitem = self.model.get_last_capture()
+        # self._share_service.autoprint(mediaitem)
