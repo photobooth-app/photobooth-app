@@ -85,6 +85,14 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show QR code in gallery. If shareservice is enabled the URL is automatically generated, if not go to share config and provide URL.",
     )
+    qrcode_text_above: str = Field(
+        default="👋 Download your photo!",
+        description="Display text above the QR code.",
+    )
+    qrcode_text_below: str = Field(
+        default="Scan above code with your phone.",
+        description="Display text below the QR code.",
+    )
     gallery_show_filter: bool = Field(
         default=True,
         description="Show instagramlike filter (pilgram2).",
