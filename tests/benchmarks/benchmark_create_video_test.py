@@ -17,7 +17,34 @@ def run_around_tests():
 
 
 def process_pyav(tmp_path):
-    pass
+    # https://pyav.basswood-io.com/docs/stable/cookbook/numpy.html#generating-video
+    import av
+
+    # pil_img = Image.open("tests/assets/input_lores.jpg")
+    input = av.open("tests/assets/input_lores.jpg")
+    frame_input = next(input.decode())
+
+    container = av.open(tmp_path / "pyav.mp4", mode="w")
+
+    stream = container.add_stream("h264", rate=250)
+    stream.width = frame_input.width
+    stream.height = frame_input.height
+    # stream.pix_fmt = "yuv420p"
+    stream.codec_context.options["tune"] = "zerolatency"
+    stream.codec_context.options["movflags"] = "faststart"
+    stream.codec_context.profile = "veryfast"
+    stream.codec_context.bit_rate = 5000000
+
+    for _ in range(200):
+        for packet in stream.encode(frame_input):
+            container.mux(packet)
+
+    # Flush stream
+    for packet in stream.encode():
+        container.mux(packet)
+
+    # Close the file
+    container.close()
 
 
 # basic idea from https://stackoverflow.com/a/42602576
@@ -46,7 +73,7 @@ def process_ffmpeg(tmp_path):
             "5000k",
             "-movflags",
             "+faststart",
-            str(tmp_path / "ffmpeg_scale.mp4"),
+            str(tmp_path / "ffmpeg.mp4"),
         ],
         stdin=PIPE,
     )

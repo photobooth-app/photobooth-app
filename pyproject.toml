@@ -57,7 +57,6 @@ dependencies = [
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
     "wigglecam @ git+https://github.com/photobooth-app/wigglecam.git",
-    "av>=14.0.1",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -128,6 +127,7 @@ test = [
   "pyvips",
   "pydot",
   "simplejpeg",
+  "av>=14.0.1",
 ]
 lint = ["ruff"]
 
