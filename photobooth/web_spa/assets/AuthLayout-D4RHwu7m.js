@@ -1,1 +1,0 @@
-import{Q as a,a as r}from"./QLayout-B4Uar507.js";import{_ as n,r as s,f as u,k as _,l as e,m as t}from"./index-DqblR8XI.js";const c={};function l(f,i){const o=s("router-view");return u(),_(r,{id:"auth-layout",view:"lHh Lpr lFf"},{default:e(()=>[t(a,null,{default:e(()=>[t(o)]),_:1})]),_:1})}const d=n(c,[["render",l],["__file","AuthLayout.vue"]]);export{d as default};

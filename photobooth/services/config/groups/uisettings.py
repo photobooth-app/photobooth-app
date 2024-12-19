@@ -35,6 +35,10 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to admin center, usually only during setup.",
     )
+    admin_button_invisible: bool = Field(
+        default=False,
+        description="If button is shown, it can still be rendered invisible. If enabled, the button is 100% transparent and 5 clicks each within 500ms are required to access the admin login.",
+    )
 
     enable_automatic_slideshow: bool = Field(
         default=True,
