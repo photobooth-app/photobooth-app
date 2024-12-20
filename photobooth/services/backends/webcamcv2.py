@@ -140,7 +140,7 @@ class WebcamCv2Backend(AbstractBackend):
             result, jpeg_buffer = cv2.imencode(".jpg", array, encode_param)
 
             with self._lores_data.condition:
-                self._lores_data.data = jpeg_buffer
+                self._lores_data.data = jpeg_buffer.tobytes()
                 self._lores_data.condition.notify_all()
 
             self._frame_tick()

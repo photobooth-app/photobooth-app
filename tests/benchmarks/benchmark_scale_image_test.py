@@ -111,7 +111,7 @@ def cv2_scale(jpeg_bytes, tmp_path):
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, encimg = cv2.imencode(".jpg", img_np_resized, encode_param)
 
-    return encimg
+    return encimg.tobytes()
 
 
 @pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale", "pyvips_resize_scale", "ffmpeg_scale"])

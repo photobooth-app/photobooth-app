@@ -478,7 +478,7 @@ class MediaItem:
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
         result, buffer_out = cv2.imencode(".jpg", img_np_resized, encode_param)
 
-        return buffer_out
+        return buffer_out.tobytes()
 
     @staticmethod
     def resize_gif(filename: Path, gif_image: Image.Image, scaled_min_length: int):

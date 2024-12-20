@@ -50,14 +50,14 @@ def cv2_encode_jpg(frame_from_camera):
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, encimg = cv2.imencode(".jpg", frame_from_camera, encode_param)
 
-    return encimg
+    return encimg.tobytes()
 
 
 def cv2_encode_webp(frame_from_camera):
     encode_param = [int(cv2.IMWRITE_WEBP_QUALITY), 90]
     result, encimg = cv2.imencode(".webp", frame_from_camera, encode_param)
 
-    return encimg
+    return encimg.tobytes()
 
 
 def cv2_encode_png(frame_from_camera):
@@ -67,7 +67,7 @@ def cv2_encode_png(frame_from_camera):
     # Default value is 1 (best speed setting).
     result, encimg = cv2.imencode(".png", frame_from_camera, encode_param)
 
-    return encimg
+    return encimg.tobytes()
 
 
 def simplejpeg_encode(frame_from_camera):
