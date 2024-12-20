@@ -42,7 +42,6 @@ dependencies = [
     "pydantic>=2.7.0",
     "pydantic-extra-types>=2.3.0",
     "pydantic-settings>=2.1.0",
-    "pyturbojpeg>=1.7.0",
     "requests>=2.31.0",
     "sse-starlette>=1.8.0",
     "uvicorn>=0.24",
@@ -57,6 +56,7 @@ dependencies = [
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
     "wigglecam @ git+https://github.com/photobooth-app/wigglecam.git",
+    "piexif>=1.1.3",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
@@ -127,6 +127,7 @@ test = [
   "pyvips",
   "pydot",
   "simplejpeg",
+  "pyturbojpeg>=1.7.0",
   "av>=14.0.1",
 ]
 lint = ["ruff"]
