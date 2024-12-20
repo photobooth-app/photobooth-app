@@ -55,7 +55,7 @@ dependencies = [
     "python-statemachine>=2.3.3",
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
-    "wigglecam @ git+https://github.com/photobooth-app/wigglecam.git",
+    "wigglecam",
     "piexif>=1.1.3",
 ]
 
