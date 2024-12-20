@@ -105,7 +105,7 @@ def cv2_scale(jpeg_bytes, tmp_path):
     dim = (width, height)
 
     # resize image
-    img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_AREA)
+    img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_CUBIC)  # bicubic
 
     # and encode to jpeg again
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
