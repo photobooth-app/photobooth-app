@@ -199,7 +199,7 @@ class MediacollectionService(BaseService):
             else:
                 os.remove(mediaitem.path_original)
         except FileNotFoundError:
-            logger.warn(f"file {mediaitem.path_original} not found but ignore because shall be deleted anyways.")
+            logger.warning(f"file {mediaitem.path_original} not found but ignore because shall be deleted anyways.")
         except Exception as exc:
             self._logger.exception(exc)
             raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
@@ -216,7 +216,7 @@ class MediacollectionService(BaseService):
             try:
                 os.remove(file)
             except FileNotFoundError:
-                logger.warn(f"file {file} not found but ignore because shall be deleted anyways.")
+                logger.warning(f"file {file} not found but ignore because shall be deleted anyways.")
             except Exception as exc:
                 self._logger.exception(exc)
                 raise RuntimeError(f"error deleting files for item {mediaitem}") from exc

@@ -86,7 +86,7 @@ class Picamera2Backend(AbstractBackend):
                 tuning = self._get_optimized_short_lowlight_tuning()
                 logger.info("optimized tuningfile for low light loaded")
             except Exception as exc:
-                logger.warn(f"error getting optimized lowlight tuning: {exc}")
+                logger.warning(f"error getting optimized lowlight tuning: {exc}")
 
         self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
 
