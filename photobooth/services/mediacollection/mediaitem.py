@@ -16,15 +16,15 @@ from enum import Enum
 from functools import cached_property
 from pathlib import Path
 
-from PIL import Image, ImageSequence, UnidentifiedImageError
+import cv2
+import numpy
+from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 from pydantic import BaseModel
-from turbojpeg import TurboJPEG
 from typing_extensions import Self
 
 from ..config import appconfig
 
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 DATA_PATH = "./media/"
 # as from image source
@@ -333,7 +333,7 @@ class MediaItem:
         Function handles the different filetypes transparently in the most efficient way.
 
         Currently need to support jpeg (images, collage_images, collage, animation_images) and gif (animation)
-        - jpeg most efficient is turbojpeg as per benchmark.
+        - jpeg most efficient is turbojpeg but going for PIL since more simple to implement and difference neglible depending on system.
         - gif PIL is used
 
         """
@@ -440,49 +440,44 @@ class MediaItem:
 
     @staticmethod
     def resize_jpeg(buffer_in: bytes, quality: int, scaled_min_length: int):
-        """scale a jpeg buffer to another buffer using turbojpeg"""
-        # get original size
-        with Image.open(io.BytesIO(buffer_in)) as img:
-            width, height = img.size
+        """scale a jpeg buffer to another buffer using cv2"""
 
-        original_length = max(width, height)  # scale for the max length
+        image = Image.open(io.BytesIO(buffer_in))
+        ImageOps.exif_transpose(image, in_place=True)
+
+        # scale by 0.5
+        original_length = max(image.width, image.height)  # scale for the max length
         scaling_factor = scaled_min_length / original_length
 
-        # TurboJPEG only allows for decent factors.
-        # To keep it simple, config allows freely to adjust the size from 10...100% and
-        # find the real factor here:
-        # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-        # limitation due to turbojpeg lib usage.
-        # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-        # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-        # example: (1,4) will result in 1/4=0.25=25% down scale in relation to
-        # the full resolution picture
-        allowed_list = [
-            (13, 8),
-            (7, 4),
-            (3, 8),
-            (1, 2),
-            (2, 1),
-            (15, 8),
-            (3, 4),
-            (5, 8),
-            (5, 4),
-            (1, 1),
-            (1, 8),
-            (1, 4),
-            (9, 8),
-            (3, 2),
-            (7, 8),
-            (11, 8),
-        ]
-        factor_list = [item[0] / item[1] for item in allowed_list]
-        (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
+        width = int(image.width * scaling_factor)
+        height = int(image.height * scaling_factor)
+        dim = (width, height)
+        # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
+        image.thumbnail(dim, Image.Resampling.BICUBIC)  # bicubic for comparison
 
-        logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
-        if factor > 1:
-            logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
+        # encode to jpeg again
+        byte_io = io.BytesIO()
+        image.save(byte_io, format="JPEG", quality=quality)
+        return byte_io.getbuffer()
 
-        buffer_out = turbojpeg.scale_with_quality(buffer_in, scaling_factor=allowed_list[index], quality=quality)
+    @staticmethod
+    def resize_jpeg_cv2(buffer_in: bytes, quality: int, scaled_min_length: int):
+        """scale a jpeg buffer to another buffer using cv2"""
+
+        nparr = numpy.frombuffer(buffer_in, numpy.uint8)
+        img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        original_length = max(img_np.shape[1], img_np.shape[0])  # scale for the max length
+        scaling_factor = scaled_min_length / original_length
+
+        width = int(img_np.shape[1] * scaling_factor)
+        height = int(img_np.shape[0] * scaling_factor)
+
+        # resize image
+        img_np_resized = cv2.resize(img_np, (width, height), interpolation=cv2.INTER_CUBIC)  # bicubic
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+        result, buffer_out = cv2.imencode(".jpg", img_np_resized, encode_param)
+
         return buffer_out
 
     @staticmethod

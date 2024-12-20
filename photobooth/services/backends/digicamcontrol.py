@@ -54,7 +54,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def __init__(self, config: GroupBackendDigicamcontrol):
         self._config: GroupBackendDigicamcontrol = config
-        super().__init__(failing_wait_for_lores_image_is_error=False)
+        super().__init__(failing_wait_for_lores_image_is_error=False, orientation=config.orientation)
 
         self._enabled_liveview: bool = False
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())

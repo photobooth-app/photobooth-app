@@ -2,6 +2,7 @@
 abstract for the photobooth-app backends
 """
 
+import io
 import logging
 import os
 import subprocess
@@ -12,6 +13,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event
+
+import piexif
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
@@ -112,10 +115,11 @@ class Framerate:
 
 class AbstractBackend(ABC):
     @abstractmethod
-    def __init__(self, failing_wait_for_lores_image_is_error: bool):
+    def __init__(self, failing_wait_for_lores_image_is_error: bool, orientation: int = 1):
         # only for (webcam, picam and virtualcamera) error can detected by missing lores img
         # missing lores images is automatically considered as error
         self._failing_wait_for_lores_image_is_error: bool = failing_wait_for_lores_image_is_error
+        self._orientation: int = orientation
 
         # statisitics attributes
         self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
@@ -199,6 +203,39 @@ class AbstractBackend(ABC):
         self.is_ready_to_deliver.wait(timeout=timeout)
         logger.debug("continue, device signaled is ready to deliver")
 
+    def rotate_jpeg_file_by_exif_flag(self, filepath: Path, orientation_value: int):
+        """inserts updated orientation flag in given filepath.
+        ref https://sirv.com/help/articles/rotate-photos-to-be-upright/
+
+        Args:
+            filepath (Path): file to modify
+            orientation_value (int): Orientierung (1=0°, 3=180°, 5=90°, 7=270°)
+        """
+        piexif.insert(self._get_updated_exif_bytes(str(filepath), orientation_value), str(filepath))
+
+    def rotate_jpeg_data_by_exif_flag(self, image_data: bytes, orientation_value: int):
+        """reads exif from image_data bytes and returns new bytes with updated orientation.
+        ref: https://sirv.com/help/articles/rotate-photos-to-be-upright/
+
+        Args:
+            image_data (bytes): data to modify
+            orientation_value (int): Orientierung (0=0°, 3=180°, 5=90°, 7=270°)
+        """
+        output = io.BytesIO()
+        piexif.insert(self._get_updated_exif_bytes(image_data, orientation_value), image_data, output)
+
+        return output.getvalue()
+
+    def _get_updated_exif_bytes(self, maybe_image, orientation_value: int):
+        # Gültige Werte für das Orientation-Tag
+        orientation_value = int(orientation_value)
+        if 1 < orientation_value > 8:
+            raise ValueError(f"invalid orientation value: {orientation_value}.")
+
+        exif_dict = piexif.load(maybe_image)
+        exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation_value
+        return piexif.dump(exif_dict)
+
     def wait_for_multicam_files(self, retries: int = 3) -> list[Path]:
         """
         function blocks until high quality image is available
@@ -228,7 +265,9 @@ class AbstractBackend(ABC):
 
         for attempt in range(1, retries + 1):
             try:
-                return self._wait_for_still_file()
+                filepath = self._wait_for_still_file()
+                self.rotate_jpeg_file_by_exif_flag(filepath, self._orientation)
+                return filepath
             except Exception as exc:
                 logger.exception(exc)
                 logger.error(f"error capture image. {attempt=}/{retries}, retrying")
@@ -258,7 +297,9 @@ class AbstractBackend(ABC):
 
         for _ in range(1, retries):
             try:
-                return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
+                img_bytes = self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
+                img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
+                return img
             except TimeoutError:
                 if self._device_alive():
                     continue

@@ -21,7 +21,16 @@ else:
     BackendsPlatform = BackendsBase
 
 
-class GroupBackendVirtualcamera(BaseModel):
+class BaseBackendModel(BaseModel):
+    orientation: int = Field(
+        default=1,
+        ge=1,
+        le=8,
+        description="1: 0° - the correct orientation - no adjustment is required; 2: 0° mirrored, 3: 180°, 4: 180° mirrored, 5: 90°, 6: 90° mirrored, 7: 270°, 8: 270° mirrored.",
+    )
+
+
+class GroupBackendVirtualcamera(BaseBackendModel):
     model_config = ConfigDict(title="VirtualCamera")
     # no additional configuration yet!
 
@@ -46,7 +55,7 @@ class GroupBackendVirtualcamera(BaseModel):
     )
 
 
-class GroupBackendPicamera2(BaseModel):
+class GroupBackendPicamera2(BaseBackendModel):
     model_config = ConfigDict(title="Picamera2")
 
     camera_num: int = Field(
@@ -85,14 +94,6 @@ class GroupBackendPicamera2(BaseModel):
         le=2500,  # hardware encoder in pi only supports max 4000 width/height
         description="actual resolution height for liveview stream",
     )
-    CAMERA_TRANSFORM_HFLIP: bool = Field(
-        default=False,
-        description="Apply horizontal flip to image source to picamera2 backend",
-    )
-    CAMERA_TRANSFORM_VFLIP: bool = Field(
-        default=False,
-        description="Apply vertical flip to image source to picamera2 backend",
-    )
     optimized_lowlight_short_exposure: bool = Field(
         default=False,
         description="Raise AnalogueGain(=ISO) preferred before longer shutter times to avoid unsharp capture of moving people.",
@@ -110,7 +111,7 @@ class GroupBackendPicamera2(BaseModel):
     )
 
 
-class GroupBackendGphoto2(BaseModel):
+class GroupBackendGphoto2(BaseBackendModel):
     model_config = ConfigDict(title="Gphoto2")
 
     gcapture_target: str = Field(
@@ -139,7 +140,7 @@ class GroupBackendGphoto2(BaseModel):
     )
 
 
-class GroupBackendOpenCv2(BaseModel):
+class GroupBackendOpenCv2(BaseBackendModel):
     model_config = ConfigDict(title="OpenCv2")
 
     device_index: int = Field(
@@ -154,14 +155,6 @@ class GroupBackendOpenCv2(BaseModel):
         default=10000,
         description="Resolution height requested from camera.",
     )
-    CAMERA_TRANSFORM_HFLIP: bool = Field(
-        default=False,
-        description="Apply horizontal flip to image source to opencv2 backend",
-    )
-    CAMERA_TRANSFORM_VFLIP: bool = Field(
-        default=False,
-        description="Apply vertical flip to image source to opencv2 backend",
-    )
     framerate: int = Field(
         default=15,
         ge=5,
@@ -170,7 +163,7 @@ class GroupBackendOpenCv2(BaseModel):
     )
 
 
-class GroupBackendV4l2(BaseModel):
+class GroupBackendV4l2(BaseBackendModel):
     model_config = ConfigDict(title="V4l2")
 
     device_index: int = Field(
@@ -187,7 +180,7 @@ class GroupBackendV4l2(BaseModel):
     )
 
 
-class GroupBackendDigicamcontrol(BaseModel):
+class GroupBackendDigicamcontrol(BaseBackendModel):
     model_config = ConfigDict(title="Digicamcontrol")
 
     base_url: str = Field(

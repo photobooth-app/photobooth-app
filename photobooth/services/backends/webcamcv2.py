@@ -10,20 +10,18 @@ from tempfile import NamedTemporaryFile
 from threading import Condition
 
 import cv2
-from turbojpeg import TurboJPEG
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendOpenCv2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 
 class WebcamCv2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendOpenCv2):
         self._config: GroupBackendOpenCv2 = config
-        super().__init__(failing_wait_for_lores_image_is_error=True)
+        super().__init__(failing_wait_for_lores_image_is_error=True, orientation=config.orientation)
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
@@ -138,13 +136,9 @@ class WebcamCv2Backend(AbstractBackend):
             if not ret:
                 raise OSError("error reading camera frame")
 
-            # apply flip image to stream only:
-            if self._config.CAMERA_TRANSFORM_HFLIP:
-                array = cv2.flip(array, 1)
-            if self._config.CAMERA_TRANSFORM_VFLIP:
-                array = cv2.flip(array, 0)
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            result, jpeg_buffer = cv2.imencode(".jpg", array, encode_param)
 
-            jpeg_buffer = turbojpeg.encode(array, quality=90)
             with self._lores_data.condition:
                 self._lores_data.data = jpeg_buffer
                 self._lores_data.condition.notify_all()

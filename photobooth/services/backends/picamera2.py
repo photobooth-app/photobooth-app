@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Condition, Event
 
-from libcamera import Transform, controls
+from libcamera import controls
 from picamera2 import Picamera2
 from picamera2.allocators import PersistentAllocator
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality
@@ -45,7 +45,7 @@ class PicamLoresData(io.BufferedIOBase):
 class Picamera2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendPicamera2):
         self._config: GroupBackendPicamera2 = config
-        super().__init__(failing_wait_for_lores_image_is_error=True)
+        super().__init__(failing_wait_for_lores_image_is_error=True, orientation=config.orientation)
 
         # private props
         self._picamera2: Picamera2 = None
@@ -97,7 +97,6 @@ class Picamera2Backend(AbstractBackend):
             encode="lores",
             buffer_count=3,
             display="lores",
-            transform=Transform(hflip=self._config.CAMERA_TRANSFORM_HFLIP, vflip=self._config.CAMERA_TRANSFORM_VFLIP),
         )
 
         # config preview mode (used for permanent live view)
@@ -107,7 +106,6 @@ class Picamera2Backend(AbstractBackend):
             encode="lores",
             buffer_count=3,
             display="lores",
-            transform=Transform(hflip=self._config.CAMERA_TRANSFORM_HFLIP, vflip=self._config.CAMERA_TRANSFORM_VFLIP),
         )
 
         # set preview mode on init

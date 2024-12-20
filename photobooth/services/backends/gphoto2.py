@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendGphoto2):
         self._config: GroupBackendGphoto2 = config
-        super().__init__(failing_wait_for_lores_image_is_error=False)
+        super().__init__(failing_wait_for_lores_image_is_error=False, orientation=config.orientation)
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
