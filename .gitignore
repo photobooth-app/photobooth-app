@@ -36,3 +36,6 @@ pdm.lock
 
 # ignore drawing of statemachine
 diagram_ProcessingPicture.png
+
+# testing
+/experimental
