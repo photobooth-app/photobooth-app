@@ -225,7 +225,9 @@ def process_and_generate_wigglegram(captured_mediaitems: list[MediaItem], mediai
     pipeline = Pipeline[MulticameraContext](*steps)
     pipeline(context)
 
+    # sequence like 1-2-3-4-3-2-restart
     sequence_images = context.images
+    sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
 
     ## create mediaitem
     sequence_images[0].save(
