@@ -20,13 +20,13 @@ elif sys.platform == "linux":
 else:
     BackendsPlatform = BackendsBase
 
+Orientation = Literal["1: 0°", "2: 0° mirrored", "3: 180°", "4: 180° mirrored", "5: 90°", "6: 90° mirrored", "7: 270°", "8: 270° mirrored"]
+
 
 class BaseBackendModel(BaseModel):
-    orientation: int = Field(
-        default=1,
-        ge=1,
-        le=8,
-        description="1: 0° - the correct orientation - no adjustment is required; 2: 0° mirrored, 3: 180°, 4: 180° mirrored, 5: 90°, 6: 90° mirrored, 7: 270°, 8: 270° mirrored.",
+    orientation: Orientation = Field(
+        default="1: 0°",
+        description="Choose the orientation of the camera. 0° is default orientation and applies no adjustment. The orientation will be set in the EXIF data so transformations are applied lossless.",
     )
 
 
