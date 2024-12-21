@@ -54,6 +54,36 @@ def ffmpeg_h265_scale(tmp_path):
         raise AssertionError("process fail")
 
 
+def pyav_h264_scale(tmp_path):
+    import av
+
+    input_container = av.open("tests/assets/video.mp4")
+    input_stream = input_container.streams.video[0]
+    output_container = av.open(tmp_path / "pyav.mp4", mode="w")
+    output_stream = output_container.add_stream("h264", rate=250)
+    output_stream.width = 600
+    output_stream.height = 500
+    output_stream.codec_context.options["movflags"] = "faststart"
+    output_stream.codec_context.profile = "veryfast"
+    output_stream.pix_fmt = "yuv420p"
+
+    for frame in input_container.decode(input_stream):
+        # Das Frame in der Zielgröße skalieren
+        scaled_frame = frame.reformat(width=output_stream.width, height=output_stream.height)
+
+        # Das skalierte Frame in den Ausgabestream codieren
+        for packet in output_stream.encode(scaled_frame):
+            output_container.mux(packet)
+
+    # Restliche Frames flushen
+    for packet in output_stream.encode():
+        output_container.mux(packet)
+
+    # Container schließen
+    input_container.close()
+    output_container.close()
+
+
 # TODO: # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
 def ffmpeg_convertgif_lq_scale(tmp_path):
     ffmpeg_subprocess = Popen(
@@ -161,6 +191,11 @@ def test_ffmpeg_h264_scale(benchmark, tmp_path):
 @pytest.mark.benchmark(group="scalevideo")
 def test_ffmpeg_h265_scale(benchmark, tmp_path):
     benchmark(ffmpeg_h265_scale, tmp_path=tmp_path)
+
+
+@pytest.mark.benchmark(group="scalevideo")
+def test_pyav_scale(benchmark, tmp_path):
+    benchmark(pyav_h264_scale, tmp_path=tmp_path)
 
 
 @pytest.mark.benchmark(group="scalevideo")
