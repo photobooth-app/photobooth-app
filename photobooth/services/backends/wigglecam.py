@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class WigglecamBackend(AbstractBackend):
     def __init__(self, config: GroupBackendWigglecam):
         self._config: GroupBackendWigglecam = config
-        super().__init__(failing_wait_for_lores_image_is_error=False)
+        super().__init__()
 
         self._camera_pool: CameraPool = None
 

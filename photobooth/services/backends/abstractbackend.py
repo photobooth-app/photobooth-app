@@ -116,10 +116,8 @@ class Framerate:
 
 class AbstractBackend(ABC):
     @abstractmethod
-    def __init__(self, failing_wait_for_lores_image_is_error: bool, orientation: Orientation = "1: 0°"):
-        # only for (webcam, picam and virtualcamera) error can detected by missing lores img
-        # missing lores images is automatically considered as error
-        self._failing_wait_for_lores_image_is_error: bool = failing_wait_for_lores_image_is_error
+    def __init__(self, orientation: Orientation = "1: 0°"):
+        # init
         self._orientation: Orientation = orientation
 
         # statisitics attributes
@@ -324,9 +322,9 @@ class AbstractBackend(ABC):
             logger.exception(exc)
             logger.critical(f"finally failed after {retries} attempts to capture lores image!")
 
-            if self._failing_wait_for_lores_image_is_error:
-                self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
-                logger.error("failing to get lores images from device is considered as error, stopping backend to recover")
+            # mark the backend as faulty, so it will be restarted from outer service
+            self.is_marked_faulty.set()
+            logger.error("failing to get lores images from device is considered as error, stopping backend to recover")
 
             raise RuntimeError("device raised exception") from exc
 

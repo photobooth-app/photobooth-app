@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendGphoto2):
         self._config: GroupBackendGphoto2 = config
-        super().__init__(failing_wait_for_lores_image_is_error=False, orientation=config.orientation)
+        super().__init__(orientation=config.orientation)
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
@@ -264,7 +264,7 @@ class Gphoto2Backend(AbstractBackend):
                     # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)
                     # in the logs. to avoid that, we just sleep a bit here effectively frame limiting and
                     # giving gphoto2 time to settle and avoid flooded logs.
-                    time.sleep(0.02)
+                    time.sleep(0.04)
                 else:
                     time.sleep(0.05)
             else:

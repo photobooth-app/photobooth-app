@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: GroupBackendVirtualcamera):
         self._config: GroupBackendVirtualcamera = config
-        super().__init__(failing_wait_for_lores_image_is_error=True, orientation=config.orientation)
+        super().__init__(orientation=config.orientation)
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
         self._worker_thread: StoppableThread = None
