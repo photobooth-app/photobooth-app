@@ -249,7 +249,7 @@ class SseService:
             try:
                 client.queue.put_nowait(
                     ServerSentEvent(
-                        id=uuid.uuid4(),
+                        id=str(uuid.uuid4()),
                         event=sse_event_data.event,
                         data=sse_event_data.data,
                         retry=10000,
