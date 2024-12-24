@@ -220,16 +220,16 @@ class Client:
 class SseService:
     def __init__(self):
         # keep track of client connections with each individual request and queue.
-        self._clients: [Client] = []
+        self._clients: list[Client] = []
 
-    def setup_client(self, client):
+    def setup_client(self, client: Client):
         self._clients.append(client)
         logger.info(f"SSE subscription added for client {client.request.client}")
         logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
         # print(f"client.queue {[client.queue for client in self._clients]}")
         # print(f"qsize {[client.queue.qsize() for client in self._clients]}")
 
-    def remove_client(self, client):
+    def remove_client(self, client: Client):
         logger.debug(f"SSE subscription remove for {client.request.client} requested")
 
         # iterate over client list and remove.
