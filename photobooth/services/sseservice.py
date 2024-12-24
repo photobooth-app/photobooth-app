@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Request
-from sse_starlette import ServerSentEvent
+from sse_starlette.event import ServerSentEvent
 
 from .jobmodels.base import JobModelBase
 from .mediacollection.mediaitem import MediaItem
