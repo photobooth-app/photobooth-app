@@ -3,7 +3,8 @@ from asyncio import Queue
 from datetime import datetime
 
 from fastapi import APIRouter, Request
-from sse_starlette import EventSourceResponse, ServerSentEvent
+from sse_starlette.event import ServerSentEvent
+from sse_starlette.sse import EventSourceResponse
 
 from ...container import container
 from ...services.sseservice import Client, SseEventFrontendNotification
