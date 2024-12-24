@@ -296,7 +296,7 @@ class Gphoto2Backend(AbstractBackend):
                     # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)
                     # in the logs. to avoid that, we just sleep a bit here effectively frame limiting and
                     # giving gphoto2 time to settle and avoid flooded logs.
-                    time.sleep(0.02)
+                    time.sleep(0.04)
                 else:
                     time.sleep(0.05)
             else:
