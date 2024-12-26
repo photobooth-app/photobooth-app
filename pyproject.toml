@@ -33,7 +33,7 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-    "fastapi<=0.105.0",
+    "fastapi<=0.115.6",
     "opencv-python-headless>=4.10.0.84",
     "numpy>=2.0.0",
     "simplejpeg>=1.7.4", # might be installed globally already on Pi but in older version incompatible to numpy2
