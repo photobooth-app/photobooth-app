@@ -57,6 +57,7 @@ dependencies = [
     "pyjwt[crypto]>=2.8.0",
     "wigglecam",
     "piexif>=1.1.3",
+    "sqlmodel>=0.0.22",
 ]
 
 # libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access

@@ -10,7 +10,6 @@ from PIL import Image
 
 from photobooth.container import Container, container
 from photobooth.services.aquisitionservice import AquisitionService
-from photobooth.services.config import appconfig
 from photobooth.services.sseservice import SseService
 from photobooth.services.wledservice import WledService
 
@@ -19,15 +18,7 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture(scope="module")
 def _container() -> Container:
-    # setup
-
-    appconfig.backends.enable_livestream = True
-    # appconfig.backends.group_main.active_backend: backends_main_concat = "VirtualCamera"
-    # appconfig.backends.group_live.active_backend: backends_live_concat = "Disabled"
-
     container.start()
-
-    # deliver
     yield container
     container.stop()
 

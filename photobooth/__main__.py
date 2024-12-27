@@ -11,6 +11,7 @@ from pathlib import Path
 import uvicorn
 
 from .__version__ import __version__
+from .database import create_db_and_tables
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--host", action="store", type=str, default="0.0.0.0", help="Host the server is bound to (default: %(default)s).")
@@ -60,6 +61,9 @@ def main(args=None, run_server: bool = True):
 
     # adjust logging after uvicorn setup
     container.logging_service.uvicorn()
+
+    # create all db
+    create_db_and_tables()
 
     # start all services
     container.start()

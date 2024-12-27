@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.informationservice import InformationService
+from photobooth.services.shareservice import ShareService
 
 logger = logging.getLogger(name=None)
 
@@ -16,8 +16,6 @@ logger = logging.getLogger(name=None)
 def client() -> TestClient:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
 
@@ -30,13 +28,8 @@ def client_authenticated(client) -> TestClient:
     yield client
 
 
-def test_get_stats_reset(client_authenticated: TestClient):
-    response = client_authenticated.get("/admin/information/cntr/reset/")
-    assert response.status_code == 204
-
-
-def test_get_limits_reset(client_authenticated: TestClient):
-    response = client_authenticated.get("/admin/information/cntr/reset/image")
+def test_get_stats_reset_all(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/share/cntr/reset/")
     assert response.status_code == 204
 
 
@@ -44,6 +37,6 @@ def test_get_stats_reset_error(client_authenticated: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception()
 
-    with patch.object(InformationService, "stats_counter_reset_all", error_mock):
-        response = client_authenticated.get("/admin/information/cntr/reset/")
+    with patch.object(ShareService, "limit_counter_reset_all", error_mock):
+        response = client_authenticated.get("/admin/share/cntr/reset/")
         assert response.status_code == 500

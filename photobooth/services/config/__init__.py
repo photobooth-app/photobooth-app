@@ -3,6 +3,6 @@ AppConfig class providing central config
 
 """
 
-from .appconfig import AppConfig
+from .appconfig_ import AppConfig
 
 appconfig = AppConfig()

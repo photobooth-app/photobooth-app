@@ -1,10 +1,10 @@
-"""
-Handle all media collection related functions
-"""
-
 import subprocess
-import time
+from datetime import datetime
 
+from sqlmodel import Session, delete, select
+
+from ..database import engine
+from ..models import ShareLimits
 from .baseservice import BaseService
 from .config import appconfig
 from .informationservice import InformationService
@@ -26,14 +26,11 @@ class ShareService(BaseService):
         self._information_service: InformationService = information_service
 
         # custom service objects
-        self._last_print_time = None
-        self._last_printing_blocked_time = None
-        self._printing_queue = None  # TODO: could add queue later
+        pass
 
     def start(self):
         super().start()
-        # unblock after restart immediately
-        self._last_print_time = None
+        pass
         super().started()
 
     def stop(self):
@@ -62,7 +59,15 @@ class ShareService(BaseService):
             raise exc
 
         # check counter limit
-        current_shares = self._information_service._stats_counter.limits.get(action_config.name, 0)
+
+        with Session(engine) as session:
+            statement = select(ShareLimits).where(ShareLimits.action == action_config.name)
+            results = session.exec(statement)
+            result = results.one_or_none()
+
+        current_shares = result.count if result else 0
+        last_used_at = result.last_used_at if result else None
+
         if self.is_quota_exceeded(current_shares, action_config.processing.max_shares):
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
@@ -74,15 +79,16 @@ class ShareService(BaseService):
             raise BlockingIOError("Maximum number of Share/Print reached!")
 
         # block queue new prints until configured time is over
-        if self.is_time_blocked():
+        remaining_s = self.remaining_time_blocked(action_config.processing.share_blocked_time, last_used_at)
+        if remaining_s > 0:
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
-                    message=f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.",
+                    message=f"Request ignored! Wait {remaining_s:.0f}s before trying again.",
                     caption="Share Service Error",
                 )
             )
-            raise BlockingIOError(f"Share/Print request ignored! Wait {self.remaining_time_blocked():.0f}s before trying again.")
+            raise BlockingIOError(f"Request ignored! Wait {remaining_s:.0f}s before trying again.")
 
         # filename absolute to print, use in printing command
         filename = mediaitem.path_full.absolute()
@@ -90,6 +96,15 @@ class ShareService(BaseService):
         try:
             # print command
             self._logger.info(f"share/print {filename=}")
+
+            self._sse_service.dispatch_event(
+                SseEventFrontendNotification(
+                    color="positive",
+                    message=f"Process '{action_config.name}' started.",
+                    caption="Share Service",
+                    spinner=True,
+                )
+            )
 
             completed_process = subprocess.run(
                 str(action_config.processing.share_command).format(filename=filename),
@@ -105,37 +120,68 @@ class ShareService(BaseService):
 
             self._logger.info(f"command started successfully {mediaitem}")
 
-            self._sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="positive",
-                    message=f"Process '{action_config.name}' started...",
-                    caption="Share Service",
-                    spinner=True,
-                )
-            )
-
-            # update last print time to calc block time on next run
-            self._start_time_blocked(action_config.processing.share_blocked_time)
         except Exception as exc:
             self._sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Share/Print Error"))
             raise RuntimeError(f"Process failed, error {exc}") from exc
 
-        self._information_service.stats_counter_increment("shares")
+        updated_current_shares = self.limit_counter_increment(action_config.name)
+
         if action_config.processing.max_shares > 0:
             # quota is enabled.
-            self._information_service.stats_counter_increment_limits(action_config.name)
-            current_shares = self._information_service._stats_counter.limits.get(action_config.name, 0)
 
             self._sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
-                    message=f"{action_config.trigger.ui_trigger.title} quota is {current_shares} of {action_config.processing.max_shares}",
+                    message=f"{action_config.trigger.ui_trigger.title} quota is {updated_current_shares} of {action_config.processing.max_shares}",
                     caption="Share/Print quota",
                 )
             )
 
-    def is_time_blocked(self) -> bool:
-        return self.remaining_time_blocked() > 0.0
+    def limit_counter_reset(self, field: str):
+        try:
+            with Session(engine) as session:
+                statement = select(ShareLimits).where(ShareLimits.action == field)
+                results = session.exec(statement)
+                result = results.one()
+
+                session.delete(result)
+                session.commit()
+
+                self._logger.info(f"deleted {result} from ShareLimits")
+
+        except Exception as exc:
+            raise RuntimeError(f"failed to reset {field}, error: {exc}") from exc
+
+    def limit_counter_reset_all(self):
+        try:
+            with Session(engine) as session:
+                statement = delete(ShareLimits)
+                results = session.exec(statement)
+                session.commit()
+                self._logger.info(f"deleted {results.rowcount} entries from ShareLimits")
+
+        except Exception as exc:
+            raise RuntimeError(f"failed to reset ShareLimits, error: {exc}") from exc
+
+    def limit_counter_increment(self, field: str) -> int:
+        try:
+            with Session(engine) as session:
+                db_entry = session.get(ShareLimits, field)
+                if not db_entry:
+                    # add 0 to db
+                    session.add(ShareLimits(action=field))
+
+                statement = select(ShareLimits).where(ShareLimits.action == field)
+                results = session.exec(statement)
+                result = results.one()
+                result.count += 1
+                result.last_used_at = datetime.now()
+                session.add(result)
+                session.commit()
+
+                return result.count
+        except Exception as exc:
+            raise RuntimeError(f"failed to update ShareLimits, error: {exc}") from exc
 
     def is_quota_exceeded(self, current_shares: int, max_shares: int) -> bool:
         if max_shares > 0 and current_shares >= max_shares:
@@ -143,23 +189,18 @@ class ShareService(BaseService):
         else:
             return False
 
-    def remaining_time_blocked(self) -> float:
-        if self._last_print_time is None:
+    def remaining_time_blocked(self, shall_block_time_s: int, last_used_at: datetime | None) -> float:
+        if last_used_at is None:
             return 0.0
 
-        delta = time.time() - self._last_print_time
-        if delta >= self._last_printing_blocked_time:
+        delta = (datetime.now() - last_used_at).total_seconds()
+
+        if delta >= shall_block_time_s:
             # last print is longer than configured time in the past - return 0 to indicate no wait time
             return 0.0
         else:
             # there is some time to wait left.
-            return self._last_printing_blocked_time - delta
-
-    def _start_time_blocked(self, printing_blocked_time: int):
-        self._last_print_time = time.time()
-        self._last_printing_blocked_time = printing_blocked_time
-
-        # TODO: add some timer/coroutine to send regular update to UI with current remaining time blocked
+            return shall_block_time_s - delta
 
     def _print_timer_fun(self):
         ## thread to send updates to client about remaining blocked time

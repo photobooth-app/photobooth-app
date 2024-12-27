@@ -1,6 +1,6 @@
 """
 AppConfig class providing central config
-
+file called appconfig_ to avoid conflicts with the singleton appconfig in __init__
 """
 
 import json

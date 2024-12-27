@@ -1,124 +1,23 @@
-"""
-_summary_
-"""
-
-import functools
-import json
 import platform
 import socket
 import sys
-from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from threading import Timer
-from typing import Any, ClassVar
+from typing import Any
 
 import psutil
 from psutil._common import sbattery
+from sqlmodel import Session, delete, select
 
 from ..__version__ import __version__
+from ..database import engine
+from ..models import ShareLimits, UsageStats
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
 from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
-
-
-# https://stackoverflow.com/a/78227581
-# https://gist.github.com/walkermatt/2871026
-def debounce(timeout: float):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            wrapper.func.cancel()
-            wrapper.func = Timer(timeout, func, args, kwargs)
-            wrapper.func.start()
-
-        wrapper.func = Timer(timeout, lambda: None)
-        return wrapper
-
-    return decorator
-
-
-@dataclass
-class StatsCounter:
-    image: int = 0  # these are actually action types - can this be populated automatically?
-    collage: int = 0
-    animation: int = 0
-    video: int = 0
-    multicamera: int = 0
-    shares: int = 0
-    limits: dict[str, int] = field(default_factory=dict)
-    last_reset: str = None
-
-    stats_file: ClassVar = "stats.json"
-
-    @classmethod
-    def from_dict(cls, data: dict):
-        return cls(
-            image=data.get("image", 0),
-            collage=data.get("collage", 0),
-            animation=data.get("animation", 0),
-            video=data.get("video", 0),
-            multicamera=data.get("multicamera", 0),
-            shares=data.get("shares", 0),
-            limits=data.get("limits", {}),
-            last_reset=data.get("last_reset", None),
-        )
-
-    @classmethod
-    def from_json(cls):
-        try:
-            with open(cls.stats_file, encoding="utf-8") as openfile:
-                return StatsCounter.from_dict(json.load(openfile))
-        except FileNotFoundError:
-            cls = StatsCounter()
-            cls.persist_stats()
-            return cls
-        except Exception as exc:
-            raise RuntimeError(f"unknown error loading stats, error: {exc}") from exc
-
-    def reset(self, field=None):
-        try:
-            if not field:
-                # reset all
-                self.__init__(last_reset=datetime.now().astimezone().strftime("%x %X"))  # ("%Y-%m-%d %H:%M:%S"))
-            else:
-                # reset specific field only
-                setattr(self, field, getattr(StatsCounter(), field))
-
-            self.persist_stats()
-        except Exception as exc:
-            raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
-
-    def increment(self, field):
-        try:
-            current_value = getattr(self, field)
-            setattr(self, field, current_value + 1)
-        except Exception as exc:
-            raise RuntimeError(f"cannot increment {field}, error: {exc}") from exc
-        else:
-            self.persist_stats()
-
-    def increment_limits(self, field: str):
-        try:
-            if field in self.limits:
-                self.limits[field] += 1
-            else:
-                self.limits[field] = 1
-        except Exception as exc:
-            raise RuntimeError(f"cannot increment {field}, error: {exc}") from exc
-        else:
-            self.persist_stats()
-
-    @debounce(timeout=1)
-    def persist_stats(self) -> None:
-        try:
-            with open(self.stats_file, "w", encoding="utf-8") as outfile:
-                json.dump(asdict(self), outfile, indent=2)
-        except Exception as exc:
-            raise RuntimeError(f"could not save statscounter file, error: {exc}") from exc
 
 
 class InformationService(BaseService):
@@ -131,7 +30,6 @@ class InformationService(BaseService):
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
-        self._stats_counter: StatsCounter = StatsCounter.from_json()
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -164,14 +62,49 @@ class InformationService(BaseService):
         self._stats_interval_timer.stop()
         super().started()
 
-    def stats_counter_reset(self, field: str = ""):
-        self._stats_counter.reset(field)
+    def stats_counter_reset(self, field: str):
+        try:
+            with Session(engine) as session:
+                statement = select(UsageStats).where(UsageStats.action == field)
+                results = session.exec(statement)
+                result = results.one()
 
-    def stats_counter_increment(self, varname):
-        self._stats_counter.increment(varname)
+                session.delete(result)
+                session.commit()
 
-    def stats_counter_increment_limits(self, field: str):
-        self._stats_counter.increment_limits(field)
+                self._logger.info(f"deleted {result} from UsageStats")
+
+        except Exception as exc:
+            raise RuntimeError(f"failed to reset {field}, error: {exc}") from exc
+
+    def stats_counter_reset_all(self):
+        try:
+            with Session(engine) as session:
+                statement = delete(UsageStats)
+                results = session.exec(statement)
+                session.commit()
+                self._logger.info(f"deleted {results.rowcount} entries from UsageStats")
+
+        except Exception as exc:
+            raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
+
+    def stats_counter_increment(self, field):
+        try:
+            with Session(engine) as session:
+                db_field_entry = session.get(UsageStats, field)
+                if not db_field_entry:
+                    # add 0 to db
+                    session.add(UsageStats(action=field))
+
+                statement = select(UsageStats).where(UsageStats.action == field)
+                results = session.exec(statement)
+                result = results.one()
+                result.count += 1
+                result.last_used_at = datetime.now().astimezone()
+                session.add(result)
+                session.commit()
+        except Exception as exc:
+            raise RuntimeError(f"failed to update statscounter, error: {exc}") from exc
 
     def initial_emit(self):
         """_summary_"""
@@ -206,11 +139,26 @@ class InformationService(BaseService):
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
-                stats_counter=asdict(self._stats_counter),
+                stats_counter=self._gather_stats_counter(),
+                limits_counter=self._gather_limits_counter(),
                 battery_percent=self._gather_battery(),
                 temperatures=self._gather_temperatures(),
             ),
         )
+
+    def _gather_limits_counter(self) -> list[ShareLimits]:
+        with Session(engine) as session:
+            statement = select(ShareLimits)
+            results = session.exec(statement)
+            # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
+            return [ShareLimits.model_validate(result).model_dump(mode="json") for result in results]
+
+    def _gather_stats_counter(self) -> list[UsageStats]:
+        with Session(engine) as session:
+            statement = select(UsageStats)
+            results = session.exec(statement)
+            # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
+            return [UsageStats.model_validate(result).model_dump(mode="json") for result in results]
 
     def _gather_cpu1_5_15(self):
         return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]

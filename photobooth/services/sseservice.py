@@ -190,6 +190,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     backends: dict[str, dict[str, Any]] = None
     printer: dict[str, Any] = None
     stats_counter: dict[str, Any] = None
+    limits_counter: dict[str, Any] = None
     battery_percent: int = None
     temperatures: dict[str, Any] = None
 
@@ -203,6 +204,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 backends=self.backends,
                 printer=self.printer,
                 stats_counter=self.stats_counter,
+                limits_counter=self.limits_counter,
                 battery_percent=self.battery_percent,
                 temperatures=self.temperatures,
             )

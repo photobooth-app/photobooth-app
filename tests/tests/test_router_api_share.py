@@ -17,6 +17,9 @@ def client() -> TestClient:
         container.start()
         container.processing_service.trigger_action("image", 0)
         container.processing_service.wait_until_job_finished()
+
+        container.share_service.limit_counter_reset_all()
+
         yield client
         container.stop()
 
