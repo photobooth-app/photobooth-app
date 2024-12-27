@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from photobooth.container import container
+from photobooth.database import create_db_and_tables
 from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
@@ -41,9 +42,8 @@ def global_function_setup2():
     yield
 
 
-# @pytest.fixture(scope="module", autouse=True)
-# def session_setup1():
-#     print("test")
-#     logger.warning("hallo")
+@pytest.fixture(scope="session", autouse=True)
+def session_setup1():
+    create_db_and_tables()
 
-#     yield "some stuff"
+    yield
