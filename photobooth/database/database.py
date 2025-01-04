@@ -3,10 +3,12 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import Session, SQLModel, create_engine
 
+from .. import DATA_PATH
+
 # import here, because create_all then creates all models that were imported.
 from . import models  # noqa: F401 https://sqlmodel.tiangolo.com/tutorial/code-structure/#order-matters
 
-sqlite_file_name = "database.sqlite"
+sqlite_file_name = f"{DATA_PATH}/database.sqlite"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 

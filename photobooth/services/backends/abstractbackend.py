@@ -16,6 +16,7 @@ from threading import Event
 
 import piexif
 
+from ... import LOG_PATH
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
 from ..config.groups.backends import Orientation
@@ -424,7 +425,7 @@ class AbstractBackend(ABC):
                 stdin=subprocess.PIPE,
                 # following report is workaround to avoid deadlock by pushing too much output in stdout/err
                 # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
-                env=dict(os.environ, FFREPORT="file=./log/ffmpeg-last.log:level=32"),
+                env=dict(os.environ, FFREPORT=f"file={LOG_PATH}/ffmpeg-last.log:level=32"),
                 # stdout=subprocess.PIPE,
                 # stderr=subprocess.STDOUT,
             )

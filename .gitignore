@@ -1,15 +1,14 @@
 
 # ignore user folders
 /config
+/cache
+/data
 /data
 /media
 /log
-log/*.log*
 /userdata
 /tmp
 /recycle
-database.db
-database.sqlite
 
 
 # python files

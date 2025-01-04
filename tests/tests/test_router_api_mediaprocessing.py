@@ -115,16 +115,16 @@ def test_apply_filter_original(client: TestClient):
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
     assert response.status_code == 200
 
-    image_original = Image.open(mediaitem.path_preview)
-    image_original.load()  # force load (open is lazy!)
+    image_processed = Image.open(mediaitem.path_original)
+    image_processed.load()  # force load (open is lazy!)
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/_1977")
     assert response.status_code == 200
-    if is_same(image_original, Image.open(mediaitem.path_preview)):
+    if is_same(image_processed, Image.open(mediaitem.path_original)):
         raise AssertionError("img data before and after same. filter was not applied!")
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/original")
 
     assert response.status_code == 200
 
-    assert is_same(image_original, Image.open(mediaitem.path_preview))
+    assert is_same(image_processed, Image.open(mediaitem.path_original))

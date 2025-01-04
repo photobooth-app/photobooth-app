@@ -1,15 +1,13 @@
-from ..config.groups.actions import (
-    SingleImageConfigurationSet,
-)
+from ...database.models import MediaitemTypes, V3Mediaitem
+from ..config.groups.actions import SingleImageConfigurationSet
 from ..config.models.models import SinglePictureDefinition
-from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
 from .base import JobModelBase
 
 
 class JobModelImage(JobModelBase):
     def __init__(self, configuration_set: SingleImageConfigurationSet):
         super().__init__(configuration_set)
-        self._media_type: MediaItemTypes = MediaItemTypes.image
+        self._media_type: MediaitemTypes = MediaitemTypes.image
         self._total_captures_to_take = 1
 
         # self._validate_job()
@@ -20,5 +18,5 @@ class JobModelImage(JobModelBase):
             **self._configuration_set.processing.model_dump(),
         )
 
-    def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
         raise RuntimeError("no phase2 mediageneration for images")

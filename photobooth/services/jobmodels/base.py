@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Literal
+from uuid import UUID, uuid4
 
+from ...database.models import MediaitemTypes, V3Mediaitem
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
@@ -12,7 +14,6 @@ from ..config.groups.actions import (
     VideoConfigurationSet,
 )
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition, SinglePictureDefinition
-from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
 
 action_type_literal = Literal["image", "collage", "animation", "video", "multicamera"]
 
@@ -26,14 +27,14 @@ class JobModelBase(ABC):
         | VideoConfigurationSet
         | MulticameraConfigurationSet,
     ):
-        self._media_type: MediaItemTypes = None
+        self._job_identifier: UUID = uuid4()
+        self._media_type: MediaitemTypes = None
         self._configuration_set = configuration_set
 
         self._total_captures_to_take: int = 0
+        self._captures_taken: int = 0
         self._ask_approval_each_capture: bool = False
-
-        self._last_captured_mediaitem: MediaItem = None
-        self._confirmed_captures_collection: list[MediaItem] = []
+        self._last_captured_mediaitem_id: UUID = None
 
         # job model timer
         self._duration_user: float = 0
@@ -58,10 +59,7 @@ class JobModelBase(ABC):
         return captures_to_take
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}, total_captures_to_take={self._total_captures_to_take}, "
-            f"confirmed_captures_collection={self._confirmed_captures_collection}, last_capture={self._last_captured_mediaitem}"
-        )
+        return f"{self.__class__.__name__}, {self._job_identifier=}, {self._total_captures_to_take=}"
 
     def export(self) -> dict:
         """Export model as dict for UI (needds to be jsonserializable)
@@ -72,49 +70,36 @@ class JobModelBase(ABC):
         Returns:
             dict: _description_
         """
-        confirmed_captures_collection = (
-            [captured_item.asdict() for captured_item in self._confirmed_captures_collection] if self._confirmed_captures_collection else []
-        )
-        last_captured_mediaitem = self._last_captured_mediaitem.asdict() if self._last_captured_mediaitem else None
 
         out = dict(
             state=self.state,
             typ=self._media_type.value,
             total_captures_to_take=self.total_captures_to_take(),
             remaining_captures_to_take=self.remaining_captures_to_take(),
-            number_captures_taken=self.number_captures_taken(),
+            number_captures_taken=self.get_captures_taken(),
             duration=self._duration_user,
             ask_user_for_approval=self.ask_user_for_approval(),
-            confirmed_captures_collection=confirmed_captures_collection,
-            last_captured_mediaitem=last_captured_mediaitem,
+            last_captured_mediaitem_id=str(self._last_captured_mediaitem_id),
         )
 
         return out
 
     # external model processing controls
-    def add_confirmed_capture_to_collection(self, captured_item: MediaItem):
-        self._confirmed_captures_collection.append(captured_item)  # most recent is always at N pos., get latest with get_last_capture
-
-    def last_capture_successful(self) -> bool:
-        return self._last_captured_mediaitem is not None
-
-    def set_last_capture(self, last_mediaitem: MediaItem | list[MediaItem]):
-        self._last_captured_mediaitem = last_mediaitem
-
-    def get_last_capture(self) -> MediaItem | list[MediaItem]:
-        return self._last_captured_mediaitem
 
     def total_captures_to_take(self) -> int:
         return self._total_captures_to_take
 
+    def set_captures_taken(self, captures_taken: int):
+        self._captures_taken = captures_taken
+
+    def get_captures_taken(self) -> int:
+        return self._captures_taken
+
     def remaining_captures_to_take(self) -> int:
-        return self._total_captures_to_take - len(self._confirmed_captures_collection)
+        return self._total_captures_to_take - self._captures_taken
 
-    def number_captures_taken(self) -> int:
-        return len(self._confirmed_captures_collection)
-
-    def all_captures_confirmed(self) -> bool:
-        return len(self._confirmed_captures_collection) >= self._total_captures_to_take
+    def all_captures_done(self) -> bool:
+        return self._captures_taken >= self._total_captures_to_take
 
     def ask_user_for_approval(self) -> bool:
         # display only for collage (multistep process if configured, otherwise always false)
@@ -130,7 +115,7 @@ class JobModelBase(ABC):
             duration (float): _description_
         """
 
-        if self.number_captures_taken() == 0:
+        if self.get_captures_taken() == 0:
             duration_user = self._configuration_set.jobcontrol.countdown_capture
         else:
             # countdown_capture_second_following is only defined for multiimagejobs
@@ -154,5 +139,5 @@ class JobModelBase(ABC):
         pass
 
     @abstractmethod
-    def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
         pass

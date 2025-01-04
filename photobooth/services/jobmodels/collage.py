@@ -1,9 +1,6 @@
-from ..config.groups.actions import (
-    CollageConfigurationSet,
-    CollageProcessing,
-)
+from ...database.models import MediaitemTypes, V3Mediaitem
+from ..config.groups.actions import CollageConfigurationSet, CollageProcessing
 from ..config.models.models import PilgramFilter, SinglePictureDefinition
-from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
 from ..mediaprocessing.processes import process_and_generate_collage
 from .base import JobModelBase
 
@@ -11,7 +8,7 @@ from .base import JobModelBase
 class JobModelCollage(JobModelBase):
     def __init__(self, configuration_set: CollageConfigurationSet):
         super().__init__(configuration_set)
-        self._media_type: MediaItemTypes = MediaItemTypes.collage
+        self._media_type: MediaitemTypes = MediaitemTypes.collage
 
         self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
         self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
@@ -33,5 +30,5 @@ class JobModelCollage(JobModelBase):
             filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
         )
 
-    def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
-        process_and_generate_collage(self._confirmed_captures_collection, phase2_mediaitem)
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+        process_and_generate_collage(phase1_mediaitems, phase2_mediaitem)

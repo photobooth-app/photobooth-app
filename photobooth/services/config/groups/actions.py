@@ -48,9 +48,9 @@ class MultiImageJobControl(BaseModel):
         description="If user is required to approve collage captures, after this timeout, the job continues and user confirmation is assumed.",
     )
 
-    gallery_hide_individual_images: bool = Field(
+    show_individual_captures_in_gallery: bool = Field(
         default=False,
-        description="Hide individual images of series in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+        description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
 
@@ -81,9 +81,9 @@ class MulticameraJobControl(BaseModel):
         description="Countdown in seconds, when user starts a capture process.",
     )
 
-    gallery_hide_individual_images: bool = Field(
-        default=True,
-        description="Hide individual images of multicam-capture in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+    show_individual_captures_in_gallery: bool = Field(
+        default=False,
+        description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
 
@@ -381,7 +381,7 @@ class GroupActions(BaseModel):
             CollageConfigurationSet(
                 jobcontrol=MultiImageJobControl(
                     ask_approval_each_capture=True,
-                    gallery_hide_individual_images=False,
+                    show_individual_captures_in_gallery=True,
                 ),
                 processing=CollageProcessing(
                     ask_approval_each_capture=True,
@@ -417,7 +417,6 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.reyes,
                         ),
                     ],
-                    gallery_hide_individual_images=False,
                     canvas_img_front_enable=True,
                     canvas_img_front_file="frames/pixabay-poster-2871536_1920.png",
                     canvas_texts_enable=True,
@@ -446,11 +445,10 @@ class GroupActions(BaseModel):
             AnimationConfigurationSet(
                 jobcontrol=MultiImageJobControl(
                     ask_approval_each_capture=False,
-                    gallery_hide_individual_images=True,
+                    show_individual_captures_in_gallery=False,
                     countdown_capture_second_following=0.5,
                 ),
                 processing=AnimationProcessing(
-                    ask_approval_each_capture=False,
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
@@ -464,7 +462,6 @@ class GroupActions(BaseModel):
                             predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
                         ),
                     ],
-                    gallery_hide_individual_images=True,
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(title="Animation", icon="gif_box"),

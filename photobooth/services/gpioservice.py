@@ -15,7 +15,6 @@ from .baseservice import BaseService
 from .config import appconfig
 from .config.groups.actions import GpioTrigger
 from .jobmodels.base import action_type_literal
-from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .processingservice import ProcessingService
 from .shareservice import ShareService
@@ -105,7 +104,7 @@ class GpioService(BaseService):
         self._logger.debug(f"trigger callback for {btn}")
 
         try:
-            mediaitem: MediaItem = self._mediacollection_service.db_get_most_recent_mediaitem()
+            mediaitem = self._mediacollection_service.db_get_most_recent_mediaitem()
             self._share_service.share(mediaitem, btn.action_index)
         except BlockingIOError:
             self._logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")

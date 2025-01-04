@@ -9,12 +9,13 @@ from pathlib import Path
 
 from PIL import Image
 
+from ...database.models import V3Mediaitem
 from ..config import appconfig
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, VideoProcessing
 from ..config.models.models import SinglePictureDefinition
-from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline
+from .resizer import get_resized_filepath
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
@@ -24,15 +25,15 @@ from .steps.video import BoomerangStep
 logger = logging.getLogger(__name__)
 
 
-def process_image_collageimage_animationimage(mediaitem: MediaItem):
+def process_image_collageimage_animationimage(mediaitem: V3Mediaitem):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
     the config has to be determined externally.
     """
 
-    image = Image.open(mediaitem.path_full_unprocessed)
-    config = SinglePictureDefinition(**mediaitem._config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
+    image = Image.open(mediaitem.unprocessed)
+    config = SinglePictureDefinition(**mediaitem.pipeline_config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
 
     context = ImageContext(image)
     steps = []
@@ -75,26 +76,18 @@ def process_image_collageimage_animationimage(mediaitem: MediaItem):
     manipulated_image = context.image
 
     # finish up creating mediafiles representants.
-    if len(steps) == 0:
-        logger.debug("no stages applied, reusing the unprocessed files as processed files.")
-        mediaitem.copy_fileset_processed()
-    else:
-        ## final: save full result and create scaled versions
-        tms = time.time()
-        manipulated_image = manipulated_image.convert("RGB") if manipulated_image.mode in ("RGBA", "P") else manipulated_image
-        buffer_full_pipeline_applied = io.BytesIO()
-        manipulated_image.save(buffer_full_pipeline_applied, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
-        mediaitem.create_fileset_processed(buffer_full_pipeline_applied.getbuffer())
-
-        logger.info(f"save processed image and create scaled versions took {round((time.time() - tms), 2)}s")
+    ## final: save full result and create scaled versions
+    manipulated_image = manipulated_image.convert("RGB") if manipulated_image.mode in ("RGBA", "P") else manipulated_image
+    # complete processed version (unprocessed and processed are different here)
+    manipulated_image.save(mediaitem.processed, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
     return mediaitem
 
 
-def process_video(video_in: Path, mediaitem: MediaItem):
+def process_video(video_in: Path, mediaitem: V3Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = VideoProcessing(**mediaitem._config)
+    config = VideoProcessing(**mediaitem.pipeline_config)
 
     context = VideoContext(video_in)
     steps = []
@@ -112,21 +105,19 @@ def process_video(video_in: Path, mediaitem: MediaItem):
     video_processed = context.video_processed
 
     # create final video
-    tms = time.time()
-    shutil.move(video_processed, mediaitem.path_original)
-    mediaitem.create_fileset_unprocessed()
-    mediaitem.copy_fileset_processed()
-    logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
+    shutil.move(video_processed, mediaitem.unprocessed)
+    # complete processed version (unprocessed and processed are same here for this one)
+    shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_collage(captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
+def process_and_generate_collage(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = CollageProcessing(**mediaitem._config)
+    config = CollageProcessing(**mediaitem.pipeline_config)
 
     ## prepare: create canvas and input images
     canvas_size = (config.canvas_width, config.canvas_height)
     canvas = Image.new("RGBA", canvas_size, color=None)
-    collage_images: list[Image.Image] = [Image.open(_captured_mediaitems.path_full) for _captured_mediaitems in captured_mediaitems]
+    collage_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
 
     context = CollageContext(canvas, collage_images)
     steps = []
@@ -163,22 +154,21 @@ def process_and_generate_collage(captured_mediaitems: list[MediaItem], mediaitem
 
     ## create mediaitem
     canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-    canvas.save(mediaitem.path_original, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
+    canvas.save(mediaitem.unprocessed, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
-    # create scaled versions (unprocessed and processed are same here for now
-    mediaitem.create_fileset_unprocessed()
-    mediaitem.copy_fileset_processed()
+    # complete processed version (unprocessed and processed are same here for this one)
+    shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_animation(captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
+def process_and_generate_animation(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = AnimationProcessing(**mediaitem._config)
+    config = AnimationProcessing(**mediaitem.pipeline_config)
 
     ## prepare: create canvas
     canvas_size = (config.canvas_width, config.canvas_height)
 
     ## stage: merge captured images and predefined to one image with transparency
-    animation_images: list[Image.Image] = [Image.open(_captured_mediaitems.path_full) for _captured_mediaitems in captured_mediaitems]
+    animation_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
 
     context = AnimationContext(animation_images)
     steps = []
@@ -192,7 +182,7 @@ def process_and_generate_animation(captured_mediaitems: list[MediaItem], mediait
 
     ## create mediaitem
     sequence_images[0].save(
-        mediaitem.path_original,
+        mediaitem.unprocessed,
         format="gif",
         save_all=True,
         append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
@@ -202,22 +192,19 @@ def process_and_generate_animation(captured_mediaitems: list[MediaItem], mediait
         loop=0,  # loop forever
     )
 
-    # create scaled versions (unprocessed and processed are same here for now
-    tms = time.time()
-    mediaitem.create_fileset_unprocessed()
-    mediaitem.copy_fileset_processed()
-    logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
+    # complete processed version (unprocessed and processed are same here for this one)
+    shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_wigglegram(captured_mediaitems: list[MediaItem], mediaitem: MediaItem):
+def process_and_generate_wigglegram(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = MulticameraProcessing(**mediaitem._config)
+    config = MulticameraProcessing(**mediaitem.pipeline_config)
 
     ## prepare: create canvas
     canvas_size = (config.canvas_width, config.canvas_height)
 
     ## stage: merge captured images and predefined to one image with transparency
-    multicamera_images: list[Image.Image] = [Image.open(_captured_mediaitems.path_full) for _captured_mediaitems in captured_mediaitems]
+    multicamera_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
 
     context = MulticameraContext(multicamera_images)
     steps = []
@@ -231,7 +218,7 @@ def process_and_generate_wigglegram(captured_mediaitems: list[MediaItem], mediai
 
     ## create mediaitem
     sequence_images[0].save(
-        mediaitem.path_original,
+        mediaitem.unprocessed,
         format="gif",
         save_all=True,
         append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
@@ -241,19 +228,16 @@ def process_and_generate_wigglegram(captured_mediaitems: list[MediaItem], mediai
         loop=0,  # loop forever
     )
 
-    # create scaled versions (unprocessed and processed are same here for now
-    tms = time.time()
-    mediaitem.create_fileset_unprocessed()
-    mediaitem.copy_fileset_processed()
-    logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled versions")
+    # unprocessed and processed are same here for now
+    shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def get_filter_preview(mediaitem: MediaItem, filter: str = None) -> io.BytesIO:
+def get_filter_preview(mediaitem: V3Mediaitem, filter: str = None) -> io.BytesIO:
     # check for type. only specific types can have a filter applied by user
-    if mediaitem.media_type not in (MediaItemTypes.image,):
-        raise ValueError(f"Filter can't be applied for media_type={mediaitem.media_type}!")
+    # if mediaitem.type not in (MediaItemTypes.image,):
+    #     raise ValueError(f"Filter can't be applied for media_type={mediaitem.media_type}!")
 
-    image = Image.open(mediaitem.path_thumbnail_unprocessed)
+    image = Image.open(get_resized_filepath(mediaitem.unprocessed, appconfig.mediaprocessing.preview_still_length))
     context = ImageContext(image)
     steps = []
 
@@ -273,6 +257,6 @@ def get_filter_preview(mediaitem: MediaItem, filter: str = None) -> io.BytesIO:
         manipulated_image = manipulated_image.convert("RGB")
 
     buffer_preview_pipeline_applied = io.BytesIO()
-    manipulated_image.save(buffer_preview_pipeline_applied, format="jpeg", quality=appconfig.mediaprocessing.THUMBNAIL_STILL_QUALITY, optimize=False)
+    manipulated_image.save(buffer_preview_pipeline_applied, format="jpeg", quality=80, optimize=False)
 
     return buffer_preview_pipeline_applied

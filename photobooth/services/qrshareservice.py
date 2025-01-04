@@ -4,6 +4,7 @@ https://photobooth-app.org/setup/shareservice/
 
 import json
 import time
+from uuid import UUID
 
 import requests
 
@@ -98,8 +99,12 @@ class QrShareService(BaseService):
                         # if webserver not correctly setup, decoding might fail. catch exception mostly to inform user to debug
                         decoded_line: dict = json.loads(line)
                     except json.JSONDecodeError as exc:
-                        self._logger.exception(exc)
-                        self._logger.error("webserver response from dl.php malformed. please check webserver setup and webserver's logs.")
+                        self._logger.error(
+                            f"webserver response from webserver malformed. please check qr shareservice url, "
+                            f"webserver setup and webserver's logs. error: {exc}"
+                            f"URL trying to connect is {appconfig.qrshare.shareservice_url}"
+                        )
+                        time.sleep(5)  # if url is wrong just slow down to not reconnect every second.
                         break
 
                     if decoded_line.get("file_identifier", None) and decoded_line.get("status", None):
@@ -109,7 +114,7 @@ class QrShareService(BaseService):
                         # set the file to be uploaded
                         request_upload_file = {}
                         try:
-                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(decoded_line["file_identifier"])
+                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(UUID(decoded_line["file_identifier"]))
                             self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except FileNotFoundError as exc:
                             self._logger.error(f"mediaitem not found, wrong id? {exc}")

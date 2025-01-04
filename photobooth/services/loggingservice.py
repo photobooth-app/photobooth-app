@@ -11,11 +11,10 @@ from datetime import datetime
 from logging import FileHandler, LogRecord
 from pathlib import Path
 
+from .. import LOG_PATH
 from .baseservice import BaseService
 from .config import appconfig
 from .sseservice import SseEventLogRecord, SseService
-
-LOG_DIR = "log"
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -60,15 +59,12 @@ class LoggingService(BaseService):
         """
         super().__init__(sse_service=sse_service)
 
-        # ensure dir exists
-        os.makedirs(LOG_DIR, exist_ok=True)
-
         ## formatter ##
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
         log_formatter = logging.Formatter(fmt=fmt)
 
         # filename per day to log to
-        logfile = Path(LOG_DIR, f"photobooth_{datetime.now().astimezone().strftime('%Y%m%d')}.log")
+        logfile = Path(LOG_PATH, f"photobooth_{datetime.now().astimezone().strftime('%Y%m%d')}.log")
 
         ## basic configuration
         # latest basicConfig adds a streamHandler output to console if not automatically called
@@ -121,7 +117,7 @@ class LoggingService(BaseService):
 
         now = time.time()
 
-        for item in Path(LOG_DIR).glob("*.log"):
+        for item in Path(LOG_PATH).glob("*.log"):
             if item.is_file():
                 if item.stat().st_mtime < (now - critical_time):
                     logging.info(f"deleting logfile older than {DAYS} days: {item}")

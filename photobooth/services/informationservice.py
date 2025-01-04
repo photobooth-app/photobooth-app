@@ -10,8 +10,8 @@ from psutil._common import sbattery
 from sqlmodel import Session, delete, select
 
 from ..__version__ import __version__
-from ..database import engine
-from ..models import ShareLimits, UsageStats
+from ..database.database import engine
+from ..database.models import ShareLimits, UsageStats
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService

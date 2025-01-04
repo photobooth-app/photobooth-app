@@ -6,6 +6,7 @@ import subprocess
 import uuid
 from pathlib import Path
 
+from .... import LOG_PATH
 from ..context import VideoContext
 from ..pipeline import NextStep
 
@@ -63,7 +64,7 @@ class BoomerangStep:
             subprocess.run(
                 args=ffmpeg_command,
                 check=True,
-                env=dict(os.environ, FFREPORT="file=./log/ffmpeg-boomerang-last.log:level=32"),
+                env=dict(os.environ, FFREPORT=f"file={LOG_PATH}/ffmpeg-boomerang-last.log:level=32"),
             )
         except Exception as exc:
             logger.exception(exc)

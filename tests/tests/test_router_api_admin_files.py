@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from photobooth import USERDATA_PATH
 from photobooth.application import app
 from photobooth.container import container
 from photobooth.routers.api_admin.files import RECYCLE_DIR, PathListItem
@@ -174,9 +175,9 @@ def test_admin_files_new_folder_empty(client_authenticated: TestClient):
 
 def test_admin_files_new_folder(client_authenticated: TestClient):
     # make up a list - only filepath needs to be valid for this function.
-    target_path = "./userdata"
+
     new_folder_name = "testfolder_automated_testing"
-    new_path = Path(target_path, new_folder_name)
+    new_path = Path(USERDATA_PATH, new_folder_name)
 
     try:
         os.rmdir(new_path)

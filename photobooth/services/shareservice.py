@@ -3,12 +3,11 @@ from datetime import datetime
 
 from sqlmodel import Session, delete, select
 
-from ..database import engine
-from ..models import ShareLimits
+from ..database.database import engine
+from ..database.models import ShareLimits, V3Mediaitem
 from .baseservice import BaseService
 from .config import appconfig
 from .informationservice import InformationService
-from .mediacollection.mediaitem import MediaItem
 from .mediacollectionservice import MediacollectionService
 from .sseservice import SseEventFrontendNotification, SseService
 
@@ -38,7 +37,7 @@ class ShareService(BaseService):
         pass
         super().started()
 
-    def share(self, mediaitem: MediaItem, config_index: int = 0):
+    def share(self, mediaitem: V3Mediaitem, config_index: int = 0):
         """print mediaitem"""
 
         if not appconfig.share.sharing_enabled:
@@ -91,7 +90,7 @@ class ShareService(BaseService):
             raise BlockingIOError(f"Request ignored! Wait {remaining_s:.0f}s before trying again.")
 
         # filename absolute to print, use in printing command
-        filename = mediaitem.path_full.absolute()
+        filename = mediaitem.processed.absolute()
 
         try:
             # print command

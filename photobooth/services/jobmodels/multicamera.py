@@ -1,19 +1,14 @@
-from ..config.groups.actions import (
-    MulticameraConfigurationSet,
-    MulticameraProcessing,
-)
+from ...database.models import MediaitemTypes, V3Mediaitem
+from ..config.groups.actions import MulticameraConfigurationSet, MulticameraProcessing
 from ..config.models.models import SinglePictureDefinition
-from ..mediacollection.mediaitem import MediaItem, MediaItemTypes
-from ..mediaprocessing.processes import (
-    process_and_generate_wigglegram,
-)
+from ..mediaprocessing.processes import process_and_generate_wigglegram
 from .base import JobModelBase
 
 
 class JobModelMulticamera(JobModelBase):
     def __init__(self, configuration_set: MulticameraConfigurationSet):
         super().__init__(configuration_set)
-        self._media_type: MediaItemTypes = MediaItemTypes.multicamera
+        self._media_type: MediaitemTypes = MediaitemTypes.multicamera
 
         self._total_captures_to_take = 1
 
@@ -28,5 +23,5 @@ class JobModelMulticamera(JobModelBase):
             filter=processing.filter.value,
         )
 
-    def do_phase2_process_and_generate(self, phase2_mediaitem: MediaItem):
-        process_and_generate_wigglegram(self._confirmed_captures_collection, phase2_mediaitem)
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+        process_and_generate_wigglegram(phase1_mediaitems, phase2_mediaitem)

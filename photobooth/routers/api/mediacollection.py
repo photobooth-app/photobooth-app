@@ -1,9 +1,11 @@
 import logging
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Body, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query
 
 from ...container import container
+from ...database.models import V3MediaitemPublic
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -12,37 +14,40 @@ router = APIRouter(
 )
 
 
-@router.get("/getitems")
-def api_getitems() -> list:
-    # TODO: improve to deliver a clean MediaItem DTO that can be used by the client automatically typed
+@router.get("/", response_model=list[V3MediaitemPublic])
+def api_getitems(offset: int = 0, limit: Annotated[int, Query(le=500)] = 500):
     try:
-        return container.mediacollection_service.db_get_images_as_dict()
+        return container.mediacollection_service.db_get_images(offset, limit)
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
-@router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete(image_id: Annotated[str, Body(embed=True)]) -> None:
-    logger.info(f"gallery_delete requested, id={image_id}")
+@router.get("/{item_id}", response_model=V3MediaitemPublic)
+def api_getitem(item_id: UUID):
     try:
-        container.mediacollection_service.delete_image_by_id(image_id)
+        return container.mediacollection_service.db_get_image_by_id(item_id)
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
+
+
+@router.delete("/{item_id}")
+def api_gallery_delete(item_id: UUID):
+    try:
+        container.mediacollection_service.delete_image_by_id(item_id)
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"deleting failed: {exc}") from exc
+    return {"ok": True}
 
 
-@router.get("/delete_all", status_code=status.HTTP_204_NO_CONTENT)
-def api_gallery_delete_all() -> None:
-    """Warning: deletes all files permanently without any further confirmation
-
-    Raises:
-        HTTPException: _description_
-    """
-    logger.info("delete_all media items requested")
+@router.delete("/")
+def api_gallery_delete_all():
     try:
         container.mediacollection_service.delete_all_mediaitems()
-        logger.info("all media successfully deleted")
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(500, f"deleting all media items failed: {exc}") from exc
+
+    return {"ok": True}

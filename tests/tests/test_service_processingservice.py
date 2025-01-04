@@ -132,13 +132,13 @@ def test_video(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
-    number_of_images_before = _container.mediacollection_service.number_of_images
+    number_of_images_before = _container.mediacollection_service.get_number_of_images()
 
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._state_machine is None
 
-    assert _container.mediacollection_service.number_of_images == number_of_images_before + 1
+    assert _container.mediacollection_service.get_number_of_images() == number_of_images_before + 1
 
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 
@@ -154,7 +154,7 @@ def test_video_stop_early(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
-    number_of_images_before = _container.mediacollection_service.number_of_images
+    number_of_images_before = _container.mediacollection_service.get_number_of_images()
 
     # wait until actually recording
     timeout_counter = 0
@@ -172,7 +172,7 @@ def test_video_stop_early(_container: Container):
 
     assert _container.processing_service._state_machine is None
 
-    assert _container.mediacollection_service.number_of_images == number_of_images_before + 1
+    assert _container.mediacollection_service.get_number_of_images() == number_of_images_before + 1
 
     video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
 

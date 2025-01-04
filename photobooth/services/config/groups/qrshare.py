@@ -29,6 +29,6 @@ class GroupQrShare(BaseModel):
     )
 
     share_custom_qr_url: str = Field(
-        default="http://localhost/media/processed/full/{filename}",
-        description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {filename} is replaced by actual filename in QR code.",
+        default="http://localhost:8000/media/full/{identifier}",
+        description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {identifier} is replaced by the actual item's id in QR code.",
     )

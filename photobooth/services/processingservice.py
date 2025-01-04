@@ -5,11 +5,15 @@ _summary_
 import logging
 import shutil
 import time
+from datetime import datetime
+from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
 
 from statemachine import State, StateMachine
 
+from .. import PATH_PROCESSED, PATH_UNPROCESSED
+from ..database.models import MediaitemTypes, V3Mediaitem
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
@@ -21,16 +25,20 @@ from .jobmodels.collage import JobModelCollage
 from .jobmodels.image import JobModelImage
 from .jobmodels.multicamera import JobModelMulticamera
 from .jobmodels.video import JobModelVideo
-from .mediacollection.mediaitem import MediaItem, MediaItemTypes, MetaDataDict
 from .mediacollectionservice import MediacollectionService
-from .mediaprocessing.processes import (
-    process_image_collageimage_animationimage,
-    process_video,
-)
+from .mediaprocessing.processes import process_image_collageimage_animationimage, process_video
 from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
 from .wledservice import WledService
 
 logger = logging.getLogger(__name__)
+
+MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
+    MediaitemTypes.image: "jpg",
+    MediaitemTypes.collage: "jpg",
+    MediaitemTypes.animation: "gif",
+    MediaitemTypes.video: "mp4",
+    MediaitemTypes.multicamera: "gif",
+}
 
 
 class ProcessingService(BaseService):
@@ -45,6 +53,7 @@ class ProcessingService(BaseService):
         information_service: InformationService,
     ):
         super().__init__(sse_service)
+
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._wled_service: WledService = wled_service
@@ -209,7 +218,7 @@ class ProcessingMachine(StateMachine):
     _counted_record = counting.to(record)
     _counted_multicapture = counting.to(multicapture)
     _captured = capture.to(approve_capture) | multicapture.to(approve_capture)
-    confirm = approve_capture.to(counting, unless="all_captures_confirmed") | approve_capture.to(captures_completed, cond="all_captures_confirmed")
+    confirm = approve_capture.to(counting, unless="all_captures_done") | approve_capture.to(captures_completed, cond="all_captures_done")
     reject = approve_capture.to(counting)
     abort = approve_capture.to(finished)
     stop_recording = record.to(captures_completed)
@@ -237,31 +246,30 @@ class ProcessingMachine(StateMachine):
         super().__init__(model=jobmodel)
 
     ## state actions
+    def _new_filename(self, media_type: MediaitemTypes):
+        filename_ending = MEDIAITEM_TYPE_TO_FILEENDING_MAPPING[media_type]
+        return f"{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.{filename_ending}"
 
     def _emit_model_state_update(self):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
+    def _update_captures_taken(self):
+        number_captures_taken = len(self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier))
+        self.model.set_captures_taken(number_captures_taken)
+
     def after_transition(self, event, source, target):
-        logger.info(f"transition after: {source.id}--({event})-->{target.id}")
+        pass
 
     def on_enter_state(self, event, target):
-        """_summary_"""
-        logger.info(f"enter: {target.id} from {event}")
-
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._emit_model_state_update()
 
     def on_exit_state(self, event, state):
-        """_summary_"""
-        logger.info(f"exit: {state.id} from {event}")
+        pass
 
     def on_exit_idle(self):
-        # when idle left, check that all is properly set up!
         pass
-        # if not self.model._validate_job():
-        #     logger.error(self.model)
-        #     raise RuntimeError("job setup illegal")
 
     def on_enter_idle(self):
         """_summary_"""
@@ -298,79 +306,67 @@ class ProcessingMachine(StateMachine):
             self._counted_capture()
 
     def on_enter_capture(self):
-        """_summary_"""
         logger.info(
-            f"current capture ({self.model.number_captures_taken()+1}/{self.model.total_captures_to_take()}, "
+            f"current capture ({self.model.get_captures_taken()+1}/{self.model.total_captures_to_take()}, "
             f"remaining {self.model.remaining_captures_to_take()-1})"
         )
-
-        # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
-        # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
-        _hide = getattr(self.model._configuration_set.jobcontrol, "gallery_hide_individual_images", False)
-        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.number_captures_taken()).model_dump(mode="json")
-
-        mediaitem = MediaItem.create(
-            MetaDataDict(
-                media_type=MediaItemTypes.image,  # it is always image here, even if create gif, during capture it's jpg image
-                hide=_hide,
-                config=_config,
-            )
-        )
-        logger.debug(f"capture to {mediaitem.path_original=}")
 
         self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         start_time_capture = time.time()
 
         filepath = self._aquisition_service.wait_for_still_file()
-        shutil.move(filepath, mediaitem.path_original)
-
-        # populate image item for further processing:
-        self.model.set_last_capture(mediaitem)
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
+
+        ## PHASE 1:
+        # postprocess each capture individually
+        logger.info(f"postprocessing capture: {filepath=}")
+
+        # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
+        # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
+        _show = getattr(self.model._configuration_set.jobcontrol, "show_individual_captures_in_gallery", True)
+        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.get_captures_taken()).model_dump(mode="json")
+
+        original_filenamepath = self._new_filename(MediaitemTypes.image)
+        v3mediaitem = V3Mediaitem(
+            job_identifier=self.model._job_identifier,
+            media_type=MediaitemTypes.image,
+            unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
+            processed=Path(PATH_PROCESSED, original_filenamepath),
+            pipeline_config=_config,
+            show_in_gallery=_show,
+        )
+
+        shutil.move(filepath, v3mediaitem.unprocessed)
+
+        logger.debug(f"capture to {v3mediaitem.unprocessed=}")
+
+        # apply 1pic pipeline:
+        tms = time.time()
+        process_image_collageimage_animationimage(v3mediaitem)
+
+        assert v3mediaitem.unprocessed.is_file()
+        assert v3mediaitem.processed.is_file()
+
+        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
+
+        logger.info(f"capture {v3mediaitem=} successful")
+
+        # add to collection
+        # update model so it knows the latest number of captures and the machine can react accordingly if finished
+        self._mediacollection_service.db_add_item(v3mediaitem)  # and to the db.
+        self.model._last_captured_mediaitem_id = v3mediaitem.id
+        self._update_captures_taken()
 
         # capture finished, go to next state
         self._captured()
 
-    def on_exit_capture(self):
-        """_summary_"""
-
-        if not self.model.last_capture_successful():
-            logger.critical("on_exit_capture no valid image taken! abort processing")
-            return
-
-        ## PHASE 1:
-        # postprocess each capture individually
-        logger.info("start postprocessing phase 1")
-
-        # load last mediaitem for further processing
-        mediaitem = self.model.get_last_capture()
-        logger.info(f"postprocessing last capture: {mediaitem=}")
-
-        # always create unprocessed versions for later usage
-        tms = time.time()
-        mediaitem.create_fileset_unprocessed()
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create scaled images")
-
-        # apply 1pic pipeline:
-        tms = time.time()
-        process_image_collageimage_animationimage(mediaitem)
-        logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
-
-        if not mediaitem.fileset_valid():
-            raise RuntimeError("created fileset invalid! check logs for additional errors")
-
-        logger.info(f"capture {mediaitem=} successful")
-
-        # add to collection
-        self.model.add_confirmed_capture_to_collection(self.model.get_last_capture())
-
     def on_enter_multicapture(self):
         # depending on job type we have slightly different filenames so it can be distinguished in the UI later.
         # 1st phase is about capture, so always image - but distinguish between other types so UI can handle different later
-        _hide = getattr(self.model._configuration_set.jobcontrol, "gallery_hide_individual_images", False)
-        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.number_captures_taken()).model_dump(mode="json")
+        _show = getattr(self.model._configuration_set.jobcontrol, "show_individual_captures_in_gallery", False)
+        _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.get_captures_taken()).model_dump(mode="json")
 
         self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
@@ -378,54 +374,47 @@ class ProcessingMachine(StateMachine):
 
         filepaths = self._aquisition_service.wait_for_multicam_files()
 
-        mediaitems = []
+        mediaitems: list[V3Mediaitem] = []
         for filepath in filepaths:
-            mediaitem = MediaItem.create(MetaDataDict(media_type=MediaItemTypes.image, hide=_hide, config=_config))
-            logger.debug(f"capture to {mediaitem.path_original=}")
+            original_filenamepath = self._new_filename(MediaitemTypes.image)
+            v3mediaitem = V3Mediaitem(
+                job_identifier=self.model._job_identifier,
+                media_type=MediaitemTypes.multicamera,
+                unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
+                processed=Path(PATH_PROCESSED, original_filenamepath),
+                pipeline_config=_config,
+                show_in_gallery=_show,
+            )
 
-            shutil.move(filepath, mediaitem.path_original)
+            logger.debug(f"capture to {v3mediaitem.unprocessed=}")
 
-            mediaitems.append(mediaitem)
+            shutil.move(filepath, v3mediaitem.unprocessed)
+
+            mediaitems.append(v3mediaitem)
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
-
-        self.model.set_last_capture(mediaitems)
-
-        # capture finished, go to next state
-        self._captured()
-
-    def on_exit_multicapture(self):
-        if not self.model.last_capture_successful():
-            logger.critical("on_exit_capture no valid image taken! abort processing")
-            return
 
         # postprocess each capture individually
         logger.info("start postprocessing phase 1")
 
         # load last mediaitem for further processing
-        mediaitems: list[MediaItem] = self.model.get_last_capture()
         logger.info(f"postprocessing last captures: {mediaitems=}")
 
         # always create unprocessed versions for later usage
         tms = time.time()
         for mediaitem in mediaitems:
-            mediaitem.create_fileset_unprocessed()
-
             process_image_collageimage_animationimage(mediaitem)
 
-            if not mediaitem.fileset_valid():
-                raise RuntimeError("created fileset invalid! check logs for additional errors")
-
             # add to collection
-            self.model.add_confirmed_capture_to_collection(mediaitem)
+            self._mediacollection_service.db_add_item(mediaitem)  # and to the db.
 
-        # this does not make sense actually. it's the last item of a time-sync capture sequence.
-        # since we do not show it anywhere, we just set it like all other jobs but it's not used anyways.
-        self.model.set_last_capture(mediaitem)
+        self.model._last_captured_mediaitem_id = mediaitems[-1].id
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process")
-
         logger.info(f"capture {mediaitem=} successful")
+
+        # capture finished, go to next state
+        self._captured()
 
     def on_enter_approve_capture(self):
         logger.info("finished capture")
@@ -457,17 +446,19 @@ class ProcessingMachine(StateMachine):
 
         if event == self.reject.name:
             # remove rejected image
-            delete_mediaitem = self.model._confirmed_captures_collection.pop()
-            self.model.set_last_capture(None)
-            logger.info(f"rejected: {delete_mediaitem=}")
-            self._mediacollection_service.delete_mediaitem_files(delete_mediaitem)
+            latest_item = self._mediacollection_service.db_get_most_recent_mediaitem()
+            logger.info(f"rejected: {latest_item=}")
+            self._mediacollection_service.delete_image_by_id(latest_item.id)
+            self._mediacollection_service.delete_mediaitem_files(latest_item)
+            self._update_captures_taken()
 
         if event == self.abort.name:
             # remove all images captured until now
             logger.info("aborting job, deleting captured items")
-            for item in self.model._confirmed_captures_collection:
-                logger.debug(f"delete item {item}")
-                self._mediacollection_service.delete_mediaitem_files(mediaitem=item)
+
+            job_items = self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier)
+            for job_item in job_items:
+                self._mediacollection_service._db_delete_item_by_item(job_item)
 
     def on_enter_record(self):
         """_summary_"""
@@ -497,12 +488,13 @@ class ProcessingMachine(StateMachine):
         temp_videofilepath = self._aquisition_service.get_recorded_video()
         logger.debug(f"recorded to {temp_videofilepath=}")
 
-        mediaitem = MediaItem.create(
-            MetaDataDict(
-                media_type=self.model._media_type,
-                hide=False,
-                config=self.model._configuration_set.processing.model_dump(mode="json"),
-            )
+        original_filenamepath = self._new_filename(self.model._media_type)
+        mediaitem = V3Mediaitem(
+            job_identifier=self.model._job_identifier,
+            media_type=self.model._media_type,
+            unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
+            processed=Path(PATH_PROCESSED, original_filenamepath),
+            pipeline_config=self.model._configuration_set.processing.model_dump(mode="json"),
         )
 
         # apply video phase2 pipeline:
@@ -511,43 +503,42 @@ class ProcessingMachine(StateMachine):
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
 
         # add to collection
-        self.model.set_last_capture(mediaitem)
-        self.model.add_confirmed_capture_to_collection(mediaitem)
+        self._mediacollection_service.db_add_item(mediaitem)  # and to the db.
+        self.model._last_captured_mediaitem_id = mediaitem.id
 
     def on_enter_captures_completed(self):
+        # get phase 1 items:
+        phase1_mediaitems = self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier)
+        assert len(phase1_mediaitems) > 0
+
         ## PHASE 2:
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        phase2_mediaitem: MediaItem = None
-
+        phase2_mediaitem: V3Mediaitem = None
         if isinstance(self.model, JobModelCollage | JobModelAnimation | JobModelMulticamera):
-            phase2_mediaitem = MediaItem.create(
-                MetaDataDict(
-                    media_type=self.model._media_type,
-                    hide=False,
-                    config=self.model._configuration_set.processing.model_dump(mode="json"),
-                )
+            original_filenamepath = self._new_filename(self.model._media_type)
+            phase2_mediaitem = V3Mediaitem(
+                job_identifier=self.model._job_identifier,
+                media_type=self.model._media_type,
+                unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
+                processed=Path(PATH_PROCESSED, original_filenamepath),
+                pipeline_config=self.model._configuration_set.processing.model_dump(mode="json"),
             )
-            tms = time.time()
-            self.model.do_phase2_process_and_generate(phase2_mediaitem)
-            logger.info(f"-- process time: {round((time.time() - tms), 2)}s for phase 2")
 
-        # resulting collage mediaitem will be added to the collection as most recent item
-        if phase2_mediaitem:
-            self.model.add_confirmed_capture_to_collection(phase2_mediaitem)
-            self.model.set_last_capture(phase2_mediaitem)
+            tms = time.time()
+            self.model.do_phase2_process_and_generate(phase1_mediaitems, phase2_mediaitem)
+            logger.info(f"-- process time: {round((time.time() - tms), 2)}s for phase 2")
 
         ## FINISH:
         # to inform frontend about new image to display
         logger.info("finished postprocessing")
 
-        ## add items to collection:
-        logger.info("adding items to db")
-
-        for item in self.model._confirmed_captures_collection:
-            logger.debug(f"adding {item} to collection")
-            _ = self._mediacollection_service.db_add_item(item)
+        ## add galleryitems
+        # finally add resulting collage mediaitem will be added to the collection as most recent item
+        if phase2_mediaitem:
+            self._mediacollection_service.db_add_item(phase2_mediaitem)
+            self.model._last_captured_mediaitem_id = phase2_mediaitem.id
 
         # present to ui
         self._present()

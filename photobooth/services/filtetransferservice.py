@@ -7,16 +7,12 @@ import psutil
 
 from photobooth.utils.stoppablethread import StoppableThread
 
+from .. import PATH_PROCESSED, PATH_UNPROCESSED
 from .baseservice import BaseService
 from .config import appconfig
-from .mediacollection.mediaitem import (
-    PATH_FULL,
-    PATH_FULL_UNPROCESSED,
-    PATH_ORIGINAL,
-)
 from .sseservice import SseService
 
-LIST_FOLDERS_TO_COPY = [PATH_ORIGINAL, PATH_FULL, PATH_FULL_UNPROCESSED]
+LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED]
 
 
 class FileTransferService(BaseService):

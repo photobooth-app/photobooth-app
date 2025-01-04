@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Response, status
 
@@ -15,7 +16,7 @@ router = APIRouter(
 
 
 @router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
-def api_get_preview_image_filtered(mediaitem_id, filter=None):
+def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
         buffer_preview_pipeline_applied = get_filter_preview(mediaitem, filter)
@@ -36,14 +37,15 @@ def api_get_preview_image_filtered(mediaitem_id, filter=None):
 
 
 @router.get("/applyfilter/{mediaitem_id}/{filter}")
-def api_get_applyfilter(mediaitem_id, filter: str = None):
+def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
     try:
         mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
-        _config = SinglePictureDefinition(**mediaitem._config)
+        _config = SinglePictureDefinition(**mediaitem.pipeline_config)
         _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
-        mediaitem._config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
+        mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
+        # TODO: update mediaitem in DB!
 
         process_image_collageimage_animationimage(mediaitem)
     except Exception as exc:
