@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from pathlib import Path
 
 from sqlalchemy.dialects.sqlite import JSON
@@ -38,7 +38,7 @@ class ShareLimits(SQLModel, table=True):
     )
 
 
-class MediaitemTypes(StrEnum):
+class MediaitemTypes(str, Enum):
     image = "image"  # captured single image that is NOT part of a collage (normal process)
     collage = "collage"  # canvas image that was made out of several collage_image
     animation = "animation"  # canvas image that was made out of several animation_image
@@ -72,7 +72,7 @@ class V3MediaitemPublic(V3MediaitemBase):
     id: uuid.UUID
 
 
-class DimensionTypes(StrEnum):
+class DimensionTypes(str, Enum):
     full = "full"
     preview = "preview"
     thumbnail = "thumbnail"
