@@ -6,8 +6,8 @@ import requests
 from PIL import Image
 
 from photobooth.container import Container, container
+from photobooth.database.models import V3Mediaitem
 from photobooth.services.config import appconfig
-from photobooth.services.mediacollection.mediaitem import MediaItem
 
 logger = logging.getLogger(name=None)
 
@@ -34,7 +34,7 @@ def _container() -> Container:
 
 # @pytest.fixture()
 @pytest.fixture(params=["image", "collage", "animation", "video"])
-def _mediaitem(request, _container: Container) -> MediaItem:
+def _mediaitem(request, _container: Container) -> V3Mediaitem:
     _container.processing_service.trigger_action(request.param)
     container.processing_service.wait_until_job_finished()
     yield _container.mediacollection_service.db_get_most_recent_mediaitem()
@@ -82,7 +82,7 @@ def test_shareservice_urls_valid():
     assert r.status_code == 500
 
 
-def test_shareservice_download_all_mediaitem_types(_mediaitem: MediaItem):
+def test_shareservice_download_all_mediaitem_types(_mediaitem: V3Mediaitem):
     """start service and try to download an image"""
 
     logger.info(f"check to download {_mediaitem.id=}, {_mediaitem.media_type=}")

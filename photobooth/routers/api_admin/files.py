@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, UploadFile, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
-from ...services.mediacollectionservice import RECYCLE_DIR
+from ... import RECYCLE_PATH
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
@@ -274,7 +274,7 @@ def api_clearrecycledir():
     """
 
     try:
-        for file in Path(f"{RECYCLE_DIR}").glob("*.*"):
+        for file in Path(f"{RECYCLE_PATH}").glob("*.*"):
             os.remove(file)
 
     except Exception as exc:

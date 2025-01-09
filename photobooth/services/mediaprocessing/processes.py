@@ -7,7 +7,7 @@ import time
 import traceback
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from ...database.models import V3Mediaitem
 from ..config import appconfig
@@ -15,7 +15,6 @@ from ..config.groups.actions import AnimationProcessing, CollageProcessing, Mult
 from ..config.models.models import SinglePictureDefinition
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline
-from .resizer import get_resized_filepath
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
@@ -232,12 +231,12 @@ def process_and_generate_wigglegram(captured_mediaitems: list[V3Mediaitem], medi
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def get_filter_preview(mediaitem: V3Mediaitem, filter: str = None) -> io.BytesIO:
-    # check for type. only specific types can have a filter applied by user
-    # if mediaitem.type not in (MediaItemTypes.image,):
-    #     raise ValueError(f"Filter can't be applied for media_type={mediaitem.media_type}!")
+def get_filter_preview(filepath_in: Path, filter: str = None) -> io.BytesIO:
+    try:
+        image = Image.open(filepath_in)
+    except UnidentifiedImageError as exc:
+        raise RuntimeError(f"apply filter to file {filepath_in} not supported, error {exc}") from exc
 
-    image = Image.open(get_resized_filepath(mediaitem.unprocessed, appconfig.mediaprocessing.preview_still_length))
     context = ImageContext(image)
     steps = []
 

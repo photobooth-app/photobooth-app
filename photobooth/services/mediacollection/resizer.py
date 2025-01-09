@@ -1,21 +1,15 @@
-"""
-Handle all media collection related functions
-"""
-
 import logging
 import os
 import subprocess
 from pathlib import Path
-from threading import Lock
 
 from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 
-from ... import CACHE_PATH, LOG_PATH
+from ... import LOG_PATH
 from ...database.models import DimensionTypes
 from ..config import appconfig
 
 logger = logging.getLogger(__name__)
-resize_lock = Lock()
 
 
 MAP_DIMENSION_TO_PIXEL = {
@@ -121,35 +115,16 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
         raise RuntimeError(f"error resizing video, error: {exc}") from exc
 
 
-def get_resized_filepath(filepath: Path, scaled_min_length: int):
-    def get_cached_filepath(filepath: Path, scaled_min_length: int):
-        # rebase to: cache-dir/length/original_filename
-        relative_path = filepath.absolute().relative_to(Path.cwd())
-        cache_filepath = Path(CACHE_PATH, str(scaled_min_length), relative_path)
+def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: int) -> None:
+    suffix = filepath_in.suffix
 
-        os.makedirs(cache_filepath.parent, exist_ok=True)
+    if suffix.lower() in (".jpg", ".jpeg"):
+        resize_jpeg(filepath_in, filepath_out, scaled_min_length)
+    elif suffix.lower() == ".gif":
+        resize_gif(filepath_in, filepath_out, scaled_min_length)
+    elif suffix.lower() == ".mp4":
+        resize_mp4(filepath_in, filepath_out, scaled_min_length)
+    else:
+        raise RuntimeError(f"filetype with suffix '{suffix}' not supported")
 
-        return cache_filepath
-
-    # cache is simple: filename+target_length is used to check if file exists, if not, create it.
-    cache_filepath = get_cached_filepath(filepath, scaled_min_length)
-
-    # lock to ensure exists-check is valid and only one resize is invoked.
-    with resize_lock:
-        if cache_filepath.exists():
-            # cached version exists - return it.
-            # TODO: need to have a way to invalidate cached versions.
-
-            return cache_filepath
-
-        suffix = filepath.suffix
-        if suffix.lower() in (".jpg", ".jpeg"):
-            resize_jpeg(filepath, cache_filepath, scaled_min_length)
-        elif suffix.lower() == ".gif":
-            resize_gif(filepath, cache_filepath, scaled_min_length)
-        elif suffix.lower() == ".mp4":
-            resize_mp4(filepath, cache_filepath, scaled_min_length)
-        else:
-            raise RuntimeError(f"filetype with suffix '{suffix}' not supported")
-
-        return cache_filepath
+    assert filepath_out.exists()

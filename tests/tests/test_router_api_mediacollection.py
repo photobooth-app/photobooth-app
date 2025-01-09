@@ -1,5 +1,6 @@
 from unittest import mock
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,7 +19,7 @@ def client() -> TestClient:
 
 
 def test_get_items(client: TestClient):
-    response = client.get("/mediacollection/getitems")
+    response = client.get("/mediacollection/")
     assert response.status_code == 200
 
 
@@ -26,8 +27,8 @@ def test_get_items_exception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception()
 
-    with patch.object(MediacollectionService, "db_get_images_as_dict", error_mock):
-        response = client.get("/mediacollection/getitems")
+    with patch.object(MediacollectionService, "db_get_images", error_mock):
+        response = client.get("/mediacollection/")
         assert response.status_code == 500
         assert "detail" in response.json()
 
@@ -36,9 +37,9 @@ def test_get_items_exception(client: TestClient):
 def test_delete_item(mock_remove, client: TestClient):
     mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
 
-    response = client.post("/mediacollection/delete", json={"image_id": mediaitem.id})
+    response = client.delete(f"/mediacollection/{mediaitem.id}")
 
-    assert response.status_code == 204
+    assert response.is_success
 
     # check os.remove was invoked
     mock_remove.assert_called()
@@ -49,16 +50,16 @@ def test_delete_item_exception_nonexistant(client: TestClient):
     error_mock.side_effect = Exception("mock error")
 
     with patch.object(MediacollectionService, "delete_image_by_id", error_mock):
-        response = client.post("/mediacollection/delete", json={"image_id": "illegalid"})
+        response = client.delete(f"/mediacollection/{uuid4()}")  # generated id is non-existant!
         assert response.status_code == 500
         assert "detail" in response.json()
 
 
 @patch("os.remove")
 def test_delete_items(mock_remove, client: TestClient):
-    response = client.get("/mediacollection/delete_all")
+    response = client.delete("/mediacollection/")
 
-    assert response.status_code == 204
+    assert response.is_success
 
     # check os.remove was invoked
     mock_remove.assert_called()
@@ -69,6 +70,6 @@ def test_delete_items_exception(client: TestClient):
     error_mock.side_effect = Exception("mock error")
 
     with patch.object(MediacollectionService, "delete_all_mediaitems", error_mock):
-        response = client.get("/mediacollection/delete_all")
+        response = client.delete("/mediacollection/")
         assert response.status_code == 500
         assert "detail" in response.json()

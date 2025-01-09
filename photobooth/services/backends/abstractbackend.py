@@ -141,9 +141,6 @@ class AbstractBackend(ABC):
         self._video_recorded_videofilepath: Path = None
         self._video_framerate: int = None
 
-        # services are responsible to create their folders needed for proper processing:
-        os.makedirs("tmp", exist_ok=True)
-
         super().__init__()
 
     def __repr__(self):

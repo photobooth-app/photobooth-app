@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth import USERDATA_PATH
+from photobooth import RECYCLE_PATH, USERDATA_PATH
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.routers.api_admin.files import RECYCLE_DIR, PathListItem
+from photobooth.routers.api_admin.files import PathListItem
 
 
 @pytest.fixture
@@ -211,7 +211,7 @@ def test_admin_files_delete(client_authenticated: TestClient):
 
 
 def test_admin_files_clearrecycle(client_authenticated: TestClient):
-    testfile = Path(RECYCLE_DIR, "testfile.test")
+    testfile = Path(RECYCLE_PATH, "testfile.test")
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception()
     open(testfile, "a").close()

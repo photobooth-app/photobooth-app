@@ -1,6 +1,7 @@
 import time
 from unittest import mock
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -104,6 +105,6 @@ def test_latest_filenotfound_exception(client: TestClient):
 
 
 def test_id_filenotfound_exception(client: TestClient):
-    response = client.get("/share/actions/nonexistantid/0")
+    response = client.get(f"/share/actions/{uuid4()}/0")
     assert response.status_code == 404
     assert "detail" in response.json()

@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Response, status
 
 from ...container import container
+from ...database.models import DimensionTypes
 from ...services.config.models.models import PilgramFilter, SinglePictureDefinition
 from ...services.mediaprocessing.processes import get_filter_preview, process_image_collageimage_animationimage
 from ...utils.exceptions import PipelineError
@@ -18,8 +19,14 @@ router = APIRouter(
 @router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
 def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
     try:
-        mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
-        buffer_preview_pipeline_applied = get_filter_preview(mediaitem, filter)
+        unprocessed_thumbnail = container.mediacollection_service.get_mediaitem_file(
+            mediaitem_id=mediaitem_id,
+            dimension=DimensionTypes.thumbnail,
+            processed=False,
+        )
+
+        buffer_preview_pipeline_applied = get_filter_preview(unprocessed_thumbnail, filter)
+
         return Response(
             content=buffer_preview_pipeline_applied.getvalue(),
             media_type="image/jpeg",
@@ -45,7 +52,8 @@ def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
         _config = SinglePictureDefinition(**mediaitem.pipeline_config)
         _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
-        # TODO: update mediaitem in DB!
+
+        container.mediacollection_service.db_update_item(mediaitem)
 
         process_image_collageimage_animationimage(mediaitem)
     except Exception as exc:

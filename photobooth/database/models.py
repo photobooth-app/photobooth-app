@@ -49,6 +49,11 @@ class MediaitemTypes(StrEnum):
 class V3MediaitemBase(SQLModel):
     media_type: MediaitemTypes
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime | None = Field(  # https://github.com/fastapi/sqlmodel/issues/252#issuecomment-2203808928
+        default_factory=datetime.now,
+        nullable=False,
+        sa_column_kwargs={"onupdate": datetime.now},
+    )
 
 
 class V3Mediaitem(V3MediaitemBase, table=True):
@@ -74,10 +79,12 @@ class DimensionTypes(StrEnum):
 
 
 class V3CachedItem(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(primary_key=True)
 
-    v3mediaitem_id: uuid.UUID = Field(index=True)
+    # following are the unique combination to identify if a cached obj is avail or no
+    v3mediaitem_id: uuid.UUID = Field(index=True, foreign_key="v3mediaitem.id")
     dimension: DimensionTypes = Field(index=True)
+    processed: bool = Field(index=True)
 
     created_at: datetime = Field(default_factory=datetime.now)
 

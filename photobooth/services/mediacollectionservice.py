@@ -6,22 +6,21 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from uuid import UUID
+from threading import Lock
+from uuid import UUID, uuid4
 
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, delete, func, select
 
-from .. import PATH_PROCESSED, PATH_UNPROCESSED
+from .. import CACHE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
 from ..database.database import engine
-from ..database.models import DimensionTypes, V3Mediaitem, V3MediaitemPublic
-from ..services.mediaprocessing.resizer import MAP_DIMENSION_TO_PIXEL, get_resized_filepath
+from ..database.models import DimensionTypes, V3CachedItem, V3Mediaitem, V3MediaitemPublic
 from .baseservice import BaseService
 from .config import appconfig
+from .mediacollection.resizer import MAP_DIMENSION_TO_PIXEL, generate_resized
 from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
 
 logger = logging.getLogger(__name__)
-
-RECYCLE_DIR = "recycle"
 
 
 class MediacollectionService(BaseService):
@@ -30,8 +29,13 @@ class MediacollectionService(BaseService):
     def __init__(self, sse_service: SseService):
         super().__init__(sse_service=sse_service)
 
+        self._lock_cache_check: Lock = Lock()
+
         # ensure data directories exist
-        os.makedirs(f"{RECYCLE_DIR}", exist_ok=True)
+        os.makedirs(RECYCLE_PATH, exist_ok=True)
+
+        # remove outdated items from cache during startup.
+        self._cache_clear_outdated()
 
         self._logger.info(f"initialized DB, found {self.get_number_of_images()} images")
 
@@ -46,6 +50,12 @@ class MediacollectionService(BaseService):
                 self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=V3MediaitemPublic.model_validate(item)))
 
             return item.id
+
+    def db_update_item(self, item: V3Mediaitem):
+        with Session(engine) as session:
+            session.add(item)
+            session.commit()
+            session.refresh(item)
 
     def _db_delete_item_by_item(self, item: V3Mediaitem):
         with Session(engine) as session:
@@ -100,8 +110,12 @@ class MediacollectionService(BaseService):
         try:
             with Session(engine) as session:
                 results = session.exec(select(V3Mediaitem).where(V3Mediaitem.id == item_id))
+                item = results.one()
 
-                return results.one()
+                if not item.unprocessed.exists() or not item.processed.exists():
+                    raise FileNotFoundError(f"cannot find representing file for item {item_id}!")
+
+                return item
         except NoResultFound as exc:
             raise FileNotFoundError(f"could not find {item_id} in database") from exc
 
@@ -136,7 +150,7 @@ class MediacollectionService(BaseService):
         try:
             if appconfig.common.users_delete_to_recycle_dir:
                 self._logger.info(f"moving {mediaitem} to recycle directory")
-                shutil.move(mediaitem.unprocessed, Path(RECYCLE_DIR, mediaitem.unprocessed.name))
+                shutil.move(mediaitem.unprocessed, Path(RECYCLE_PATH, mediaitem.unprocessed.name))
             else:
                 os.remove(mediaitem.unprocessed)
         except FileNotFoundError:
@@ -174,10 +188,82 @@ class MediacollectionService(BaseService):
 
         self._logger.info("deleted all mediaitems")
 
-    def get_mediaitem_file(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
-        item = self.db_get_image_by_id(mediaitem_id)
+    def _cache_clear_outdated(self):
+        with Session(engine) as session:
+            statement = select(V3CachedItem).join(V3Mediaitem).where(V3Mediaitem.updated_at > V3CachedItem.created_at)
+            results = session.exec(statement)
+            outdated_items = results.all()
 
-        dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, 100)
-        resized_filepath = get_resized_filepath(item.processed if processed else item.unprocessed, dimension_pixel)
+            for outdated_item in outdated_items:
+                session.delete(outdated_item)
 
-        return resized_filepath
+            session.commit()
+
+            logger.info(f"deleted {len(outdated_items)} outdated items from the cache")
+
+    def _cache_clear_all(self):
+        with Session(engine) as session:
+            statement = delete(V3CachedItem)
+            session.exec(statement)
+            session.commit()
+
+    def _check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
+        with Session(engine) as session:
+            results = session.exec(
+                select(V3CachedItem)
+                .join(V3Mediaitem)
+                .where(V3CachedItem.v3mediaitem_id == mediaitem_id, V3CachedItem.dimension == dimension, V3CachedItem.processed == processed)
+                .where(V3Mediaitem.updated_at < V3CachedItem.created_at)  # cached item created later than last updated mediaitem
+            )
+
+            v3cacheditem_exists: V3CachedItem = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
+
+            # check files also, otherwise delete the item:
+            if v3cacheditem_exists and not v3cacheditem_exists.filepath.exists():
+                logger.warning("deleting cached item from DB because file representation does not exist any more.")
+                session.exec(delete(v3cacheditem_exists))
+                session.commit()
+
+                return None
+
+            return v3cacheditem_exists
+
+    def get_mediaitem_file(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True) -> Path:
+        dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
+
+        if dimension_pixel is None:
+            raise ValueError(f"invalid dimension given: '{dimension}'")
+
+        with Session(engine) as session:
+            # if there are multiple requests for same item at the same time,
+            # it might lead to generate cached versions multiple times wasting cpu until it's done.
+            # so it's locked from the moment it's checked but that means there is only one process
+            # at a time. Maybe a queue is more efficient, but it's ok for now probably.
+            with self._lock_cache_check:
+                v3cacheditem_exists = self._check_cache_valid(mediaitem_id, dimension, processed)
+
+                if v3cacheditem_exists:
+                    return v3cacheditem_exists.filepath
+
+                else:
+                    item = self.db_get_image_by_id(mediaitem_id)
+
+                    id = uuid4()
+                    v3cacheditem_new = V3CachedItem(
+                        id=id,
+                        v3mediaitem_id=mediaitem_id,
+                        dimension=dimension,
+                        processed=processed,
+                        filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
+                    )
+
+                    generate_resized(
+                        filepath_in=item.processed if processed else item.unprocessed,
+                        filepath_out=v3cacheditem_new.filepath,
+                        scaled_min_length=dimension_pixel,
+                    )
+
+                    session.add(v3cacheditem_new)
+                    session.commit()
+
+                    return v3cacheditem_new.filepath
