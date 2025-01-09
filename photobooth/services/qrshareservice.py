@@ -41,13 +41,13 @@ class QrShareService(BaseService):
         super().started()
 
     def stop(self):
-        super().start()
+        super().stop()
 
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.stop()
             self._worker_thread.join()
 
-        super().started()
+        super().stopped()
 
     def _worker_fun(self):
         # init

@@ -58,9 +58,9 @@ class InformationService(BaseService):
         super().started()
 
     def stop(self):
-        super().start()
+        super().stop()
         self._stats_interval_timer.stop()
-        super().started()
+        super().stopped()
 
     def stats_counter_reset(self, field: str):
         try:

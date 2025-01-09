@@ -35,9 +35,9 @@ class SystemService(BaseService):
         super().started()
 
     def stop(self):
-        super().start()
+        super().stop()
         pass
-        super().started()
+        super().stopped()
 
     def util_systemd_control(self, state):
         # will return 0 for active else inactive.

@@ -31,13 +31,19 @@ class MediacollectionService(BaseService):
 
         self._lock_cache_check: Lock = Lock()
 
-        # ensure data directories exist
-        os.makedirs(RECYCLE_PATH, exist_ok=True)
+        # don't access database during init because it might not be set up during tests...
 
+    def start(self):
+        super().start()
         # remove outdated items from cache during startup.
         self._cache_clear_outdated()
-
         self._logger.info(f"initialized DB, found {self.get_number_of_images()} images")
+        super().started()
+
+    def stop(self):
+        super().stop()
+        pass
+        super().stopped()
 
     def db_add_item(self, item: V3Mediaitem):
         with Session(engine) as session:

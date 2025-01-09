@@ -48,7 +48,7 @@ class WledService(BaseService):
         super().started()
 
     def stop(self):
-        super().start()
+        super().stop()
 
         self._reconnect_interval_timer.stop()
 
@@ -56,7 +56,7 @@ class WledService(BaseService):
             self._logger.info("close port to WLED module")
             self._serial.close()
 
-        super().started()
+        super().stopped()
 
     def is_connected(self) -> bool:
         return self._serial and self._serial.is_open

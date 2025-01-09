@@ -33,9 +33,9 @@ class ShareService(BaseService):
         super().started()
 
     def stop(self):
-        super().start()
+        super().stop()
         pass
-        super().started()
+        super().stopped()
 
     def share(self, mediaitem: V3Mediaitem, config_index: int = 0):
         """print mediaitem"""
