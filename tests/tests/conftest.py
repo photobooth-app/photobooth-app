@@ -2,7 +2,6 @@ import logging
 
 import pytest
 
-from photobooth.container import container
 from photobooth.database.database import create_db_and_tables
 from photobooth.services.config import appconfig
 
@@ -11,6 +10,8 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup1():
+    from photobooth.container import container
+
     logger.info("global function-scoped mediaitem setup")
 
     if container.mediacollection_service.get_number_of_images() == 0:
