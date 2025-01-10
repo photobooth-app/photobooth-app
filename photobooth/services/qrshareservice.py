@@ -122,9 +122,9 @@ class QrShareService(BaseService):
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
                             if appconfig.qrshare.shareservice_share_original:
-                                filepath_to_upload = mediaitem_to_upload.path_original
+                                filepath_to_upload = mediaitem_to_upload.unprocessed
                             else:
-                                filepath_to_upload = mediaitem_to_upload.path_full
+                                filepath_to_upload = mediaitem_to_upload.processed
 
                             self._logger.debug(f"{filepath_to_upload=}")
 
