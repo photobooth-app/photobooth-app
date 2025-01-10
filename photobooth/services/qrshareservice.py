@@ -116,8 +116,8 @@ class QrShareService(BaseService):
                         try:
                             mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(UUID(decoded_line["file_identifier"]))
                             self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
-                        except FileNotFoundError as exc:
-                            self._logger.error(f"mediaitem not found, wrong id? {exc}")
+                        except Exception as exc:
+                            self._logger.error(f"mediaitem not found, error: {exc}")
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")

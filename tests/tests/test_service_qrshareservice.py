@@ -1,5 +1,6 @@
 import io
 import logging
+from uuid import uuid4
 
 import pytest
 import requests
@@ -103,7 +104,7 @@ def test_shareservice_download_nonexistant_image(_container: Container):
 
     r = requests.get(
         appconfig.qrshare.shareservice_url,
-        params={"action": "download", "id": "nonexistentidentifier"},
+        params={"action": "download", "id": uuid4().hex},
     )
 
     # valid status code is 500 because image not existing.
