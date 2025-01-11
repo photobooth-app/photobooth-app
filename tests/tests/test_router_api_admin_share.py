@@ -48,6 +48,15 @@ def test_get_limits_reset(client_authenticated: TestClient):
     assert response.status_code == 204
 
 
-def test_get_limits_reset_error(client_authenticated: TestClient):
+def test_get_limits_reset_nonexistant_failsilent(client_authenticated: TestClient):
     response = client_authenticated.get("/admin/share/cntr/reset/test_case_does_not_exist")
     assert response.status_code == 204
+
+
+def test_get_limits_reset_error(client_authenticated: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(ShareService, "limit_counter_reset", error_mock):
+        response = client_authenticated.get("/admin/share/cntr/reset/mockexctest")
+        assert response.status_code == 500

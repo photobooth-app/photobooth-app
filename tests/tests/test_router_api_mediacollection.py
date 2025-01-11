@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
+from photobooth.database.schemas import MediaitemPublic
 from photobooth.services.mediacollectionservice import MediacollectionService
 
 
@@ -20,7 +21,9 @@ def client() -> TestClient:
 
 def test_get_items(client: TestClient):
     response = client.get("/mediacollection/")
+
     assert response.status_code == 200
+    MediaitemPublic.model_validate(response.json()[0])
 
 
 def test_get_items_exception(client: TestClient):
@@ -29,6 +32,25 @@ def test_get_items_exception(client: TestClient):
 
     with patch.object(MediacollectionService, "db_get_images", error_mock):
         response = client.get("/mediacollection/")
+        assert response.status_code == 500
+        assert "detail" in response.json()
+
+
+def test_get_item(client: TestClient):
+    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    response = client.get(f"/mediacollection/{mediaitem.id}")
+
+    assert response.status_code == 200
+    assert MediaitemPublic.model_validate(response.json()) == MediaitemPublic.model_validate(mediaitem)
+
+
+def test_get_item_exception(client: TestClient):
+    error_mock = mock.MagicMock()
+    error_mock.side_effect = Exception()
+
+    with patch.object(MediacollectionService, "db_get_image_by_id", error_mock):
+        mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+        response = client.get(f"/mediacollection/{mediaitem.id}")
         assert response.status_code == 500
         assert "detail" in response.json()
 

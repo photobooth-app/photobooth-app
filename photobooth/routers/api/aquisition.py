@@ -53,9 +53,7 @@ def api_still_get():
 
 
 @router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
-def api_cmd_aquisition_capturemode_get(
-    mode: str = "preview",
-):
+def api_cmd_aquisition_capturemode_get(mode: str = "preview"):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
         container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
