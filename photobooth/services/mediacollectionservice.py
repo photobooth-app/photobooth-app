@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from .. import CACHE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
 from ..database.database import engine
-from ..database.models import DimensionTypes, V3CachedItem, V3Mediaitem
+from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
 from .baseservice import BaseService
 from .config import appconfig
@@ -47,7 +47,7 @@ class MediacollectionService(BaseService):
         pass
         super().stopped()
 
-    def db_add_item(self, item: V3Mediaitem):
+    def db_add_item(self, item: Mediaitem):
         with Session(engine) as session:
             session.add(item)
             session.commit()
@@ -59,13 +59,13 @@ class MediacollectionService(BaseService):
 
             return item.id
 
-    def db_update_item(self, item: V3Mediaitem):
+    def db_update_item(self, item: Mediaitem):
         with Session(engine) as session:
             session.add(item)
             session.commit()
             session.refresh(item)
 
-    def _db_delete_item_by_item(self, item: V3Mediaitem):
+    def _db_delete_item_by_item(self, item: Mediaitem):
         with Session(engine) as session:
             session.delete(item)
             session.commit()
@@ -76,7 +76,7 @@ class MediacollectionService(BaseService):
 
     def _db_delete_items(self):
         with Session(engine) as session:
-            statement = delete(V3Mediaitem)
+            statement = delete(Mediaitem)
             result = session.execute(statement)
             session.commit()
 
@@ -84,37 +84,37 @@ class MediacollectionService(BaseService):
 
     def get_number_of_images(self) -> int:
         with Session(engine) as session:
-            statement = select(func.count(V3Mediaitem.id))
+            statement = select(func.count(Mediaitem.id))
             return session.scalars(statement).one()
 
-    def db_get_all_jobitems(self, job_identifier: UUID) -> list[V3Mediaitem]:
+    def db_get_all_jobitems(self, job_identifier: UUID) -> list[Mediaitem]:
         with Session(engine) as session:
             galleryitems = session.scalars(
-                select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc()).where(V3Mediaitem.job_identifier == job_identifier)
+                select(Mediaitem).order_by(Mediaitem.created_at.desc()).where(Mediaitem.job_identifier == job_identifier)
             ).all()
 
             return galleryitems
 
-    def db_get_images(self, offset: int = 0, limit: int = 500) -> list[V3Mediaitem]:
+    def db_get_images(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.scalars(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
+            galleryitems = session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
 
             return galleryitems
 
-    def db_get_most_recent_mediaitem(self) -> V3Mediaitem:
+    def db_get_most_recent_mediaitem(self) -> Mediaitem:
         try:
             with Session(engine) as session:
-                return session.scalars(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc())).first()
+                return session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc())).first()
         except NoResultFound as exc:
             raise FileNotFoundError("could get an item") from exc
 
-    def db_get_image_by_id(self, item_id: UUID) -> V3Mediaitem:
+    def db_get_image_by_id(self, item_id: UUID) -> Mediaitem:
         if not isinstance(item_id, UUID):
             raise RuntimeError("item_id is wrong type")
 
         try:
             with Session(engine) as session:
-                results = session.scalars(select(V3Mediaitem).where(V3Mediaitem.id == item_id))
+                results = session.scalars(select(Mediaitem).where(Mediaitem.id == item_id))
                 item = results.one()
 
                 if not item.unprocessed.exists() or not item.processed.exists():
@@ -147,7 +147,7 @@ class MediacollectionService(BaseService):
             self._logger.error(f"error deleting item id={item_id}")
             raise exc
 
-    def delete_mediaitem_files(self, mediaitem: V3Mediaitem):
+    def delete_mediaitem_files(self, mediaitem: Mediaitem):
         """delete single file and it's related thumbnails"""
 
         self._logger.info(f"request delete files of {mediaitem}")
@@ -195,7 +195,7 @@ class MediacollectionService(BaseService):
 
     def _cache_clear_outdated(self):
         with Session(engine) as session:
-            statement = select(V3CachedItem).join(V3Mediaitem).where(V3Mediaitem.updated_at > V3CachedItem.created_at)
+            statement = select(Cacheditem).join(Mediaitem).where(Mediaitem.updated_at > Cacheditem.created_at)
             results = session.scalars(statement)
             outdated_items = results.all()
 
@@ -208,17 +208,17 @@ class MediacollectionService(BaseService):
 
     def _cache_clear_all(self):
         with Session(engine) as session:
-            statement = delete(V3CachedItem)
+            statement = delete(Cacheditem)
             session.execute(statement)
             session.commit()
 
     def _check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
             results = session.scalars(
-                select(V3CachedItem)
-                .join(V3Mediaitem)
-                .where(V3CachedItem.v3mediaitem_id == mediaitem_id, V3CachedItem.dimension == dimension, V3CachedItem.processed == processed)
-                .where(V3Mediaitem.updated_at < V3CachedItem.created_at)  # cached item created later than last updated mediaitem
+                select(Cacheditem)
+                .join(Mediaitem)
+                .where(Cacheditem.v3mediaitem_id == mediaitem_id, Cacheditem.dimension == dimension, Cacheditem.processed == processed)
+                .where(Mediaitem.updated_at < Cacheditem.created_at)  # cached item created later than last updated mediaitem
             )
 
             v3cacheditem_exists = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
@@ -254,7 +254,7 @@ class MediacollectionService(BaseService):
                     item = self.db_get_image_by_id(mediaitem_id)
 
                     id = uuid4()
-                    v3cacheditem_new = V3CachedItem(
+                    v3cacheditem_new = Cacheditem(
                         id=id,
                         v3mediaitem_id=mediaitem_id,
                         dimension=dimension,

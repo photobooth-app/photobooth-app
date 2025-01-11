@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Literal
 from uuid import UUID, uuid4
 
-from ...database.models import MediaitemTypes, V3Mediaitem
+from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import get_user_file
 from ..config.groups.actions import (
@@ -139,5 +139,5 @@ class JobModelBase(ABC):
         pass
 
     @abstractmethod
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
         pass

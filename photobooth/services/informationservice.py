@@ -71,7 +71,7 @@ class InformationService(BaseService):
                 result = session.execute(statement)
                 session.commit()
 
-                self._logger.info(f"deleted {result} from UsageStats")
+                self._logger.info(f"deleted {result.rowcount} entries from UsageStats")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset {field}, error: {exc}") from exc

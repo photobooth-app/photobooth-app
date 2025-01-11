@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
 
-from ...database.models import V3Mediaitem
+from ...database.models import Mediaitem
 from ..config import appconfig
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, VideoProcessing
 from ..config.models.models import SinglePictureDefinition
@@ -24,7 +24,7 @@ from .steps.video import BoomerangStep
 logger = logging.getLogger(__name__)
 
 
-def process_image_collageimage_animationimage(mediaitem: V3Mediaitem):
+def process_image_collageimage_animationimage(mediaitem: Mediaitem):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
@@ -84,7 +84,7 @@ def process_image_collageimage_animationimage(mediaitem: V3Mediaitem):
     return mediaitem
 
 
-def process_video(video_in: Path, mediaitem: V3Mediaitem):
+def process_video(video_in: Path, mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = VideoProcessing(**mediaitem.pipeline_config)
 
@@ -109,7 +109,7 @@ def process_video(video_in: Path, mediaitem: V3Mediaitem):
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_collage(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
+def process_and_generate_collage(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = CollageProcessing(**mediaitem.pipeline_config)
 
@@ -159,7 +159,7 @@ def process_and_generate_collage(captured_mediaitems: list[V3Mediaitem], mediait
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_animation(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
+def process_and_generate_animation(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = AnimationProcessing(**mediaitem.pipeline_config)
 
@@ -195,7 +195,7 @@ def process_and_generate_animation(captured_mediaitems: list[V3Mediaitem], media
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_wigglegram(captured_mediaitems: list[V3Mediaitem], mediaitem: V3Mediaitem):
+def process_and_generate_wigglegram(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = MulticameraProcessing(**mediaitem.pipeline_config)
 

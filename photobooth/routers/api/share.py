@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from ...container import container
-from ...database.models import V3Mediaitem
+from ...database.models import Mediaitem
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-def _share(mediaitem: V3Mediaitem, index: int):
+def _share(mediaitem: Mediaitem, index: int):
     try:
         container.share_service.share(mediaitem, index)
     except BlockingIOError:

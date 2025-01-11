@@ -1,4 +1,4 @@
-from ...database.models import MediaitemTypes, V3Mediaitem
+from ...database.models import Mediaitem, MediaitemTypes
 from ..config.groups.actions import VideoConfigurationSet
 from ..config.models.models import SinglePictureDefinition
 from .base import JobModelBase
@@ -16,5 +16,5 @@ class JobModelVideo(JobModelBase):
     def get_phase1_singlepicturedefinition_per_index(self, index: int = None) -> SinglePictureDefinition:
         raise RuntimeError("no filter available for videos")
 
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
         raise RuntimeError("no filter available for videos")

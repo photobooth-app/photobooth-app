@@ -30,8 +30,8 @@ class ShareLimits(Base):
     last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class V3Mediaitem(Base):
-    __tablename__ = "v3mediaitem"
+class Mediaitem(Base):
+    __tablename__ = "mediaitems"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     media_type: Mapped[MediaitemTypes] = mapped_column(Enum(MediaitemTypes))
@@ -47,13 +47,13 @@ class V3Mediaitem(Base):
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class V3CachedItem(Base):
-    __tablename__ = "v3cacheditem"
+class Cacheditem(Base):
+    __tablename__ = "cacheditems"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
     # following are the unique combination to identify if a cached obj is avail or no
-    v3mediaitem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("v3mediaitem.id"), index=True)
+    v3mediaitem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mediaitems.id"), index=True)
     dimension: Mapped[DimensionTypes] = mapped_column(Enum(DimensionTypes), index=True)
     processed: Mapped[bool] = mapped_column(Boolean, index=True)
 

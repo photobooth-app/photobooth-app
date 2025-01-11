@@ -1,4 +1,4 @@
-from ...database.models import MediaitemTypes, V3Mediaitem
+from ...database.models import Mediaitem, MediaitemTypes
 from ..config.groups.actions import MulticameraConfigurationSet, MulticameraProcessing
 from ..config.models.models import SinglePictureDefinition
 from ..mediaprocessing.processes import process_and_generate_wigglegram
@@ -23,5 +23,5 @@ class JobModelMulticamera(JobModelBase):
             filter=processing.filter.value,
         )
 
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
         process_and_generate_wigglegram(phase1_mediaitems, phase2_mediaitem)

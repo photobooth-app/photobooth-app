@@ -13,7 +13,7 @@ from threading import Thread
 from statemachine import State, StateMachine
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
-from ..database.models import MediaitemTypes, V3Mediaitem
+from ..database.models import Mediaitem, MediaitemTypes
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
@@ -329,7 +329,7 @@ class ProcessingMachine(StateMachine):
         _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.get_captures_taken()).model_dump(mode="json")
 
         original_filenamepath = self._new_filename(MediaitemTypes.image)
-        v3mediaitem = V3Mediaitem(
+        v3mediaitem = Mediaitem(
             job_identifier=self.model._job_identifier,
             media_type=MediaitemTypes.image,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -374,10 +374,10 @@ class ProcessingMachine(StateMachine):
 
         filepaths = self._aquisition_service.wait_for_multicam_files()
 
-        mediaitems: list[V3Mediaitem] = []
+        mediaitems: list[Mediaitem] = []
         for filepath in filepaths:
             original_filenamepath = self._new_filename(MediaitemTypes.image)
-            v3mediaitem = V3Mediaitem(
+            v3mediaitem = Mediaitem(
                 job_identifier=self.model._job_identifier,
                 media_type=MediaitemTypes.multicamera,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -489,7 +489,7 @@ class ProcessingMachine(StateMachine):
         logger.debug(f"recorded to {temp_videofilepath=}")
 
         original_filenamepath = self._new_filename(self.model._media_type)
-        mediaitem = V3Mediaitem(
+        mediaitem = Mediaitem(
             job_identifier=self.model._job_identifier,
             media_type=self.model._media_type,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -515,10 +515,10 @@ class ProcessingMachine(StateMachine):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        phase2_mediaitem: V3Mediaitem = None
+        phase2_mediaitem: Mediaitem = None
         if isinstance(self.model, JobModelCollage | JobModelAnimation | JobModelMulticamera):
             original_filenamepath = self._new_filename(self.model._media_type)
-            phase2_mediaitem = V3Mediaitem(
+            phase2_mediaitem = Mediaitem(
                 job_identifier=self.model._job_identifier,
                 media_type=self.model._media_type,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),

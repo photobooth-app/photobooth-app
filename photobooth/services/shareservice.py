@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..database.database import engine
-from ..database.models import ShareLimits, V3Mediaitem
+from ..database.models import Mediaitem, ShareLimits
 from .baseservice import BaseService
 from .config import appconfig
 from .informationservice import InformationService
@@ -38,7 +38,7 @@ class ShareService(BaseService):
         pass
         super().stopped()
 
-    def share(self, mediaitem: V3Mediaitem, config_index: int = 0):
+    def share(self, mediaitem: Mediaitem, config_index: int = 0):
         """print mediaitem"""
 
         if not appconfig.share.sharing_enabled:
@@ -144,7 +144,7 @@ class ShareService(BaseService):
                 result = session.execute(statement)
                 session.commit()
 
-                self._logger.info(f"deleted {result} from ShareLimits")
+                self._logger.info(f"deleted {result.rowcount} items from ShareLimits")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset {field}, error: {exc}") from exc

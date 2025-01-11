@@ -1,4 +1,4 @@
-from ...database.models import MediaitemTypes, V3Mediaitem
+from ...database.models import Mediaitem, MediaitemTypes
 from ..config.groups.actions import SingleImageConfigurationSet
 from ..config.models.models import SinglePictureDefinition
 from .base import JobModelBase
@@ -18,5 +18,5 @@ class JobModelImage(JobModelBase):
             **self._configuration_set.processing.model_dump(),
         )
 
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[V3Mediaitem], phase2_mediaitem: V3Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
         raise RuntimeError("no phase2 mediageneration for images")
