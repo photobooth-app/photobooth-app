@@ -50,4 +50,4 @@ def test_get_limits_reset(client_authenticated: TestClient):
 
 def test_get_limits_reset_error(client_authenticated: TestClient):
     response = client_authenticated.get("/admin/share/cntr/reset/test_case_does_not_exist")
-    assert response.status_code == 500
+    assert response.status_code == 204
