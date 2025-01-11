@@ -116,6 +116,9 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
 
 def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: int) -> None:
+    assert isinstance(filepath_in, Path)
+    assert isinstance(filepath_out, Path)
+
     suffix = filepath_in.suffix
 
     if suffix.lower() in (".jpg", ".jpeg"):
@@ -126,5 +129,3 @@ def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: i
         resize_mp4(filepath_in, filepath_out, scaled_min_length)
     else:
         raise RuntimeError(f"filetype with suffix '{suffix}' not supported")
-
-    assert filepath_out.exists()
