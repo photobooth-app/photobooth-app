@@ -9,12 +9,14 @@ from pathlib import Path
 from threading import Lock
 from uuid import UUID, uuid4
 
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import NoResultFound
-from sqlmodel import Session, delete, func, select
+from sqlalchemy.orm import Session
 
 from .. import CACHE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
 from ..database.database import engine
-from ..database.models import DimensionTypes, V3CachedItem, V3Mediaitem, V3MediaitemPublic
+from ..database.models import DimensionTypes, V3CachedItem, V3Mediaitem
+from ..database.schemas import MediaitemPublic
 from .baseservice import BaseService
 from .config import appconfig
 from .mediacollection.resizer import MAP_DIMENSION_TO_PIXEL, generate_resized
@@ -53,7 +55,7 @@ class MediacollectionService(BaseService):
 
             # and insert in client db collection so gallery is up to date.
             if item.show_in_gallery:
-                self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=V3MediaitemPublic.model_validate(item)))
+                self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
 
             return item.id
 
@@ -70,12 +72,12 @@ class MediacollectionService(BaseService):
 
             # # and remove from client db collection so gallery is up to date.
             # event is even sent if not show_in_gallery, client needs to sort things out
-            self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=V3MediaitemPublic.model_validate(item)))
+            self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=MediaitemPublic.model_validate(item)))
 
     def _db_delete_items(self):
         with Session(engine) as session:
             statement = delete(V3Mediaitem)
-            result = session.exec(statement)
+            result = session.execute(statement)
             session.commit()
 
             logger.info(f"deleted {result.rowcount} items from the database")
@@ -83,14 +85,14 @@ class MediacollectionService(BaseService):
     def get_number_of_images(self) -> int:
         with Session(engine) as session:
             statement = select(func.count(V3Mediaitem.id))
-            results = session.exec(statement)
+            results = session.execute(statement)
             count = results.one()
 
             return count
 
     def db_get_all_jobitems(self, job_identifier: UUID) -> list[V3Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.exec(
+            galleryitems = session.scalars(
                 select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc()).where(V3Mediaitem.job_identifier == job_identifier)
             ).all()
 
@@ -98,14 +100,14 @@ class MediacollectionService(BaseService):
 
     def db_get_images(self, offset: int = 0, limit: int = 500) -> list[V3Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.exec(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
+            galleryitems = session.scalars(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
 
             return galleryitems
 
     def db_get_most_recent_mediaitem(self) -> V3Mediaitem:
         try:
             with Session(engine) as session:
-                return session.exec(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc())).first()
+                return session.scalars(select(V3Mediaitem).order_by(V3Mediaitem.created_at.desc())).first()
         except NoResultFound as exc:
             raise FileNotFoundError("could get an item") from exc
 
@@ -115,7 +117,7 @@ class MediacollectionService(BaseService):
 
         try:
             with Session(engine) as session:
-                results = session.exec(select(V3Mediaitem).where(V3Mediaitem.id == item_id))
+                results = session.scalars(select(V3Mediaitem).where(V3Mediaitem.id == item_id))
                 item = results.one()
 
                 if not item.unprocessed.exists() or not item.processed.exists():
@@ -197,7 +199,7 @@ class MediacollectionService(BaseService):
     def _cache_clear_outdated(self):
         with Session(engine) as session:
             statement = select(V3CachedItem).join(V3Mediaitem).where(V3Mediaitem.updated_at > V3CachedItem.created_at)
-            results = session.exec(statement)
+            results = session.scalars(statement)
             outdated_items = results.all()
 
             for outdated_item in outdated_items:
@@ -210,24 +212,24 @@ class MediacollectionService(BaseService):
     def _cache_clear_all(self):
         with Session(engine) as session:
             statement = delete(V3CachedItem)
-            session.exec(statement)
+            session.execute(statement)
             session.commit()
 
     def _check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
-            results = session.exec(
+            results = session.scalars(
                 select(V3CachedItem)
                 .join(V3Mediaitem)
                 .where(V3CachedItem.v3mediaitem_id == mediaitem_id, V3CachedItem.dimension == dimension, V3CachedItem.processed == processed)
                 .where(V3Mediaitem.updated_at < V3CachedItem.created_at)  # cached item created later than last updated mediaitem
             )
 
-            v3cacheditem_exists: V3CachedItem = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
+            v3cacheditem_exists = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
 
             # check files also, otherwise delete the item:
             if v3cacheditem_exists and not v3cacheditem_exists.filepath.exists():
                 logger.warning("deleting cached item from DB because file representation does not exist any more.")
-                session.exec(delete(v3cacheditem_exists))
+                session.execute(delete(v3cacheditem_exists))
                 session.commit()
 
                 return None

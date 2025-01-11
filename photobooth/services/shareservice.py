@@ -1,7 +1,8 @@
 import subprocess
 from datetime import datetime
 
-from sqlmodel import Session, delete, select
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
 
 from ..database.database import engine
 from ..database.models import ShareLimits, V3Mediaitem
@@ -61,7 +62,7 @@ class ShareService(BaseService):
 
         with Session(engine) as session:
             statement = select(ShareLimits).where(ShareLimits.action == action_config.name)
-            results = session.exec(statement)
+            results = session.scalars(statement)
             result = results.one_or_none()
 
         current_shares = result.count if result else 0
@@ -139,11 +140,8 @@ class ShareService(BaseService):
     def limit_counter_reset(self, field: str):
         try:
             with Session(engine) as session:
-                statement = select(ShareLimits).where(ShareLimits.action == field)
-                results = session.exec(statement)
-                result = results.one()
-
-                session.delete(result)
+                statement = delete(ShareLimits).where(ShareLimits.action == field)
+                result = session.execute(statement)
                 session.commit()
 
                 self._logger.info(f"deleted {result} from ShareLimits")
@@ -155,7 +153,7 @@ class ShareService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(ShareLimits)
-                results = session.exec(statement)
+                results = session.execute(statement)
                 session.commit()
                 self._logger.info(f"deleted {results.rowcount} entries from ShareLimits")
 
@@ -171,7 +169,7 @@ class ShareService(BaseService):
                     session.add(ShareLimits(action=field))
 
                 statement = select(ShareLimits).where(ShareLimits.action == field)
-                results = session.exec(statement)
+                results = session.scalars(statement)
                 result = results.one()
                 result.count += 1
                 result.last_used_at = datetime.now()

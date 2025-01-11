@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query
 
 from ...container import container
-from ...database.models import V3MediaitemPublic
+from ...database.schemas import MediaitemPublic
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[V3MediaitemPublic])
+@router.get("/", response_model=list[MediaitemPublic])
 def api_getitems(offset: int = 0, limit: Annotated[int, Query(le=500)] = 500):
     try:
         return container.mediacollection_service.db_get_images(offset, limit)
@@ -23,7 +23,7 @@ def api_getitems(offset: int = 0, limit: Annotated[int, Query(le=500)] = 500):
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
-@router.get("/{item_id}", response_model=V3MediaitemPublic)
+@router.get("/{item_id}", response_model=MediaitemPublic)
 def api_getitem(item_id: UUID):
     try:
         return container.mediacollection_service.db_get_image_by_id(item_id)

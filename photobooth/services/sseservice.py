@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import Request
 from sse_starlette.event import ServerSentEvent
 
-from ..database.models import V3MediaitemPublic
+from ..database.schemas import MediaitemPublic
 from .jobmodels.base import JobModelBase
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ class SseEventDbInsert(SseEventBase):
     """basic class for sse events"""
 
     event: str = "DbInsert"
-    mediaitem: V3MediaitemPublic = None
+    mediaitem: MediaitemPublic = None
 
     @property
     def data(self) -> str:
@@ -89,7 +89,7 @@ class SseEventDbRemove(SseEventBase):
     """basic class for sse events"""
 
     event: str = "DbRemove"
-    mediaitem: V3MediaitemPublic = None
+    mediaitem: MediaitemPublic = None
 
     @property
     def data(self) -> str:

@@ -1,91 +1,62 @@
 import uuid
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 
+from sqlalchemy import UUID, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.sqlite import JSON
-from sqlalchemy.types import String, TypeDecorator
-from sqlmodel import Column, Field, SQLModel
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import func
+
+from .types import DimensionTypes, MediaitemTypes, PathType
 
 
-class PathType(TypeDecorator):
-    impl = String
-
-    def process_bind_param(self, value, dialect):
-        if isinstance(value, Path):
-            return str(value)
-        return value
-
-    def process_result_value(self, value, dialect):
-        if value is not None:
-            return Path(value)
-        return value
+class Base(DeclarativeBase):
+    pass
 
 
-class UsageStats(SQLModel, table=True):
-    action: str = Field(default=None, primary_key=True)
-    count: int = Field(default=0)
-    last_used_at: datetime | None = Field(
-        default_factory=datetime.now().astimezone,
-    )
+class UsageStats(Base):
+    __tablename__ = "usagestats"
+
+    action: Mapped[str] = mapped_column(String, default=None, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class ShareLimits(SQLModel, table=True):
-    action: str = Field(default=None, primary_key=True)
-    count: int = Field(default=0)
-    last_used_at: datetime | None = Field(
-        default_factory=datetime.now().astimezone,
-    )
+class ShareLimits(Base):
+    __tablename__ = "sharelimits"
+
+    action: Mapped[str] = mapped_column(String, default=None, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class MediaitemTypes(str, Enum):
-    image = "image"  # captured single image that is NOT part of a collage (normal process)
-    collage = "collage"  # canvas image that was made out of several collage_image
-    animation = "animation"  # canvas image that was made out of several animation_image
-    video = "video"  # captured video - h264, mp4 is currently well supported in browsers it seems
-    multicamera = "multicamera"  #  video - h264, mp4, result of multicamera image, example the wigglegram
+class V3Mediaitem(Base):
+    __tablename__ = "v3mediaitem"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
+    media_type: Mapped[MediaitemTypes] = mapped_column(Enum(MediaitemTypes))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    job_identifier: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=None)
+
+    unprocessed: Mapped[Path] = mapped_column(PathType)  # the original!
+    processed: Mapped[Path] = mapped_column(PathType)  # processed original (aka "full" having the pipeline applied)
+    pipeline_config: Mapped[dict] = mapped_column(JSON)  # json config of pipeline? or in separate table?
+
+    show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class V3MediaitemBase(SQLModel):
-    media_type: MediaitemTypes
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime | None = Field(  # https://github.com/fastapi/sqlmodel/issues/252#issuecomment-2203808928
-        default_factory=datetime.now,
-        nullable=False,
-        sa_column_kwargs={"onupdate": datetime.now},
-    )
+class V3CachedItem(Base):
+    __tablename__ = "v3cacheditem"
 
-
-class V3Mediaitem(V3MediaitemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-
-    job_identifier: uuid.UUID | None = Field(default=None, description="Assign items during capture to the specific job.")
-
-    unprocessed: Path = Field(sa_column=Column(PathType))  # the original!
-    processed: Path = Field(sa_column=Column(PathType))  # processed original (aka "full" having the pipeline applied)
-    pipeline_config: dict = Field(sa_column=Column(JSON))  # json config of pipeline? or in separate table?
-
-    show_in_gallery: bool = Field(default=True)
-
-
-class V3MediaitemPublic(V3MediaitemBase):
-    id: uuid.UUID
-
-
-class DimensionTypes(str, Enum):
-    full = "full"
-    preview = "preview"
-    thumbnail = "thumbnail"
-
-
-class V3CachedItem(SQLModel, table=True):
-    id: uuid.UUID = Field(primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
     # following are the unique combination to identify if a cached obj is avail or no
-    v3mediaitem_id: uuid.UUID = Field(index=True, foreign_key="v3mediaitem.id")
-    dimension: DimensionTypes = Field(index=True)
-    processed: bool = Field(index=True)
+    v3mediaitem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("v3mediaitem.id"), index=True)
+    dimension: Mapped[DimensionTypes] = mapped_column(Enum(DimensionTypes), index=True)
+    processed: Mapped[bool] = mapped_column(Boolean, index=True)
 
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    filepath: Path = Field(sa_column=Column(PathType))
+    filepath: Mapped[Path] = mapped_column(PathType)

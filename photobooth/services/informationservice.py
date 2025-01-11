@@ -7,11 +7,13 @@ from typing import Any
 
 import psutil
 from psutil._common import sbattery
-from sqlmodel import Session, delete, select
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
 
 from ..__version__ import __version__
 from ..database.database import engine
 from ..database.models import ShareLimits, UsageStats
+from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisitionservice import AquisitionService
 from .baseservice import BaseService
@@ -65,11 +67,8 @@ class InformationService(BaseService):
     def stats_counter_reset(self, field: str):
         try:
             with Session(engine) as session:
-                statement = select(UsageStats).where(UsageStats.action == field)
-                results = session.exec(statement)
-                result = results.one()
-
-                session.delete(result)
+                statement = delete(UsageStats).where(UsageStats.action == field)
+                result = session.execute(statement)
                 session.commit()
 
                 self._logger.info(f"deleted {result} from UsageStats")
@@ -81,7 +80,7 @@ class InformationService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(UsageStats)
-                results = session.exec(statement)
+                results = session.execute(statement)
                 session.commit()
                 self._logger.info(f"deleted {results.rowcount} entries from UsageStats")
 
@@ -97,8 +96,7 @@ class InformationService(BaseService):
                     session.add(UsageStats(action=field))
 
                 statement = select(UsageStats).where(UsageStats.action == field)
-                results = session.exec(statement)
-                result = results.one()
+                result = session.scalars(statement).one()
                 result.count += 1
                 result.last_used_at = datetime.now().astimezone()
                 session.add(result)
@@ -146,19 +144,19 @@ class InformationService(BaseService):
             ),
         )
 
-    def _gather_limits_counter(self) -> list[ShareLimits]:
+    def _gather_limits_counter(self) -> list[ShareLimitsPublic]:
         with Session(engine) as session:
             statement = select(ShareLimits)
-            results = session.exec(statement)
+            results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
-            return [ShareLimits.model_validate(result).model_dump(mode="json") for result in results]
+            return [ShareLimitsPublic.model_validate(result).model_dump(mode="json") for result in results]
 
-    def _gather_stats_counter(self) -> list[UsageStats]:
+    def _gather_stats_counter(self) -> list[UsageStatsPublic]:
         with Session(engine) as session:
             statement = select(UsageStats)
-            results = session.exec(statement)
+            results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
-            return [UsageStats.model_validate(result).model_dump(mode="json") for result in results]
+            return [UsageStatsPublic.model_validate(result).model_dump(mode="json") for result in results]
 
     def _gather_cpu1_5_15(self):
         return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]
