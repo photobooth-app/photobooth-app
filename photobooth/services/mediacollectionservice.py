@@ -85,10 +85,7 @@ class MediacollectionService(BaseService):
     def get_number_of_images(self) -> int:
         with Session(engine) as session:
             statement = select(func.count(V3Mediaitem.id))
-            results = session.execute(statement)
-            count = results.one()
-
-            return count
+            return session.scalars(statement).one()
 
     def db_get_all_jobitems(self, job_identifier: UUID) -> list[V3Mediaitem]:
         with Session(engine) as session:
