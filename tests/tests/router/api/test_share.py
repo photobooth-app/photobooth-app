@@ -49,7 +49,7 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
     appconfig.share.sharing_enabled = True
 
     # get an image to print
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/share/actions/{mediaitem.id}/0")
 
@@ -98,7 +98,7 @@ def test_latest_filenotfound_exception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = FileNotFoundError()
 
-    with patch.object(MediacollectionService, "db_get_most_recent_mediaitem", error_mock):
+    with patch.object(MediacollectionService, "get_item_latest", error_mock):
         response = client.get("/share/actions/latest/0")
         assert response.status_code == 404
         assert "detail" in response.json()

@@ -104,7 +104,7 @@ class GpioService(BaseService):
         self._logger.debug(f"trigger callback for {btn}")
 
         try:
-            mediaitem = self._mediacollection_service.db_get_most_recent_mediaitem()
+            mediaitem = self._mediacollection_service.get_item_latest()
             self._share_service.share(mediaitem, btn.action_index)
         except BlockingIOError:
             self._logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")

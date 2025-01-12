@@ -32,194 +32,152 @@ MAP_DIMENSION_TO_PIXEL = {
 }
 
 
-class MediacollectionService(BaseService):
-    """Handle all image related stuff"""
-
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service=sse_service)
-
-        self._lock_cache_check: Lock = Lock()
-
-        # don't access database during init because it might not be set up during tests...
-
-    def start(self):
-        super().start()
-        # remove outdated items from cache during startup.
-        self._cache_clear_outdated()
-        self._logger.info(f"initialized DB, found {self.get_number_of_images()} images")
-        super().started()
-
-    def stop(self):
-        super().stop()
+class Database:
+    def __init__(self):
         pass
-        super().stopped()
 
-    def db_add_item(self, item: Mediaitem):
+    def add_item(self, item: Mediaitem):
+        # add to db and notify
         with Session(engine) as session:
             session.add(item)
             session.commit()
             session.refresh(item)
 
-            # and insert in client db collection so gallery is up to date.
-            if item.show_in_gallery:
-                self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
-
-            return item.id
-
-    def db_update_item(self, item: Mediaitem):
+    def update_item(self, item: Mediaitem):
         with Session(engine) as session:
             session.add(item)
             session.commit()
             session.refresh(item)
 
-    def _db_delete_item_by_item(self, item: Mediaitem):
+    def delete_item(self, item: Mediaitem):
         with Session(engine) as session:
             session.delete(item)
             session.commit()
 
-            # # and remove from client db collection so gallery is up to date.
-            # event is even sent if not show_in_gallery, client needs to sort things out
-            self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=MediaitemPublic.model_validate(item)))
-
-    def _db_delete_items(self):
+    def clear_all(self) -> int:
         with Session(engine) as session:
             statement = delete(Mediaitem)
             result = session.execute(statement)
             session.commit()
 
-            logger.info(f"deleted {result.rowcount} items from the database")
+            return result.rowcount
 
-    def get_number_of_images(self) -> int:
+    def count(self) -> int:
         with Session(engine) as session:
             statement = select(func.count(Mediaitem.id))
             return session.scalars(statement).one()
 
-    def db_get_all_jobitems(self, job_identifier: UUID) -> list[Mediaitem]:
-        with Session(engine) as session:
-            galleryitems = session.scalars(
-                select(Mediaitem).order_by(Mediaitem.created_at.desc()).where(Mediaitem.job_identifier == job_identifier)
-            ).all()
-
-            return galleryitems
-
-    def db_get_images(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
+    def list_items(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
         with Session(engine) as session:
             galleryitems = session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
 
             return galleryitems
 
-    def db_get_most_recent_mediaitem(self) -> Mediaitem:
-        try:
-            with Session(engine) as session:
-                return session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc())).first()
-        except NoResultFound as exc:
-            raise FileNotFoundError("could get an item") from exc
-
-    def db_get_image_by_id(self, item_id: UUID) -> Mediaitem:
-        if not isinstance(item_id, UUID):
-            raise RuntimeError("item_id is wrong type")
-
+    def get_item(self, item_id: UUID) -> Mediaitem:
         try:
             with Session(engine) as session:
                 results = session.scalars(select(Mediaitem).where(Mediaitem.id == item_id))
                 item = results.one()
 
-                if not item.unprocessed.exists() or not item.processed.exists():
-                    raise FileNotFoundError(f"cannot find representing file for item {item_id}!")
-
                 return item
         except NoResultFound as exc:
             raise FileNotFoundError(f"could not find {item_id} in database") from exc
 
-    def delete_image_by_id(self, item_id: UUID):
-        """delete single file and it's related thumbnails"""
-        if not isinstance(item_id, UUID):
-            raise RuntimeError("item_id is wrong type")
 
-        self._logger.info(f"request delete item id {item_id}")
+class Files:
+    def __init__(self):
+        pass
 
-        try:
-            # lookup item in collection
-            item = self.db_get_image_by_id(item_id)
-            self._logger.debug(f"found item={item}")
+    def check_representing_files_raise(self, item: Mediaitem):
+        if not item.unprocessed.is_file():
+            raise FileNotFoundError(f"failed to process {item.id} because representing unprocessed file does not exist: {item.unprocessed}")
+        if not item.processed.is_file():
+            raise FileNotFoundError(f"failed to process {item.id} because representing processed file does not exist: {item.processed}")
 
-            # remove from collection
-            self._db_delete_item_by_item(item)
+    def delete_item(self, mediaitem: Mediaitem, delete_to_recycle_dir: bool = True):
+        """delete single items processed and unprocessed"""
 
-            # remove files from disk
-            self.delete_mediaitem_files(item)
-
-            self._logger.debug(f"deleted mediaitem from db and files {item}")
-        except Exception as exc:
-            self._logger.error(f"error deleting item id={item_id}")
-            raise exc
-
-    def delete_mediaitem_files(self, mediaitem: Mediaitem):
-        """delete single file and it's related thumbnails"""
-
-        self._logger.info(f"request delete files of {mediaitem}")
+        logger.info(f"request delete files of {mediaitem}")
 
         try:
-            if appconfig.common.users_delete_to_recycle_dir:
-                self._logger.info(f"moving {mediaitem} to recycle directory")
+            if delete_to_recycle_dir:
+                logger.info(f"moving {mediaitem} to recycle directory")
                 shutil.move(mediaitem.unprocessed, Path(RECYCLE_PATH, mediaitem.unprocessed.name))
             else:
                 os.remove(mediaitem.unprocessed)
         except FileNotFoundError:
             logger.warning(f"file {mediaitem.unprocessed} not found but ignore because shall be deleted anyways.")
         except Exception as exc:
-            self._logger.exception(exc)
             raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
 
-        for file in [
-            mediaitem.processed,
-        ]:
+        for file in [mediaitem.processed]:  # could be extended to other processed versions if any again...
             try:
                 os.remove(file)
             except FileNotFoundError:
                 logger.warning(f"file {file} not found but ignore because shall be deleted anyways.")
             except Exception as exc:
-                self._logger.exception(exc)
                 raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
 
-        self._logger.info(f"deleted files of {mediaitem}")
+        logger.info(f"deleted files of {mediaitem}")
 
-    def delete_all_mediaitems(self):
+    def clear_all(self):
         """delete all images, inclusive thumbnails, ..."""
         try:
-            self._db_delete_items()
-
             for file in Path(f"{PATH_UNPROCESSED}").glob("*.*"):
                 os.remove(file)
             for file in Path(f"{PATH_PROCESSED}").glob("*.*"):
                 os.remove(file)
 
         except Exception as exc:
-            self._logger.exception(exc)
+            logger.exception(exc)
             raise exc
 
-        self._logger.info("deleted all mediaitems")
+        logger.info("deleted all files for mediaitems")
 
-    def _cache_clear_outdated(self):
+
+class Cache:
+    def __init__(self):
+        self._lock_cache_check: Lock = Lock()
+
+    def get_cached_repr(self, item: Mediaitem, dimension: DimensionTypes, processed: bool = True) -> Path:
+        dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
+
+        if dimension_pixel is None:
+            raise ValueError(f"invalid dimension given: '{dimension}'")
+
         with Session(engine) as session:
-            statement = select(Cacheditem).join(Mediaitem).where(Mediaitem.updated_at > Cacheditem.created_at)
-            results = session.scalars(statement)
-            outdated_items = results.all()
+            # if there are multiple requests for same item at the same time,
+            # it might lead to generate cached versions multiple times wasting cpu until it's done.
+            # so it's locked from the moment it's checked but that means there is only one process
+            # at a time. Maybe a queue is more efficient, but it's ok for now probably.
+            with self._lock_cache_check:
+                v3cacheditem_exists = self._db_check_cache_valid(item.id, dimension, processed)
 
-            for outdated_item in outdated_items:
-                session.delete(outdated_item)
+                if v3cacheditem_exists:
+                    return v3cacheditem_exists.filepath
 
-            session.commit()
+                else:
+                    id = uuid4()
+                    v3cacheditem_new = Cacheditem(
+                        id=id,
+                        v3mediaitem_id=item.id,
+                        dimension=dimension,
+                        processed=processed,
+                        filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
+                    )
 
-            logger.info(f"deleted {len(outdated_items)} outdated items from the cache")
+                    generate_resized(
+                        filepath_in=item.processed if processed else item.unprocessed,
+                        filepath_out=v3cacheditem_new.filepath,
+                        scaled_min_length=dimension_pixel,
+                    )
 
-    def _cache_clear_all(self):
-        with Session(engine) as session:
-            statement = delete(Cacheditem)
-            session.execute(statement)
-            session.commit()
+                    session.add(v3cacheditem_new)
+                    session.commit()
 
-    def _check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
+                    return v3cacheditem_new.filepath
+
+    def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
             results = session.scalars(
                 select(Cacheditem)
@@ -240,42 +198,132 @@ class MediacollectionService(BaseService):
 
             return v3cacheditem_exists
 
-    def get_mediaitem_file(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True) -> Path:
-        dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
-
-        if dimension_pixel is None:
-            raise ValueError(f"invalid dimension given: '{dimension}'")
+    def clear_outdated(self):
+        outdated_filepaths: list[Path] = []
 
         with Session(engine) as session:
-            # if there are multiple requests for same item at the same time,
-            # it might lead to generate cached versions multiple times wasting cpu until it's done.
-            # so it's locked from the moment it's checked but that means there is only one process
-            # at a time. Maybe a queue is more efficient, but it's ok for now probably.
-            with self._lock_cache_check:
-                v3cacheditem_exists = self._check_cache_valid(mediaitem_id, dimension, processed)
+            statement = select(Cacheditem).join(Mediaitem).where(Mediaitem.updated_at > Cacheditem.created_at)
+            results = session.scalars(statement)
+            outdated_items = results.all()
 
-                if v3cacheditem_exists:
-                    return v3cacheditem_exists.filepath
+            for outdated_item in outdated_items:
+                outdated_filepaths.append(outdated_item.filepath)
+                session.delete(outdated_item)
 
-                else:
-                    item = self.db_get_image_by_id(mediaitem_id)
+            session.commit()
 
-                    id = uuid4()
-                    v3cacheditem_new = Cacheditem(
-                        id=id,
-                        v3mediaitem_id=mediaitem_id,
-                        dimension=dimension,
-                        processed=processed,
-                        filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
-                    )
+            logger.info(f"deleted {len(outdated_items)} outdated items from the cache")
 
-                    generate_resized(
-                        filepath_in=item.processed if processed else item.unprocessed,
-                        filepath_out=v3cacheditem_new.filepath,
-                        scaled_min_length=dimension_pixel,
-                    )
+            for outdated_filepath in outdated_filepaths:
+                try:
+                    os.remove(outdated_filepath)
+                except Exception as exc:
+                    logger.warning(f"could not delete file {outdated_filepath} from cache, error: {exc}")
 
-                    session.add(v3cacheditem_new)
-                    session.commit()
+    def clear_all(self):
+        self.db_clear_all()
+        self.fs_clear_all()
 
-                    return v3cacheditem_new.filepath
+    def db_clear_all(self):
+        with Session(engine) as session:
+            statement = delete(Cacheditem)
+            session.execute(statement)
+            session.commit()
+
+    def fs_clear_all(self):
+        for file in Path(f"{CACHE_PATH}").glob("*.*"):
+            os.remove(file)
+
+        logger.info("deleted all files for mediaitems")
+
+
+class MediacollectionService(BaseService):
+    """Handle all image related stuff"""
+
+    def __init__(self, sse_service: SseService):
+        super().__init__(sse_service=sse_service)
+
+        self.cache: Cache = Cache()
+        self.db: Database = Database()
+        self.fs: Files = Files()
+
+        # don't access database during init because it might not be set up during tests...
+
+    def start(self):
+        super().start()
+
+        # remove outdated items from cache during startup.
+        self.cache.clear_outdated()
+        self._logger.info(f"initialized DB, found {self.count()} images")
+
+        super().started()
+
+    def stop(self):
+        super().stop()
+        pass
+        super().stopped()
+
+    def add_item(self, item: Mediaitem):
+        # check files are avail:
+        self.fs.check_representing_files_raise(item)
+
+        self.db.add_item(item)
+
+        # and insert in client db collection so gallery is up to date.
+        if item.show_in_gallery:
+            self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
+
+        return item.id
+
+    def update_item(self, item: Mediaitem):
+        self.fs.check_representing_files_raise(item)
+
+        self.db.update_item(item)
+
+    def delete_item(self, item: Mediaitem):
+        self.db.delete_item(item)
+        self.fs.delete_item(item, appconfig.common.users_delete_to_recycle_dir)
+
+        # # and remove from client db collection so gallery is up to date.
+        # event is even sent if not show_in_gallery, client needs to sort things out
+        self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=MediaitemPublic.model_validate(item)))
+
+    def clear_all(self):
+        deleted_count = self.db.clear_all()
+        logger.info(f"deleted {deleted_count} items from the database")
+
+        self.fs.clear_all()
+        logger.info("media files cleared")
+
+        self.cache.clear_all()
+        logger.info("cache cleared")
+
+    def count(self) -> int:
+        return self.db.count()
+
+    def list_items(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
+        return self.db.list_items(offset, limit)
+
+    def get_item(self, item_id: UUID) -> Mediaitem:
+        if not isinstance(item_id, UUID):
+            raise RuntimeError("item_id is wrong type")
+
+        item = self.db.get_item(item_id)
+        self.fs.check_representing_files_raise(item)
+
+        return item
+
+    def get_item_latest(self) -> Mediaitem:
+        try:
+            with Session(engine) as session:
+                return session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc())).first()
+        except NoResultFound as exc:
+            raise FileNotFoundError("could get an item") from exc
+
+    def get_items_relto_job(self, job_identifier: UUID) -> list[Mediaitem]:
+        with Session(engine) as session:
+            galleryitems = session.scalars(
+                select(Mediaitem).order_by(Mediaitem.created_at.desc()).where(Mediaitem.job_identifier == job_identifier)
+            ).all()
+
+            return galleryitems

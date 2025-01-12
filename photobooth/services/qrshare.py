@@ -114,7 +114,7 @@ class QrShareService(BaseService):
                         # set the file to be uploaded
                         request_upload_file = {}
                         try:
-                            mediaitem_to_upload = self._mediacollection_service.db_get_image_by_id(UUID(decoded_line["file_identifier"]))
+                            mediaitem_to_upload = self._mediacollection_service.get_item(UUID(decoded_line["file_identifier"]))
                             self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except Exception as exc:
                             self._logger.error(f"mediaitem not found, error: {exc}")

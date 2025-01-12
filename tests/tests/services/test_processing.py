@@ -132,15 +132,15 @@ def test_video(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
-    number_of_images_before = _container.mediacollection_service.get_number_of_images()
+    number_of_images_before = _container.mediacollection_service.count()
 
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._state_machine is None
 
-    assert _container.mediacollection_service.get_number_of_images() == number_of_images_before + 1
+    assert _container.mediacollection_service.count() == number_of_images_before + 1
 
-    video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    video_item = _container.mediacollection_service.get_item_latest()
 
     # boomerang reverses video so double length
     in_dur = appconfig.actions.video[0].processing.video_duration
@@ -154,7 +154,7 @@ def test_video_stop_early(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
     assert _container.processing_service._state_machine is not None
-    number_of_images_before = _container.mediacollection_service.get_number_of_images()
+    number_of_images_before = _container.mediacollection_service.count()
 
     # wait until actually recording
     timeout_counter = 0
@@ -172,9 +172,9 @@ def test_video_stop_early(_container: Container):
 
     assert _container.processing_service._state_machine is None
 
-    assert _container.mediacollection_service.get_number_of_images() == number_of_images_before + 1
+    assert _container.mediacollection_service.count() == number_of_images_before + 1
 
-    video_item = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    video_item = _container.mediacollection_service.get_item_latest()
 
     # ensure written video is about in tolerance duration
     video_duration_seconds = abs(round(video_duration(video_item.unprocessed), 1))

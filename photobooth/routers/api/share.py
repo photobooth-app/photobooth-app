@@ -32,7 +32,7 @@ def _share(mediaitem: Mediaitem, index: int):
 @router.get("/actions/latest/{index}")
 def api_share_latest(index: int = 0):
     try:
-        latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+        latest_mediaitem = container.mediacollection_service.get_item_latest()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
 
@@ -42,7 +42,7 @@ def api_share_latest(index: int = 0):
 @router.get("/actions/{id}/{index}")
 def api_share_item_id(id: UUID, index: int = 0):
     try:
-        requested_mediaitem = container.mediacollection_service.db_get_image_by_id(id)
+        requested_mediaitem = container.mediacollection_service.get_item(id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
     _share(requested_mediaitem, index)

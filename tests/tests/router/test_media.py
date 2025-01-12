@@ -27,14 +27,14 @@ def test_get_500_on_fail(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception()
 
-    with patch.object(MediacollectionService, "get_mediaitem_file", error_mock):
+    with patch.object(MediacollectionService, "get_item", error_mock):
         response = client.get(f"/media/full/{uuid4()}")
         assert response.status_code == 500
         assert "detail" in response.json()
 
 
 def test_get_item_variants(client: TestClient):
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/media/full/{mediaitem.id}")
     assert response.is_success

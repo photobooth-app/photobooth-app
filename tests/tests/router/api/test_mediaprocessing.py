@@ -30,7 +30,7 @@ def client() -> TestClient:
 
 def test_preview_filter_original(client: TestClient):
     # get the newest mediaitem
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
 
@@ -45,7 +45,7 @@ def test_preview_filter_original(client: TestClient):
 
 def test_preview_filter_1977(client: TestClient):
     # get the newest mediaitem
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/_1977")
 
@@ -68,7 +68,7 @@ def test_preview_otherexception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     with patch.object(photobooth.routers.api.mediaprocessing, "get_filter_preview", error_mock):
         response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
@@ -78,7 +78,7 @@ def test_preview_otherexception(client: TestClient):
 
 def test_preview_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/theresnofilterlikethis")
 
@@ -87,7 +87,7 @@ def test_preview_filter_nonexistentfilter(client: TestClient):
 
 def test_apply_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/theresnofilterlikethis")
 
@@ -96,7 +96,7 @@ def test_apply_filter_nonexistentfilter(client: TestClient):
 
 def test_apply_filter(client: TestClient):
     # get the newest mediaitem
-    mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+    mediaitem = container.mediacollection_service.get_item_latest()
 
     image_before = Image.open(mediaitem.processed)
     image_before.load()  # force load (open is lazy!)

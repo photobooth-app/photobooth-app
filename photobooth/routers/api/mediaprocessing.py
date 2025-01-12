@@ -19,8 +19,9 @@ router = APIRouter(
 @router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
 def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
     try:
-        unprocessed_thumbnail = container.mediacollection_service.get_mediaitem_file(
-            mediaitem_id=mediaitem_id,
+        item = container.mediacollection_service.get_item(mediaitem_id)
+        unprocessed_thumbnail = container.mediacollection_service.cache.get_cached_repr(
+            item=item,
             dimension=DimensionTypes.thumbnail,
             processed=False,
         )
@@ -46,14 +47,14 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
 @router.get("/applyfilter/{mediaitem_id}/{filter}")
 def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
     try:
-        mediaitem = container.mediacollection_service.db_get_image_by_id(item_id=mediaitem_id)
+        mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         _config = SinglePictureDefinition(**mediaitem.pipeline_config)
         _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
-        container.mediacollection_service.db_update_item(mediaitem)
+        container.mediacollection_service.update_item(mediaitem)
 
         process_image_collageimage_animationimage(mediaitem)
     except Exception as exc:

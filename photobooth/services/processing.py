@@ -255,7 +255,7 @@ class ProcessingMachine(StateMachine):
         self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
     def _update_captures_taken(self):
-        number_captures_taken = len(self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier))
+        number_captures_taken = len(self._mediacollection_service.get_items_relto_job(self.model._job_identifier))
         self.model.set_captures_taken(number_captures_taken)
 
     def after_transition(self, event, source, target):
@@ -355,7 +355,7 @@ class ProcessingMachine(StateMachine):
 
         # add to collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
-        self._mediacollection_service.db_add_item(v3mediaitem)  # and to the db.
+        self._mediacollection_service.add_item(v3mediaitem)  # and to the db.
         self.model._last_captured_mediaitem_id = v3mediaitem.id
         self._update_captures_taken()
 
@@ -406,7 +406,7 @@ class ProcessingMachine(StateMachine):
             process_image_collageimage_animationimage(mediaitem)
 
             # add to collection
-            self._mediacollection_service.db_add_item(mediaitem)  # and to the db.
+            self._mediacollection_service.add_item(mediaitem)  # and to the db.
 
         self.model._last_captured_mediaitem_id = mediaitems[-1].id
 
@@ -446,19 +446,19 @@ class ProcessingMachine(StateMachine):
 
         if event == self.reject.name:
             # remove rejected image
-            latest_item = self._mediacollection_service.db_get_most_recent_mediaitem()
+            latest_item = self._mediacollection_service.get_item_latest()
             logger.info(f"rejected: {latest_item=}")
-            self._mediacollection_service.delete_image_by_id(latest_item.id)
-            self._mediacollection_service.delete_mediaitem_files(latest_item)
+            self._mediacollection_service.delete_item(latest_item)
+
             self._update_captures_taken()
 
         if event == self.abort.name:
             # remove all images captured until now
             logger.info("aborting job, deleting captured items")
 
-            job_items = self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier)
+            job_items = self._mediacollection_service.get_items_relto_job(self.model._job_identifier)
             for job_item in job_items:
-                self._mediacollection_service._db_delete_item_by_item(job_item)
+                self._mediacollection_service.delete_item(job_item)
 
     def on_enter_record(self):
         """_summary_"""
@@ -503,12 +503,12 @@ class ProcessingMachine(StateMachine):
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to create video")
 
         # add to collection
-        self._mediacollection_service.db_add_item(mediaitem)  # and to the db.
+        self._mediacollection_service.add_item(mediaitem)  # and to the db.
         self.model._last_captured_mediaitem_id = mediaitem.id
 
     def on_enter_captures_completed(self):
         # get phase 1 items:
-        phase1_mediaitems = self._mediacollection_service.db_get_all_jobitems(self.model._job_identifier)
+        phase1_mediaitems = self._mediacollection_service.get_items_relto_job(self.model._job_identifier)
         assert len(phase1_mediaitems) > 0
 
         ## PHASE 2:
@@ -537,7 +537,7 @@ class ProcessingMachine(StateMachine):
         ## add galleryitems
         # finally add resulting collage mediaitem will be added to the collection as most recent item
         if phase2_mediaitem:
-            self._mediacollection_service.db_add_item(phase2_mediaitem)
+            self._mediacollection_service.add_item(phase2_mediaitem)
             self.model._last_captured_mediaitem_id = phase2_mediaitem.id
 
         # present to ui

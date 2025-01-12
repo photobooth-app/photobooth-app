@@ -54,7 +54,7 @@ def test_print_service_disabled(mock_run, _container: Container):
     appconfig.share.sharing_enabled = False
 
     # get the newest mediaitem
-    latest_mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    latest_mediaitem = _container.mediacollection_service.get_item_latest()
 
     with pytest.raises(ConnectionRefusedError):
         _container.share_service.share(latest_mediaitem, 0)
@@ -67,7 +67,7 @@ def test_print_image(mock_run, _container: Container):
     """enable service and try to print"""
 
     # get the newest mediaitem
-    latest_mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    latest_mediaitem = _container.mediacollection_service.get_item_latest()
     _container.share_service.share(latest_mediaitem, 0)
 
     # check subprocess.run was invoked
@@ -79,7 +79,7 @@ def test_print_image_blocked(mock_run, _container: Container):
     """enable service and try to print, check that it repsonds blocking correctly"""
 
     # get the newest mediaitem
-    latest_mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    latest_mediaitem = _container.mediacollection_service.get_item_latest()
 
     # two prints issued
 
@@ -103,7 +103,7 @@ def test_is_limited_exceeded(mock_run, _container: Container):
     for _ in range(appconfig.share.actions[test_action_index].processing.max_shares):
         _container.share_service.limit_counter_increment(appconfig.share.actions[test_action_index].name)
 
-    latest_mediaitem = _container.mediacollection_service.db_get_most_recent_mediaitem()
+    latest_mediaitem = _container.mediacollection_service.get_item_latest()
     with pytest.raises(BlockingIOError):
         _container.share_service.share(latest_mediaitem, test_action_index)
 

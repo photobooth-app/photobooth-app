@@ -38,7 +38,7 @@ def _container() -> Container:
 def _mediaitem(request, _container: Container) -> Mediaitem:
     _container.processing_service.trigger_action(request.param)
     container.processing_service.wait_until_job_finished()
-    yield _container.mediacollection_service.db_get_most_recent_mediaitem()
+    yield _container.mediacollection_service.get_item_latest()
 
 
 def test_shareservice_landingpage_valid():

@@ -17,7 +17,8 @@ media_router = APIRouter(
 @media_router.get("/{dimension}/{mediaitem_id}")
 def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
     try:
-        filepath = container.mediacollection_service.get_mediaitem_file(mediaitem_id, dimension, processed=True)
+        item = container.mediacollection_service.get_item(mediaitem_id)
+        filepath = container.mediacollection_service.cache.get_cached_repr(item, dimension, processed=True)
         return FileResponse(path=filepath)
     except FileNotFoundError as exc:
         logger.warning(f"cannot find mediaitem by id {mediaitem_id}")
