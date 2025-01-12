@@ -7,7 +7,7 @@ from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 
-from .utils import get_images
+from ..utils import get_images
 
 
 @pytest.fixture(autouse=True)
@@ -22,10 +22,7 @@ logger = logging.getLogger(name=None)
 ## check skip if wrong platform
 
 if not is_rpi():
-    pytest.skip(
-        "platform not raspberry pi, test of backends skipped",
-        allow_module_level=True,
-    )
+    pytest.skip("platform not raspberry pi, test of backends skipped", allow_module_level=True)
 
 
 ## fixtures

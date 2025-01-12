@@ -7,7 +7,7 @@ from photobooth.container import Container, container
 from photobooth.services.config import appconfig
 from photobooth.services.processing import ProcessingService
 
-from .utils import video_duration
+from ..utils import video_duration
 
 logger = logging.getLogger(name=None)
 

@@ -11,7 +11,7 @@ from wigglecam.container import Container
 from photobooth.services.backends.wigglecam import WigglecamBackend
 from photobooth.services.config.groups.backends import ConfigCameraNode, GroupBackendWigglecam
 
-from .utils import get_images
+from ..utils import get_images
 
 logger = logging.getLogger(name=None)
 

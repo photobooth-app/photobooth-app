@@ -13,7 +13,7 @@ from werkzeug.wrappers import Request, Response
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
-from .utils import get_images
+from ..utils import get_images
 
 logger = logging.getLogger(name=None)
 

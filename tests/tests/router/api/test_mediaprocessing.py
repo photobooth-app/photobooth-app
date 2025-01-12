@@ -12,7 +12,7 @@ import photobooth.routers.api.mediaprocessing
 from photobooth.application import app
 from photobooth.container import container
 
-from .utils import is_same
+from ...utils import is_same
 
 logger = logging.getLogger(name=None)
 
