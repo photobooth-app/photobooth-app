@@ -1,8 +1,4 @@
-from typing import Annotated
-
-from fastapi import Depends
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from .. import DATABASE_PATH
 
@@ -16,18 +12,12 @@ SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLALCHEMY_DATABASE_FILE}"
 connect_args = {"check_same_thread": False}
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)  # , echo=True)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def get_session():
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-SessionDep = Annotated[Session, Depends(get_session)]
+# not used until now, could be used instead normal Session() below
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# def get_session():
+#     with Session(engine) as session:
+#         yield session
+# SessionDep = Annotated[Session, Depends(get_session)]
 
 
 def create_db_and_tables():
