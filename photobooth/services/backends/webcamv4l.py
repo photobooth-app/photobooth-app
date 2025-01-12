@@ -96,10 +96,12 @@ class WebcamV4lBackend(AbstractBackend):
                 logger.exception(exc)
                 raise exc
 
-            # about ready to deliver, so signal it.
-            self._device_set_is_ready_to_deliver()
-
             for frame in device:  # forever
+                # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib
+                if not self.is_ready_to_deliver.is_set():
+                    # set only once.
+                    self._device_set_is_ready_to_deliver()
+
                 with self._lores_data.condition:
                     self._lores_data.data = bytes(frame)
                     self._lores_data.condition.notify_all()
