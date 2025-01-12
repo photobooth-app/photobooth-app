@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from photobooth.services.sseservice import SseService
-from photobooth.services.systemservice import SystemService
+from photobooth.services.sse import SseService
+from photobooth.services.system import SystemService
 
 logger = logging.getLogger(name=None)
 

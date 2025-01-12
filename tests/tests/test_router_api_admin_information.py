@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.informationservice import InformationService
+from photobooth.services.information import InformationService
 
 logger = logging.getLogger(name=None)
 

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.mediacollectionservice import MediacollectionService
+from photobooth.services.collection import MediacollectionService
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ from gpiozero.pins.mock import MockFactory
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.gpioservice import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
+from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
 Device.pin_factory = MockFactory()
 logger = logging.getLogger(name=None)

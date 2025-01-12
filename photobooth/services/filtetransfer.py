@@ -8,9 +8,9 @@ import psutil
 from photobooth.utils.stoppablethread import StoppableThread
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
-from .baseservice import BaseService
+from .base import BaseService
 from .config import appconfig
-from .sseservice import SseService
+from .sse import SseService
 
 LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED]
 

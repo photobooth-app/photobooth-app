@@ -12,9 +12,9 @@ from logging import FileHandler, LogRecord
 from pathlib import Path
 
 from .. import LOG_PATH
-from .baseservice import BaseService
+from .base import BaseService
 from .config import appconfig
-from .sseservice import SseEventLogRecord, SseService
+from .sse import SseEventLogRecord, SseService
 
 
 class EventstreamLogHandler(logging.Handler):

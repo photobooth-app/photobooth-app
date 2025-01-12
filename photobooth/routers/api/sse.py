@@ -7,7 +7,7 @@ from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
 
 from ...container import container
-from ...services.sseservice import Client
+from ...services.sse import Client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(

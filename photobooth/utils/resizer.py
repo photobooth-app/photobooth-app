@@ -5,18 +5,9 @@ from pathlib import Path
 
 from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 
-from ... import LOG_PATH
-from ...database.models import DimensionTypes
-from ..config import appconfig
+from .. import LOG_PATH
 
 logger = logging.getLogger(__name__)
-
-
-MAP_DIMENSION_TO_PIXEL = {
-    DimensionTypes.full: appconfig.mediaprocessing.full_still_length,
-    DimensionTypes.preview: appconfig.mediaprocessing.preview_still_length,
-    DimensionTypes.thumbnail: appconfig.mediaprocessing.thumbnail_still_length,
-}
 
 
 def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):

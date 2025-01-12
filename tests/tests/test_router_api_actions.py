@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
-from photobooth.services.processingservice import ProcessingService
+from photobooth.services.processing import ProcessingService
 from photobooth.utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(name=None)

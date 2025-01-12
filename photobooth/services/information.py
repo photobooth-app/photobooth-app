@@ -15,9 +15,9 @@ from ..database.database import engine
 from ..database.models import ShareLimits, UsageStats
 from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
 from ..utils.repeatedtimer import RepeatedTimer
-from .aquisitionservice import AquisitionService
-from .baseservice import BaseService
-from .sseservice import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
+from .aquisition import AquisitionService
+from .base import BaseService
+from .sse import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
 
 STATS_INTERVAL_TIMER = 2  # every x seconds
 

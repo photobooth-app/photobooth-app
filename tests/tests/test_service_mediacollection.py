@@ -6,7 +6,8 @@ import pytest
 from PIL import Image
 
 from photobooth.database.types import DimensionTypes
-from photobooth.services.mediacollection.resizer import MAP_DIMENSION_TO_PIXEL, generate_resized, resize_gif, resize_jpeg, resize_mp4
+from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
+from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, resize_mp4
 
 logger = logging.getLogger(name=None)
 
@@ -47,27 +48,27 @@ def test_resize_mp4(tmp_path):
 
 
 def test_generate_resized():
-    import photobooth.services.mediacollection.resizer
+    import photobooth.utils.resizer
 
-    with patch.object(photobooth.services.mediacollection.resizer, "resize_jpeg"):
+    with patch.object(photobooth.utils.resizer, "resize_jpeg"):
         generate_resized(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.services.mediacollection.resizer.resize_jpeg.assert_called_once()
+        photobooth.utils.resizer.resize_jpeg.assert_called_once()
 
-    with patch.object(photobooth.services.mediacollection.resizer, "resize_jpeg"):
+    with patch.object(photobooth.utils.resizer, "resize_jpeg"):
         generate_resized(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.services.mediacollection.resizer.resize_jpeg.assert_called_once()
+        photobooth.utils.resizer.resize_jpeg.assert_called_once()
 
-    with patch.object(photobooth.services.mediacollection.resizer, "resize_gif"):
+    with patch.object(photobooth.utils.resizer, "resize_gif"):
         generate_resized(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.services.mediacollection.resizer.resize_gif.assert_called_once()
+        photobooth.utils.resizer.resize_gif.assert_called_once()
 
-    with patch.object(photobooth.services.mediacollection.resizer, "resize_mp4"):
+    with patch.object(photobooth.utils.resizer, "resize_mp4"):
         generate_resized(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.services.mediacollection.resizer.resize_mp4.assert_called_once()
+        photobooth.utils.resizer.resize_mp4.assert_called_once()
 
 
 def test_generate_resized_raise_nonavail_format():

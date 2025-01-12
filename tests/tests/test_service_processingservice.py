@@ -5,7 +5,7 @@ import pytest
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
-from photobooth.services.processingservice import ProcessingService
+from photobooth.services.processing import ProcessingService
 
 from .utils import video_duration
 

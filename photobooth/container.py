@@ -1,18 +1,18 @@
 import logging
 
-from .services.aquisitionservice import AquisitionService
-from .services.baseservice import BaseService
-from .services.filtetransferservice import FileTransferService
-from .services.gpioservice import GpioService
-from .services.informationservice import InformationService
-from .services.loggingservice import LoggingService
-from .services.mediacollectionservice import MediacollectionService
-from .services.processingservice import ProcessingService
-from .services.qrshareservice import QrShareService
-from .services.shareservice import ShareService
-from .services.sseservice import SseService
-from .services.systemservice import SystemService
-from .services.wledservice import WledService
+from .services.aquisition import AquisitionService
+from .services.base import BaseService
+from .services.collection import MediacollectionService
+from .services.filtetransfer import FileTransferService
+from .services.gpio import GpioService
+from .services.information import InformationService
+from .services.logging import LoggingService
+from .services.processing import ProcessingService
+from .services.qrshare import QrShareService
+from .services.share import ShareService
+from .services.sse import SseService
+from .services.system import SystemService
+from .services.wled import WledService
 
 logger = logging.getLogger(__name__)
 

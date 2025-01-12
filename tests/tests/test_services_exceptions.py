@@ -7,7 +7,7 @@ from unittest import mock
 from unittest.mock import patch
 
 from photobooth.container import container
-from photobooth.services.informationservice import InformationService
+from photobooth.services.information import InformationService
 
 logger = logging.getLogger(name=None)
 

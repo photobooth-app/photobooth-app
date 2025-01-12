@@ -15,20 +15,20 @@ from statemachine import State, StateMachine
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
 from ..database.models import Mediaitem, MediaitemTypes
 from ..utils.exceptions import ProcessMachineOccupiedError
-from .aquisitionservice import AquisitionService
-from .baseservice import BaseService
+from .aquisition import AquisitionService
+from .base import BaseService
+from .collection import MediacollectionService
 from .config import appconfig
-from .informationservice import InformationService
+from .information import InformationService
 from .jobmodels.animation import JobModelAnimation
 from .jobmodels.base import JobModelBase, action_type_literal
 from .jobmodels.collage import JobModelCollage
 from .jobmodels.image import JobModelImage
 from .jobmodels.multicamera import JobModelMulticamera
 from .jobmodels.video import JobModelVideo
-from .mediacollectionservice import MediacollectionService
 from .mediaprocessing.processes import process_image_collageimage_animationimage, process_video
-from .sseservice import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
-from .wledservice import WledService
+from .sse import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
+from .wled import WledService
 
 logger = logging.getLogger(__name__)
 

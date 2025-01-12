@@ -6,11 +6,11 @@ from sqlalchemy.orm import Session
 
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
-from .baseservice import BaseService
+from .base import BaseService
+from .collection import MediacollectionService
 from .config import appconfig
-from .informationservice import InformationService
-from .mediacollectionservice import MediacollectionService
-from .sseservice import SseEventFrontendNotification, SseService
+from .information import InformationService
+from .sse import SseEventFrontendNotification, SseService
 
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 

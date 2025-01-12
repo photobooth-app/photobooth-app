@@ -16,10 +16,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
-from .baseservice import BaseService
+from .base import BaseService
 from .config import appconfig
-from .sseservice import SseService
-from .wledservice import WledService
+from .sse import SseService
+from .wled import WledService
 
 logger = logging.getLogger(__name__)
 

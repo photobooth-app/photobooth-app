@@ -11,8 +11,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal
 
-from .baseservice import BaseService
-from .sseservice import SseService
+from .base import BaseService
+from .sse import SseService
 
 logger = logging.getLogger(__name__)
 

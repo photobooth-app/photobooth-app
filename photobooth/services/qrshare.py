@@ -9,10 +9,10 @@ from uuid import UUID
 import requests
 
 from ..utils.stoppablethread import StoppableThread
-from .baseservice import BaseService
+from .base import BaseService
+from .collection import MediacollectionService
 from .config import appconfig
-from .mediacollectionservice import MediacollectionService
-from .sseservice import SseService
+from .sse import SseService
 
 
 class QrShareService(BaseService):

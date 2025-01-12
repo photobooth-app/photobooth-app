@@ -6,9 +6,9 @@ import time
 import serial
 
 from ..utils.repeatedtimer import RepeatedTimer
-from .baseservice import BaseService
+from .base import BaseService
 from .config import appconfig
-from .sseservice import SseService
+from .sse import SseService
 
 # these presets are set on WLED module to control lights:
 PRESET_ID_STANDBY = 1

@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 
-from .sseservice import SseService
+from .sse import SseService
 
 
 class EnumStatus(Enum):

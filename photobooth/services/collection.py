@@ -17,12 +17,19 @@ from .. import CACHE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
 from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
-from .baseservice import BaseService
+from ..utils.resizer import generate_resized
+from .base import BaseService
 from .config import appconfig
-from .mediacollection.resizer import MAP_DIMENSION_TO_PIXEL, generate_resized
-from .sseservice import SseEventDbInsert, SseEventDbRemove, SseService
+from .sse import SseEventDbInsert, SseEventDbRemove, SseService
 
 logger = logging.getLogger(__name__)
+
+
+MAP_DIMENSION_TO_PIXEL = {
+    DimensionTypes.full: appconfig.mediaprocessing.full_still_length,
+    DimensionTypes.preview: appconfig.mediaprocessing.preview_still_length,
+    DimensionTypes.thumbnail: appconfig.mediaprocessing.thumbnail_still_length,
+}
 
 
 class MediacollectionService(BaseService):

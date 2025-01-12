@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 
 from photobooth.application import app
 from photobooth.container import container
+from photobooth.services.collection import MediacollectionService
 from photobooth.services.config import appconfig
-from photobooth.services.mediacollectionservice import MediacollectionService
 
 
 @pytest.fixture

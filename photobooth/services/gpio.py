@@ -11,14 +11,14 @@ from gpiozero import Button as ZeroButton
 from gpiozero.exc import BadPinFactory
 
 from ..utils.exceptions import ProcessMachineOccupiedError
-from .baseservice import BaseService
+from .base import BaseService
+from .collection import MediacollectionService
 from .config import appconfig
 from .config.groups.actions import GpioTrigger
 from .jobmodels.base import action_type_literal
-from .mediacollectionservice import MediacollectionService
-from .processingservice import ProcessingService
-from .shareservice import ShareService
-from .sseservice import SseService
+from .processing import ProcessingService
+from .share import ShareService
+from .sse import SseService
 
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
@@ -47,7 +47,7 @@ class ActionButton(Button):
         self.action_index: int = action_index
 
     def __repr__(self):
-        return f"gpioservice.{self.__class__.__name__} triggers action_type={self.action_type}, action_index={self.action_index} {super().__repr__()}"
+        return f"gpio.{self.__class__.__name__} triggers action_type={self.action_type}, action_index={self.action_index} {super().__repr__()}"
 
 
 class ShareButton(Button):
@@ -57,7 +57,7 @@ class ShareButton(Button):
         self.action_index: int = action_index
 
     def __repr__(self):
-        return f"gpioservice.{self.__class__.__name__} triggers share action, action_index={self.action_index} {super().__repr__()}"
+        return f"gpio.{self.__class__.__name__} triggers share action, action_index={self.action_index} {super().__repr__()}"
 
 
 class GpioService(BaseService):
