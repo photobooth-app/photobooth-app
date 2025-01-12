@@ -27,10 +27,7 @@ prepare config for testing
 
 ## check skip if wrong platform
 if not platform.system() == "Linux":
-    pytest.skip(
-        "tests are linux only platform, skipping test",
-        allow_module_level=True,
-    )
+    pytest.skip("tests are linux only platform, skipping test", allow_module_level=True)
 
 
 @pytest.fixture()
@@ -104,6 +101,10 @@ def test_assert_is_alive(backend_gphoto2):
     assert backend_gphoto2._device_alive()
 
 
+def test_check_avail(backend_gphoto2):
+    assert backend_gphoto2._device_available()
+
+
 def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 
@@ -117,7 +118,9 @@ def test_get_images_gphoto2(backend_gphoto2):
 
 def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._on_configure_optimized_for_hq_capture()
-    time.sleep(1)
+
+    backend_gphoto2.wait_for_still_file()
+
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
@@ -129,7 +132,9 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._config.shutter_speed_capture = "1/20"
     backend_gphoto2._config.shutter_speed_liveview = "1/30"
     backend_gphoto2._on_configure_optimized_for_hq_capture()
-    time.sleep(1)
+
+    backend_gphoto2.wait_for_still_file()
+
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
@@ -141,7 +146,9 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._config.shutter_speed_capture = "illegal"
     backend_gphoto2._config.shutter_speed_liveview = "illegal"
     backend_gphoto2._on_configure_optimized_for_hq_capture()
-    time.sleep(1)
+
+    backend_gphoto2.wait_for_still_file()
+
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()

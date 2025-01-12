@@ -196,8 +196,10 @@ class AbstractBackend(ABC):
             _type_: _description_
         """
         timeout = 10
-        logger.info(f"waiting for device to be ready to deliver until timeout={timeout}")
-        self.is_ready_to_deliver.wait(timeout=timeout)
+        logger.info(f"waiting for device to be ready to deliver until timeout={timeout}s")
+        if not self.is_ready_to_deliver.wait(timeout=timeout):
+            raise RuntimeError("Error, device not signaling ready until timeout occured!")
+
         logger.debug("continue, device signaled is ready to deliver")
 
     def rotate_jpeg_file_by_exif_flag(self, filepath: Path, orientation_choice: Orientation):
