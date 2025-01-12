@@ -122,8 +122,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2.wait_for_still_file()
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
 
     # change some values
@@ -136,8 +138,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2.wait_for_still_file()
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
 
     # and try illegal values that raise exception
@@ -150,8 +154,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2.wait_for_still_file()
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
     backend_gphoto2._on_configure_optimized_for_idle()
+    backend_gphoto2._configure_optimized_for_idle_video()
     time.sleep(1)
 
 
