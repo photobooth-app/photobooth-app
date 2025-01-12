@@ -41,7 +41,7 @@ class SystemService(BaseService):
         super().stopped()
 
     def util_systemd_control(self, state: Literal["start", "stop", "restart"]):
-        if not platform.system() != "Linux":
+        if not platform.system() == "Linux":
             raise RuntimeError("service control supported on linux platform only")
 
         try:
