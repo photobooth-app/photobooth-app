@@ -9,6 +9,7 @@ import subprocess
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Literal
 
 from .baseservice import BaseService
 from .sseservice import SseService
@@ -39,25 +40,23 @@ class SystemService(BaseService):
         pass
         super().stopped()
 
-    def util_systemd_control(self, state):
-        # will return 0 for active else inactive.
+    def util_systemd_control(self, state: Literal["start", "stop", "restart"]):
+        if not platform.system() != "Linux":
+            raise RuntimeError("service control supported on linux platform only")
+
         try:
-            subprocess.run(
-                args=["systemctl", "--user", "is-active", "--quiet", SERVICE_NAME],
-                timeout=10,
-                check=True,
-            )
-        except FileNotFoundError:
-            self._logger.info(f"command systemctl not found to invoke restart; restart {SERVICE_NAME} by yourself.")
+            # will return 0 for active else inactive.
+            subprocess.run(args=["systemctl", "--user", "is-active", "--quiet", SERVICE_NAME], timeout=10, check=True)
         except subprocess.CalledProcessError as exc:
             # non zero returncode
             self._logger.warning(f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
-        except subprocess.TimeoutExpired as exc:
-            self._logger.error(f"subprocess timeout {exc}")
+        except Exception as exc:
+            self._logger.error(f"error: {exc}")
+
         else:
             # no error, service restart ok
             self._logger.info(f"service {SERVICE_NAME} currently active, restarting")
-            os.system(f"systemctl --user {state} {SERVICE_NAME}")
+            subprocess.run(["systemctl", "--user", state, SERVICE_NAME])
 
     def install_service(self):
         # install booth service

@@ -14,10 +14,7 @@ router = APIRouter(
 
 
 @router.get("/{action}/{param}")
-def api_cmd(
-    action,
-    param,
-):
+def api_cmd(action, param):
     logger.info(f"cmd api requested action={action}, param={param}")
 
     if action == "server" and param == "reboot":
