@@ -80,7 +80,7 @@ def test_delete_items_exception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(MediacollectionService, "delete_all_mediaitems", error_mock):
+    with patch.object(MediacollectionService, "clear_all", error_mock):
         response = client.delete("/mediacollection/")
         assert response.status_code == 500
         assert "detail" in response.json()
