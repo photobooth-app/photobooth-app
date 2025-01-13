@@ -1,5 +1,6 @@
 import logging
 import time
+from unittest.mock import patch
 
 import pytest
 
@@ -43,6 +44,25 @@ def backend_picamera2():
 
 
 ## tests
+
+
+def test_picamera2_switch_modes(backend_picamera2):
+    from picamera2 import Picamera2
+
+    with patch.object(Picamera2, "switch_mode"):
+        backend_picamera2._on_configure_optimized_for_hq_capture()
+        time.sleep(1)
+        Picamera2.switch_mode.assert_called()
+
+    with patch.object(Picamera2, "switch_mode"):
+        backend_picamera2._on_configure_optimized_for_hq_preview()
+        time.sleep(1)
+        Picamera2.switch_mode.assert_called()
+
+    with patch.object(Picamera2, "switch_mode"):
+        backend_picamera2._on_configure_optimized_for_idle()
+        time.sleep(1)
+        Picamera2.switch_mode.assert_called()
 
 
 def test_assert_is_alive(backend_picamera2):
