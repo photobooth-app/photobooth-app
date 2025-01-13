@@ -76,9 +76,7 @@ class Picamera2Backend(AbstractBackend):
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
 
         # https://github.com/raspberrypi/picamera2/issues/576
-        if self._picamera2:
-            self._picamera2.close()
-            del self._picamera2
+        self._device_close()
 
         tuning = None
         if self._config.optimized_lowlight_short_exposure:
@@ -148,15 +146,19 @@ class Picamera2Backend(AbstractBackend):
             self._worker_thread.stop()
             self._worker_thread.join()
 
+        self._device_close()
+
         logger.debug("stopping encoder")
+
+        logger.debug(f"{self.__module__} stopped")
+
+    def _device_close(self):
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
             self._picamera2.stop_encoder()
             self._picamera2.stop()
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
             del self._picamera2
-
-        logger.debug(f"{self.__module__} stopped")
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
