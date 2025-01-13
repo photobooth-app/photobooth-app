@@ -44,6 +44,7 @@ def test_assert_is_alive(backend_cv2):
 
 
 def test_check_avail(backend_cv2):
+    backend_cv2.stop()  # for avail check backend not allowed to access it
     assert backend_cv2._device_available()
 
 

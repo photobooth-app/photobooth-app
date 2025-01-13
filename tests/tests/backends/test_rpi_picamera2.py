@@ -51,7 +51,8 @@ def test_picamera2_switch_modes(backend_picamera2):
         backend_picamera2._on_configure_optimized_for_hq_capture()
         backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
         backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
-        backend_picamera2._picamera2.switch_mode.assert_called()
+        # hq-capture does not change actually because change happens in hq preview already.
+        backend_picamera2._picamera2.switch_mode.assert_not_called()
 
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
         backend_picamera2._on_configure_optimized_for_hq_preview()
