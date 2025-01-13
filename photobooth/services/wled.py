@@ -25,8 +25,8 @@ class WledService(BaseService):
     def __init__(self, sse_service: SseService):
         super().__init__(sse_service)
 
-        self._enabled = appconfig.hardwareinputoutput.wled_enabled
-        self._serial_port = appconfig.hardwareinputoutput.wled_serial_port
+        self._enabled: bool = None
+        self._serial_port: str = None
 
         self._serial: serial.Serial = None
         self._reconnect_interval_timer: RepeatedTimer = RepeatedTimer(RECONNECT_INTERVAL_TIMER, self.connect)
@@ -34,9 +34,17 @@ class WledService(BaseService):
     def start(self):
         super().start()
 
+        self._enabled = appconfig.hardwareinputoutput.wled_enabled
+        self._serial_port = appconfig.hardwareinputoutput.wled_serial_port
+
         if not self._enabled:
             self._logger.info("WledService disabled")
             super().disabled()
+            return
+
+        if not self._serial_port:
+            self._logger.info("given serial port empty. define valid port!")
+            super().faulty()
             return
 
         self.connect()
