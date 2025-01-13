@@ -47,5 +47,11 @@ def test_assert_is_alive(emulated_node, backend_wigglecam):
     assert backend_wigglecam._device_alive()
 
 
+def test_optimize_mode(backend_wigglecam):
+    backend_wigglecam._on_configure_optimized_for_hq_capture()
+    backend_wigglecam._on_configure_optimized_for_hq_preview()
+    backend_wigglecam._on_configure_optimized_for_idle()
+
+
 def test_read_still(emulated_node, backend_wigglecam):
     get_images(backend_wigglecam)

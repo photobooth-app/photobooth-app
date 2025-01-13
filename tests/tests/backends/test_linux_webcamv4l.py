@@ -65,6 +65,17 @@ def test_assert_is_alive(backend_v4l):
     assert backend_v4l._device_alive()
 
 
+def test_check_avail(backend_v4l):
+    backend_v4l.stop()
+    assert backend_v4l._device_available()
+
+
+def test_optimize_mode(backend_v4l):
+    backend_v4l._on_configure_optimized_for_hq_capture()
+    backend_v4l._on_configure_optimized_for_hq_preview()
+    backend_v4l._on_configure_optimized_for_idle()
+
+
 def test_get_images_webcamv4l(backend_v4l):
     # get lores and hires images from backend and assert
     get_images(backend_v4l)

@@ -48,6 +48,12 @@ def test_check_avail(backend_cv2):
     assert backend_cv2._device_available()
 
 
+def test_optimize_mode(backend_cv2):
+    backend_cv2._on_configure_optimized_for_hq_capture()
+    backend_cv2._on_configure_optimized_for_hq_preview()
+    backend_cv2._on_configure_optimized_for_idle()
+
+
 def test_get_images_webcamcv2(backend_cv2: WebcamCv2Backend):
     """get lores and hires images from backend and assert"""
     get_images(backend_cv2)

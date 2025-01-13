@@ -79,6 +79,12 @@ def test_assert_is_alive(backend_digicamcontrol_emulated: DigicamcontrolBackend)
     assert backend_digicamcontrol_emulated._device_alive()
 
 
+def test_optimize_mode(backend_digicamcontrol_emulated: DigicamcontrolBackend):
+    backend_digicamcontrol_emulated._on_configure_optimized_for_hq_capture()
+    backend_digicamcontrol_emulated._on_configure_optimized_for_hq_preview()
+    backend_digicamcontrol_emulated._on_configure_optimized_for_idle()
+
+
 def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol_emulated: DigicamcontrolBackend):
     # ensure its working fine.
     get_images(backend_digicamcontrol_emulated)

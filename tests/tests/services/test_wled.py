@@ -5,6 +5,8 @@ import pytest
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
+from photobooth.services.sse import SseService
+from photobooth.services.wled import WledService
 
 logger = logging.getLogger(name=None)
 
@@ -16,19 +18,26 @@ def _container() -> Container:
     container.stop()
 
 
-def test_disabled(_container: Container):
+@pytest.fixture()
+def wled_service():
+    # setup
+    ws = WledService(SseService())
+
+    # deliver
+    ws.start()
+    yield ws
+    ws.stop()
+
+
+def test_disabled(wled_service: WledService):
     """should just fail in silence if disabled but app triggers some presets"""
 
     appconfig.hardwareinputoutput.wled_enabled = False
 
-    try:
-        _container.wled_service.start()
+    wled_service.start()
 
-        # test this, because should be ignored, no error
-        _container.wled_service.preset_standby()
-
-    except Exception as exc:
-        raise AssertionError("init failed") from exc
+    # test this, because should be ignored, no error
+    wled_service.preset_standby()
 
 
 def test_enabled_nonexistentserialport(_container: Container):
