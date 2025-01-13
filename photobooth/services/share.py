@@ -7,9 +7,7 @@ from sqlalchemy.orm import Session
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
 from .base import BaseService
-from .collection import MediacollectionService
 from .config import appconfig
-from .information import InformationService
 from .sse import SseEventFrontendNotification, SseService
 
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
@@ -18,12 +16,11 @@ TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 class ShareService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService, information_service: InformationService):
+    def __init__(self, sse_service: SseService):
         super().__init__(sse_service)
 
         # common objects
-        self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._information_service: InformationService = information_service
+        pass
 
         # custom service objects
         pass
