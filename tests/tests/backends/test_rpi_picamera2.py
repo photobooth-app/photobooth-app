@@ -49,17 +49,20 @@ def backend_picamera2():
 def test_picamera2_switch_modes(backend_picamera2):
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
         backend_picamera2._on_configure_optimized_for_hq_capture()
-        time.sleep(1)
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
         backend_picamera2._picamera2.switch_mode.assert_called()
 
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
         backend_picamera2._on_configure_optimized_for_hq_preview()
-        time.sleep(1)
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
         backend_picamera2._picamera2.switch_mode.assert_called()
 
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
         backend_picamera2._on_configure_optimized_for_idle()
-        time.sleep(1)
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
+        backend_picamera2._wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
         backend_picamera2._picamera2.switch_mode.assert_called()
 
 
