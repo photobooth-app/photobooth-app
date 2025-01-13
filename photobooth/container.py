@@ -51,8 +51,6 @@ class Container:
     )
     share_service = ShareService(
         sse_service,
-        mediacollection_service,
-        information_service,
     )
     gpio_service = GpioService(
         sse_service,
