@@ -6,9 +6,10 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
-from typing import Literal
 
 from ..models.models import PilgramFilter
 
