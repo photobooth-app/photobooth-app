@@ -102,8 +102,6 @@ def process_ffmpeg(tmp_path):
     logger.info("finished waiting.")
     logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
     if code != 0:
-        # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
-        # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
         raise RuntimeError(f"error creating videofile, ffmpeg exit code ({code}).")
 
 

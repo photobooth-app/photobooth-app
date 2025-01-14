@@ -464,9 +464,8 @@ class AbstractBackend(ABC):
             if code != 0:
                 logger.error(ffmpeg_stderr)  # can help to track down errors for non-zero exitcodes.
 
-                # more debug info can be received in ffmpeg popen stderr (pytest captures automatically)
-                # TODO: check how to get in application at runtime to write to logs or maybe let ffmpeg write separate logfile
                 logger.error(f"error creating videofile, ffmpeg exit code ({code}).")
+                # note: there is more information in ffmpeg logfile: ffmpeg-last.log
 
             ffmpeg_subprocess = None
 
