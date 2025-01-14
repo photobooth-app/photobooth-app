@@ -6,6 +6,8 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
@@ -25,6 +27,11 @@ class GroupUiSettings(BaseModel):
     SECONDARY_COLOR: Color = Field(
         default=Color("#b8124f").as_hex(),
         description="Secondary color (admin interface, accents).",
+    )
+
+    theme: Literal["system", "light", "dark"] = Field(
+        default="system",
+        description="Specify the theme for the app. Set to system for automatic switching based on system/browser settings or force the light/dark theme.",
     )
 
     show_gallery_on_frontpage: bool = Field(
