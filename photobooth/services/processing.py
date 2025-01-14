@@ -409,6 +409,7 @@ class ProcessingMachine(StateMachine):
             self._mediacollection_service.add_item(mediaitem)  # and to the db.
 
         self.model._last_captured_mediaitem_id = mediaitems[-1].id
+        self._update_captures_taken()
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process")
         logger.info(f"capture {mediaitem=} successful")
