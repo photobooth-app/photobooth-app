@@ -187,7 +187,7 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug("closed")
 
-        logger.debug(f"{self.__module__} stopped,  {self._worker_thread.is_alive()=}")
+        logger.debug(f"{self.__module__} stopped")
 
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
