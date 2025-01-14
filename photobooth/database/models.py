@@ -46,6 +46,9 @@ class Mediaitem(Base):
 
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}> id={self.id}, media_type={self.media_type}, unprocessed={self.unprocessed}"
+
 
 class Cacheditem(Base):
     __tablename__ = "cacheditems"
@@ -60,3 +63,6 @@ class Cacheditem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     filepath: Mapped[Path] = mapped_column(PathType)
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}> id={self.id}, mediaitem_id={self.v3mediaitem_id}, filepath={self.filepath}"
