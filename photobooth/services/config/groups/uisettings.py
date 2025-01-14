@@ -8,6 +8,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
+from typing import Literal
 
 from ..models.models import PilgramFilter
 
@@ -16,6 +17,11 @@ class GroupUiSettings(BaseModel):
     """Personalize the booth's UI."""
 
     model_config = ConfigDict(title="Personalize the User Interface")
+
+    theme: Literal["system", "light", "dark"] = Field(
+        default="system",
+        description="Specify the theme for the app.",
+    )
 
     PRIMARY_COLOR: Color = Field(
         default=Color("#196cb0").as_hex(),
