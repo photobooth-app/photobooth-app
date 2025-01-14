@@ -184,3 +184,17 @@ def test_video_stop_early(_container: Container):
     if appconfig.actions.video[0].processing.boomerang:
         desired_video_duration *= 2
     assert video_duration_seconds == pytest.approx(desired_video_duration, 0.5)
+
+
+def test_multicamera(_container: Container):
+    number_of_images_before = _container.mediacollection_service.count()
+
+    _container.processing_service.trigger_action("multicamera", 0)
+
+    assert _container.processing_service._state_machine is not None
+
+    _container.processing_service.wait_until_job_finished()
+
+    assert _container.processing_service._state_machine is None
+
+    assert _container.mediacollection_service.count() == number_of_images_before + 5
