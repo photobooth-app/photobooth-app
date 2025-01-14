@@ -8,6 +8,8 @@ log/*.log*
 /userdata
 /tmp
 /recycle
+/cache
+/database
 stats.json
 
 
