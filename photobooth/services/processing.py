@@ -379,7 +379,7 @@ class ProcessingMachine(StateMachine):
             original_filenamepath = self._new_filename(MediaitemTypes.image)
             v3mediaitem = Mediaitem(
                 job_identifier=self.model._job_identifier,
-                media_type=MediaitemTypes.multicamera,
+                media_type=MediaitemTypes.image,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
                 processed=Path(PATH_PROCESSED, original_filenamepath),
                 pipeline_config=_config,
