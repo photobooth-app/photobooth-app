@@ -200,7 +200,7 @@ class Cache:
 
             return v3cacheditem_exists
 
-    def clear_outdated(self):
+    def on_start_maintain(self):
         outdated_filepaths: list[Path] = []
 
         with Session(engine) as session:
@@ -254,8 +254,8 @@ class MediacollectionService(BaseService):
     def start(self):
         super().start()
 
-        # remove outdated items from cache during startup.
-        self.cache.clear_outdated()
+        self.on_start_maintain()
+
         self._logger.info(f"initialized DB, found {self.count()} images")
 
         super().started()
@@ -264,6 +264,10 @@ class MediacollectionService(BaseService):
         super().stop()
         pass
         super().stopped()
+
+    def on_start_maintain(self):
+        # remove outdated items from cache during startup.
+        self.cache.on_start_maintain()
 
     def add_item(self, item: Mediaitem):
         # check files are avail:
@@ -308,7 +312,7 @@ class MediacollectionService(BaseService):
 
     def get_item(self, item_id: UUID) -> Mediaitem:
         if not isinstance(item_id, UUID):
-            raise RuntimeError("item_id is wrong type")
+            raise ValueError("item_id is wrong type")
 
         item = self.db.get_item(item_id)
         self.fs.check_representing_files_raise(item)
