@@ -310,12 +310,15 @@ class MediacollectionService(BaseService):
     def list_items(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
         return self.db.list_items(offset, limit)
 
-    def get_item(self, item_id: UUID) -> Mediaitem:
+    def get_item(self, item_id: UUID, check_representing_files_raise: bool = True) -> Mediaitem:
         if not isinstance(item_id, UUID):
             raise ValueError("item_id is wrong type")
 
         item = self.db.get_item(item_id)
-        self.fs.check_representing_files_raise(item)
+
+        if check_representing_files_raise:
+            # on delete the check is usually skipped, because we want to proceed deleting then and need item returned...
+            self.fs.check_representing_files_raise(item)
 
         return item
 

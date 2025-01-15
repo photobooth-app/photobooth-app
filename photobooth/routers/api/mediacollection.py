@@ -35,7 +35,7 @@ def api_getitem(item_id: UUID):
 @router.delete("/{item_id}")
 def api_gallery_delete(item_id: UUID):
     try:
-        item = container.mediacollection_service.get_item(item_id)
+        item = container.mediacollection_service.get_item(item_id, False)
         container.mediacollection_service.delete_item(item)
     except Exception as exc:
         logger.exception(exc)
