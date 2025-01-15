@@ -101,8 +101,9 @@ def test_update_item(cs: MediacollectionService, dummy_item: Mediaitem):
     updated_at_before_update = dummy_item.updated_at
 
     # "simulate" a change, so the item is updated actually in the db.
-    time.sleep(0.1)
     flag_modified(dummy_item, "pipeline_config")
+    # time is only precise for 1 second in db so we need to wait a bit until updating actually
+    time.sleep(1.5)
 
     cs.update_item(dummy_item)
 
