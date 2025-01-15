@@ -42,7 +42,7 @@ def dummy_item(tmp_path):
 
 
 def test_start_maintain(cs: MediacollectionService):
-    with patch.object(cs, "maintain"):
+    with patch.object(cs, "on_start_maintain"):
         cs.start()
 
         cs.on_start_maintain.assert_called()
