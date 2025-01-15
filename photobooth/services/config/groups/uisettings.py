@@ -8,7 +8,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
 from ..models.models import PilgramFilter
@@ -51,7 +51,7 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Enable a random slideshow after some time without any user interaction.",
     )
-    show_automatic_slideshow_timeout: NonNegativeInt = Field(
+    show_automatic_slideshow_timeout: int = Field(
         default=300,
         ge=30,
         description="Timeout in seconds after which the slideshow starts.",
