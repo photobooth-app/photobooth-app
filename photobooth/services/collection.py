@@ -175,6 +175,8 @@ class Cache:
                     session.add(v3cacheditem_new)
                     session.commit()
 
+                    logger.debug(f"generated new cacheitem: {v3cacheditem_new}")
+
                     return v3cacheditem_new.filepath
 
     def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
