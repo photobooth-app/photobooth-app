@@ -113,13 +113,13 @@ class GroupUiSettings(BaseModel):
     )
     gallery_show_download: bool = Field(
         default=True,
-        description="Show download button in gallery.",
+        description="Show a download button in gallery.",
     )
     gallery_show_delete: bool = Field(
         default=True,
-        description="Show delete button for items in gallery.",
+        description="Show a delete button in gallery.",
     )
-    gallery_show_print: bool = Field(
+    gallery_show_shareprint: bool = Field(
         default=True,
-        description="Show print button for items in gallery.",
+        description="Show the share/print buttons in gallery.",
     )
