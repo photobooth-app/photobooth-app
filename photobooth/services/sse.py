@@ -177,6 +177,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     limits_counter: dict[str, Any] = None
     battery_percent: int = None
     temperatures: dict[str, Any] = None
+    mediacollection: dict[str, Any] = None
 
     @property
     def data(self) -> str:
@@ -191,6 +192,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 limits_counter=self.limits_counter,
                 battery_percent=self.battery_percent,
                 temperatures=self.temperatures,
+                mediacollection=self.mediacollection,
             )
         )
 

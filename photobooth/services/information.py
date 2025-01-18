@@ -7,12 +7,12 @@ from typing import Any
 
 import psutil
 from psutil._common import sbattery
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..__version__ import __version__
 from ..database.database import engine
-from ..database.models import ShareLimits, UsageStats
+from ..database.models import Cacheditem, Mediaitem, ShareLimits, UsageStats
 from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
 from ..utils.repeatedtimer import RepeatedTimer
 from .aquisition import AquisitionService
@@ -141,6 +141,7 @@ class InformationService(BaseService):
                 limits_counter=self._gather_limits_counter(),
                 battery_percent=self._gather_battery(),
                 temperatures=self._gather_temperatures(),
+                mediacollection=self._gather_mediacollection(),
             ),
         )
 
@@ -157,6 +158,20 @@ class InformationService(BaseService):
             results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
             return [UsageStatsPublic.model_validate(result).model_dump(mode="json") for result in results]
+
+    def _gather_mediacollection(self) -> dict:
+        out = {}
+        with Session(engine) as session:
+            statement = select(func.count(Mediaitem.id))
+            out["number_mediaitems"] = session.scalars(statement).one()
+
+            statement = select(func.count(Cacheditem.id))
+            out["number_cacheditems"] = session.scalars(statement).one()
+
+            # out["number_outdated_cacheditems"] = "TODO"
+            # out["number_whatelse?"] = "TODO"
+
+        return out
 
     def _gather_cpu1_5_15(self):
         return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]
