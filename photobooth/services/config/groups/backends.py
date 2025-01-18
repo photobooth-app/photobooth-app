@@ -34,13 +34,6 @@ class GroupBackendVirtualcamera(BaseBackendModel):
     model_config = ConfigDict(title="VirtualCamera")
     # no additional configuration yet!
 
-    emulate_camera_delay_still_capture: float = Field(
-        default=0.2,
-        multiple_of=0.1,
-        ge=0,
-        le=5,
-        description="Emulate the delay of a camera. Time between camera is requested to deliver a still and actual delivery to the app.",
-    )
     framerate: int = Field(
         default=15,
         ge=5,
