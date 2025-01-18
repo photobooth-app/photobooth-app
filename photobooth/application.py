@@ -10,6 +10,7 @@ from types import FrameType
 from fastapi import FastAPI
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
 from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 
 from . import USERDATA_PATH
@@ -78,12 +79,12 @@ def _create_app() -> FastAPI:
     _app.mount("/userdata", StaticFiles(directory=USERDATA_PATH), name="userdata")  # serve userdata for convenience
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
-    async def custom_http_exception_handler(request, exc):
-        logger.error(f"HTTPException: {repr(exc)}")
+    async def custom_http_exception_handler(request: Request, exc):
+        logger.error(f"HTTPException: {request.url=} {exc=}")
         return await http_exception_handler(request, exc)
 
-    async def validation_exception_handler(request, exc):
-        logger.error(f"RequestValidationError: {exc}")
+    async def validation_exception_handler(request: Request, exc):
+        logger.error(f"RequestValidationError: {request.url=} {exc=}")
         return await request_validation_exception_handler(request, exc)
 
     _app.add_exception_handler(HTTPException, custom_http_exception_handler)
