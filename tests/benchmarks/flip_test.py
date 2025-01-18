@@ -69,18 +69,14 @@ def image_hires() -> bytes:
 
 
 # needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="flip_lores",
-)
+@pytest.mark.benchmark(group="flip_lores")
 def test_libraries_encode_lores(library, image_lores, benchmark):
     benchmark(eval(library), pil_image=image_lores)
     assert True
 
 
 # needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="flip_hires",
-)
+@pytest.mark.benchmark(group="flip_hires")
 def test_libraries_encode_hires(library, image_hires, benchmark):
     benchmark(eval(library), pil_image=image_hires)
     assert True
