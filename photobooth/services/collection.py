@@ -5,6 +5,7 @@ Handle all media collection related functions
 import logging
 import os
 import shutil
+import time
 from pathlib import Path
 from threading import Lock
 from uuid import UUID, uuid4
@@ -157,6 +158,8 @@ class Cache:
                     return v3cacheditem_exists.filepath
 
                 else:
+                    tms = time.time()
+
                     id = uuid4()
                     v3cacheditem_new = Cacheditem(
                         id=id,
@@ -175,7 +178,7 @@ class Cache:
                     session.add(v3cacheditem_new)
                     session.commit()
 
-                    logger.debug(f"generated new cacheitem: {v3cacheditem_new}")
+                    logger.debug(f"-- finished processing in {round((time.time() - tms), 2)}s for {v3cacheditem_new}: ")
 
                     return v3cacheditem_new.filepath
 
