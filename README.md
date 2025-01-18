@@ -21,7 +21,7 @@ Welcome to your brand-new open-source photobooth-app! Written in Python 🐍, co
 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported  
 🔓 Open-source, non-restrictive MIT license  
 
-[![photobooth-app screenshot of the frontpage](./screenshots/frontpage.png)](https://photobooth-app.org/screenshots/)
+[![photobooth-app screenshot of the frontpage](./assets/screenshots/frontpage.png)](https://photobooth-app.org/screenshots/)
 
 [Find more screenshots in the documentation](https://photobooth-app.org/screenshots/)
 
