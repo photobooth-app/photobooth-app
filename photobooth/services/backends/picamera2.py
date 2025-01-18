@@ -49,6 +49,7 @@ class Picamera2Backend(AbstractBackend):
 
         # private props
         self._picamera2: Picamera2 = None
+        self._mjpeg_encoder: MJPEGEncoder = None  # livestream encoder
 
         # lores and hires data output
         self._lores_data: PicamLoresData = None
@@ -126,9 +127,9 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
 
         # start encoder
-        mjpeg_encoder = MJPEGEncoder()
-        mjpeg_encoder.frame_skip_count = 2  # TODO: for testing currently, the Pi might be overloaded if not skipping for display.
-        self._picamera2.start_encoder(mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+        self._mjpeg_encoder = MJPEGEncoder()
+        self._mjpeg_encoder.frame_skip_count = 2  # TODO: for testing currently, the Pi might be overloaded if not skipping for display.
+        self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
 
         # start camera
         self._picamera2.start()
@@ -307,7 +308,7 @@ class Picamera2Backend(AbstractBackend):
             logger.critical(f"error switching mode in picamera due to {exc}")
             self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
         else:
-            self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+            self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
             logger.info("switchmode finished successfully")
 
     def _init_autofocus(self):
