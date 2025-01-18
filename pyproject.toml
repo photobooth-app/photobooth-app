@@ -48,7 +48,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyserial~=3.5",
     "jsonref>=1.1.0",
-    "pilgram2>=2.0.2",
+    "pilgram2>=2.0.6",
     "linuxpy>=0.10.0; platform_system == 'Linux'",
     "gpiozero~=2.0.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
@@ -59,9 +59,6 @@ dependencies = [
     "piexif>=1.1.3",
     "SQLAlchemy>=2.0.37",
 ]
-
-# libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
-# system-packages = true
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
@@ -84,14 +81,13 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 # disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
 disable_warnings = ["couldnt-parse"]
-omit = ["test_*.py", "./tests/*", "./photobooth/vendor/*"]
+omit = ["test_*.py", "./tests/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
 
 [tool.ruff]
 line-length = 150
-extend-exclude = ["vendor"]
 
 [tool.ruff.lint]
 select = [
@@ -118,6 +114,7 @@ version = { source = "file", path = "photobooth/__version__.py" }
 
 [tool.pdm.dev-dependencies]
 test = [
+  "ruff",
   "pytest",
   "pytest-benchmark",
   "pytest-cov",
@@ -125,13 +122,14 @@ test = [
   "httpx",
   "httpx-sse",
   "pytest-httpserver",
-  "pyvips",
   "pydot",
+]
+benchmarks = [
+  "pyvips",
   "simplejpeg",
   "pyturbojpeg>=1.7.0",
   "av>=14.0.1",
 ]
-lint = ["ruff"]
 
 [tool.pdm.build]
 includes = ["./photobooth"]
