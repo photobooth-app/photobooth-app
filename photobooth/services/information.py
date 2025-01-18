@@ -174,7 +174,7 @@ class InformationService(BaseService):
         return out
 
     def _gather_cpu1_5_15(self):
-        return [round(x / psutil.cpu_count() * 100, 2) for x in psutil.getloadavg()]
+        return [round(x / psutil.cpu_count() * 100, 0) for x in psutil.getloadavg()]
 
     def _gather_memory(self):
         return psutil.virtual_memory()._asdict()
