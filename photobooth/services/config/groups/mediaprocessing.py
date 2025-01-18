@@ -18,27 +18,6 @@ class GroupMediaprocessing(BaseModel):
         description="Still JPEG full resolution quality, applied to download images and images with filter",
         json_schema_extra={"ui_component": "QSlider"},
     )
-    LIVEPREVIEW_QUALITY: int = Field(
-        default=80,
-        ge=10,
-        le=100,
-        description="Livepreview stream JPEG image quality on supported backends",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-    THUMBNAIL_STILL_QUALITY: int = Field(
-        default=60,
-        ge=10,
-        le=100,
-        description="Still JPEG thumbnail quality, thumbs used in gallery list",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-    PREVIEW_STILL_QUALITY: int = Field(
-        default=75,
-        ge=10,
-        le=100,
-        description="Still JPEG preview quality, preview still shown in gallery detail",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
 
     full_still_length: int = Field(
         default=1500,

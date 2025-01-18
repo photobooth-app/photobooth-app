@@ -8,7 +8,7 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
 from ..models.models import PilgramFilter
@@ -34,6 +34,11 @@ class GroupUiSettings(BaseModel):
         description="Secondary color (admin interface, accents).",
     )
 
+    theme: Literal["system", "light", "dark"] = Field(
+        default="system",
+        description="Specify the theme for the app. Set to system for automatic switching based on system/browser settings or force the light/dark theme.",
+    )
+
     show_gallery_on_frontpage: bool = Field(
         default=True,
         description="Show button to gallery on frontpage.",
@@ -42,13 +47,29 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to admin center, usually only during setup.",
     )
-
-    show_automatic_slideshow_timeout: NonNegativeInt = Field(
-        default=300,
-        ge=30,
-        description="Timeout (seconds) after which a random order slideshow of all images is started. Set to 0 to disable.",
+    admin_button_invisible: bool = Field(
+        default=False,
+        description="If button is shown, it can still be rendered invisible. If enabled, the button is 100% transparent and 5 clicks each within 500ms are required to access the admin login.",
     )
 
+    enable_automatic_slideshow: bool = Field(
+        default=True,
+        description="Enable a random slideshow after some time without any user interaction.",
+    )
+    show_automatic_slideshow_timeout: int = Field(
+        default=300,
+        ge=30,
+        description="Timeout in seconds after which the slideshow starts.",
+    )
+
+    enable_livestream_when_idle: bool = Field(
+        default=True,
+        description="When idle, the cameras livestream is displayed permanently.",
+    )
+    enable_livestream_when_active: bool = Field(
+        default=True,
+        description="When countdown or capture is active, the cameras livestream is displayed.",
+    )
     livestream_mirror_effect: bool = Field(
         default=True,
         description="Flip livestream horizontally to create a mirror effect feeling more natural to users.",
@@ -80,6 +101,14 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show QR code in gallery. If shareservice is enabled the URL is automatically generated, if not go to share config and provide URL.",
     )
+    qrcode_text_above: str = Field(
+        default="👋 Download your photo!",
+        description="Display text above the QR code.",
+    )
+    qrcode_text_below: str = Field(
+        default="Scan above code with your phone.",
+        description="Display text below the QR code.",
+    )
     gallery_show_filter: bool = Field(
         default=True,
         description="Show instagramlike filter (pilgram2).",
@@ -89,13 +118,13 @@ class GroupUiSettings(BaseModel):
     )
     gallery_show_download: bool = Field(
         default=True,
-        description="Show download button in gallery.",
+        description="Show a download button in gallery.",
     )
     gallery_show_delete: bool = Field(
         default=True,
-        description="Show delete button for items in gallery.",
+        description="Show a delete button in gallery.",
     )
-    gallery_show_print: bool = Field(
+    gallery_show_shareprint: bool = Field(
         default=True,
-        description="Show print button for items in gallery.",
+        description="Show the share/print buttons in gallery.",
     )

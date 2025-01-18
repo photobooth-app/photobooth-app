@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
 from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PilgramFilter, TextsConfig
@@ -48,9 +48,9 @@ class MultiImageJobControl(BaseModel):
         description="If user is required to approve collage captures, after this timeout, the job continues and user confirmation is assumed.",
     )
 
-    gallery_hide_individual_images: bool = Field(
+    show_individual_captures_in_gallery: bool = Field(
         default=False,
-        description="Hide individual images of series in the gallery. Hidden images are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+        description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
 
@@ -68,14 +68,32 @@ class VideoJobControl(BaseModel):
     )
 
 
+class MulticameraJobControl(BaseModel):
+    """Configure job control affecting the procedure."""
+
+    model_config = ConfigDict(title="Job control for wigglegram-multicamera captures")
+
+    countdown_capture: float = Field(
+        default=2.0,
+        multiple_of=0.1,
+        ge=0,
+        le=20,
+        description="Countdown in seconds, when user starts a capture process.",
+    )
+
+    show_individual_captures_in_gallery: bool = Field(
+        default=False,
+        description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+    )
+
+
 class SingleImageProcessing(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Single captures processing after capture")
 
-    filter: PilgramFilter = Field(
-        default=PilgramFilter.original,
-    )
+    filter: PilgramFilter = Field(default=PilgramFilter.original)
+
     fill_background_enable: bool = Field(
         default=False,
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
@@ -223,13 +241,35 @@ class VideoProcessing(BaseModel):
     )
 
 
+class MulticameraProcessing(BaseModel):
+    """Configure stages how to process collage after capture."""
+
+    model_config = ConfigDict(title="Wigglegram-multicamera processing")
+
+    canvas_width: int = Field(
+        default=1500,
+        description="Width (X) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    canvas_height: int = Field(
+        default=900,
+        description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+    )
+    duration: NonNegativeInt = Field(
+        default=125,
+        description="Duration of each frame in milliseconds. Wigglegrams look good usually between 100-200ms duration.",
+    )
+    filter: PilgramFilter = Field(
+        default=PilgramFilter.original,
+    )
+
+
 class SingleImageConfigurationSet(BaseModel):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
 
     name: str = Field(
-        default="default single image settings",
+        default="default single image",
         description="Name to identify, only used for display in admin center.",
     )
 
@@ -244,7 +284,7 @@ class CollageConfigurationSet(BaseModel):
     model_config = ConfigDict(title="Postprocess collage captures")
 
     name: str = Field(
-        default="default collage settings",
+        default="default collage",
         description="Name to identify, only used for display in admin center.",
     )
 
@@ -259,7 +299,7 @@ class AnimationConfigurationSet(BaseModel):
     model_config = ConfigDict(title="Postprocess animation captures")
 
     name: str = Field(
-        default="default animation settings",
+        default="default animation",
         description="Name to identify, only used for display in admin center.",
     )
 
@@ -274,12 +314,27 @@ class VideoConfigurationSet(BaseModel):
     model_config = ConfigDict(title="Postprocess video captures")
 
     name: str = Field(
-        default="default video settings",
+        default="default video",
         description="Name to identify, only used for display in admin center.",
     )
 
     jobcontrol: VideoJobControl
     processing: VideoProcessing
+    trigger: Trigger
+
+
+class MulticameraConfigurationSet(BaseModel):
+    """Configure stages how to process images after capture."""
+
+    model_config = ConfigDict(title="Postprocess multicamera captures")
+
+    name: str = Field(
+        default="default wigglegram",
+        description="Name to identify, only used for display in admin center.",
+    )
+
+    jobcontrol: MulticameraJobControl
+    processing: MulticameraProcessing
     trigger: Trigger
 
 
@@ -326,7 +381,7 @@ class GroupActions(BaseModel):
             CollageConfigurationSet(
                 jobcontrol=MultiImageJobControl(
                     ask_approval_each_capture=True,
-                    gallery_hide_individual_images=False,
+                    show_individual_captures_in_gallery=True,
                 ),
                 processing=CollageProcessing(
                     ask_approval_each_capture=True,
@@ -334,6 +389,7 @@ class GroupActions(BaseModel):
                     canvas_height=1280,
                     merge_definition=[
                         CollageMergeDefinition(
+                            description="left",
                             pos_x=160,
                             pos_y=220,
                             width=510,
@@ -342,6 +398,7 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.earlybird,
                         ),
                         CollageMergeDefinition(
+                            description="middle predefined",
                             pos_x=705,
                             pos_y=66,
                             width=510,
@@ -351,6 +408,7 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.original,
                         ),
                         CollageMergeDefinition(
+                            description="right",
                             pos_x=1245,
                             pos_y=220,
                             width=510,
@@ -359,7 +417,6 @@ class GroupActions(BaseModel):
                             filter=PilgramFilter.reyes,
                         ),
                     ],
-                    gallery_hide_individual_images=False,
                     canvas_img_front_enable=True,
                     canvas_img_front_file="frames/pixabay-poster-2871536_1920.png",
                     canvas_texts_enable=True,
@@ -388,11 +445,10 @@ class GroupActions(BaseModel):
             AnimationConfigurationSet(
                 jobcontrol=MultiImageJobControl(
                     ask_approval_each_capture=False,
-                    gallery_hide_individual_images=True,
+                    show_individual_captures_in_gallery=False,
                     countdown_capture_second_following=0.5,
                 ),
                 processing=AnimationProcessing(
-                    ask_approval_each_capture=False,
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
@@ -406,7 +462,6 @@ class GroupActions(BaseModel):
                             predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
                         ),
                     ],
-                    gallery_hide_individual_images=True,
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(title="Animation", icon="gif_box"),
@@ -435,4 +490,19 @@ class GroupActions(BaseModel):
             ),
         ],
         description="Capture videos from live streaming backend.",
+    )
+
+    multicamera: list[MulticameraConfigurationSet] = Field(
+        default=[
+            MulticameraConfigurationSet(
+                jobcontrol=MulticameraJobControl(),
+                processing=MulticameraProcessing(),
+                trigger=Trigger(
+                    ui_trigger=UiTrigger(title="Wigglegram", icon="burst_mode"),
+                    gpio_trigger=GpioTrigger(pin="12"),
+                    keyboard_trigger=KeyboardTrigger(keycode="w"),
+                ),
+            ),
+        ],
+        description="Capture wigglegrams from a multicamera backend.",
     )

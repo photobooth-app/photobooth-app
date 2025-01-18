@@ -14,7 +14,7 @@ def get_images(backend: AbstractBackend):
     # backend.start()
 
     try:
-        with Image.open(io.BytesIO(backend.wait_for_hq_image())) as img:
+        with Image.open(backend.wait_for_still_file()) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
@@ -45,7 +45,7 @@ def is_same(img1: Image.Image, img2: Image.Image):
     return not bool(diff.getbbox())
 
 
-def video_duration(input_video):
+def video_duration(input_video: str):
     result = subprocess.run(
         [
             "ffprobe",

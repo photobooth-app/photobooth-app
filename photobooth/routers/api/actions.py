@@ -53,6 +53,11 @@ def api_chose_video_get(index: int = 0):
     return _capture("video", index)
 
 
+@router.get("/multicamera/{index}")
+def api_chose_multicamera_get(index: int = 0):
+    return _capture("multicamera", index)
+
+
 @router.get("/confirm")
 def api_cmd_confirm_get():
     try:

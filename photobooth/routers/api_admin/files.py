@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, UploadFile, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
-from ...services.mediacollectionservice import RECYCLE_DIR
+from ... import RECYCLE_PATH
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
@@ -33,36 +33,77 @@ class PathListItem:
     size: int
 
 
-def zipfiles(paths: list[Path]):
-    zip_filename = f"photobooth_archive_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}.zip"
+class ZipStream(io.RawIOBase):
+    """An unseekable stream for the ZipFile to write to,
+    reference: https://github.com/pR0Ps/zipstream-ng
+    """
 
-    # create in memory zip file. TODO: improve to lower memory consumption use zip streaming.
-    zip_io = io.BytesIO()
-    zip_file = zipfile.ZipFile(zip_io, "w")
+    def __init__(self):
+        self._buffer = bytearray()
+        self._closed = False
 
+    def close(self):
+        self._closed = True
+
+    def write(self, b):
+        if self._closed:
+            raise ValueError("Can't write to a closed stream")
+        self._buffer += b
+        return len(b)
+
+    def readall(self):
+        chunk = bytes(self._buffer)
+        self._buffer.clear()
+        return chunk
+
+
+def iter_files(paths: list[Path]):
     for path in paths:
         if path.is_dir():
             files = [f for f in path.rglob("*")]  # walks also through subdirs to get all files
 
             for file in files:
-                zip_file.write(file.relative_to(Path.cwd()))
+                yield file.relative_to(Path.cwd())
 
         else:
             # is file
-            zip_file.write(path.relative_to(Path.cwd()))
+            yield path.relative_to(Path.cwd())
 
-    # Must close zip for all contents to be written
-    zip_file.close()
 
-    logger.info(f"created {zip_filename}, added {len(zip_file.filelist)}, size {round(len(zip_io.getvalue())/1024**2,2)} MB")
-    # logger.debug(zip.namelist())
+def read_file(path):
+    with open(path, "rb") as fp:
+        while True:
+            buf = fp.read(1024 * 64)
+            if not buf:
+                break
+            yield buf
 
-    # Grab ZIP file from in-memory, make response with correct MIME-type
-    return StreamingResponse(
-        iter([zip_io.getvalue()]),
-        media_type="application/x-zip-compressed",
-        headers={"Content-Disposition": f"attachment; filename={zip_filename}.zip"},
-    )
+
+def generate_zipstream(paths: list[Path]):
+    try:
+        stream = ZipStream()
+
+        with zipfile.ZipFile(stream, mode="w", compression=zipfile.ZIP_STORED) as zf:
+            for path in iter_files(paths):
+                arcname = None  # path.absolute()
+                zinfo = zipfile.ZipInfo.from_file(path, arcname)
+
+                # Write data to the zip file then yield the stream content
+                with zf.open(zinfo, mode="w") as fp:
+                    if zinfo.is_dir():
+                        continue
+                    for buf in read_file(path):
+                        fp.write(buf)
+                        yield stream.readall()
+
+        yield stream.readall()
+
+    except Exception as exc:
+        # this generator is called by fastapi in separate background taskgroup. an exception cannot be
+        # raised and catched in the actual route because the output has started to the client during generation
+        # this one is just to catch the error in the backend - the resulting ZIP download is probably trash.
+        logger.exception(exc)
+        logger.error(f"error creating the compressed data: {exc}")
 
 
 @router.get("/list/{dir:path}")
@@ -202,11 +243,24 @@ async def post_delete(selected_paths: list[PathListItem] = None):
 
 @router.post("/zip")
 def post_zip(selected_paths: list[PathListItem] = None):
+    zip_filename = f"photobooth_archive_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}.zip"
+
     try:
         filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]
+        # preflight check if selected paths exist, otherwise raise error here because in generator there is no ability to
+        # raise exceptions since output started already.
+        for path in filenames_to_process:
+            if not path.exists():
+                raise FileNotFoundError(f"{path} not found")
+
         logger.info(f"requested zip, {filenames_to_process=}")
 
-        return zipfiles(filenames_to_process)
+        response = StreamingResponse(
+            generate_zipstream(filenames_to_process),
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={zip_filename}"},
+        )
+        return response
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"selected file not found {exc}") from exc
 
@@ -220,7 +274,7 @@ def api_clearrecycledir():
     """
 
     try:
-        for file in Path(f"{RECYCLE_DIR}").glob("*.*"):
+        for file in Path(f"{RECYCLE_PATH}").glob("*.*"):
             os.remove(file)
 
     except Exception as exc:

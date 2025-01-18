@@ -42,24 +42,23 @@ dependencies = [
     "pydantic>=2.7.0",
     "pydantic-extra-types>=2.3.0",
     "pydantic-settings>=2.1.0",
-    "pyturbojpeg>=1.7.0",
     "requests>=2.31.0",
     "sse-starlette>=2.2.0",
     "uvicorn>=0.24",
     "python-dotenv>=1.0.0",
     "pyserial~=3.5",
     "jsonref>=1.1.0",
-    "pilgram2>=2.0.2",
+    "pilgram2>=2.0.6",
     "linuxpy>=0.10.0; platform_system == 'Linux'",
     "gpiozero~=2.0.0",
     "gphoto2~=2.5.0; platform_system == 'Linux'",
     "python-statemachine>=2.3.3",
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
+    "wigglecam",
+    "piexif>=1.1.3",
+    "SQLAlchemy>=2.0.37",
 ]
-
-# libcamera/picamera2 are avail for now only as system python package - isolated env cannot use them without global access
-# system-packages = true
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
@@ -82,14 +81,13 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 # disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
 disable_warnings = ["couldnt-parse"]
-omit = ["test_*.py", "./tests/*", "./photobooth/vendor/*"]
+omit = ["test_*.py", "./tests/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
 
 [tool.ruff]
 line-length = 150
-extend-exclude = ["vendor"]
 
 [tool.ruff.lint]
 select = [
@@ -116,18 +114,22 @@ version = { source = "file", path = "photobooth/__version__.py" }
 
 [tool.pdm.dev-dependencies]
 test = [
-  "pytest>=7.4.0",
-  "pytest-benchmark>=4.0.0",
-  "pytest-cov>=4.1.0",
-  "coverage[toml]>=7.4.0",
-  "httpx-sse>=0.4.0",
-  "httpx>=0.25.0",
-  "pytest-httpserver>=1.0.8",
-  "pyvips>=2.2.2",
-  "pydot>=2.0.0",
-  "simplejpeg>=1.7.4",
+  "ruff",
+  "pytest",
+  "pytest-benchmark",
+  "pytest-cov",
+  "coverage[toml]",
+  "httpx",
+  "httpx-sse",
+  "pytest-httpserver",
+  "pydot",
 ]
-lint = ["ruff>=0.1.8"]
+benchmarks = [
+  "pyvips",
+  "simplejpeg",
+  "pyturbojpeg>=1.7.0",
+  "av>=14.0.1",
+]
 
 [tool.pdm.build]
 includes = ["./photobooth"]

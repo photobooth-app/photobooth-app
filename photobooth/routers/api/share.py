@@ -1,9 +1,10 @@
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 
 from ...container import container
-from ...services.mediacollection.mediaitem import MediaItem
+from ...database.models import Mediaitem
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -12,7 +13,7 @@ router = APIRouter(
 )
 
 
-def _share(mediaitem: MediaItem, index: int):
+def _share(mediaitem: Mediaitem, index: int):
     try:
         container.share_service.share(mediaitem, index)
     except BlockingIOError:
@@ -31,7 +32,7 @@ def _share(mediaitem: MediaItem, index: int):
 @router.get("/actions/latest/{index}")
 def api_share_latest(index: int = 0):
     try:
-        latest_mediaitem = container.mediacollection_service.db_get_most_recent_mediaitem()
+        latest_mediaitem = container.mediacollection_service.get_item_latest()
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
 
@@ -39,9 +40,9 @@ def api_share_latest(index: int = 0):
 
 
 @router.get("/actions/{id}/{index}")
-def api_share_item_id(id: str, index: int = 0):
+def api_share_item_id(id: UUID, index: int = 0):
     try:
-        requested_mediaitem: MediaItem = container.mediacollection_service.db_get_image_by_id(id)
+        requested_mediaitem = container.mediacollection_service.get_item(id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
     _share(requested_mediaitem, index)

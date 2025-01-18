@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.3"
           ini-values: upload_max_filesize=50M, post_max_size=51M, memory_limit=200M, max_execution_time=180
       - name: start php built-in server to allow testing shareservice
         run: |
@@ -58,59 +58,9 @@ jobs:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
 
-  # tests-win:
-  #   env:
-  #     sharing__shareservice_apikey: "runnertestingpassword"
-  #     sharing__shareservice_url: "http://localhost:8082/dl.php"
-  #     PHP_CLI_SERVER_WORKERS: 6
-  #   runs-on: windows-latest
-  #   continue-on-error: false
-  #   strategy:
-  #     fail-fast: true
-  #     matrix:
-  #       python-version: ["3.12"]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: shivammathur/setup-php@v2
-  #       with:
-  #         php-version: "8.2"
-  #         ini-values: upload_max_filesize=50M, post_max_size=51M, memory_limit=200M, max_execution_time=180
-  #     # - name: start php built-in server to allow testing shareservice
-  #     #   run: |
-  #     #     sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php
-  #     #     nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     # - name: Install system apt dependencies
-  #     #   run: |
-  #     #     sudo apt update
-  #     #     sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
-  #     #     sudo apt -y install ffmpeg
-  #     - name: install pdm
-  #       run: |
-  #         pip install pdm
-  #     - name: install app
-  #       run: |
-  #         pdm install
-  #     - name: Run pytest
-  #       run: |
-  #         pdm run test
-  #     # - name: output php logs
-  #     #   if: always()
-  #     #   run: |
-  #     #     cat phpd.log
-  #     #     cat extras/shareservice/php-error.log
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: coverage-${{ matrix.python-version }}
-  #         path: coverage.xml
-
   tests-hardware-rpi:
     env:
       ## Sets environment variable
-      backends__MAIN_BACKEND: VirtualCamera
       hardwareinputoutput__wled_enabled: True
       hardwareinputoutput__wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0
 

@@ -3,6 +3,7 @@ import logging
 import pytest
 
 from photobooth.container import container
+from photobooth.database.database import create_db_and_tables
 from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
@@ -12,10 +13,10 @@ logger = logging.getLogger(name=None)
 def global_function_setup1():
     logger.info("global function-scoped mediaitem setup")
 
-    if container.mediacollection_service.number_of_images == 0:
+    if container.mediacollection_service.count() == 0:
         logger.info("no mediaitem in collection, creating one image")
         container.start()
-        if container.mediacollection_service.number_of_images == 0:
+        if container.mediacollection_service.count() == 0:
             container.processing_service.trigger_action("image", 0)
             container.processing_service.wait_until_job_finished()
         container.stop()
@@ -41,9 +42,8 @@ def global_function_setup2():
     yield
 
 
-# @pytest.fixture(scope="module", autouse=True)
-# def session_setup1():
-#     print("test")
-#     logger.warning("hallo")
+@pytest.fixture(scope="session", autouse=True)
+def session_setup1():
+    create_db_and_tables()
 
-#     yield "some stuff"
+    yield

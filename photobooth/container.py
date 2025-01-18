@@ -1,19 +1,18 @@
 import logging
 
-from .services.aquisitionservice import AquisitionService
-from .services.baseservice import BaseService
-from .services.filtetransferservice import FileTransferService
-from .services.gpioservice import GpioService
-from .services.informationservice import InformationService
-from .services.loggingservice import LoggingService
-from .services.mediacollectionservice import MediacollectionService
-from .services.mediaprocessingservice import MediaprocessingService
-from .services.processingservice import ProcessingService
-from .services.qrshareservice import QrShareService
-from .services.shareservice import ShareService
-from .services.sseservice import SseService
-from .services.systemservice import SystemService
-from .services.wledservice import WledService
+from .services.aquisition import AquisitionService
+from .services.base import BaseService
+from .services.collection import MediacollectionService
+from .services.filtetransfer import FileTransferService
+from .services.gpio import GpioService
+from .services.information import InformationService
+from .services.logging import LoggingService
+from .services.processing import ProcessingService
+from .services.qrshare import QrShareService
+from .services.share import ShareService
+from .services.sse import SseService
+from .services.system import SystemService
+from .services.wled import WledService
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +31,8 @@ class Container:
         sse_service,
         wled_service,
     )
-    mediaprocessing_service: MediaprocessingService = MediaprocessingService(
-        sse_service,
-    )
     mediacollection_service: MediacollectionService = MediacollectionService(
         sse_service,
-        mediaprocessing_service,
     )
     information_service: InformationService = InformationService(
         sse_service,
@@ -48,7 +43,6 @@ class Container:
         sse_service,
         aquisition_service,
         mediacollection_service,
-        mediaprocessing_service,
         wled_service,
         information_service,
     )
@@ -57,8 +51,6 @@ class Container:
     )
     share_service = ShareService(
         sse_service,
-        mediacollection_service,
-        information_service,
     )
     gpio_service = GpioService(
         sse_service,

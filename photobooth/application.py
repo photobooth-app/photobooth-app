@@ -1,7 +1,6 @@
 """Application module."""
 
 import logging
-import os
 import signal
 import threading
 from contextlib import asynccontextmanager
@@ -11,22 +10,17 @@ from types import FrameType
 from fastapi import FastAPI
 from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
 from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 
+from . import USERDATA_PATH
 from .__version__ import __version__
 from .container import container
 from .routers import api, api_admin
+from .routers.media import media_router
 from .routers.static import static_router
 
 logger = logging.getLogger(f"{__name__}")
-
-
-def _create_basic_folders():
-    os.makedirs("media", exist_ok=True)
-    os.makedirs("userdata", exist_ok=True)
-    os.makedirs("log", exist_ok=True)
-    os.makedirs("config", exist_ok=True)
-    os.makedirs("tmp", exist_ok=True)
 
 
 @asynccontextmanager
@@ -57,12 +51,6 @@ async def lifespan(_: FastAPI):
 
 
 def _create_app() -> FastAPI:
-    try:
-        _create_basic_folders()
-    except Exception as exc:
-        logger.critical(f"cannot create data folders, error: {exc}")
-        raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
-
     container.logging_service.start()
 
     _app = FastAPI(
@@ -86,20 +74,17 @@ def _create_app() -> FastAPI:
     )
     _app.include_router(api.router)
     _app.include_router(api_admin.router)
+    _app.include_router(media_router)
     _app.include_router(static_router)
-    # serve data directory holding images, thumbnails, ...
-    _app.mount("/media", StaticFiles(directory="media"), name="media")
-    # serve userdata for convenience
-    _app.mount("/userdata", StaticFiles(directory="userdata"), name="userdata")
-    # if not match anything above, default to deliver static files from web directory
+    _app.mount("/userdata", StaticFiles(directory=USERDATA_PATH), name="userdata")  # serve userdata for convenience
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
-    async def custom_http_exception_handler(request, exc):
-        logger.error(f"HTTPException: {repr(exc)}")
+    async def custom_http_exception_handler(request: Request, exc):
+        logger.error(f"HTTPException: {request.url=} {exc=}")
         return await http_exception_handler(request, exc)
 
-    async def validation_exception_handler(request, exc):
-        logger.error(f"RequestValidationError: {exc}")
+    async def validation_exception_handler(request: Request, exc):
+        logger.error(f"RequestValidationError: {request.url=} {exc=}")
         return await request_validation_exception_handler(request, exc)
 
     _app.add_exception_handler(HTTPException, custom_http_exception_handler)

@@ -3,7 +3,6 @@
 Welcome to your brand-new open-source photobooth-app! Written in Python 🐍, coming along with a modern Vue3 frontend.
 
 [![PyPI](https://img.shields.io/pypi/v/photobooth-app)](https://pypi.org/project/photobooth-app/)
-![rpi, linux and windows platform supported](https://img.shields.io/badge/platform-rpi%20%7C%20linux%20%7C%20windows-lightgrey)
 [![ruff](https://github.com/photobooth-app/photobooth-app/actions/workflows/ruff.yml/badge.svg)](https://github.com/photobooth-app/photobooth-app/actions/workflows/ruff.yml)
 [![pytest](https://github.com/photobooth-app/photobooth-app/actions/workflows/pytests.yml/badge.svg)](https://github.com/photobooth-app/photobooth-app/actions/workflows/pytests.yml)
 [![codecov](https://codecov.io/gh/photobooth-app/photobooth-app/branch/main/graph/badge.svg?token=SBB5DGX17V)](https://codecov.io/gh/photobooth-app/photobooth-app)
@@ -21,6 +20,10 @@ Welcome to your brand-new open-source photobooth-app! Written in Python 🐍, co
 💡 Countdown animation using customizable WLED module
 🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported  
 🔓 Open-source, non-restrictive MIT license  
+
+[![photobooth-app screenshot of the frontpage](./screenshots/frontpage.png)](https://photobooth-app.org/screenshots/)
+
+[Find more screenshots in the documentation](https://photobooth-app.org/screenshots/)
 
 ## 🔧 Build your own
 
