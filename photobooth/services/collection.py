@@ -325,14 +325,12 @@ class MediacollectionService(BaseService):
     def get_item_latest(self) -> Mediaitem:
         try:
             with Session(engine) as session:
-                return session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc())).first()
+                return session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc())).first()
         except NoResultFound as exc:
-            raise FileNotFoundError("could get an item") from exc
+            raise FileNotFoundError("could not find an item") from exc
 
     def get_items_relto_job(self, job_identifier: UUID) -> list[Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.scalars(
-                select(Mediaitem).order_by(Mediaitem.created_at.desc()).where(Mediaitem.job_identifier == job_identifier)
-            ).all()
+            galleryitems = session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc()).where(Mediaitem.job_identifier == job_identifier)).all()
 
             return galleryitems

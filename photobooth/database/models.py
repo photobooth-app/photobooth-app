@@ -33,13 +33,13 @@ class ShareLimits(Base):
 class Mediaitem(Base):
     __tablename__ = "mediaitems"
 
+    rowid: Mapped[int] = mapped_column(Integer, system=True)  # used to get last item (https://stackoverflow.com/a/78857439)
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=uuid.uuid4, primary_key=True)
     media_type: Mapped[MediaitemTypes] = mapped_column(Enum(MediaitemTypes))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
-    # FIXME: currently the resolution seems only seconds. that means several captures in 1 second cannot be sorted properly later using order_by.
-    # Also get_last_item fails to get the last one, because there could be multiple items in 1 seconds. Since this is actually currently a minor
-    # issue and mostly relevant for benchmark testing, we might solve in the future only. In tests the last item is queried differently when needed.
+    # Notice: Currently the resolution for datetime seems to be only seconds. That means several captures in 1 second cannot be sorted properly
+    # later using order_by and datetime-columns. To fix that, we added the systems rowid and use it to sort to find latest items.
 
     job_identifier: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=None)
 
