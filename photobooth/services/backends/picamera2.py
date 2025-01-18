@@ -92,6 +92,7 @@ class Picamera2Backend(AbstractBackend):
             encode="lores",
             buffer_count=3,
             display="lores",
+            controls={"FrameRate": 10},  # -> limit to 10fps for still
         )
 
         # config preview mode (used for permanent live view)
@@ -101,6 +102,7 @@ class Picamera2Backend(AbstractBackend):
             encode="lores",
             buffer_count=3,
             display="lores",
+            controls={"FrameRate": 25},  # -> limit to 25fps for video
         )
 
         # set preview mode on init
@@ -124,7 +126,9 @@ class Picamera2Backend(AbstractBackend):
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
 
         # start encoder
-        self._picamera2.start_encoder(MJPEGEncoder(), FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+        mjpeg_encoder = MJPEGEncoder()
+        mjpeg_encoder.frame_skip_count = 2  # TODO: for testing currently, the Pi might be overloaded if not skipping for display.
+        self._picamera2.start_encoder(mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
 
         # start camera
         self._picamera2.start()
