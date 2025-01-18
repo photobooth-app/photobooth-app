@@ -139,30 +139,32 @@ class WledService(BaseService):
         return wled_detected
 
     def preset_standby(self):
-        """_summary_"""
-        self._logger.info("WledService preset_standby triggered")
+        if not self._serial:
+            return
+
         self._write_request(self._request_preset(PRESET_ID_STANDBY))
 
     def preset_thrill(self):
-        """_summary_"""
-        self._logger.info("WledService preset_thrill triggered")
+        if not self._serial:
+            return
+
         self._write_request(self._request_preset(PRESET_ID_COUNTDOWN))
 
     def preset_shoot(self):
-        """_summary_"""
-        self._logger.info("WledService preset_shoot triggered")
+        if not self._serial:
+            return
+
         self._write_request(self._request_preset(PRESET_ID_SHOOT))
 
     def preset_record(self):
-        """_summary_"""
-        self._logger.info("WledService preset_record triggered")
+        if not self._serial:
+            return
+
         self._write_request(self._request_preset(PRESET_ID_RECORD))
 
     def _write_request(self, request):
-        # _serial is None if not initialized -> return
-        # if not open() -> return also, fail in silence
         if not self.is_connected():
-            self._logger.warning("WLED module not connected, ignoring request")
+            self._logger.warning(f"WLED module not connected, ignoring request '{request}'")
             return
 
         try:
