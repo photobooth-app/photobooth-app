@@ -100,7 +100,7 @@ class WebcamV4lBackend(AbstractBackend):
                 logger.exception(exc)
                 raise exc
 
-            for frame in capture:  # forever
+            for frame in device:  # forever
                 # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib
                 if not self.is_ready_to_deliver.is_set():
                     # set only once.
