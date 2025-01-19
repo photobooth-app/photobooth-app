@@ -174,6 +174,7 @@ class InformationService(BaseService):
         return out
 
     def _gather_cpu1_5_15(self):
+        # FIXME: on windows currently not working: https://github.com/giampaolo/psutil/issues/2498
         return [round(x / psutil.cpu_count() * 100, 0) for x in psutil.getloadavg()]
 
     def _gather_memory(self):
