@@ -19,11 +19,6 @@ class GroupUiSettings(BaseModel):
 
     model_config = ConfigDict(title="Personalize the User Interface")
 
-    theme: Literal["system", "light", "dark"] = Field(
-        default="system",
-        description="Specify the theme for the app.",
-    )
-
     PRIMARY_COLOR: Color = Field(
         default=Color("#196cb0").as_hex(),
         description="Primary color (e.g. buttons, title bar).",
