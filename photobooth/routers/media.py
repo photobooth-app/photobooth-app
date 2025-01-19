@@ -17,9 +17,13 @@ media_router = APIRouter(
 @media_router.get("/{dimension}/{mediaitem_id}")
 def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
     try:
+        # headers = {"Cache-Control": "max-age=86400, must-revalidate"}
+        headers = None
+
         item = container.mediacollection_service.get_item(mediaitem_id)
-        filepath = container.mediacollection_service.cache.get_cached_repr(item, dimension, processed=True)
-        return FileResponse(path=filepath)
+        cacheditem = container.mediacollection_service.cache.get_cached_repr(item, dimension, processed=True)
+
+        return FileResponse(path=cacheditem.filepath, headers=headers)
     except FileNotFoundError as exc:
         logger.warning(f"cannot find mediaitem by id {mediaitem_id}")
         raise HTTPException(status_code=404, detail=f"cannot find mediaitem by id {mediaitem_id}") from exc

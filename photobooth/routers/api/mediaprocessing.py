@@ -20,13 +20,13 @@ router = APIRouter(
 def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
     try:
         item = container.mediacollection_service.get_item(mediaitem_id)
-        unprocessed_thumbnail = container.mediacollection_service.cache.get_cached_repr(
+        thumbnail = container.mediacollection_service.cache.get_cached_repr(
             item=item,
             dimension=DimensionTypes.thumbnail,
             processed=False,
         )
 
-        buffer_preview_pipeline_applied = get_filter_preview(unprocessed_thumbnail, filter)
+        buffer_preview_pipeline_applied = get_filter_preview(thumbnail.filepath, filter)
 
         return Response(
             content=buffer_preview_pipeline_applied.getvalue(),

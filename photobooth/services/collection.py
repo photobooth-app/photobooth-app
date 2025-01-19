@@ -140,7 +140,7 @@ class Cache:
     def __init__(self):
         self._lock_cache_check: Lock = Lock()
 
-    def get_cached_repr(self, item: Mediaitem, dimension: DimensionTypes, processed: bool = True) -> Path:
+    def get_cached_repr(self, item: Mediaitem, dimension: DimensionTypes, processed: bool = True) -> Cacheditem:
         dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
 
         if dimension_pixel is None:
@@ -155,7 +155,7 @@ class Cache:
                 v3cacheditem_exists = self._db_check_cache_valid(item.id, dimension, processed)
 
                 if v3cacheditem_exists:
-                    return v3cacheditem_exists.filepath
+                    return v3cacheditem_exists
 
                 else:
                     tms = time.time()
@@ -180,7 +180,7 @@ class Cache:
 
                     logger.debug(f"-- finished processing in {round((time.time() - tms), 2)}s for {v3cacheditem_new}: ")
 
-                    return v3cacheditem_new.filepath
+                    return v3cacheditem_new
 
     def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
