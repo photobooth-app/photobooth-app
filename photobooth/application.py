@@ -76,7 +76,11 @@ def _create_app() -> FastAPI:
     _app.include_router(api_admin.router)
     _app.include_router(media_router)
     _app.include_router(static_router)
-    _app.mount("/userdata", StaticFiles(directory=USERDATA_PATH), name="userdata")  # serve userdata for convenience
+
+    # serve demoassets and userdata for convenience
+    _app.mount("/demoassets", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("demoassets")), name="demoassets")
+    _app.mount("/userdata", StaticFiles(directory=USERDATA_PATH), name="userdata")
+    # serve the spa
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 
     async def custom_http_exception_handler(request: Request, exc):

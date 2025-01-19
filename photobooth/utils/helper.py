@@ -32,8 +32,8 @@ def get_user_file(filepath: Path | str) -> Path:
     # check font is avail, otherwise send pipelineerror - so we can recover and continue
     # default font Roboto comes with app, fallback to that one if avail
     file_user_path = Path(filepath)
-    file_assets_path = Path(__file__).parent.parent.resolve().joinpath(Path("assets", filepath))
-    out_filepath = file_user_path if file_user_path.is_file() else file_assets_path
+    file_demoassets_path = Path(__file__).parent.parent.resolve().joinpath(Path("demoassets", filepath))
+    out_filepath = file_user_path if file_user_path.is_file() else file_demoassets_path
 
     if not out_filepath.is_file():
         raise FileNotFoundError(f"filepath {str(filepath)} not found!")

@@ -69,8 +69,21 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Flip livestream horizontally to create a mirror effect feeling more natural to users.",
     )
+    livestream_blurredbackground: bool = Field(
+        default=True,
+        description="Display the livestream blurred in the background of the actual livestream covering the full screen. This might look nice if the livestream resolution does not match the screen's aspect ratio. Check cpu usage on low power devices.",
+    )
+    enable_livestream_frameoverlay: bool = Field(
+        default=True,
+        description="Enable to overlay the image configured below above the livestream.",
+    )
+    livestream_frameoverlay_image: str = Field(
+        default="/demoassets/frames/frame_image_photobooth-app.png",
+        description="When enabled, the frame is displayed above the livestream. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
+    )
+
     FRONTPAGE_TEXT: str = Field(
-        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷💕</div>',
+        default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷</div>',
         description="Text/HTML displayed on frontpage.",
     )
 
