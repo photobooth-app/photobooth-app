@@ -50,7 +50,7 @@ class Mediaitem(Base):
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}> id={self.id}, media_type={self.media_type}, unprocessed={self.unprocessed}"
+        return f"<{self.__class__.__name__}> id: {self.id}, media_type: {self.media_type}, unprocessed: {self.unprocessed}"
 
 
 class Cacheditem(Base):
@@ -68,4 +68,4 @@ class Cacheditem(Base):
     filepath: Mapped[Path] = mapped_column(PathType)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}> id={self.id}, mediaitem_id={self.v3mediaitem_id}, filepath={self.filepath}"
+        return f"<{self.__class__.__name__}> filepath: {self.filepath}, mediaitem_id: {self.v3mediaitem_id}"
