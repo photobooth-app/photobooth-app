@@ -102,7 +102,7 @@ class WebcamCv2Backend(AbstractBackend):
 
         # activate preview mode on init
         _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        _video_set_check(_video, cv2.CAP_PROP_FPS, 30.0)
+        _video_set_check(_video, cv2.CAP_PROP_FPS, 25.0)
         _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, self._config.CAM_RESOLUTION_WIDTH)
         _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, self._config.CAM_RESOLUTION_HEIGHT)
 
@@ -113,7 +113,7 @@ class WebcamCv2Backend(AbstractBackend):
             raise OSError(f"cannot read camera index {self._config.device_index}")
 
         logger.info(f"webcam cv2 using backend {_video.getBackendName()}")
-        logger.info(f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x" f"{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
+        logger.info(f"webcam resolution: {int(_video.get(cv2.CAP_PROP_FRAME_WIDTH))}x{int(_video.get(cv2.CAP_PROP_FRAME_HEIGHT))}")
 
         # read first five frames and send to void
         for _ in range(5):
