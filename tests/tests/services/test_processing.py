@@ -36,7 +36,7 @@ class ConfirmRejectUserinputObserver:
     def after_transition(self, event, source, target):
         logger.info(f"transition after: {source.id}--({event})-->{target.id}")
 
-    def on_enter_state(self, target, event):
+    def before_transition(self, target, event):
         logger.info(f"enter: {target.id} from {event}")
 
         if target.id == "approve_capture":
@@ -90,6 +90,9 @@ def test_collage_auto_approval(_container: Container):
 
 
 def test_collage_manual_approval(_container: Container):
+    before_count = _container.mediacollection_service.count()
+    correct_after_count = before_count + 3  # there are 2 captures plus final collage, one image is rejected, that shall be deleted again
+
     appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = True
 
     # starts in separate thread
@@ -104,8 +107,13 @@ def test_collage_manual_approval(_container: Container):
 
     assert _container.processing_service._state_machine is None
 
+    assert correct_after_count == _container.mediacollection_service.count()
+
 
 def test_collage_manual_abort(_container: Container):
+    before_count = _container.mediacollection_service.count()
+    correct_after_count = before_count  # there is one capture made but then abort. should have 0 items added
+
     appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = True
 
     _container.processing_service.trigger_action("collage", 0)
@@ -116,6 +124,8 @@ def test_collage_manual_abort(_container: Container):
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._state_machine is None
+
+    assert correct_after_count == _container.mediacollection_service.count()
 
 
 def test_animation(_container: Container):
