@@ -56,36 +56,54 @@ class GroupBackendPicamera2(BaseBackendModel):
         description="Camera number. Usually 0 or 1.",
     )
     CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
-        default=1280,
+        default=4608,
         description="camera resolution width to capture high resolution photo",
     )
     CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
-        default=720,
+        default=2592,
         description="camera resolution height to capture high resolution photo",
     )
     PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
-        default=1280,
+        default=2304,
         ge=500,
         le=3500,  # hardware encoder in pi only supports max 4000 width/height
         description="camera resolution width to capture live video",
     )
     PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
-        default=720,
+        default=1296,
         ge=500,
         le=2500,  # hardware encoder in pi only supports max 4000 width/height
         description="camera resolution height to capture live video",
     )
     LIVEVIEW_RESOLUTION_WIDTH: int = Field(
-        default=1280,
+        default=1152,
         ge=500,
         le=3500,  # hardware encoder in pi only supports max 4000 width/height
         description="actual resolution width for liveview stream",
     )
     LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
-        default=720,
+        default=648,
         ge=500,
         le=2500,  # hardware encoder in pi only supports max 4000 width/height
         description="actual resolution height for liveview stream",
+    )
+    framerate_still_mode: int = Field(
+        default=10,
+        ge=5,
+        le=30,
+        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+    )
+    framerate_video_mode: int = Field(
+        default=25,
+        ge=5,
+        le=30,
+        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+    )
+    frame_skip_count: int = Field(
+        default=2,
+        ge=1,
+        le=4,
+        description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
     )
     optimized_lowlight_short_exposure: bool = Field(
         default=False,
