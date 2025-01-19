@@ -168,7 +168,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
 
     event: str = "InformationRecord"
 
-    cpu1_5_15: list[float] = None
+    cpu_percent: float = None
     memory: dict[str, Any] = None
     cma: dict[str, Any] = None
     backends: dict[str, dict[str, Any]] = None
@@ -183,7 +183,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     def data(self) -> str:
         return json.dumps(
             dict(
-                cpu1_5_15=self.cpu1_5_15,
+                cpu_percent=self.cpu_percent,
                 memory=self.memory,
                 cma=self.cma,
                 backends=self.backends,

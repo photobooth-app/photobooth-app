@@ -15,6 +15,7 @@ from ..database.database import engine
 from ..database.models import Cacheditem, Mediaitem, ShareLimits, UsageStats
 from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
 from ..utils.repeatedtimer import RepeatedTimer
+from ..utils.stoppablethread import StoppableThread
 from .aquisition import AquisitionService
 from .base import BaseService
 from .sse import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
@@ -32,6 +33,8 @@ class InformationService(BaseService):
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
+        self._cpu_percent_thread = StoppableThread(name="_on_cpu_percent_worker", target=self._on_cpu_percent_fun, daemon=True)
+        self._cpu_percent: float = 0.0
 
         # log some very basic common information
         self._logger.info(f"{platform.system()=}")
@@ -43,6 +46,7 @@ class InformationService(BaseService):
         self._logger.info(f"{self._gather_model()=}")
         self._logger.info(f"{psutil.cpu_count()=}")
         self._logger.info(f"{psutil.cpu_count(logical=False)=}")
+        self._logger.info(f"{psutil.cpu_freq()=}")
         self._logger.info(f"{psutil.disk_partitions()=}")
         self._logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
         self._logger.info(
@@ -57,11 +61,14 @@ class InformationService(BaseService):
     def start(self):
         super().start()
         self._stats_interval_timer.start()
+        self._cpu_percent_thread = StoppableThread(name="_on_cpu_percent_worker", target=self._on_cpu_percent_fun, daemon=True)
+        self._cpu_percent_thread.start()
         super().started()
 
     def stop(self):
         super().stop()
         self._stats_interval_timer.stop()
+        self._cpu_percent_thread.stop()
         super().stopped()
 
     def stats_counter_reset(self, field: str):
@@ -133,7 +140,7 @@ class InformationService(BaseService):
         # gather information to be sent off on timer tick:
         self._sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
-                cpu1_5_15=self._gather_cpu1_5_15(),
+                cpu_percent=self._gather_cpu_percent(),
                 memory=self._gather_memory(),
                 cma=self._gather_cma(),
                 backends=self._gather_backends_stats(),
@@ -173,9 +180,12 @@ class InformationService(BaseService):
 
         return out
 
-    def _gather_cpu1_5_15(self):
-        # FIXME: on windows currently not working: https://github.com/giampaolo/psutil/issues/2498
-        return [round(x / psutil.cpu_count() * 100, 0) for x in psutil.getloadavg()]
+    def _on_cpu_percent_fun(self):
+        while not self._cpu_percent_thread.stopped():
+            self._cpu_percent = psutil.cpu_percent(interval=2)
+
+    def _gather_cpu_percent(self) -> float:
+        return self._cpu_percent
 
     def _gather_memory(self):
         return psutil.virtual_memory()._asdict()
