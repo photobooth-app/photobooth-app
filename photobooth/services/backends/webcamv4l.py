@@ -90,13 +90,17 @@ class WebcamV4lBackend(AbstractBackend):
 
             try:
                 capture = VideoCapture(device)
+                capture.set_fps(25)
                 capture.set_format(self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT, "MJPG")
+                fmt = capture.get_format()
+                fps = capture.get_fps()
+                device.log.info(f"Starting capture {fmt.width}x{fmt.height} at {fps} fps in {fmt.pixel_format.name}")
             except (AttributeError, FileNotFoundError) as exc:
                 logger.error(f"cannot open camera {self._config.device_index} properly.")
                 logger.exception(exc)
                 raise exc
 
-            for frame in device:  # forever
+            for frame in capture:  # forever
                 # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib
                 if not self.is_ready_to_deliver.is_set():
                     # set only once.
