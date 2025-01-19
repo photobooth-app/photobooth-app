@@ -307,8 +307,8 @@ class ProcessingMachine(StateMachine):
 
     def on_enter_capture(self):
         logger.info(
-            f"current capture ({self.model.get_captures_taken()+1}/{self.model.total_captures_to_take()}, "
-            f"remaining {self.model.remaining_captures_to_take()-1})"
+            f"current capture ({self.model.get_captures_taken() + 1}/{self.model.total_captures_to_take()}, "
+            f"remaining {self.model.remaining_captures_to_take() - 1})"
         )
 
         self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
@@ -351,13 +351,13 @@ class ProcessingMachine(StateMachine):
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
-        logger.info(f"capture {v3mediaitem=} successful")
-
         # add to collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
         self._mediacollection_service.add_item(v3mediaitem)  # and to the db.
         self.model._last_captured_mediaitem_id = v3mediaitem.id
         self._update_captures_taken()
+
+        logger.info(f"capture {v3mediaitem=} successful")
 
         # capture finished, go to next state
         self._captured()

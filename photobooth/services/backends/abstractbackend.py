@@ -312,7 +312,7 @@ class AbstractBackend(ABC):
                 logger.warning("device raised exception (maybe lost connection to device?)")
                 raise RuntimeError("device raised exception (maybe lost connection to device?)") from exc
 
-        logger.debug(f"device timed out deliver lores image in {retries-1} attempts. One last try now or raise exception.")
+        logger.debug(f"device timed out deliver lores image in {retries - 1} attempts. One last try now or raise exception.")
 
         # final call
         try:

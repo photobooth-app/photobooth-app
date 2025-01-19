@@ -298,7 +298,7 @@ class Gphoto2Backend(AbstractBackend):
                 # https://github.com/jim-easterbrook/python-gphoto2/issues/65#issuecomment-433615025
                 evt_typ, evt_data = self._camera.wait_for_event(200)
                 while evt_typ != gp.GP_EVENT_TIMEOUT:
-                    logger.debug(f"Event: {self.event_texts.get(evt_typ,f'unknown event index: {evt_typ}')}, data: {evt_data}")
+                    logger.debug(f"Event: {self.event_texts.get(evt_typ, f'unknown event index: {evt_typ}')}, data: {evt_data}")
 
                     if evt_typ == gp.GP_EVENT_FILE_ADDED:
                         captured_files.append((evt_data.folder, evt_data.name))

@@ -32,7 +32,7 @@ class WigglecamBackend(AbstractBackend):
         # quick sanity check.
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
         if max_index > len(self._config.nodes) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes)-1}")
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
 
         nodes = []
         for config_node in self._config.nodes:

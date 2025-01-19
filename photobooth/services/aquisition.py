@@ -54,7 +54,7 @@ class AquisitionService(BaseService):
         # validate during startup that all indexes are in valid range. TODO: move to pydantic config logic at any point?
         max_index = max(appconfig.backends.index_backend_stills, appconfig.backends.index_backend_video, appconfig.backends.index_backend_multicam)
         if max_index > len(self._backends) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends)-1}")
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends) - 1}")
 
         logger.info(f"loaded backends: {self._backends}")
 
@@ -289,7 +289,7 @@ class AquisitionService(BaseService):
                     appconfig.uisettings.livestream_mirror_effect,
                 )
 
-            yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
 
     @staticmethod
     @cache
