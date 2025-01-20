@@ -5,7 +5,6 @@ Picamera2 backend implementation
 
 import io
 import logging
-import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -73,6 +72,11 @@ class Picamera2Backend(AbstractBackend):
 
     def start(self):
         super().start()
+
+        if self._picamera2:
+            self._picamera2.stop_encoder()
+            self._picamera2.stop()
+            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
         self._lores_data: PicamLoresData = PicamLoresData()
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
@@ -155,10 +159,6 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.stop()
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
-            # it seems after stopping + closing the camera is unavailable to start again. since on test-pi there is also a
-            # usb webcam, the webcam is indexed now with 0 instead of the picam. so it seems to work but it's using the webcam then
-            time.sleep(0.1)
-
         logger.debug("stopping encoder")
 
         logger.debug(f"{self.__module__} stopped")
@@ -171,11 +171,16 @@ class Picamera2Backend(AbstractBackend):
 
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
-        if len(Picamera2.global_camera_info()) > 0:
-            return True
-        else:
-            logger.warning("no camera found, device not available!")
-            return False
+        with Picamera2(camera_num=self._config.camera_num) as cam:
+            try:
+                cam.start()
+
+                return True
+            except Exception as exc:
+                logger.info(exc)
+                logger.info(f"camera index {self._config.camera_num} not found!")
+
+                return False
 
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
