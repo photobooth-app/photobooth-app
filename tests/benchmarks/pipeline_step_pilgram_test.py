@@ -18,6 +18,7 @@ def image(request):
     yield request.param
 
 
+@pytest.mark.skip(reason="pi4 test hardware runs out of memory for maven+hires image")
 @pytest.mark.benchmark(group="pilgram2")
 def test_pilgram2(library, image, benchmark):
     benchmark(eval(library), Image.open(image))
