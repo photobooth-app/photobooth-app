@@ -10,6 +10,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
+from PIL import Image
+
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendVirtualcamera
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -98,8 +100,15 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="virtualcamera_") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="virtualcamera_", suffix=".jpg") as f:
             f.write(next(self._images_iterator))
+
+            if self._config.upscale_stills > 1:
+                tms = time.time()
+                img = Image.open(f.name)
+                img = img.resize(tuple([int(z * self._config.upscale_stills) for z in img.size]), resample=Image.Resampling.NEAREST)
+                img.save(f.name)
+                logger.info(f"-- upscaling still took additional time: {round((time.time() - tms), 2)}s to process")
 
             return Path(f.name)
 
