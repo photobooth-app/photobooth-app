@@ -5,6 +5,7 @@ Picamera2 backend implementation
 
 import io
 import logging
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -153,7 +154,10 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.stop_encoder()
             self._picamera2.stop()
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
-            del self._picamera2
+
+            # it seems after stopping + closing the camera is unavailable to start again. since on test-pi there is also a
+            # usb webcam, the webcam is indexed now with 0 instead of the picam. so it seems to work but it's using the webcam then
+            time.sleep(0.1)
 
         logger.debug("stopping encoder")
 
