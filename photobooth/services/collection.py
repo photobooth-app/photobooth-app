@@ -143,6 +143,8 @@ class Cache:
     def get_cached_repr(self, item: Mediaitem, dimension: DimensionTypes, processed: bool = True) -> Cacheditem:
         dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
 
+        if not item.id:
+            raise ValueError("there is no item.id given - cannot create cached representation without id!")
         if dimension_pixel is None:
             raise ValueError(f"invalid dimension given: '{dimension}'")
 

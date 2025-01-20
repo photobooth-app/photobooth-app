@@ -9,8 +9,11 @@ from datetime import datetime
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
+from uuid import uuid4
 
 from statemachine import State, StateMachine
+
+from photobooth.database.types import DimensionTypes
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
 from ..database.models import Mediaitem, MediaitemTypes
@@ -330,6 +333,7 @@ class ProcessingMachine(StateMachine):
 
         original_filenamepath = self._new_filename(MediaitemTypes.image)
         mediaitem = Mediaitem(
+            id=uuid4(),
             job_identifier=self.model._job_identifier,
             media_type=MediaitemTypes.image,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -344,7 +348,14 @@ class ProcessingMachine(StateMachine):
 
         # apply 1pic pipeline:
         tms = time.time()
-        process_image_collageimage_animationimage(mediaitem)
+
+        mediaitem_cached_repr_full = self._mediacollection_service.cache.get_cached_repr(
+            item=mediaitem,
+            dimension=DimensionTypes.full,
+            processed=False,
+        )
+
+        process_image_collageimage_animationimage(mediaitem_cached_repr_full.filepath, mediaitem)
 
         assert mediaitem.unprocessed.is_file()
         assert mediaitem.processed.is_file()
@@ -378,6 +389,7 @@ class ProcessingMachine(StateMachine):
         for filepath in filepaths:
             original_filenamepath = self._new_filename(MediaitemTypes.image)
             mediaitem = Mediaitem(
+                id=uuid4(),
                 job_identifier=self.model._job_identifier,
                 media_type=MediaitemTypes.image,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -403,7 +415,12 @@ class ProcessingMachine(StateMachine):
         # always create unprocessed versions for later usage
         tms = time.time()
         for mediaitem in mediaitems:
-            process_image_collageimage_animationimage(mediaitem)
+            mediaitem_cached_repr_full = self._mediacollection_service.cache.get_cached_repr(
+                item=mediaitem,
+                dimension=DimensionTypes.full,
+                processed=False,
+            )
+            process_image_collageimage_animationimage(mediaitem_cached_repr_full.filepath, mediaitem)
 
             # add to collection
             self._mediacollection_service.add_item(mediaitem)  # and to the db.
@@ -491,6 +508,7 @@ class ProcessingMachine(StateMachine):
 
         original_filenamepath = self._new_filename(self.model._media_type)
         mediaitem = Mediaitem(
+            id=uuid4(),
             job_identifier=self.model._job_identifier,
             media_type=self.model._media_type,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -520,6 +538,7 @@ class ProcessingMachine(StateMachine):
         if isinstance(self.model, JobModelCollage | JobModelAnimation | JobModelMulticamera):
             original_filenamepath = self._new_filename(self.model._media_type)
             phase2_mediaitem = Mediaitem(
+                id=uuid4(),
                 job_identifier=self.model._job_identifier,
                 media_type=self.model._media_type,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),

@@ -56,7 +56,13 @@ def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
 
         container.mediacollection_service.update_item(mediaitem)
 
-        process_image_collageimage_animationimage(mediaitem)
+        mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(
+            item=mediaitem,
+            dimension=DimensionTypes.full,
+            processed=False,
+        )
+
+        process_image_collageimage_animationimage(mediaitem_cached_repr_full.filepath, mediaitem)
     except Exception as exc:
         logger.exception(exc)
         logger.error(f"apply pipeline failed, reason: {exc}.")

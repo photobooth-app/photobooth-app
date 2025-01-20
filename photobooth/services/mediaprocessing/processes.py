@@ -24,14 +24,14 @@ from .steps.video import BoomerangStep
 logger = logging.getLogger(__name__)
 
 
-def process_image_collageimage_animationimage(mediaitem: Mediaitem):
+def process_image_collageimage_animationimage(image_in: Path, mediaitem: Mediaitem):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
     the config has to be determined externally.
     """
 
-    image = Image.open(mediaitem.unprocessed)
+    image = Image.open(image_in)
     config = SinglePictureDefinition(**mediaitem.pipeline_config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
 
     context = ImageContext(image)
