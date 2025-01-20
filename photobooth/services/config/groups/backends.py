@@ -40,6 +40,12 @@ class GroupBackendVirtualcamera(BaseBackendModel):
         le=30,
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
     )
+    upscale_stills: int = Field(
+        default=1,
+        ge=1,
+        le=5,
+        description="Scale still images delivered by the backend by the factor set. Useful to test the processing times by emulating hires cameras.",
+    )
     emulate_multicam_capture_devices: int = Field(
         default=4,
         ge=2,
