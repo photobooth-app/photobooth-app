@@ -74,8 +74,7 @@ class Picamera2Backend(AbstractBackend):
         super().start()
 
         if self._picamera2:
-            self._picamera2.stop_encoder()
-            self._picamera2.stop()
+            logger.info("closing camera before starting to ensure it's available")
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
         self._lores_data: PicamLoresData = PicamLoresData()
