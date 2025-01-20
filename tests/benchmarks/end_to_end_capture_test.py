@@ -13,6 +13,7 @@ logger = logging.getLogger(name=None)
 def _container() -> Container:
     container.start()
     container.aquisition_service._get_stills_backend().block_until_device_is_running()
+    container.aquisition_service._get_stills_backend()._config.upscale_stills = 1
 
     yield container
     container.stop()
