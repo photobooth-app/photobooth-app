@@ -152,18 +152,18 @@ class Cache:
             # so it's locked from the moment it's checked but that means there is only one process
             # at a time. Maybe a queue is more efficient, but it's ok for now probably.
             with self._lock_cache_check:
-                v3cacheditem_exists = self._db_check_cache_valid(item.id, dimension, processed)
+                cacheditem_exists = self._db_check_cache_valid(item.id, dimension, processed)
 
-                if v3cacheditem_exists:
-                    return v3cacheditem_exists
+                if cacheditem_exists:
+                    return cacheditem_exists
 
                 else:
                     tms = time.time()
 
                     id = uuid4()
-                    v3cacheditem_new = Cacheditem(
+                    cacheditem_new = Cacheditem(
                         id=id,
-                        v3mediaitem_id=item.id,
+                        mediaitem_id=item.id,
                         dimension=dimension,
                         processed=processed,
                         filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
@@ -171,37 +171,37 @@ class Cache:
 
                     generate_resized(
                         filepath_in=item.processed if processed else item.unprocessed,
-                        filepath_out=v3cacheditem_new.filepath,
+                        filepath_out=cacheditem_new.filepath,
                         scaled_min_length=dimension_pixel,
                     )
 
-                    session.add(v3cacheditem_new)
+                    session.add(cacheditem_new)
                     session.commit()
 
-                    logger.debug(f"-- finished processing in {round((time.time() - tms), 2)}s for {v3cacheditem_new}: ")
+                    logger.debug(f"-- finished processing in {round((time.time() - tms), 2)}s for {cacheditem_new}: ")
 
-                    return v3cacheditem_new
+                    return cacheditem_new
 
     def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
             results = session.scalars(
                 select(Cacheditem)
                 .join(Mediaitem)
-                .where(Cacheditem.v3mediaitem_id == mediaitem_id, Cacheditem.dimension == dimension, Cacheditem.processed == processed)
+                .where(Cacheditem.mediaitem_id == mediaitem_id, Cacheditem.dimension == dimension, Cacheditem.processed == processed)
                 .where(Mediaitem.updated_at < Cacheditem.created_at)  # cached item created later than last updated mediaitem
             )
 
-            v3cacheditem_exists = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
+            cacheditem_exists = results.one_or_none()  # if none, there is no item yet cached and cached version needs to be created.
 
             # check files also, otherwise delete the item:
-            if v3cacheditem_exists and not v3cacheditem_exists.filepath.exists():
+            if cacheditem_exists and not cacheditem_exists.filepath.exists():
                 logger.warning("deleting cached item from DB because file representation does not exist any more.")
-                session.execute(delete(v3cacheditem_exists))
+                session.execute(delete(cacheditem_exists))
                 session.commit()
 
                 return None
 
-            return v3cacheditem_exists
+            return cacheditem_exists
 
     def on_start_maintain(self):
         outdated_filepaths: list[Path] = []

@@ -329,7 +329,7 @@ class ProcessingMachine(StateMachine):
         _config = self.model.get_phase1_singlepicturedefinition_per_index(self.model.get_captures_taken()).model_dump(mode="json")
 
         original_filenamepath = self._new_filename(MediaitemTypes.image)
-        v3mediaitem = Mediaitem(
+        mediaitem = Mediaitem(
             job_identifier=self.model._job_identifier,
             media_type=MediaitemTypes.image,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -338,26 +338,26 @@ class ProcessingMachine(StateMachine):
             show_in_gallery=_show,
         )
 
-        shutil.move(filepath, v3mediaitem.unprocessed)
+        shutil.move(filepath, mediaitem.unprocessed)
 
-        logger.debug(f"capture to {v3mediaitem.unprocessed=}")
+        logger.debug(f"capture to {mediaitem.unprocessed=}")
 
         # apply 1pic pipeline:
         tms = time.time()
-        process_image_collageimage_animationimage(v3mediaitem)
+        process_image_collageimage_animationimage(mediaitem)
 
-        assert v3mediaitem.unprocessed.is_file()
-        assert v3mediaitem.processed.is_file()
+        assert mediaitem.unprocessed.is_file()
+        assert mediaitem.processed.is_file()
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process singleimage")
 
         # add to collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
-        self._mediacollection_service.add_item(v3mediaitem)  # and to the db.
-        self.model._last_captured_mediaitem_id = v3mediaitem.id
+        self._mediacollection_service.add_item(mediaitem)  # and to the db.
+        self.model._last_captured_mediaitem_id = mediaitem.id
         self._update_captures_taken()
 
-        logger.info(f"capture {v3mediaitem=} successful")
+        logger.info(f"capture {mediaitem=} successful")
 
         # capture finished, go to next state
         self._captured()
@@ -377,7 +377,7 @@ class ProcessingMachine(StateMachine):
         mediaitems: list[Mediaitem] = []
         for filepath in filepaths:
             original_filenamepath = self._new_filename(MediaitemTypes.image)
-            v3mediaitem = Mediaitem(
+            mediaitem = Mediaitem(
                 job_identifier=self.model._job_identifier,
                 media_type=MediaitemTypes.image,
                 unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
@@ -386,11 +386,11 @@ class ProcessingMachine(StateMachine):
                 show_in_gallery=_show,
             )
 
-            logger.debug(f"capture to {v3mediaitem.unprocessed=}")
+            logger.debug(f"capture to {mediaitem.unprocessed=}")
 
-            shutil.move(filepath, v3mediaitem.unprocessed)
+            shutil.move(filepath, mediaitem.unprocessed)
 
-            mediaitems.append(v3mediaitem)
+            mediaitems.append(mediaitem)
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
 

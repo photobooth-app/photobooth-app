@@ -59,7 +59,7 @@ class Cacheditem(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
     # following are the unique combination to identify if a cached obj is avail or no
-    v3mediaitem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mediaitems.id"), index=True)
+    mediaitem_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mediaitems.id"), index=True)
     dimension: Mapped[DimensionTypes] = mapped_column(Enum(DimensionTypes), index=True)
     processed: Mapped[bool] = mapped_column(Boolean, index=True)
 
@@ -68,4 +68,4 @@ class Cacheditem(Base):
     filepath: Mapped[Path] = mapped_column(PathType)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}> filepath: {self.filepath}, mediaitem_id: {self.v3mediaitem_id}"
+        return f"<{self.__class__.__name__}> filepath: {self.filepath}, mediaitem_id: {self.mediaitem_id}"
