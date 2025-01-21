@@ -52,7 +52,7 @@ dependencies = [
     "pilgram2>=2.0.2",
     "linuxpy>=0.10.0; platform_system == 'Linux'",
     "gpiozero~=2.0.0",
-    "gphoto2~=2.5.0; platform_system == 'Linux'",
+    "gphoto2~=2.5.0; platform_system == 'Linux' or platform_system == 'Darwin'",
     "python-statemachine>=2.3.3",
     "python-multipart>=0.0.6",
     "pyjwt[crypto]>=2.8.0",
