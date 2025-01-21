@@ -12,11 +12,10 @@ from .. import LOG_PATH
 logger = logging.getLogger(__name__)
 try:
     turbojpeg = TurboJPEG()
-    logger.info("turbojpeg lib found, using fast turbojpeg algorithm to scale jpegs.")
-except RuntimeError as exc:
+    print("using turbojpeg to scale images")  # print because log at this point not yet active...
+except RuntimeError:
     turbojpeg = None
-    logger.info(exc)
-    logger.info("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
+    print("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
 
 
 def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
@@ -51,23 +50,14 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
     scaling_factor = scaled_min_length / original_length
 
     # TurboJPEG only allows for decent factors.
-    # To keep it simple, config allows freely to adjust the size from 10...100% and
-    # find the real factor here:
-    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
-    # limitation due to turbojpeg lib usage.
-    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
-    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
-    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to
-    # the full resolution picture
-    allowed_list = [(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1), (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)]
-    factor_list = [item[0] / item[1] for item in allowed_list]
+    factor_list = [item[0] / item[1] for item in turbojpeg.scaling_factors]
     (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
 
     logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
     if factor > 1:
         logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
 
-    buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=allowed_list[index], quality=85)
+    buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=list(turbojpeg.scaling_factors)[index], quality=85)
 
     with open(filepath_out, "wb") as file_out:
         file_out.write(buffer_out)
