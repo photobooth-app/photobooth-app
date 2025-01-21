@@ -2,11 +2,11 @@ name: Publish 🐍 📦 to PyPI and TestPyPI
 
 #on: [push]
 on:
-  # push:
-  #   branches:
-  #     - main
-  #   tags:
-  #     - "**"
+  push:
+    branches:
+      - main
+    tags:
+      - "**"
   label:
     types:
       - created
