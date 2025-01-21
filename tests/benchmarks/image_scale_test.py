@@ -114,7 +114,16 @@ def cv2_scale(jpeg_bytes, tmp_path):
     return encimg.tobytes()
 
 
-@pytest.fixture(params=["turbojpeg_scale", "pillow_scale", "cv2_scale", "pyvips_scale", "pyvips_resize_scale", "ffmpeg_scale"])
+@pytest.fixture(
+    params=[
+        "turbojpeg_scale",
+        "pillow_scale",
+        "cv2_scale",
+        "pyvips_scale",
+        "pyvips_resize_scale",
+        "ffmpeg_scale",
+    ]
+)
 def library(request):
     # yield fixture instead return to allow for cleanup:
     yield request.param
