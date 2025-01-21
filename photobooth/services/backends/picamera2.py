@@ -170,16 +170,16 @@ class Picamera2Backend(AbstractBackend):
 
     def _device_available(self) -> bool:
         """picameras are assumed to be available always for now"""
-        with Picamera2(camera_num=self._config.camera_num) as cam:
-            try:
+        try:
+            with Picamera2(camera_num=self._config.camera_num) as cam:
                 cam.start()
 
-                return True
-            except Exception as exc:
-                logger.info(exc)
-                logger.info(f"camera index {self._config.camera_num} not found!")
+            return True
+        except Exception as exc:
+            logger.info(exc)
+            logger.info(f"camera index {self._config.camera_num} not found!")
 
-                return False
+            return False
 
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
