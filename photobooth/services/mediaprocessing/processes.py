@@ -7,7 +7,7 @@ import time
 import traceback
 from pathlib import Path
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from ...database.models import Mediaitem
 from ..config import appconfig
@@ -32,6 +32,8 @@ def process_image_collageimage_animationimage(image_in: Path, mediaitem: Mediait
     """
 
     image = Image.open(image_in)
+    ImageOps.exif_transpose(image, in_place=True)  # to correct for any orientation set.
+
     config = SinglePictureDefinition(**mediaitem.pipeline_config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
 
     context = ImageContext(image)
@@ -234,6 +236,7 @@ def process_and_generate_wigglegram(captured_mediaitems: list[Mediaitem], mediai
 def get_filter_preview(filepath_in: Path, filter: str = None) -> io.BytesIO:
     try:
         image = Image.open(filepath_in)
+        ImageOps.exif_transpose(image, in_place=True)  # needed to allow all backends set the orientation properly
     except UnidentifiedImageError as exc:
         raise RuntimeError(f"apply filter to file {filepath_in} not supported, error {exc}") from exc
 

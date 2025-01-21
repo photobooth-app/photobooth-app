@@ -3,20 +3,29 @@ import os
 import subprocess
 from pathlib import Path
 
+import piexif
 from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
+from turbojpeg import TurboJPEG
 
 from .. import LOG_PATH
 
 logger = logging.getLogger(__name__)
+try:
+    turbojpeg = TurboJPEG()
+    logger.info("turbojpeg lib found, using fast turbojpeg algorithm to scale jpegs.")
+except RuntimeError as exc:
+    turbojpeg = None
+    logger.info(exc)
+    logger.info("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
 
 
-def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    """scale a jpeg buffer to another buffer using cv2"""
+def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
+    """scale a jpeg buffer to another buffer using pillow"""
 
     image = Image.open(filepath_in)
     ImageOps.exif_transpose(image, in_place=True)
 
-    # scale by 0.5
+    # scale by factor to determine
     original_length = max(image.width, image.height)  # scale for the max length
     scaling_factor = scaled_min_length / original_length
 
@@ -28,6 +37,50 @@ def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
     # encode to jpeg again
     image.save(filepath_out, quality=85)
+
+
+def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
+    assert turbojpeg is not None
+
+    with open(filepath_in, "rb") as file_in:
+        jpeg_bytes_in = file_in.read()
+
+    (width, height, _, _) = turbojpeg.decode_header(jpeg_bytes_in)
+
+    original_length = max(width, height)  # scale for the max length
+    scaling_factor = scaled_min_length / original_length
+
+    # TurboJPEG only allows for decent factors.
+    # To keep it simple, config allows freely to adjust the size from 10...100% and
+    # find the real factor here:
+    # possible scaling factors (TurboJPEG.scaling_factors)   (nominator, denominator)
+    # limitation due to turbojpeg lib usage.
+    # ({(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1),
+    # (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)})
+    # example: (1,4) will result in 1/4=0.25=25% down scale in relation to
+    # the full resolution picture
+    allowed_list = [(13, 8), (7, 4), (3, 8), (1, 2), (2, 1), (15, 8), (3, 4), (5, 8), (5, 4), (1, 1), (1, 8), (1, 4), (9, 8), (3, 2), (7, 8), (11, 8)]
+    factor_list = [item[0] / item[1] for item in allowed_list]
+    (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
+
+    logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
+    if factor > 1:
+        logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
+
+    buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=allowed_list[index], quality=85)
+
+    with open(filepath_out, "wb") as file_out:
+        file_out.write(buffer_out)
+
+    # transplanting the exif data to newly produced output because we use the orientation tag to rotate without encoding.
+    piexif.insert(piexif.dump(piexif.load(str(filepath_in))), str(filepath_out))
+
+
+def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
+    if turbojpeg:
+        resize_jpeg_turbojpeg(filepath_in, filepath_out, scaled_min_length)
+    else:
+        resize_jpeg_pillow(filepath_in, filepath_out, scaled_min_length)
 
 
 def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
