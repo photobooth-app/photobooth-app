@@ -58,6 +58,7 @@ dependencies = [
     "wigglecam",
     "piexif>=1.1.3",
     "SQLAlchemy>=2.0.37",
+    "pyturbojpeg>=1.7.0",
 ]
 
 [project.scripts]
@@ -127,7 +128,6 @@ test = [
 benchmarks = [
   "pyvips",
   "simplejpeg",
-  "pyturbojpeg>=1.7.0",
   "av>=14.0.1",
 ]
 
