@@ -14,7 +14,7 @@ def ffmpeg_h264_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-c:v",
             "libx264",
             "-preset",
@@ -37,7 +37,7 @@ def ffmpeg_h265_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-c:v",
             "libx265",
             "-preset",
@@ -57,7 +57,7 @@ def ffmpeg_h265_scale(tmp_path):
 def pyav_h264_scale(tmp_path):
     import av
 
-    input_container = av.open("tests/assets/video.mp4")
+    input_container = av.open("src/tests/assets/video.mp4")
     input_stream = input_container.streams.video[0]
     output_container = av.open(tmp_path / "pyav.mp4", mode="w")
     output_stream = output_container.add_stream("h264", rate=250)
@@ -91,7 +91,7 @@ def ffmpeg_convertgif_lq_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-vf",
             "fps=12,scale=500:-2:flags=bicubic",
             str(tmp_path / "ffmpeg_convertgif_lq_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -109,7 +109,7 @@ def ffmpeg_convertgif_hq_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-vf",
             "fps=12,scale=500:-2:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             str(tmp_path / "ffmpeg_convertgif_hq_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -126,7 +126,7 @@ def ffmpeg_convertwebm_vp9_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-c:v",
             "libvpx-vp9",
             "-crf",
@@ -149,7 +149,7 @@ def ffmpeg_convertwebm_vp8_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-c:v",
             "libvpx",
             "-c:a",
@@ -170,7 +170,7 @@ def ffmpeg_convertavif_scale(tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/video.mp4",
+            "src/tests/assets/video.mp4",
             "-c:v",
             "libaom-av1",
             "-crf",

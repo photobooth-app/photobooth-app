@@ -17,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 
 def test_align_sizes_stage():
-    video_in = Path("tests/assets/video.mp4")
+    video_in = Path("src/tests/assets/video.mp4")
 
     context = VideoContext(video_in)
     steps = [BoomerangStep()]

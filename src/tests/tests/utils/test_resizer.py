@@ -23,7 +23,7 @@ def test_mapping_avail():
 
 
 def test_resize_jpg(tmp_path):
-    input = Path("tests/assets/input.jpg")
+    input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
     resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
@@ -33,7 +33,7 @@ def test_resize_jpg(tmp_path):
 
 
 def test_resize_gif(tmp_path):
-    input = Path("tests/assets/animation.gif")
+    input = Path("src/tests/assets/animation.gif")
     output = tmp_path / "animation.gif"
 
     resize_gif(filepath_in=input, filepath_out=output, scaled_min_length=100)
@@ -43,7 +43,7 @@ def test_resize_gif(tmp_path):
 
 
 def test_resize_mp4(tmp_path):
-    input = Path("tests/assets/video.mp4")
+    input = Path("src/tests/assets/video.mp4")
     output = tmp_path / "video.mp4"
 
     resize_mp4(filepath_in=input, filepath_out=output, scaled_min_length=100)

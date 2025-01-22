@@ -18,7 +18,7 @@ def ffmpeg_hq_optimizedquality_scale(gif_bytes, tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/animation.gif",
+            "src/tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             str(tmp_path / "ffmpeg_hq_optimizedquality_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -36,7 +36,7 @@ def ffmpeg_hq_optimizedspeed_scale(gif_bytes, tmp_path):
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "tests/assets/animation.gif",
+            "src/tests/assets/animation.gif",
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             str(tmp_path / "ffmpeg_hq_optimizedspeed_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -147,5 +147,5 @@ def image(file) -> bytes:
     group="scalegif",
 )
 def test_libraries_scalegif(library, benchmark, tmp_path):
-    benchmark(eval(library), gif_bytes=image("tests/assets/animation.gif"), tmp_path=tmp_path)
+    benchmark(eval(library), gif_bytes=image("src/tests/assets/animation.gif"), tmp_path=tmp_path)
     assert True

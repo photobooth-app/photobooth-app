@@ -28,8 +28,8 @@ def dummy_item(tmp_path):
     filepath_unprocessed = tmp_path / "unproc.jpg"
     filepath_processed = tmp_path / "proc.jpg"
 
-    shutil.copy("./tests/assets/input.jpg", filepath_unprocessed)
-    shutil.copy("./tests/assets/input.jpg", filepath_processed)
+    shutil.copy("./src/tests/assets/input.jpg", filepath_unprocessed)
+    shutil.copy("./src/tests/assets/input.jpg", filepath_processed)
 
     yield Mediaitem(
         job_identifier=uuid4(),
@@ -74,8 +74,8 @@ def test_add_item_filedoesntexist(cs: MediacollectionService):
             Mediaitem(
                 job_identifier=uuid4(),
                 media_type=MediaitemTypes.image,
-                unprocessed=Path("./tests/assets/input.jpg"),
-                processed=Path("./tests/assets/input_nonexistant.jpg"),
+                unprocessed=Path("./src/tests/assets/input.jpg"),
+                processed=Path("./src/tests/assets/input_nonexistant.jpg"),
                 pipeline_config={},
                 show_in_gallery=True,
             )
@@ -86,8 +86,8 @@ def test_add_item_filedoesntexist(cs: MediacollectionService):
             Mediaitem(
                 job_identifier=uuid4(),
                 media_type=MediaitemTypes.image,
-                unprocessed=Path("./tests/assets/input_nonexistant.jpg"),
-                processed=Path("./tests/assets/input.jpg"),
+                unprocessed=Path("./src/tests/assets/input_nonexistant.jpg"),
+                processed=Path("./src/tests/assets/input.jpg"),
                 pipeline_config={},
                 show_in_gallery=True,
             )

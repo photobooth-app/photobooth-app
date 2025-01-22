@@ -15,10 +15,10 @@ logger = logging.getLogger(name=None)
 def test_collage_shared():
     canvas = Image.new("RGBA", (1500, 1500), color=None)
     images = [
-        Image.open("tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        CollageMergeDefinition(predefined_image="tests/assets/input.jpg", filter=PilgramFilter._1977),
+        CollageMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
         CollageMergeDefinition(filter=PilgramFilter._1977),
     ]
 
@@ -33,10 +33,10 @@ def test_collage_shared():
 
 def test_animation_shared():
     images = [
-        Image.open("tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        AnimationMergeDefinition(predefined_image="tests/assets/input.jpg", filter=PilgramFilter._1977),
+        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
         AnimationMergeDefinition(filter=PilgramFilter._1977),
     ]
 
@@ -51,12 +51,12 @@ def test_animation_shared():
 
 def test_animation_shared_wrongnumbers_runtime():
     images = [
-        Image.open("tests/assets/input.jpg"),
-        Image.open("tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
         # we have two captured images and two definitions but one is already a predefined. thats bad because we should have only one captured
-        AnimationMergeDefinition(predefined_image="tests/assets/input.jpg", filter=PilgramFilter._1977),
+        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
         AnimationMergeDefinition(filter=PilgramFilter._1977),
     ]
 

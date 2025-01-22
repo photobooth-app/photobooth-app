@@ -138,12 +138,12 @@ def image(file) -> bytes:
 
 @pytest.fixture()
 def image_hires() -> bytes:
-    yield image("tests/assets/input.jpg")
+    yield image("src/tests/assets/input.jpg")
 
 
 @pytest.fixture()
 def image_lores() -> bytes:
-    yield image("tests/assets/input_lores.jpg")
+    yield image("src/tests/assets/input_lores.jpg")
 
 
 @pytest.mark.benchmark(group="scalejpeg_hires")

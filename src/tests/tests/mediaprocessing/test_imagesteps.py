@@ -29,7 +29,7 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture()
 def pil_image() -> Image.Image:
-    yield Image.open("tests/assets/input.jpg")
+    yield Image.open("src/tests/assets/input.jpg")
 
 
 ## two test methods to check whether pixels are different or same:
@@ -262,7 +262,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
     assert pil_image.mode == "RGBA"  # before process it's RGBA
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./tests/assets/frames/polaroid-6125402_1pic-transparency.png", reverse=True)]
+    steps = [ImageMountStep("./src/tests/assets/frames/polaroid-6125402_1pic-transparency.png", reverse=True)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -274,7 +274,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
 def test_img_frame_stage(pil_image: Image.Image):
     context = ImageContext(pil_image)
-    steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic-transparency.png")]
+    steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic-transparency.png")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -287,7 +287,7 @@ def test_img_frame_stage(pil_image: Image.Image):
 def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic-notransparency.png")]
+        steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic-notransparency.png")]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
         _ = context.image
@@ -296,7 +296,7 @@ def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
 def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageFrameStep("./tests/assets/frames/polaroid-6125402_1pic.jpg")]
+        steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic.jpg")]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
         _ = context.image

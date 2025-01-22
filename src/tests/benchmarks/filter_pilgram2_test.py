@@ -13,7 +13,7 @@ def filter_algo(request):
 
 
 def test_pilgram_lores_benchmark(benchmark, filter_algo):
-    with Image.open("tests/assets/input_lores.jpg") as im:
+    with Image.open("src/tests/assets/input_lores.jpg") as im:
         if filter_algo == "__version__":
             pytest.skip()
         benchmark(eval(f"pilgram2.{filter_algo}"), im)

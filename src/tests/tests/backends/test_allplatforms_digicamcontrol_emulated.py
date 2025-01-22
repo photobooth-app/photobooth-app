@@ -44,7 +44,7 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
         if request.args.get("slc") == "set" and request.args.get("param1") == "session.folder" and request.args.get("param2"):
             logger.info(request.args)
             target_folder = Path(request.args.get("param2"))
-            shutil.copy2("tests/assets/input.jpg", Path(target_folder, "input.jpg"))
+            shutil.copy2("src/tests/assets/input.jpg", Path(target_folder, "input.jpg"))
 
             return Response("OK", content_type="text/plain")
         logger.warning("hit custom handler 500 out")

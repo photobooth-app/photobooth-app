@@ -16,9 +16,9 @@ logger = logging.getLogger(name=None)
 def test_align_sizes_stage():
     canvas_size = (400, 400)  # w, h
     images = [
-        Image.open("tests/assets/input.jpg"),
-        Image.open("tests/assets/input.jpg"),
-        Image.open("tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
+        Image.open("src/tests/assets/input.jpg"),
     ]
 
     context = AnimationContext(images)

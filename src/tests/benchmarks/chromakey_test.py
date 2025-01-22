@@ -156,7 +156,7 @@ def library(request):
 
 @pytest.fixture()
 def image():
-    yield Image.open("tests/assets/greenscreen.jpg")
+    yield Image.open("src/tests/assets/greenscreen.jpg")
 
 
 # needs pip install pytest-benchmark

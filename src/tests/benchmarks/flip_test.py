@@ -60,12 +60,12 @@ def image(file) -> Image.Image:
 
 @pytest.fixture()
 def image_lores() -> bytes:
-    yield image("tests/assets/input_lores.jpg")
+    yield image("src/tests/assets/input_lores.jpg")
 
 
 @pytest.fixture()
 def image_hires() -> bytes:
-    yield image("tests/assets/input.jpg")
+    yield image("src/tests/assets/input.jpg")
 
 
 # needs pip install pytest-benchmark

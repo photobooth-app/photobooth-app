@@ -22,14 +22,14 @@ logger = logging.getLogger(name=None)
 
 def transpose_pillow():
     # read image
-    with Image.open("tests/assets/input_lores.jpg") as img:
+    with Image.open("src/tests/assets/input_lores.jpg") as img:
         ImageOps.exif_transpose(img, in_place=True)  # needed to allow all backends set the orientation properly
 
     return img
 
 
 def transpose_piexif():
-    with open("tests/assets/input_lores.jpg", "rb") as img:
+    with open("src/tests/assets/input_lores.jpg", "rb") as img:
         jpeg_bytes = img.read()
 
     bytes = jpeg_bytes  # copy so we have an out-bytes to transplant to

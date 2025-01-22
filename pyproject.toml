@@ -65,13 +65,15 @@ dependencies = [
 photobooth = "photobooth.__main__:main"
 
 [project.urls]
-homepage = "https://github.com/photobooth-app/photobooth-app"
-repository = "https://github.com/photobooth-app/photobooth-app"
-documentation = "https://photobooth-app.org"
+Homepage = "https://github.com/photobooth-app/photobooth-app"
+Repository = "https://github.com/photobooth-app/photobooth-app"
+Documentation = "https://photobooth-app.org"
+
 
 [build-system]
-requires = ["pdm-backend"]
-build-backend = "pdm.backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 
 [tool.pytest.ini_options]
 log_cli = true
@@ -82,7 +84,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 [tool.coverage.run]
 # disable couldnt-parse: https://github.com/nedbat/coveragepy/issues/1392
 disable_warnings = ["couldnt-parse"]
-omit = ["test_*.py", "./tests/*"]
+omit = ["test_*.py", "./src/tests/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
@@ -105,16 +107,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"photobooth/services/config/groups/*.py" = ["E501"]
+"src/photobooth/services/config/groups/*.py" = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.pdm]
-version = { source = "file", path = "photobooth/__version__.py" }
-
-[tool.pdm.dev-dependencies]
-test = [
+[dependency-groups]
+dev = [
   "ruff",
   "pytest",
   "pytest-benchmark",
@@ -131,9 +130,25 @@ benchmarks = [
   "av>=14.0.1",
 ]
 
-[tool.pdm.build]
-includes = ["./photobooth"]
+[tool.uv]
+default-groups = ["dev", "benchmarks"] # by default only dev is automatically installed, so here add benchmarks
+cache-dir = "./.uv_cache"
 
-[tool.pdm.scripts]
-test = "pytest --basetemp=./tests_tmp/ -v ./tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
-benchmark = "pytest --basetemp=./tests_tmp/ -v ./tests/benchmarks"
+# uv does not yet support [tool.pdm.scripts], so we skip this for now...
+# [tool.uv.tasks]
+# test = "pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
+# benchmark = "pytest --basetemp=./tests_tmp/ -v ./src/tests/benchmarks"
+
+[tool.hatch.version]
+path = "./src/photobooth/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/.vscode",
+  "/.uv_cache",
+  "/assets",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["./src/photobooth"]

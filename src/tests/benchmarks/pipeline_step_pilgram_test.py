@@ -13,7 +13,7 @@ def library(request):
     yield request.param
 
 
-@pytest.fixture(params=["tests/assets/input_lores.jpg", "tests/assets/input.jpg"])
+@pytest.fixture(params=["src/tests/assets/input_lores.jpg", "src/tests/assets/input.jpg"])
 def image(request):
     yield request.param
 

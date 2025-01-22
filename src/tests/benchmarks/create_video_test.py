@@ -20,8 +20,7 @@ def process_pyav(tmp_path):
     # https://pyav.basswood-io.com/docs/stable/cookbook/numpy.html#generating-video
     import av
 
-    # pil_img = Image.open("tests/assets/input_lores.jpg")
-    input = av.open("tests/assets/input_lores.jpg")
+    input = av.open("src/tests/assets/input_lores.jpg")
     frame_input = next(input.decode())
 
     container = av.open(tmp_path / "pyav.mp4", mode="w")
@@ -81,7 +80,7 @@ def process_ffmpeg(tmp_path):
     logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
     tms = time.time()
-    with open("tests/assets/input_lores.jpg", "rb") as file:
+    with open("src/tests/assets/input_lores.jpg", "rb") as file:
         in_file_read = file.read()
 
         for _ in range(200):

@@ -114,7 +114,7 @@ def test_admin_files_zip_post_notfound(client_authenticated: TestClient):
 
 
 def test_admin_files_upload(client_authenticated: TestClient):
-    with open("tests/assets/input.jpg", "rb") as f:
+    with open("src/tests/assets/input.jpg", "rb") as f:
         response = client_authenticated.post(
             "/admin/files/file/upload",
             data={"upload_target_folder": "./"},
@@ -134,7 +134,7 @@ def test_admin_files_upload_internalerror(client_authenticated: TestClient):
     error_mock.side_effect = Exception("mock error")
 
     with patch.object(shutil, "copyfileobj", error_mock):
-        with open("tests/assets/input.jpg", "rb") as f:
+        with open("src/tests/assets/input.jpg", "rb") as f:
             response = client_authenticated.post(
                 "/admin/files/file/upload",
                 data={"upload_target_folder": "./"},
@@ -158,7 +158,7 @@ def test_admin_files_upload_fails(client_authenticated: TestClient):
     )
     assert response.status_code in (400, 422)
 
-    with open("tests/assets/input.jpg", "rb") as f:
+    with open("src/tests/assets/input.jpg", "rb") as f:
         response = client_authenticated.post(
             "/admin/files/file/upload",
             data={"upload_target_folder": "./nonexistantfoldertouploadto_automated"},
