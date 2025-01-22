@@ -12,11 +12,14 @@ from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
+BackendsDarwin = Literal["Gphoto2"]
 
 if sys.platform == "win32":
     BackendsPlatform = Literal[BackendsBase, BackendsWindows]
 elif sys.platform == "linux":
     BackendsPlatform = Literal[BackendsBase, BackendsLinux]
+elif sys.platform == "darwin":
+    BackendsPlatform = Literal[BackendsBase, BackendsDarwin]
 else:
     BackendsPlatform = BackendsBase
 
