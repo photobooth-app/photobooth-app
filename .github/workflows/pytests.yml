@@ -70,7 +70,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - run: uv venv --system-site-packages --python-preference only-system # incl system site to allow for picamera2 to import
+      - run: uv venv --system-site-packages --python 3.11 --python-preference only-system # incl system site to allow for picamera2 to import
       - run: uv sync # install in-project env
       - name: Test with pytest
         run: |
