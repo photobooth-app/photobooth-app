@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from ...database.models import Mediaitem, MediaitemTypes
 from ..config.groups.actions import SingleImageConfigurationSet
 from ..config.models.models import SinglePictureDefinition
@@ -18,5 +20,5 @@ class JobModelImage(JobModelBase):
             **self._configuration_set.processing.model_dump(),
         )
 
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
         raise RuntimeError("no phase2 mediageneration for images")

@@ -68,4 +68,4 @@ class Cacheditem(Base):
     filepath: Mapped[Path] = mapped_column(PathType)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}> filepath: {self.filepath}, mediaitem_id: {self.mediaitem_id}"
+        return f"<{self.__class__.__name__}> filepath: {self.filepath}, dimension: {self.dimension.value}, mediaitem_id: {self.mediaitem_id}"

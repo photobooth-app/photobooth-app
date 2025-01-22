@@ -24,14 +24,14 @@ from .steps.video import BoomerangStep
 logger = logging.getLogger(__name__)
 
 
-def process_image_collageimage_animationimage(image_in: Path, mediaitem: Mediaitem):
+def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaitem):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
     the config has to be determined externally.
     """
 
-    image = Image.open(image_in)
+    image = Image.open(file_in)
     ImageOps.exif_transpose(image, in_place=True)  # to correct for any orientation set.
 
     config = SinglePictureDefinition(**mediaitem.pipeline_config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
@@ -111,14 +111,14 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_collage(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
+def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = CollageProcessing(**mediaitem.pipeline_config)
 
     ## prepare: create canvas and input images
     canvas_size = (config.canvas_width, config.canvas_height)
     canvas = Image.new("RGBA", canvas_size, color=None)
-    collage_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
+    collage_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = CollageContext(canvas, collage_images)
     steps = []
@@ -161,7 +161,7 @@ def process_and_generate_collage(captured_mediaitems: list[Mediaitem], mediaitem
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_animation(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
+def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = AnimationProcessing(**mediaitem.pipeline_config)
 
@@ -169,7 +169,7 @@ def process_and_generate_animation(captured_mediaitems: list[Mediaitem], mediait
     canvas_size = (config.canvas_width, config.canvas_height)
 
     ## stage: merge captured images and predefined to one image with transparency
-    animation_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
+    animation_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = AnimationContext(animation_images)
     steps = []
@@ -197,7 +197,7 @@ def process_and_generate_animation(captured_mediaitems: list[Mediaitem], mediait
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_wigglegram(captured_mediaitems: list[Mediaitem], mediaitem: Mediaitem):
+def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = MulticameraProcessing(**mediaitem.pipeline_config)
 
@@ -205,7 +205,7 @@ def process_and_generate_wigglegram(captured_mediaitems: list[Mediaitem], mediai
     canvas_size = (config.canvas_width, config.canvas_height)
 
     ## stage: merge captured images and predefined to one image with transparency
-    multicamera_images: list[Image.Image] = [Image.open(_captured_mediaitems.processed) for _captured_mediaitems in captured_mediaitems]
+    multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = MulticameraContext(multicamera_images)
     steps = []

@@ -13,7 +13,7 @@ logger = logging.getLogger(name=None)
 def _container() -> Container:
     container.start()
     container.aquisition_service._get_stills_backend().block_until_device_is_running()
-    container.aquisition_service._get_stills_backend()._config.upscale_stills = 3
+    container.aquisition_service._get_stills_backend()._config.emulate_hires_static_still = True
 
     yield container
     container.stop()
@@ -43,10 +43,10 @@ def test_end_to_end_collage(benchmark, _container: Container):
     benchmark(do_end_to_end, _container, "collage")
 
 
-@pytest.mark.benchmark(group="end_to_end_actions")
-def test_end_to_end_video(benchmark, _container: Container):
-    # TODO: video recording would need to be subtracted from results. ...
-    benchmark(do_end_to_end, _container, "video")
+# @pytest.mark.benchmark(group="end_to_end_actions")
+# def test_end_to_end_video(benchmark, _container: Container):
+#     # TODO: video recording would need to be subtracted from results. ...
+#     benchmark(do_end_to_end, _container, "video")
 
 
 @pytest.mark.benchmark(group="end_to_end_actions")

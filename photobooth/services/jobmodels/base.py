@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -139,5 +140,5 @@ class JobModelBase(ABC):
         pass
 
     @abstractmethod
-    def do_phase2_process_and_generate(self, phase1_mediaitems: list[Mediaitem], phase2_mediaitem: Mediaitem):
+    def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
         pass

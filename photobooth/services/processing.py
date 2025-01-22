@@ -547,16 +547,13 @@ class ProcessingMachine(StateMachine):
             )
 
             tms = time.time()
-            self.model.do_phase2_process_and_generate(phase1_mediaitems, phase2_mediaitem)
+            self.model.do_phase2_process_and_generate([item.processed for item in phase1_mediaitems], phase2_mediaitem)
             logger.info(f"-- process time: {round((time.time() - tms), 2)}s for phase 2")
 
-        ## FINISH:
-        # to inform frontend about new image to display
-        logger.info("finished postprocessing")
+            assert phase2_mediaitem.unprocessed.is_file()
+            assert phase2_mediaitem.processed.is_file()
 
-        ## add galleryitems
-        # finally add resulting collage mediaitem will be added to the collection as most recent item
-        if phase2_mediaitem:
+            ## add galleryitems
             self._mediacollection_service.add_item(phase2_mediaitem)
             self.model._last_captured_mediaitem_id = phase2_mediaitem.id
 
