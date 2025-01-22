@@ -25,16 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pdm-project/setup-pdm@v4
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Build packages
-        run: pdm build
-
+        run: uv build
+      
       - name: Publish distribution 📦 to Test PyPI
-        run: pdm publish --no-build --repository https://test.pypi.org/legacy/ --skip-existing
+        run: uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always # skip exisiting?
 
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.ref, 'refs/tags')
-        run: pdm publish --no-build
+        run: uv publish --trusted-publishing always
 
       
