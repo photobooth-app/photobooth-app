@@ -35,7 +35,8 @@ jobs:
         run: uv build
       
       - name: Publish distribution 📦 to Test PyPI
-        run: uv publish --publish-url https://test.pypi.org/legacy/ --check-url https://test.pypi.org/simple --trusted-publishing always # skip exisiting?
+        continue-on-error: true
+        run: uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always # skip exisiting?
 
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.ref, 'refs/tags')
