@@ -17,10 +17,3 @@ def test_pilgram_lores_benchmark(benchmark, filter_algo):
         if filter_algo == "__version__":
             pytest.skip()
         benchmark(eval(f"pilgram2.{filter_algo}"), im)
-
-
-def test_pilgram_hires_benchmark(benchmark, filter_algo):
-    with Image.open("tests/assets/input.jpg") as im:
-        if filter_algo == "__version__":
-            pytest.skip()
-        benchmark(eval(f"pilgram2.{filter_algo}"), im)
