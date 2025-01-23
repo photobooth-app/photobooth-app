@@ -2,59 +2,24 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "test",
-      "type": "shell",
-      "command": "pdm run test",
-      "problemMatcher": [],
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      }
-    },
-    {
       "label": "lint",
       "type": "shell",
-      "command": "pdm run ruff check ."
+      "command": "uvx ruff check ."
     },
     {
       "label": "format",
       "type": "shell",
-      "command": "pdm run ruff format ."
-    },
-    {
-      "label": "build",
-      "type": "shell",
-      "command": "pdm build",
-      "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
-    },
-    {
-      "label": "test-upload",
-      "type": "shell",
-      "command": "pdm publish -r testpypi"
-    },
-    {
-      "label": "upload",
-      "type": "shell",
-      "command": "pdm publish -r pypi"
-    },
-    {
-      "label": "clean",
-      "type": "shell",
-      "command": "rm -rf dist"
+      "command": "uvx ruff format ."
     },
     {
       "label": "statemachine diagram (needs pydot and graphviz)",
       "type": "shell",
-      "command": "pdm run python -m statemachine.contrib.diagram photobooth.services.processingservice.ProcessingMachine diagram_ProcessingPicture.png"
+      "command": "uv run python -m statemachine.contrib.diagram photobooth.services.processingservice.ProcessingMachine diagram_ProcessingPicture.png"
     },
     {
       "label": "create openapi.json schema http api description",
       "type": "shell",
-      "command": "pdm run python -m photobooth.utils.fastapi_get_openapi"
+      "command": "uv run python -m photobooth.utils.fastapi_get_openapi"
     }
   ]
 }

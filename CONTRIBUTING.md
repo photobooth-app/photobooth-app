@@ -43,7 +43,7 @@ Feel free to send pull request to the [documentation repository](https://github.
 
 - [photobooth-app installed](https://photobooth-app.org/setup/installation/)
 - VS Code
-- pdm
+- uv
 
 #### Setup the repo
 
@@ -51,13 +51,13 @@ Feel free to send pull request to the [documentation repository](https://github.
 git clone https://github.com/photobooth-app/photobooth-app.git
 cd photobooth-app
 
-pdm install
+uv sync
 ```
 
 #### Start the App
 
 ```sh
-pdm run photobooth
+uv run photobooth
 ```
 
 #### Code
