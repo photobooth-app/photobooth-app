@@ -6,7 +6,7 @@ import pytest
 from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendV4l2
 
-from ..utils import get_images
+from ..util import get_images
 
 logger = logging.getLogger(name=None)
 

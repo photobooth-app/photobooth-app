@@ -11,7 +11,7 @@ from photobooth.services.mediaprocessing.context import VideoContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
 from photobooth.services.mediaprocessing.steps.video import BoomerangStep
 
-from ..utils import video_duration
+from ..util import video_duration
 
 logger = logging.getLogger(name=None)
 

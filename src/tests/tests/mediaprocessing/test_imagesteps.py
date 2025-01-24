@@ -22,7 +22,7 @@ from photobooth.services.mediaprocessing.steps.image import (
 )
 from photobooth.utils.exceptions import PipelineError
 
-from ..utils import is_same
+from ..util import is_same
 
 logger = logging.getLogger(name=None)
 

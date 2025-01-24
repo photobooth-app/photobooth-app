@@ -2,6 +2,7 @@ import io
 import logging
 import subprocess
 
+import piexif
 from PIL import Image, ImageChops
 
 from photobooth.services.backends.abstractbackend import AbstractBackend
@@ -84,3 +85,20 @@ def video_frames(input_video):
     )
 
     return int(result.stdout)
+
+
+def get_exiforiented_jpeg(jpeg_bytes_io: io.BytesIO, orientation: int) -> io.BytesIO:
+    exif_dict = {"0th": {piexif.ImageIFD.Orientation: orientation}}
+    exif_bytes = piexif.dump(exif_dict)
+
+    out_jpeg_bytes_io = io.BytesIO()
+    piexif.insert(exif_bytes, jpeg_bytes_io.getvalue(), out_jpeg_bytes_io)
+
+    return out_jpeg_bytes_io
+
+
+def get_jpeg(dim: tuple[int, int]) -> io.BytesIO:
+    im = Image.new("L", dim, "red")
+    jpeg_bytes_io = io.BytesIO()
+    im.save(jpeg_bytes_io, "jpeg")
+    return jpeg_bytes_io

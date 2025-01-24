@@ -78,6 +78,22 @@ def images() -> list[Image.Image]:
     return imgs
 
 
+def create_gif_opencv(image_folder, output_gif, fps=10):
+    import imageio
+
+    images = []
+    # Make it pause at the end so that the viewers can ponder
+    for _ in range(5):
+        images.append(imageio.imread(image_folder))
+
+    imageio.mimsave(output_gif, images)
+
+
 @pytest.mark.benchmark(group="merge_frame")
 def test_pil_to_mp4_cv2(benchmark, tmp_path):
     benchmark(pil_to_mp4_cv2, images=images(), _tmp_path=tmp_path)
+
+
+@pytest.mark.benchmark(group="merge_frame")
+def test_jpg_to_gif_cv2(benchmark, tmp_path):
+    benchmark(create_gif_opencv, image_folder="src/tests/assets/input_lores.jpg", output_gif=tmp_path / "output.gif")

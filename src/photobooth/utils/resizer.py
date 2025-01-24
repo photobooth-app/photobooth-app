@@ -22,7 +22,6 @@ def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length:
     """scale a jpeg buffer to another buffer using pillow"""
 
     image = Image.open(filepath_in)
-    ImageOps.exif_transpose(image, in_place=True)
 
     # scale by factor to determine
     original_length = max(image.width, image.height)  # scale for the max length
@@ -31,8 +30,12 @@ def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length:
     width = int(image.width * scaling_factor)
     height = int(image.height * scaling_factor)
     dim = (width, height)
+
     # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
     image.thumbnail(dim, Image.Resampling.BICUBIC)  # bicubic for comparison, does not upscale, which is what we want.
+
+    # transpose the image to the correct orientation (same as piexif transplant the exif data)
+    ImageOps.exif_transpose(image, in_place=True)
 
     # encode to jpeg again
     image.save(filepath_out, quality=85)
@@ -63,6 +66,7 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
         file_out.write(buffer_out)
 
     # transplanting the exif data to newly produced output because we use the orientation tag to rotate without encoding.
+    # same as pillow exif_transpose
     piexif.insert(piexif.dump(piexif.load(str(filepath_in))), str(filepath_out))
 
 

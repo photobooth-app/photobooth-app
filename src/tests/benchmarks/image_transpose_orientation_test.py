@@ -6,6 +6,8 @@ import pytest
 from PIL import Image, ImageOps
 from turbojpeg import TurboJPEG
 
+from ..tests.util import get_exiforiented_jpeg, get_jpeg
+
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
@@ -20,30 +22,31 @@ logger = logging.getLogger(name=None)
 # 2) need to ensure the exif tag is always transplanted in to the images
 
 
-def transpose_pillow():
+def transpose_pillow(jpg_with_exif_data):
     # read image
-    with Image.open("src/tests/assets/input_lores.jpg") as img:
+    with Image.open(jpg_with_exif_data) as img:
         ImageOps.exif_transpose(img, in_place=True)  # needed to allow all backends set the orientation properly
 
     return img
 
 
-def transpose_piexif():
-    with open("src/tests/assets/input_lores.jpg", "rb") as img:
-        jpeg_bytes = img.read()
-
-    bytes = jpeg_bytes  # copy so we have an out-bytes to transplant to
+def transpose_piexif(jpg_with_exif_data):
+    bytes = jpg_with_exif_data  # copy so we have an out-bytes to transplant to
     out = io.BytesIO()
-    piexif.transplant(jpeg_bytes, bytes, out)
+    piexif.transplant(jpg_with_exif_data, bytes, out)
 
     return out.getvalue()
 
 
 @pytest.mark.benchmark(group="transpose")
 def test_transpose_pillow(benchmark):
-    benchmark(transpose_pillow)
+    jpeg_bytes_io = get_jpeg((1800, 700))
+    updated_jpeg_bytes_io = get_exiforiented_jpeg(jpeg_bytes_io, 5)
+    benchmark(transpose_pillow, updated_jpeg_bytes_io)
 
 
 @pytest.mark.benchmark(group="transpose")
 def test_transpose_piexif(benchmark):
-    benchmark(transpose_piexif)
+    jpeg_bytes_io = get_jpeg((1800, 700))
+    updated_jpeg_bytes_io = get_exiforiented_jpeg(jpeg_bytes_io, 5)
+    benchmark(transpose_piexif, updated_jpeg_bytes_io.getvalue())

@@ -1,9 +1,7 @@
-import io
 import logging
 from pathlib import Path
 from unittest.mock import patch
 
-import piexif
 import pytest
 from PIL import Image, ImageOps
 from turbojpeg import TurboJPEG
@@ -11,6 +9,8 @@ from turbojpeg import TurboJPEG
 from photobooth.database.types import DimensionTypes
 from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
 from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, resize_mp4
+
+from ..util import get_exiforiented_jpeg, get_jpeg
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
@@ -78,23 +78,6 @@ def test_generate_resized():
 def test_generate_resized_raise_nonavail_format():
     with pytest.raises(RuntimeError):
         generate_resized(filepath_in=Path("somefile.unknownextension"), filepath_out=Path("dontcare"), scaled_min_length=100)
-
-
-def get_exiforiented_jpeg(jpeg_bytes_io: io.BytesIO, orientation: int) -> io.BytesIO:
-    exif_dict = {"0th": {piexif.ImageIFD.Orientation: orientation}}
-    exif_bytes = piexif.dump(exif_dict)
-
-    out_jpeg_bytes_io = io.BytesIO()
-    piexif.insert(exif_bytes, jpeg_bytes_io.getvalue(), out_jpeg_bytes_io)
-
-    return out_jpeg_bytes_io
-
-
-def get_jpeg(dim: tuple[int, int]) -> io.BytesIO:
-    im = Image.new("L", dim, "red")
-    jpeg_bytes_io = io.BytesIO()
-    im.save(jpeg_bytes_io, "jpeg")
-    return jpeg_bytes_io
 
 
 def test_exif_transpose():
