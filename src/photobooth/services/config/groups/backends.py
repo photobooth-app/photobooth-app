@@ -44,7 +44,7 @@ class GroupBackendVirtualcamera(BaseBackendModel):
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
     )
     emulate_hires_static_still: bool = Field(
-        default=True,
+        default=False,
         description="Deliver high-resolution still image instead the demovideo. Useful to test the processing times by emulating hires cameras.",
     )
     emulate_multicam_capture_devices: int = Field(
