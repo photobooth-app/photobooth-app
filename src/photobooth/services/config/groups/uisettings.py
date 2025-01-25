@@ -78,7 +78,7 @@ class GroupUiSettings(BaseModel):
         description="Enable to overlay the image configured below above the livestream.",
     )
     livestream_frameoverlay_image: str = Field(
-        default="/demoassets/frames/frame_image_photobooth-app.png",
+        default="/userdata/frames/frame_image_photobooth-app.png",
         description="When enabled, the frame is displayed above the livestream. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
     )
 

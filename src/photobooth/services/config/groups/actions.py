@@ -351,9 +351,9 @@ class GroupActions(BaseModel):
                 jobcontrol=SingleImageJobControl(),
                 processing=SingleImageProcessing(
                     img_background_enable=True,
-                    img_background_file="backgrounds/pink-7761356_1920.jpg",
+                    img_background_file="userdata/backgrounds/pink-7761356_1920.jpg",
                     img_frame_enable=True,
-                    img_frame_file="frames/frame_image_photobooth-app.png",
+                    img_frame_file="userdata/frames/frame_image_photobooth-app.png",
                     texts_enable=True,
                     texts=[
                         TextsConfig(
@@ -404,7 +404,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            predefined_image="predefined_images/photobooth-collage-predefined-image.png",
+                            predefined_image="userdata/predefined_images/photobooth-collage-predefined-image.png",
                             filter=PilgramFilter.original,
                         ),
                         CollageMergeDefinition(
@@ -418,7 +418,7 @@ class GroupActions(BaseModel):
                         ),
                     ],
                     canvas_img_front_enable=True,
-                    canvas_img_front_file="frames/pixabay-poster-2871536_1920.png",
+                    canvas_img_front_file="userdata/frames/pixabay-poster-2871536_1920.png",
                     canvas_texts_enable=True,
                     canvas_texts=[
                         TextsConfig(

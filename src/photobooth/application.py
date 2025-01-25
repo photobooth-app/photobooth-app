@@ -13,12 +13,12 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 
-from . import USERDATA_PATH
 from .__version__ import __version__
 from .container import container
 from .routers import api, api_admin
 from .routers.media import media_router
 from .routers.static import static_router
+from .routers.userdata import userdata_router
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -76,10 +76,8 @@ def _create_app() -> FastAPI:
     _app.include_router(api_admin.router)
     _app.include_router(media_router)
     _app.include_router(static_router)
+    _app.include_router(userdata_router)
 
-    # serve demoassets and userdata for convenience
-    _app.mount("/demoassets", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("demoassets")), name="demoassets")
-    _app.mount("/userdata", StaticFiles(directory=USERDATA_PATH), name="userdata")
     # serve the spa
     _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
 

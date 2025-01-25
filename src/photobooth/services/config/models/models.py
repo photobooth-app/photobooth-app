@@ -70,7 +70,7 @@ class TextsConfig(BaseModel):
     pos_y: NonNegativeInt = 50
     rotate: int = 0
     font_size: PositiveInt = 40
-    font: str = "fonts/Roboto-Bold.ttf"
+    font: str = "userdata/fonts/Roboto-Bold.ttf"
     color: Color = Color("red").as_hex()
 
 
@@ -79,9 +79,9 @@ class SinglePictureDefinition(BaseModel):
     fill_background_enable: bool = False
     fill_background_color: Color = Color("blue").as_hex()
     img_background_enable: bool = False
-    img_background_file: str = "backgrounds/pink-7761356_1920.jpg"
+    img_background_file: str = "userdata/backgrounds/pink-7761356_1920.jpg"
     img_frame_enable: bool = False
-    img_frame_file: str = "frames/frame_image_photobooth-app.png"
+    img_frame_file: str = "userdata/frames/frame_image_photobooth-app.png"
     texts_enable: bool = False
     texts: list[TextsConfig] = []
 

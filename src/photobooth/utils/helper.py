@@ -29,10 +29,16 @@ def filenames_sanitize(path_str: str) -> Path:
 
 
 def get_user_file(filepath: Path | str) -> Path:
-    # check font is avail, otherwise send pipelineerror - so we can recover and continue
-    # default font Roboto comes with app, fallback to that one if avail
+    """function to check if a file exists in the user directory or in the demoassets directory
+    if it exists in the user directory, return the user directory path, else return the demoassets path
+    used by the pipelines and also by the API to serve files
+    from API as well as internal the filepath is /userdata/path/to/file
+
+    """
+
     file_user_path = Path(filepath)
     file_demoassets_path = Path(__file__).parent.parent.resolve().joinpath(Path("demoassets", filepath))
+
     out_filepath = file_user_path if file_user_path.is_file() else file_demoassets_path
 
     if not out_filepath.is_file():
