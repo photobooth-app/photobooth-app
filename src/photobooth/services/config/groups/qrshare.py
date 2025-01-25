@@ -23,10 +23,6 @@ class GroupQrShare(BaseModel):
         default="changedefault!",
         description="Key to secure the download php script. Set the key in dl.php script to same value. Only if correct key is provided the shareservice works properly.",
     )
-    shareservice_share_original: bool = Field(
-        default=False,
-        description="Upload original image as received from camera. If unchecked, the full processed version is uploaded with filter and texts applied.",
-    )
 
     share_custom_qr_url: str = Field(
         default="http://localhost:8000/media/full/{identifier}",

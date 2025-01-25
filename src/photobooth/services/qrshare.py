@@ -121,14 +121,7 @@ class QrShareService(BaseService):
                             self._logger.info("sending upload request to dl.php anyway to signal failure")
                         else:
                             self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
-                            if appconfig.qrshare.shareservice_share_original:
-                                filepath_to_upload = mediaitem_to_upload.unprocessed
-                            else:
-                                filepath_to_upload = mediaitem_to_upload.processed
-
-                            self._logger.debug(f"{filepath_to_upload=}")
-
-                            request_upload_file = {"upload_file": open(filepath_to_upload, "rb")}
+                            request_upload_file = {"upload_file": open(mediaitem_to_upload.processed, "rb")}
 
                         ## send request
                         start_time = time.time()
