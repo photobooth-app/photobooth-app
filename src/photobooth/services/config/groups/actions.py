@@ -459,7 +459,7 @@ class GroupActions(BaseModel):
                         AnimationMergeDefinition(
                             duration=4000,
                             filter=PilgramFilter.original,
-                            predefined_image="predefined_images/photobooth-gif-animation-predefined-image.png",
+                            predefined_image="userdata/predefined_images/photobooth-gif-animation-predefined-image.png",
                         ),
                     ],
                 ),
