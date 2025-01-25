@@ -1,7 +1,3 @@
-"""
-_summary_
-"""
-
 import logging
 import shutil
 import time

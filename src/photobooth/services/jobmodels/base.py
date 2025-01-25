@@ -81,6 +81,7 @@ class JobModelBase(ABC):
             duration=self._duration_user,
             ask_user_for_approval=self.ask_user_for_approval(),
             last_captured_mediaitem_id=str(self._last_captured_mediaitem_id),
+            configuration_set=self._configuration_set.model_dump(mode="json"),
         )
 
         return out
