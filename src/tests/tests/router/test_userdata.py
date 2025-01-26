@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -24,10 +25,13 @@ def test_get_404_missing_item(client: TestClient):
 
 
 def test_get(client: TestClient):
-    with NamedTemporaryFile(mode="wb", delete=True, delete_on_close=False, dir="userdata/", prefix="tmptestuserdata_", suffix=".dummy") as f:
-        f.close()  # close so it is accessible by testclient. is deleted then on context exit
-        response = client.get(f"/userdata/{Path(f.name).name}")
-        assert response.status_code == 200
+    tmpfile = NamedTemporaryFile(mode="wb", delete=False, dir="userdata/", prefix="tmptestuserdata_", suffix=".dummy")
+    tmpfile.close()  # close so its accessible for reading by http
+
+    response = client.get(f"/userdata/{Path(tmpfile.name).name}")
+    assert response.status_code == 200
+
+    os.unlink(tmpfile.name)
 
 
 def test_get_fallback_demofolder(client: TestClient):
