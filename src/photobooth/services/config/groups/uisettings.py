@@ -47,6 +47,11 @@ class GroupUiSettings(BaseModel):
         description="If button is shown, it can still be rendered invisible. If enabled, the button is 100% transparent and 5 clicks each within 500ms are required to access the admin login.",
     )
 
+    show_frontpage_timeout: int = Field(
+        default=5,
+        ge=1,
+        description="Idle timeout in minutes after which the app switches to the frontpage again.",
+    )
     enable_automatic_slideshow: bool = Field(
         default=True,
         description="Enable a random slideshow after some time without any user interaction.",
@@ -75,11 +80,11 @@ class GroupUiSettings(BaseModel):
     )
     enable_livestream_frameoverlay: bool = Field(
         default=True,
-        description="Enable to overlay the image configured below above the livestream.",
+        description="Enable to overlay livestream_frameoverlay_image the livestream.",
     )
     livestream_frameoverlay_image: str = Field(
         default="/userdata/frames/frame_image_photobooth-app.png",
-        description="When enabled, the frame is displayed above the livestream. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
+        description="When enabled, the frame is overlayed the livestream. This image is not used in the postprocessing. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
     )
 
     FRONTPAGE_TEXT: str = Field(
