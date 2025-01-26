@@ -108,7 +108,7 @@ class SingleImageProcessing(BaseModel):
     )
     img_background_file: str = Field(
         default="",
-        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+        description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
     )
     img_frame_enable: bool = Field(
         default=False,
@@ -124,7 +124,7 @@ class SingleImageProcessing(BaseModel):
     )
     texts: list[TextsConfig] = Field(
         default=[],
-        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in working directory/userdata/*",
     )
 
 
@@ -149,7 +149,7 @@ class CollageProcessing(BaseModel):
     )
     capture_img_background_file: str = Field(
         default="",
-        description="Image file to use as background filling transparent area. File needs to be located in DATA_DIR/*",
+        description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
     )
 
     ## phase 2 per collage settings.
@@ -163,7 +163,7 @@ class CollageProcessing(BaseModel):
         description="Height (Y) in pixel of collage image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     merge_definition: list[CollageMergeDefinition] = Field(
-        description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
+        description="How to arrange single images in the collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Width/Height in pixels. Aspect ratio is kept always. Predefined image files are used instead a camera capture. File needs to be located in working directory/userdata/*",
     )
     canvas_fill_background_enable: bool = Field(
         default=False,
@@ -187,7 +187,7 @@ class CollageProcessing(BaseModel):
     )
     canvas_img_front_file: str = Field(
         default="",
-        description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in DATA_DIR/*",
+        description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in working directory/userdata/*",
     )
     canvas_texts_enable: bool = Field(
         default=False,
@@ -195,7 +195,7 @@ class CollageProcessing(BaseModel):
     )
     canvas_texts: list[TextsConfig] = Field(
         default=[],
-        description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in DATA_DIR/*",
+        description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in working directory/userdata/*",
     )
 
 
@@ -216,7 +216,7 @@ class AnimationProcessing(BaseModel):
     )
     merge_definition: list[AnimationMergeDefinition] = Field(
         default=[],
-        description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in DATA_DIR/*",
+        description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in working directory/userdata/*",
     )
 
 

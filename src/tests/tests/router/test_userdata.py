@@ -1,0 +1,43 @@
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+
+import pytest
+from fastapi import HTTPException
+from fastapi.testclient import TestClient
+
+from photobooth.application import app
+from photobooth.container import container
+from photobooth.routers.userdata import api_get_userfiles
+
+
+@pytest.fixture
+def client() -> TestClient:
+    with TestClient(app=app, base_url="http://test/") as client:
+        container.start()
+        yield client
+        container.stop()
+
+
+def test_get_404_missing_item(client: TestClient):
+    response = client.get("/userdata/nonexistant/file.png")
+    assert response.status_code == 404
+
+
+def test_get(client: TestClient):
+    with NamedTemporaryFile(mode="wb", delete=True, delete_on_close=False, dir="userdata/", prefix="tmptestuserdata_", suffix=".dummy") as f:
+        f.close()  # close so it is accessible by testclient. is deleted then on context exit
+        response = client.get(f"/userdata/{Path(f.name).name}")
+        assert response.status_code == 200
+
+
+def test_get_fallback_demofolder(client: TestClient):
+    assert not Path("/userdata/frames/frame_image_photobooth-app.png").is_file()  # ensure file does not exist in userdata before test
+    response = client.get("/userdata/frames/frame_image_photobooth-app.png")
+    assert response.status_code == 200
+
+
+def test_get_500_on_illegal():
+    with pytest.raises(HTTPException) as exc_info:
+        api_get_userfiles("/../../test/illegal-file")
+
+    assert exc_info.value.status_code == 500
