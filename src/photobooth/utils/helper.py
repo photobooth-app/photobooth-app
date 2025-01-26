@@ -2,9 +2,12 @@
 Utilities
 """
 
+import logging
 import os
 import platform
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def filenames_sanitize(path_str: str) -> Path:
@@ -37,14 +40,26 @@ def get_user_file(filepath: Path | str) -> Path:
     """
 
     file_user_path = Path(filepath)
-    file_demoassets_path = Path(__file__).parent.parent.resolve().joinpath(Path("demoassets", filepath))
+    if file_user_path.is_file():
+        return file_user_path
 
-    out_filepath = file_user_path if file_user_path.is_file() else file_demoassets_path
+    # now check to fallback to demoassets
+    demoassets_path = Path(__file__).parent.parent.resolve().joinpath("demoassets")
 
-    if not out_filepath.is_file():
-        raise FileNotFoundError(f"filepath {str(filepath)} not found!")
+    file_demoassets_path = Path(demoassets_path, filepath)
+    if file_demoassets_path.is_file():
+        logger.info(f"file {filepath} found in demoassets {file_demoassets_path}")
+        return file_demoassets_path
 
-    return out_filepath
+    file_demoassets_path_v4_deprecated = Path(demoassets_path, "userdata", filepath)
+    if file_demoassets_path_v4_deprecated.is_file():
+        logger.warning(
+            f"file {filepath} found in demoassets using v4 deprecated configuration. "
+            "Please update the configuration using to files starting with /userdata/x/path/to/file",
+        )
+        return file_demoassets_path_v4_deprecated
+
+    raise FileNotFoundError(f"filepath {str(filepath)} not found!")
 
 
 def is_rpi():
