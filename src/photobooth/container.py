@@ -5,6 +5,7 @@ from .services.base import BaseService
 from .services.collection import MediacollectionService
 from .services.filtetransfer import FileTransferService
 from .services.gpio import GpioService
+from .services.gpioout import GpiooutService
 from .services.information import InformationService
 from .services.logging import LoggingService
 from .services.processing import ProcessingService
@@ -38,6 +39,9 @@ class Container:
         sse_service,
         aquisition_service,
     )
+    gpioout_service: GpiooutService = GpiooutService(
+        sse_service,
+    )
 
     processing_service = ProcessingService(
         sse_service,
@@ -45,6 +49,7 @@ class Container:
         mediacollection_service,
         wled_service,
         information_service,
+        gpioout_service,
     )
     system_service = SystemService(
         sse_service,

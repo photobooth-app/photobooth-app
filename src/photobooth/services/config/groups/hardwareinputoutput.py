@@ -42,3 +42,12 @@ class GroupHardwareInputOutput(BaseModel):
         default=18,
         description="GPIO pin to reboot after holding it for 2 seconds.",
     )
+
+    gpio_pin_light: int = Field(
+        default=2,
+        description="GPIO pin to control a light.",
+    )
+    gpio_light_off_after_capture: bool = Field(
+        default=True,
+        description="Turn the light off after every capture.",
+    )
