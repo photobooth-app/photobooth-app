@@ -16,6 +16,7 @@ from pydantic import PrivateAttr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
+from ... import CONFIG_PATH
 from .groups.actions import GroupActions
 from .groups.backends import GroupBackends
 from .groups.common import GroupCommon
@@ -29,9 +30,9 @@ from .groups.uisettings import GroupUiSettings
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DIR = "./config/"
-CONFIG_FILENAME = "config.json"
-CONFIG_FILEPATH = f"{CONFIG_DIR}{CONFIG_FILENAME}"
+
+APPCONFIG_FILENAME = "config.json"
+APPCONFIG_FILEPATH = f"{CONFIG_PATH}{APPCONFIG_FILENAME}"
 
 
 class JsonConfigSettingsSource(PydanticBaseSettingsSource):
@@ -47,7 +48,7 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
         encoding = self.config.get("env_file_encoding")
         field_value = None
         try:
-            file_content_json = json.loads(Path(CONFIG_FILEPATH).read_text(encoding))
+            file_content_json = json.loads(Path(APPCONFIG_FILEPATH).read_text(encoding))
             field_value = file_content_json.get(field_name)
         except FileNotFoundError:
             # ignore file not found, because it could have been deleted or not yet initialized
@@ -152,7 +153,7 @@ class BaseConfig(BaseSettings):
         self.backup_config()
 
         # write model to disk to persist
-        with open(CONFIG_FILEPATH, mode="w", encoding="utf-8") as write_file:
+        with open(APPCONFIG_FILEPATH, mode="w", encoding="utf-8") as write_file:
             write_file.write(self.model_dump_json(context={"secrets_is_allowed": True}, indent=2))
 
         # remove old config to not clutter the config dir
@@ -163,20 +164,20 @@ class BaseConfig(BaseSettings):
         logger.debug("config reset to default")
 
         try:
-            os.remove(CONFIG_FILEPATH)
-            logger.debug(f"deleted {CONFIG_FILEPATH} file.")
+            os.remove(APPCONFIG_FILEPATH)
+            logger.debug(f"deleted {APPCONFIG_FILEPATH} file.")
         except (FileNotFoundError, PermissionError):
-            logger.warning(f"delete {CONFIG_FILEPATH} file failed.")
+            logger.warning(f"delete {APPCONFIG_FILEPATH} file failed.")
 
     def backup_config(self):
-        if Path(CONFIG_FILEPATH).exists():
+        if Path(APPCONFIG_FILEPATH).exists():
             datetimestr = datetime.now().strftime("%Y%m%d-%H%M%S")
-            shutil.copy2(CONFIG_FILEPATH, f"{CONFIG_FILEPATH}_backup-{datetimestr}")
+            shutil.copy2(APPCONFIG_FILEPATH, f"{APPCONFIG_FILEPATH}_backup-{datetimestr}")
 
     def remove_old_configs(self):
         KEEP_NO = 10
 
-        paths = sorted(Path(CONFIG_DIR).glob("*_backup*"), key=os.path.getmtime, reverse=True)
+        paths = sorted(Path(CONFIG_PATH).glob("*_backup*"), key=os.path.getmtime, reverse=True)
 
         if len(paths) > KEEP_NO:
             for path in paths[KEEP_NO:]:
