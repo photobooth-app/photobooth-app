@@ -20,36 +20,7 @@ parser.add_argument("--port", action="store", type=int, default=8000, help="Port
 logger = logging.getLogger(f"{__name__}")
 
 
-def discover_plugins():
-    # https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-namespace-packages
-    import importlib
-    import pkgutil
-
-    import photobooth.plugins
-
-    def iter_namespace(ns_pkg):
-        # Specifying the second argument (prefix) to iter_modules makes the
-        # returned name an absolute name instead of a relative one. This allows
-        # import_module to work without having to do additional modification to
-        # the name.
-        return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-
-    discovered_plugins = {name: importlib.import_module(name) for finder, name, ispkg in iter_namespace(photobooth.plugins)}
-    print(discovered_plugins)
-
-    print(discovered_plugins["photobooth.plugins.ftp_upload"])
-    plugin_kls = discovered_plugins["photobooth.plugins.ftp_upload"].Plugin
-    plugin_cls = plugin_kls()
-    print(plugin_cls)
-
-    # for val in discovered_plugins:
-    #     import val  # noqa: F401
-    #     # import (discovered_plugins,"photobooth.plugins.ftp_upload")
-
-
 def main(args=None, run_server: bool = True):
-    discover_plugins()
-    # quit()
     args = parser.parse_args(args)  # parse here, not above because pytest system exit 2
 
     # create all db before anything else...

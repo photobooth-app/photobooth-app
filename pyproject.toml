@@ -59,10 +59,15 @@ dependencies = [
     "piexif>=1.1.3",
     "SQLAlchemy>=2.0.37",
     "pyturbojpeg>=1.7.0",
+    "pluggy>=1.5.0",
 ]
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
+
+[project.entry-points.pluggable]
+"pluggy_skeleton1" = "photobooth.plugins.pluggy_skeleton1"
+"pluggy_skeleton2" = "photobooth.plugins.pluggy_skeleton2"
 
 [project.urls]
 Homepage = "https://github.com/photobooth-app/photobooth-app"

@@ -8,6 +8,7 @@ from .services.gpio import GpioService
 from .services.gpioout import GpiooutService
 from .services.information import InformationService
 from .services.logging import LoggingService
+from .services.pluginmanager import PluginManagerService
 from .services.processing import ProcessingService
 from .services.qrshare import QrShareService
 from .services.share import ShareService
@@ -31,6 +32,7 @@ class Container:
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)
     qr_share_service = QrShareService(mediacollection_service)
     filetransfer_service = FileTransferService()
+    pluginmanager_service = PluginManagerService()
 
     def _service_list(self) -> list[BaseService]:
         # list used to start/stop services. List sorted in the order of definition.
