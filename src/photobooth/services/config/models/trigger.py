@@ -1,6 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_extra_types.color import Color
 
 
 class UiTrigger(BaseModel):
@@ -22,6 +23,16 @@ class UiTrigger(BaseModel):
         default="",
         description="Icon used for the button (any icon from material icons, see documentation).",
     )
+    use_custom_color: bool = Field(
+        default=False,
+        description="Use custom color for button.",
+    )
+    custom_color: Color = Field(
+        default=Color("#196cb0").as_hex(),
+        description="Custom color for the button.",
+    )
+
+
 
 
 class KeyboardTrigger(BaseModel):
