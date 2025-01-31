@@ -1,14 +1,17 @@
+import logging
+
 from gpiozero import DigitalOutputDevice
 from gpiozero.exc import BadPinFactory
 
 from .base import BaseService
 from .config import appconfig
-from .sse import SseService
+
+logger = logging.getLogger(__name__)
 
 
 class GpiooutService(BaseService):
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service=sse_service)
+    def __init__(self):
+        super().__init__()
 
         self.light_out: DigitalOutputDevice = None
 
@@ -35,12 +38,12 @@ class GpiooutService(BaseService):
             self.init_io()
         except BadPinFactory:
             # use separate exception without log actual exception because it looks like everything is breaking apart but only gpio is not supported.
-            self._logger.warning("GPIOzero is enabled but could not find a supported pin factory. Hardware is not supported.")
+            logger.warning("GPIOzero is enabled but could not find a supported pin factory. Hardware is not supported.")
         except Exception as exc:
-            self._logger.exception(exc)
-            self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
+            logger.exception(exc)
+            logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
 
-        self._logger.info("gpio out enabled")
+        logger.info("gpio out enabled")
 
         super().started()
 
@@ -56,4 +59,4 @@ class GpiooutService(BaseService):
             try:
                 self.light_out.on() if on else self.light_out.off()
             except Exception as exc:
-                self._logger.error(f"could not switch light, error: {exc}")
+                logger.error(f"could not switch light, error: {exc}")

@@ -7,7 +7,8 @@ from sse_starlette.event import ServerSentEvent
 from sse_starlette.sse import EventSourceResponse
 
 from ...container import container
-from ...services.sse import Client
+from ...services.sse import sse_service
+from ...services.sse.sse_ import Client
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -31,14 +32,14 @@ async def subscribe(request: Request):
     # https://docs.python.org/3.11/library/asyncio-queue.html
     queue = Queue(100)
     client = Client(request, queue)
-    container.sse_service.setup_client(client=client)
+    sse_service.setup_client(client=client)
 
     # following modules send some data on connection init to client:
     container.information_service.initial_emit()
     container.processing_service.initial_emit()
 
     return EventSourceResponse(
-        container.sse_service.event_iterator(client=client),
+        sse_service.event_iterator(client=client),
         ping=1,
         ping_message_factory=lambda: ServerSentEvent(datetime.now(timezone.utc), event="ping").encode(),
     )

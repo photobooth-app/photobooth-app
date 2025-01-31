@@ -27,7 +27,8 @@ from .jobmodels.image import JobModelImage
 from .jobmodels.multicamera import JobModelMulticamera
 from .jobmodels.video import JobModelVideo
 from .mediaprocessing.processes import process_image_collageimage_animationimage, process_video
-from .sse import SseEventFrontendNotification, SseEventProcessStateinfo, SseService
+from .sse import sse_service
+from .sse.sse_ import SseEventFrontendNotification, SseEventProcessStateinfo
 from .wled import WledService
 
 logger = logging.getLogger(__name__)
@@ -46,14 +47,13 @@ class ProcessingService(BaseService):
 
     def __init__(
         self,
-        sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         wled_service: WledService,
         information_service: InformationService,
         gpioout_service: GpiooutService,
     ):
-        super().__init__(sse_service)
+        super().__init__()
 
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -68,7 +68,7 @@ class ProcessingService(BaseService):
 
     def _check_occupied(self):
         if self._state_machine is not None:
-            self._sse_service.dispatch_event(
+            sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="info",
                     message="There is already a job running. Please wait until it finished.",
@@ -86,14 +86,14 @@ class ProcessingService(BaseService):
             logger.exception(exc)
             logger.error(f"the job failed, error: {exc}")
 
-            self._sse_service.dispatch_event(
+            sse_service.dispatch_event(
                 SseEventFrontendNotification(
                     color="negative",
                     message="Please try again. Check the logs if the error is permanent!",
                     caption="Error processing the job 😔",
                 )
             )
-            self._sse_service.dispatch_event(SseEventProcessStateinfo(None))
+            sse_service.dispatch_event(SseEventProcessStateinfo(None))
 
             # removed raising exception because it's in a thread and reraising it will just create an uncaught exception but adds no value
             # raise exc
@@ -115,7 +115,6 @@ class ProcessingService(BaseService):
 
         ## init statemachine
         self._state_machine = ProcessingMachine(
-            self._sse_service,
             self._aquisition_service,
             self._mediacollection_service,
             self._wled_service,
@@ -230,7 +229,6 @@ class ProcessingMachine(StateMachine):
 
     def __init__(
         self,
-        sse_service: SseService,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         wled_service: WledService,
@@ -238,7 +236,6 @@ class ProcessingMachine(StateMachine):
         _external_cmd_queue: Queue,
         jobmodel: JobModelBase,
     ):
-        self._sse_service: SseService = sse_service
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._wled_service: WledService = wled_service
@@ -257,7 +254,7 @@ class ProcessingMachine(StateMachine):
 
     def _emit_model_state_update(self):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
-        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
+        sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
     def _update_captures_taken(self):
         number_captures_taken = len(self._mediacollection_service.get_items_relto_job(self.model._job_identifier))
@@ -298,7 +295,7 @@ class ProcessingMachine(StateMachine):
         logger.info(f"started countdown, duration={self.model._duration_user}, offset_camera={appconfig.backends.countdown_camera_capture_offset}")
 
         # inform UI to count
-        self._sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
+        sse_service.dispatch_event(SseEventProcessStateinfo(self.model))
 
         # wait for countdown finished before continue machine
         self.model.wait_countdown_finished()  # blocking call

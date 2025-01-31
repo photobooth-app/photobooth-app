@@ -5,10 +5,10 @@ Pin Numbering: https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-number
 
 """
 
+import logging
 import subprocess
 
 from gpiozero import Button as ZeroButton
-from gpiozero import DigitalOutputDevice
 from gpiozero.exc import BadPinFactory
 
 from ..utils.exceptions import ProcessMachineOccupiedError
@@ -19,8 +19,8 @@ from .config.groups.actions import GpioTrigger
 from .jobmodels.base import action_type_literal
 from .processing import ProcessingService
 from .share import ShareService
-from .sse import SseService
 
+logger = logging.getLogger(__name__)
 HOLD_TIME_SHUTDOWN = 2
 HOLD_TIME_REBOOT = 2
 DEBOUNCE_TIME = 0.04
@@ -61,68 +61,9 @@ class ShareButton(Button):
         return f"gpio.{self.__class__.__name__} triggers share action, action_index={self.action_index} {super().__repr__()}"
 
 
-class GpiooutService(BaseService):
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service=sse_service)
-
-        self.light_out: DigitalOutputDevice = None
-
-    def init_io(self):
-        # shutdown
-        self.light_out: DigitalOutputDevice = DigitalOutputDevice(appconfig.hardwareinputoutput.gpio_pin_light)
-
-    def uninit_io(self):
-        if self.light_out:
-            self.light_out.close()
-
-    def start(self):
-        super().start()
-
-        self.uninit_io()
-
-        self.light_out: DigitalOutputDevice = None
-
-        if not appconfig.hardwareinputoutput.gpio_enabled:
-            super().disabled()
-            return
-
-        try:
-            self.init_io()
-        except BadPinFactory:
-            # use separate exception without log actual exception because it looks like everything is breaking apart but only gpio is not supported.
-            self._logger.warning("GPIOzero is enabled but could not find a supported pin factory. Hardware is not supported.")
-        except Exception as exc:
-            self._logger.exception(exc)
-            self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
-
-        self._logger.info("gpio out enabled")
-
-        super().started()
-
-    def stop(self):
-        super().stop()
-
-        self.uninit_io()
-
-        super().stopped()
-
-    def light(self, on: bool):
-        if self.is_running():
-            try:
-                self.light_out.on() if on else self.light_out.off()
-            except Exception as exc:
-                self._logger.error(f"could not switch light, error: {exc}")
-
-
 class GpioService(BaseService):
-    def __init__(
-        self,
-        sse_service: SseService,
-        processing_service: ProcessingService,
-        share_service: ShareService,
-        mediacollection_service: MediacollectionService,
-    ):
-        super().__init__(sse_service=sse_service)
+    def __init__(self, processing_service: ProcessingService, share_service: ShareService, mediacollection_service: MediacollectionService):
+        super().__init__()
 
         self._processing_service = processing_service
         self._share_service = share_service
@@ -138,7 +79,7 @@ class GpioService(BaseService):
         # none yet
 
     def _handle_action_button(self, btn: ActionButton):
-        self._logger.debug(f"trigger callback for {btn}")
+        logger.debug(f"trigger callback for {btn}")
 
         # start job
 
@@ -146,23 +87,23 @@ class GpioService(BaseService):
             self._processing_service.trigger_action(btn.action_type, btn.action_index)
         except ProcessMachineOccupiedError as exc:
             # raised if processingservice not idle
-            self._logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
+            logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
         except Exception as exc:
             # other errors
-            self._logger.exception(exc)
-            self._logger.critical(exc)
+            logger.exception(exc)
+            logger.critical(exc)
 
     def _handle_share_button(self, btn: ShareButton):
-        self._logger.debug(f"trigger callback for {btn}")
+        logger.debug(f"trigger callback for {btn}")
 
         try:
             mediaitem = self._mediacollection_service.get_item_latest()
             self._share_service.share(mediaitem, btn.action_index)
         except BlockingIOError:
-            self._logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")
+            logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")
         except Exception as exc:
             # other errors
-            self._logger.critical(exc)
+            logger.critical(exc)
 
     def _setup_action_button(self, action_type: action_type_literal, gpio_trigger: GpioTrigger, index: int):
         try:
@@ -178,7 +119,7 @@ class GpioService(BaseService):
             )
 
         except Exception as exc:
-            self._logger.warning(f"could not setup action button, error: {exc}")
+            logger.warning(f"could not setup action button, error: {exc}")
 
         else:
             if trigger_on == "pressed":
@@ -190,7 +131,7 @@ class GpioService(BaseService):
 
             self.action_btns.append(btn)
 
-            self._logger.debug(f"finished setup: {btn}")
+            logger.debug(f"finished setup: {btn}")
 
     def _setup_share_button(self, gpio_trigger: GpioTrigger, index: int):
         try:
@@ -198,7 +139,7 @@ class GpioService(BaseService):
             trigger_on = gpio_trigger.trigger_on
 
             if not pin:
-                self._logger.info(f"skip register print config {index=} because pin empty")
+                logger.info(f"skip register print config {index=} because pin empty")
                 return
 
             btn = ShareButton(
@@ -209,7 +150,7 @@ class GpioService(BaseService):
             )
 
         except Exception as exc:
-            self._logger.warning(f"could not setup action button, error: {exc}")
+            logger.warning(f"could not setup action button, error: {exc}")
 
         else:
             if trigger_on == "pressed":
@@ -221,7 +162,7 @@ class GpioService(BaseService):
 
             self.share_btns.append(btn)
 
-            self._logger.debug(f"finished setup: {btn}")
+            logger.debug(f"finished setup: {btn}")
 
     def init_io(self):
         # shutdown
@@ -283,12 +224,12 @@ class GpioService(BaseService):
             self.init_io()
         except BadPinFactory:
             # use separate exception without log actual exception because it looks like everything is breaking apart but only gpio is not supported.
-            self._logger.warning("GPIOzero is enabled but could not find a supported pin factory. Hardware is not supported.")
+            logger.warning("GPIOzero is enabled but could not find a supported pin factory. Hardware is not supported.")
         except Exception as exc:
-            self._logger.exception(exc)
-            self._logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
+            logger.exception(exc)
+            logger.error(f"init_io failed, GPIO might behave erratic, error: {exc}")
 
-        self._logger.info("gpio enabled - listeners installed")
+        logger.info("gpio enabled - listeners installed")
 
         super().started()
 
@@ -300,9 +241,9 @@ class GpioService(BaseService):
         super().stopped()
 
     def _shutdown(self):
-        self._logger.info("trigger _shutdown")
+        logger.info("trigger _shutdown")
         subprocess.check_call(["poweroff"])
 
     def _reboot(self):
-        self._logger.info("trigger _reboot")
+        logger.info("trigger _reboot")
         subprocess.check_call(["reboot"])

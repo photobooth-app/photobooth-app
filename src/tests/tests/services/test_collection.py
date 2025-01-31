@@ -10,7 +10,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from photobooth.database.models import Mediaitem, MediaitemTypes
 from photobooth.services.collection import MediacollectionService
-from photobooth.services.sse import SseService
+from photobooth.services.sse.sse_ import SseService
 
 logger = logging.getLogger(name=None)
 

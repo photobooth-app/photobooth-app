@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import time
@@ -10,14 +11,14 @@ from photobooth.utils.stoppablethread import StoppableThread
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
 from .base import BaseService
 from .config import appconfig
-from .sse import SseService
 
+logger = logging.getLogger(__name__)
 LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED]
 
 
 class FileTransferService(BaseService):
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service)
+    def __init__(self):
+        super().__init__()
 
         self._worker_thread: StoppableThread = None
 
@@ -25,14 +26,14 @@ class FileTransferService(BaseService):
         super().start()
 
         if not appconfig.filetransfer.enabled:
-            self._logger.info("FileTransferService disabled, start aborted.")
+            logger.info("FileTransferService disabled, start aborted.")
             super().disabled()
             return
 
         self._worker_thread = StoppableThread(name="_filetransferservice_worker", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        self._logger.info("FileTransferService started.")
+        logger.info("FileTransferService started.")
 
         super().started()
 
@@ -43,7 +44,7 @@ class FileTransferService(BaseService):
             self._worker_thread.stop()
             self._worker_thread.join()
 
-        self._logger.info("FileTransferService stopped.")
+        logger.info("FileTransferService stopped.")
         super().stopped()
 
     def _worker_fun(self):
@@ -67,18 +68,18 @@ class FileTransferService(BaseService):
             time.sleep(1)
 
     def handle_mount(self, device: psutil._common.sdiskpart):
-        self._logger.info(f"Device {device.device} has been newly detected.")
+        logger.info(f"Device {device.device} has been newly detected.")
 
         if device.mountpoint:
             if self.has_enough_space(device.mountpoint):
                 self.copy_folders_to_usb(device.mountpoint)
             else:
-                self._logger.warning(f"Not enough space on USB device at {device.mountpoint} to copy the folders.")
+                logger.warning(f"Not enough space on USB device at {device.mountpoint} to copy the folders.")
         else:
-            self._logger.error(f"USB device not correctly mounted {device}.")
+            logger.error(f"USB device not correctly mounted {device}.")
 
     def handle_unmount(self, device: psutil._common.sdiskpart):
-        self._logger.info(f"Device {device.device} has been removed.")
+        logger.info(f"Device {device.device} has been removed.")
 
     @staticmethod
     def get_current_removable_media():
@@ -96,7 +97,7 @@ class FileTransferService(BaseService):
 
     def copy_folders_to_usb(self, usb_path):
         if not appconfig.filetransfer.target_folder_name:
-            self._logger.warning("Target USB parent foldername cannot be empty")
+            logger.warning("Target USB parent foldername cannot be empty")
             return
 
         destination_path = Path(usb_path, appconfig.filetransfer.target_folder_name)
@@ -104,15 +105,15 @@ class FileTransferService(BaseService):
         try:
             os.makedirs(destination_path, exist_ok=True)
         except Exception as exc:
-            self._logger.warning(f"Error creating folder {destination_path} on usb drive: {exc}")
+            logger.warning(f"Error creating folder {destination_path} on usb drive: {exc}")
 
-        self._logger.info(f"Start copying data to {destination_path}")
+        logger.info(f"Start copying data to {destination_path}")
         for folder in LIST_FOLDERS_TO_COPY:
             try:
                 # TODO: improve to only copy modified files.
                 shutil.copytree(folder, Path(destination_path, folder), dirs_exist_ok=True)
             except Exception as exc:
-                self._logger.warning(f"Error copying files: {exc}")
+                logger.warning(f"Error copying files: {exc}")
                 return
 
-        self._logger.info(f"Copy folders finished. Copied to {destination_path}")
+        logger.info(f"Copy folders finished. Copied to {destination_path}")

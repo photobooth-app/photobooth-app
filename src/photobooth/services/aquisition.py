@@ -18,15 +18,14 @@ from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
 from .base import BaseService
 from .config import appconfig
-from .sse import SseService
 from .wled import WledService
 
 logger = logging.getLogger(__name__)
 
 
 class AquisitionService(BaseService):
-    def __init__(self, sse_service: SseService, wled_service: WledService):
-        super().__init__(sse_service=sse_service)
+    def __init__(self, wled_service: WledService):
+        super().__init__()
         self._wled_service: WledService = wled_service
 
         self._backends: list[AbstractBackend] = None

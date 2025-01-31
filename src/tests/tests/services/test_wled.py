@@ -4,7 +4,7 @@ import time
 import pytest
 
 from photobooth.services.config import appconfig
-from photobooth.services.sse import SseService
+from photobooth.services.sse.sse_ import SseService
 from photobooth.services.wled import WledService
 
 logger = logging.getLogger(name=None)

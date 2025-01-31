@@ -10,7 +10,7 @@ from PIL import Image
 
 from photobooth.container import Container, container
 from photobooth.services.aquisition import AquisitionService
-from photobooth.services.sse import SseService
+from photobooth.services.sse.sse_ import SseService
 from photobooth.services.wled import WledService
 
 logger = logging.getLogger(name=None)

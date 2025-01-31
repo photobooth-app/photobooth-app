@@ -1,3 +1,4 @@
+import logging
 import platform
 import socket
 import sys
@@ -18,16 +19,18 @@ from ..utils.repeatedtimer import RepeatedTimer
 from ..utils.stoppablethread import StoppableThread
 from .aquisition import AquisitionService
 from .base import BaseService
-from .sse import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord, SseService
+from .sse import sse_service
+from .sse.sse_ import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
 
+logger = logging.getLogger(__name__)
 STATS_INTERVAL_TIMER = 2  # every x seconds
 
 
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, sse_service: SseService, aquisition_service: AquisitionService):
-        super().__init__(sse_service)
+    def __init__(self, aquisition_service: AquisitionService):
+        super().__init__()
 
         self._aquisition_service = aquisition_service
 
@@ -37,26 +40,24 @@ class InformationService(BaseService):
         self._cpu_percent: float = 0.0
 
         # log some very basic common information
-        self._logger.info(f"{platform.system()=}")
-        self._logger.info(f"{platform.uname()=}")
-        self._logger.info(f"{platform.release()=}")
-        self._logger.info(f"{platform.machine()=}")
-        self._logger.info(f"{platform.python_version()=}")
-        self._logger.info(f"{platform.node()=}")
-        self._logger.info(f"{self._gather_model()=}")
-        self._logger.info(f"{psutil.cpu_count()=}")
-        self._logger.info(f"{psutil.cpu_count(logical=False)=}")
-        self._logger.info(f"{psutil.cpu_freq()=}")
-        self._logger.info(f"{psutil.disk_partitions()=}")
-        self._logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
-        self._logger.info(
-            [(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()]
-        )
-        self._logger.info(f"{psutil.virtual_memory()=}")
+        logger.info(f"{platform.system()=}")
+        logger.info(f"{platform.uname()=}")
+        logger.info(f"{platform.release()=}")
+        logger.info(f"{platform.machine()=}")
+        logger.info(f"{platform.python_version()=}")
+        logger.info(f"{platform.node()=}")
+        logger.info(f"{self._gather_model()=}")
+        logger.info(f"{psutil.cpu_count()=}")
+        logger.info(f"{psutil.cpu_count(logical=False)=}")
+        logger.info(f"{psutil.cpu_freq()=}")
+        logger.info(f"{psutil.disk_partitions()=}")
+        logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
+        logger.info([(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()])
+        logger.info(f"{psutil.virtual_memory()=}")
         # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-        self._logger.info(f"{__debug__=}")
+        logger.info(f"{__debug__=}")
 
-        self._logger.info("initialized information service")
+        logger.info("initialized information service")
 
     def start(self):
         super().start()
@@ -78,7 +79,7 @@ class InformationService(BaseService):
                 result = session.execute(statement)
                 session.commit()
 
-                self._logger.info(f"deleted {result.rowcount} entries from UsageStats")
+                logger.info(f"deleted {result.rowcount} entries from UsageStats")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset {field}, error: {exc}") from exc
@@ -89,7 +90,7 @@ class InformationService(BaseService):
                 statement = delete(UsageStats)
                 results = session.execute(statement)
                 session.commit()
-                self._logger.info(f"deleted {results.rowcount} entries from UsageStats")
+                logger.info(f"deleted {results.rowcount} entries from UsageStats")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
@@ -115,7 +116,7 @@ class InformationService(BaseService):
         """_summary_"""
 
         # gather one time on connect information to be sent off:
-        self._sse_service.dispatch_event(
+        sse_service.dispatch_event(
             SseEventOnetimeInformationRecord(
                 version=__version__,
                 platform_system=platform.system(),
@@ -138,7 +139,7 @@ class InformationService(BaseService):
         """_summary_"""
 
         # gather information to be sent off on timer tick:
-        self._sse_service.dispatch_event(
+        sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
                 cpu_percent=self._gather_cpu_percent(),
                 memory=self._gather_memory(),
@@ -220,7 +221,7 @@ class InformationService(BaseService):
                 with open("/proc/device-tree/model") as f:
                     model = f.read()
             except Exception:
-                self._logger.info("cannot detect computer model")
+                logger.info("cannot detect computer model")
 
         return model
 

@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Literal
 
 from .base import BaseService
-from .sse import SseService
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +24,10 @@ PHOTOBOOTH_APP_SERVICE_FILE = Path(f"{str(Path.home())}/.local/share/systemd/use
 class SystemService(BaseService):
     """_summary_"""
 
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service)
+    def __init__(self):
+        super().__init__()
 
-        self._logger.info("initialized systemservice")
+        logger.info("initialized systemservice")
 
     def start(self):
         super().start()
@@ -49,13 +48,13 @@ class SystemService(BaseService):
             subprocess.run(args=["systemctl", "--user", "is-active", "--quiet", SERVICE_NAME], timeout=10, check=True)
         except subprocess.CalledProcessError as exc:
             # non zero returncode
-            self._logger.warning(f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
+            logger.warning(f"service {SERVICE_NAME} currently inactive, need to restart by yourself! error {exc}")
         except Exception as exc:
-            self._logger.error(f"error: {exc}")
+            logger.error(f"error: {exc}")
 
         else:
             # no error, service restart ok
-            self._logger.info(f"service {SERVICE_NAME} currently active, restarting")
+            logger.info(f"service {SERVICE_NAME} currently active, restarting")
             subprocess.run(["systemctl", "--user", state, SERVICE_NAME])
 
     def install_service(self):

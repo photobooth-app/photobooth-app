@@ -3,6 +3,7 @@ https://photobooth-app.org/setup/shareservice/
 """
 
 import json
+import logging
 import time
 from uuid import UUID
 
@@ -12,14 +13,15 @@ from ..utils.stoppablethread import StoppableThread
 from .base import BaseService
 from .collection import MediacollectionService
 from .config import appconfig
-from .sse import SseService
+
+logger = logging.getLogger(__name__)
 
 
 class QrShareService(BaseService):
     """_summary_"""
 
-    def __init__(self, sse_service: SseService, mediacollection_service: MediacollectionService):
-        super().__init__(sse_service)
+    def __init__(self, mediacollection_service: MediacollectionService):
+        super().__init__()
 
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
@@ -29,14 +31,14 @@ class QrShareService(BaseService):
         super().start()
 
         if not appconfig.qrshare.enabled:
-            self._logger.info("shareservice disabled, start aborted.")
+            logger.info("shareservice disabled, start aborted.")
             super().disabled()
             return
 
         self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        self._logger.debug(f"{self.__module__} started - it tries to connect to dl.php on regular basis now.")
+        logger.debug(f"{self.__module__} started - it tries to connect to dl.php on regular basis now.")
 
         super().started()
 
@@ -51,7 +53,7 @@ class QrShareService(BaseService):
 
     def _worker_fun(self):
         # init
-        self._logger.info("starting shareservice worker_thread")
+        logger.info("starting shareservice worker_thread")
 
         while not self._worker_thread.stopped():
             payload = {"action": "upload_queue"}
@@ -65,16 +67,16 @@ class QrShareService(BaseService):
                 )
 
                 if r.ok:
-                    self._logger.info("successfully connected to shareservice dl.php script")
+                    logger.info("successfully connected to shareservice dl.php script")
                 else:
                     raise RuntimeError(f"error connecting to shareservice dl.php, error {r.status_code} {r.text}")
 
             except requests.exceptions.ReadTimeout as exc:
-                self._logger.warning(f"error connecting to service: {exc}")
+                logger.warning(f"error connecting to service: {exc}")
                 time.sleep(5)
                 continue  # try again after wait time
             except Exception as exc:
-                self._logger.error(f"unknown error occured: {exc}")
+                logger.error(f"unknown error occured: {exc}")
                 time.sleep(10)
                 continue  # try again after wait time
 
@@ -87,10 +89,10 @@ class QrShareService(BaseService):
                 try:
                     line = next(iterator)
                 except StopIteration:
-                    self._logger.debug("dl.php script finished after some time. stopiteration issued-reconnect")
+                    logger.debug("dl.php script finished after some time. stopiteration issued-reconnect")
                     break
                 except Exception as exc:
-                    self._logger.warning(f"encountered shareservice connection issue. retrying. error: {exc}")
+                    logger.warning(f"encountered shareservice connection issue. retrying. error: {exc}")
                     break
 
                 # filter out keep-alive new lines
@@ -99,7 +101,7 @@ class QrShareService(BaseService):
                         # if webserver not correctly setup, decoding might fail. catch exception mostly to inform user to debug
                         decoded_line: dict = json.loads(line)
                     except json.JSONDecodeError as exc:
-                        self._logger.error(
+                        logger.error(
                             f"webserver response from webserver malformed. please check qr shareservice url, "
                             f"webserver setup and webserver's logs. error: {exc}"
                             f"URL trying to connect is {appconfig.qrshare.shareservice_url}"
@@ -109,18 +111,18 @@ class QrShareService(BaseService):
 
                     if decoded_line.get("file_identifier", None) and decoded_line.get("status", None):
                         # valid job check whether pending and upload
-                        self._logger.info(f"got share upload job, {decoded_line}")
+                        logger.info(f"got share upload job, {decoded_line}")
 
                         # set the file to be uploaded
                         request_upload_file = {}
                         try:
                             mediaitem_to_upload = self._mediacollection_service.get_item(UUID(decoded_line["file_identifier"]))
-                            self._logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
+                            logger.info(f"found mediaitem to upload: {mediaitem_to_upload}")
                         except Exception as exc:
-                            self._logger.error(f"mediaitem not found, error: {exc}")
-                            self._logger.info("sending upload request to dl.php anyway to signal failure")
+                            logger.error(f"mediaitem not found, error: {exc}")
+                            logger.info("sending upload request to dl.php anyway to signal failure")
                         else:
-                            self._logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
+                            logger.info(f"mediaitem to upload: {mediaitem_to_upload}")
                             request_upload_file = {"upload_file": open(mediaitem_to_upload.processed, "rb")}
 
                         ## send request
@@ -139,25 +141,25 @@ class QrShareService(BaseService):
                                 allow_redirects=False,
                             )
                         except Exception as exc:
-                            self._logger.warning(f"upload failed, err: {exc}")
+                            logger.warning(f"upload failed, err: {exc}")
                             # try again?
 
                         else:
-                            self._logger.debug(f"response from dl.php script: {r.text}")
-                            self._logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
+                            logger.debug(f"response from dl.php script: {r.text}")
+                            logger.debug(f"-- request took: {round((time.time() - start_time), 2)}s")
                     elif decoded_line.get("ping", None):
                         pass
                     else:
-                        self._logger.error(f"invalid queue line, ignore: {line}")
+                        logger.error(f"invalid queue line, ignore: {line}")
 
                 # if a keepalive message is issued, we can check here also regularly for exit condition set
                 if self._worker_thread.stopped():
-                    self._logger.debug("stop workerthread requested")
+                    logger.debug("stop workerthread requested")
                     break
 
-            self._logger.info("request timed out, error occured or shutdown requested")
+            logger.info("request timed out, error occured or shutdown requested")
             if not self._worker_thread.stopped():
-                self._logger.info("restarting loop wait 1 second")
+                logger.info("restarting loop wait 1 second")
                 time.sleep(1)
 
-        self._logger.info("leaving shareservice workerthread")
+        logger.info("leaving shareservice workerthread")

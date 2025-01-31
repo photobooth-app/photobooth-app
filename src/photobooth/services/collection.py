@@ -21,7 +21,8 @@ from ..database.schemas import MediaitemPublic
 from ..utils.resizer import generate_resized
 from .base import BaseService
 from .config import appconfig
-from .sse import SseEventDbInsert, SseEventDbRemove, SseService
+from .sse import sse_service
+from .sse.sse_ import SseEventDbInsert, SseEventDbRemove
 
 logger = logging.getLogger(__name__)
 
@@ -247,8 +248,8 @@ class Cache:
 class MediacollectionService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, sse_service: SseService):
-        super().__init__(sse_service=sse_service)
+    def __init__(self):
+        super().__init__()
 
         self.cache: Cache = Cache()
         self.db: Database = Database()
@@ -261,7 +262,7 @@ class MediacollectionService(BaseService):
 
         self.on_start_maintain()
 
-        self._logger.info(f"initialized DB, found {self.count()} images")
+        logger.info(f"initialized DB, found {self.count()} images")
 
         super().started()
 
@@ -282,7 +283,7 @@ class MediacollectionService(BaseService):
 
         # and insert in client db collection so gallery is up to date.
         if item.show_in_gallery:
-            self._sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
+            sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
 
         return item.id
 
@@ -297,7 +298,7 @@ class MediacollectionService(BaseService):
 
         # # and remove from client db collection so gallery is up to date.
         # event is even sent if not show_in_gallery, client needs to sort things out
-        self._sse_service.dispatch_event(SseEventDbRemove(mediaitem=MediaitemPublic.model_validate(item)))
+        sse_service.dispatch_event(SseEventDbRemove(mediaitem=MediaitemPublic.model_validate(item)))
 
     def clear_all(self):
         deleted_count = self.db.clear_all()

@@ -14,7 +14,8 @@ from pathlib import Path
 from .. import LOG_PATH
 from .base import BaseService
 from .config import appconfig
-from .sse import SseEventLogRecord, SseService
+from .sse import sse_service
+from .sse.sse_ import SseEventLogRecord
 
 
 class EventstreamLogHandler(logging.Handler):
@@ -26,9 +27,7 @@ class EventstreamLogHandler(logging.Handler):
       - record.display_notification (bool): Show the log in the UI or not.
     """
 
-    def __init__(self, sse_service: SseService):
-        self._sse_service = sse_service
-
+    def __init__(self):
         logging.Handler.__init__(self)
 
     def emit(self, record: LogRecord):
@@ -41,7 +40,7 @@ class EventstreamLogHandler(logging.Handler):
             lineno=record.lineno,
         )
 
-        self._sse_service.dispatch_event(sse_logrecord)
+        sse_service.dispatch_event(sse_logrecord)
 
 
 class LoggingService(BaseService):
@@ -49,13 +48,8 @@ class LoggingService(BaseService):
 
     logging_level = logging.DEBUG
 
-    def __init__(self, sse_service: SseService):
-        """Setup logger
-
-        Args:
-            sse_service (SseService): _description_
-        """
-        super().__init__(sse_service=sse_service)
+    def __init__(self):
+        super().__init__()
 
         ## formatter ##
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
@@ -89,7 +83,7 @@ class LoggingService(BaseService):
         self.file_handler.setFormatter(log_formatter)
 
         # create rotatingFileHandler
-        self.eventstream_handler = EventstreamLogHandler(sse_service=sse_service)
+        self.eventstream_handler = EventstreamLogHandler()
         self.eventstream_handler.setFormatter(log_formatter)
 
         ## wire logger and handler ##

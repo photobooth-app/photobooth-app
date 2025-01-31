@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 
-from .sse import SseService
+logger = logging.getLogger(__name__)
 
 
 class EnumStatus(Enum):
@@ -27,10 +27,8 @@ class BaseService:
     logger and eventbus are set here
     """
 
-    def __init__(self, sse_service: SseService) -> None:
+    def __init__(self) -> None:
         self._status: EnumStatus = EnumStatus.uninitialized
-        self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self._sse_service = sse_service
 
         self._set_status(EnumStatus.initialized)
 
@@ -60,4 +58,4 @@ class BaseService:
 
     def _set_status(self, new_status: EnumStatus):
         self._status = new_status
-        self._logger.info(f"service {self.__class__.__name__} now {self._status}")
+        logger.info(f"service {self.__class__.__name__} now {self._status}")
