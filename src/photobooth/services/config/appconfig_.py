@@ -71,34 +71,7 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
         return d
 
 
-class AppConfig(BaseSettings):
-    """
-    AppConfig class glueing all together
-
-    In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows
-    (in descending order of priority):
-
-    1 Arguments passed to the Settings class initialiser.
-    2 Environment variables, e.g. my_prefix_special_function as described above.
-    3 Variables loaded from a dotenv (.env) file.
-    4 Variables loaded from the secrets directory.
-    5 The default field values for the Settings model.
-    """
-
-    _processed_at: datetime = PrivateAttr(default_factory=datetime.now)  # private attributes
-
-    # groups -> setting items
-    common: GroupCommon = GroupCommon()
-    actions: GroupActions = GroupActions()
-    share: GroupShare = GroupShare()
-    qrshare: GroupQrShare = GroupQrShare()
-    filetransfer: GroupFileTransfer = GroupFileTransfer()
-    mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
-    uisettings: GroupUiSettings = GroupUiSettings()
-    backends: GroupBackends = GroupBackends()
-    hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
-    misc: GroupMisc = GroupMisc()
-
+class BaseConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         # first in following list is least important; last .env file overwrites the other.
@@ -209,3 +182,32 @@ class AppConfig(BaseSettings):
             for path in paths[KEEP_NO:]:
                 logging.debug(f"deleting old config {path}")
                 os.remove(path)
+
+
+class AppConfig(BaseConfig):
+    """
+    AppConfig class glueing all together
+
+    In the case where a value is specified for the same Settings field in multiple ways, the selected value is determined as follows
+    (in descending order of priority):
+
+    1 Arguments passed to the Settings class initialiser.
+    2 Environment variables, e.g. my_prefix_special_function as described above.
+    3 Variables loaded from a dotenv (.env) file.
+    4 Variables loaded from the secrets directory.
+    5 The default field values for the Settings model.
+    """
+
+    _processed_at: datetime = PrivateAttr(default_factory=datetime.now)  # private attributes
+
+    # groups -> setting items
+    common: GroupCommon = GroupCommon()
+    actions: GroupActions = GroupActions()
+    share: GroupShare = GroupShare()
+    qrshare: GroupQrShare = GroupQrShare()
+    filetransfer: GroupFileTransfer = GroupFileTransfer()
+    mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
+    uisettings: GroupUiSettings = GroupUiSettings()
+    backends: GroupBackends = GroupBackends()
+    hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
+    misc: GroupMisc = GroupMisc()
