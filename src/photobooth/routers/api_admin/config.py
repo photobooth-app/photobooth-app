@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter
 
+from ...container import container
 from ...services.config import AppConfig, appconfig
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def api_reset_config():
     Reset config, deleting config.json file
 
     """
-    appconfig.deleteconfig()  #  delete file
+    container.config_service.reset()
 
 
 @router.get("/currentActive")
@@ -43,15 +44,15 @@ def api_get_config_current():
 
 
 @router.post("/current")
-def api_post_config_current(
-    updated_config: AppConfig,
-):
+def api_post_config_current(updated_config: AppConfig):
     # save settings to disc
-    updated_config.persist()
+    # updated_config.persist()
 
     # update central config to make new config avail immediately
     # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
     appconfig.__dict__.update(updated_config)
+
+    container.config_service.save()
 
     # appcontainer.shutdown_resources()
     # appcontainer.init_resources()

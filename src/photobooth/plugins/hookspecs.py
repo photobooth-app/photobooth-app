@@ -1,23 +1,30 @@
 import pluggy
 
 hookspec = pluggy.HookspecMarker("photobooth-app")
+hookimpl = pluggy.HookimplMarker("photobooth-app")
 
 
-@hookspec
-def init(arg1, arg2) -> None:
-    pass
+class PluginManagementSpec:
+    @hookspec
+    def start() -> None:
+        pass
+
+    @hookspec
+    def stop() -> None:
+        pass
 
 
-@hookspec
-def start() -> None:
-    pass
+class PluginConfigSpec:
+    @hookspec
+    def persist() -> None:
+        pass
+
+    @hookspec
+    def deleteconfig() -> None:
+        pass
 
 
-@hookspec
-def stop() -> None:
-    pass
-
-
-@hookspec
-def on_state_before_transition() -> None:
-    pass
+class PluginStatemachineSpec:
+    @hookspec
+    def on_state_before_transition() -> None:
+        pass

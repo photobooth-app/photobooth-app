@@ -5,13 +5,11 @@ import sys
 
 import pluggy
 
+from .. import plugins
 from ..plugins import hookspecs
 from .base import BaseService
 
 logger = logging.getLogger(__name__)
-
-
-hookimpl = pluggy.HookimplMarker("photobooth-app")
 
 
 class PluginManagerService(BaseService):
@@ -20,28 +18,36 @@ class PluginManagerService(BaseService):
 
         # create a manager and add the spec
         self.pm = pluggy.PluginManager("photobooth-app")
-        self.pm.add_hookspecs(hookspecs)
+        self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
+        self.pm.add_hookspecs(hookspecs.PluginConfigSpec)
+        self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
 
-        #  register plugins
-        # internal predefined plugins that come with the app
-        number_registered_plugins = self.pm.load_setuptools_entrypoints("pluggable")
-        logger.info(f"registered {number_registered_plugins} internal plugins: {[names[0] for names in self.pm.list_name_plugin()]}")
+        # included predefined plugins that come with the app
+        included_plugins = [
+            importlib.import_module(name) for _, name, ispkg in pkgutil.iter_modules(plugins.__path__, plugins.__name__ + ".") if ispkg
+        ]
+        print(included_plugins)
+        logger.info(f"discovered {len(included_plugins)} included-plugins: {[plugin.__name__ for plugin in included_plugins]}")
 
-        #  register plugins
         # user plugins
         sys.path.append("./plugins/")
-        discovered_userplugins = [importlib.import_module(name) for finder, name, ispkg in pkgutil.iter_modules(["./plugins/"])]
-        logger.info(f"discovered {len(discovered_userplugins)} user plugins: {[plugin.__name__ for plugin in discovered_userplugins]}")
-        for discovered_userplugin in discovered_userplugins:
-            self.pm.register(discovered_userplugin)
+        user_plugins = [importlib.import_module(name) for _, name, ispkg in pkgutil.iter_modules(["./plugins/"]) if ispkg]
+        logger.info(f"discovered {len(user_plugins)} user-plugins: {[plugin.__name__ for plugin in user_plugins]} in ./plugins/")
 
-        # all registered plugins
-        logger.info(f"finally registered plugins: {[names[0] for names in self.pm.list_name_plugin()]}")
+        # register all plugins
+        for discovered_plugin in included_plugins + user_plugins:
+            plugin_class_factory = str(discovered_plugin.__name__).split(".")[-1].title().replace("_", "")
 
-        res = self.pm.hook.init(arg1=1, arg2=2)
-        print(res)
+            logger.info(f"registering plugin: {discovered_plugin.__name__} with instanced class: {plugin_class_factory}")
+
+            instance = getattr(discovered_plugin, plugin_class_factory)()  # Call the plugins object to instanciate.
+
+            self.pm.register(instance, name=discovered_plugin.__name__)  # Register the plugin instance
+
+        logger.info(f"registered plugins: {[plugin for name, plugin in self.pm.list_name_plugin()]}")
 
     def start(self):
+        """When the pluginmanager is started, it will start all registered plugins that have the start hook registered"""
         super().start()
 
         self.pm.hook.start()
@@ -49,6 +55,7 @@ class PluginManagerService(BaseService):
         super().started()
 
     def stop(self):
+        """When the pluginmanager is stoppped, it will stop all registered plugins that have the stop hook registered"""
         super().stop()
 
         self.pm.hook.stop()
