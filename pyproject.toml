@@ -65,9 +65,6 @@ dependencies = [
 [project.scripts]
 photobooth = "photobooth.__main__:main"
 
-[project.entry-points.pluggable]
-"pluggy_skeleton1" = "photobooth.plugins.pluggy_skeleton1"
-"pluggy_skeleton2" = "photobooth.plugins.pluggy_skeleton2"
 
 [project.urls]
 Homepage = "https://github.com/photobooth-app/photobooth-app"
