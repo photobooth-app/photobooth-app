@@ -1,9 +1,10 @@
 import logging
+from typing import Any, AnyStr
 
 from fastapi import APIRouter
 
 from ...container import container
-from ...services.config import AppConfig, appconfig
+from ...services.config.baseconfig import SchemaTypes
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -13,46 +14,30 @@ router = APIRouter(
 
 
 @router.get("/schema")
-def api_get_config_schema(schema_type: str = "default"):
-    """
-    Get schema to build the client UI
-    :param str schema_type: default or dereferenced.
-    """
-    return appconfig.get_schema(schema_type=schema_type)
+def api_get_config_schema(schema_type: SchemaTypes = "default", plugin_name: str = None):
+    return container.config_service.get_schema(schema_type=schema_type, plugin_name=plugin_name)
 
 
 @router.get("/reset")
 def api_reset_config():
-    """
-    Reset config, deleting config.json file
-
-    """
     container.config_service.reset()
 
 
-@router.get("/currentActive")
-def api_get_config_current_active():
-    """returns currently cached and active settings"""
-    return appconfig.model_dump(context={"secrets_is_allowed": True}, mode="json")
-
-
 @router.get("/current")
-def api_get_config_current():
-    """read settings from drive and return"""
-    _appconfig = AppConfig()
-    return _appconfig.model_dump(context={"secrets_is_allowed": True}, mode="json")
+def api_get_config_current_active(plugin_name: str = None):
+    return container.config_service.get_current(secrets_is_allowed=True, plugin_name=plugin_name)
 
 
 @router.post("/current")
-def api_post_config_current(updated_config: AppConfig):
-    # save settings to disc
-    # updated_config.persist()
+def api_post_config_current(updated_config: dict[AnyStr, Any], plugin_name: str = None):
+    """Update the configuration for appconfig (plugin_name=None) or a plugin (example plugin_name="photobooth.plugins.gpio_lights")
+    The configuration is persisted also after update.
+    updated_config is a generic type valid to receive json objects instead of a pydantic model because depending on the plugin_name the model is different.
 
-    # update central config to make new config avail immediately
-    # pay attention: dict is overwritten directly, so updated_config needs to be validated (which it is)
-    appconfig.__dict__.update(updated_config)
+    Args:
+        updated_config (dict[AnyStr, Any]): valid json that is validated against appconfig or plugin config pydantic models
+        plugin_name (str, optional): None for appconfig, otherwise str with plugin name to update the config for. Defaults to None.
+    """
 
-    container.config_service.save()
-
-    # appcontainer.shutdown_resources()
-    # appcontainer.init_resources()
+    # persists also automatically
+    container.config_service.set_current(updated_config, plugin_name=plugin_name)

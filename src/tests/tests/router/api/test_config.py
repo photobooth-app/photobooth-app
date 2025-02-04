@@ -27,10 +27,10 @@ def client_authenticated(client) -> TestClient:
 
 @pytest.fixture(
     params=[
-        "/config/currentActive",  # without password protection, UI reads the config
+        "/config/current",  # without password protection, UI reads the config
         "/admin/config/schema?schema_type=dereferenced",
-        "/admin/config/currentActive",
         "/admin/config/current",
+        "/admin/config/default",
     ]
 )
 def config_endpoint(request):

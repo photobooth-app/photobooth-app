@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter
 
-from ...services.config import appconfig
+from ...container import container
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -11,7 +11,6 @@ router = APIRouter(
 )
 
 
-@router.get("/currentActive")
+@router.get("/current")
 def api_get_config_current_active():
-    """returns currently cached and active settings, ui requests this on startup."""
-    return appconfig.model_dump(context={"secrets_is_allowed": False}, mode="json")
+    return container.config_service.get_current(False, None)  # no secrets, None=AppConfig

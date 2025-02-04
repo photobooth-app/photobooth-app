@@ -7,6 +7,7 @@ import pluggy
 
 from .. import plugins
 from ..plugins import hookspecs
+from ..plugins.base_plugin import BasePlugin
 from .base import BaseService
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class PluginManagerService(BaseService):
 
         # create a manager and add the spec
         self.pm = pluggy.PluginManager("photobooth-app")
+        # self.pm.add_hookspecs(hookspecs)
         self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
         self.pm.add_hookspecs(hookspecs.PluginConfigSpec)
         self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
@@ -61,3 +63,33 @@ class PluginManagerService(BaseService):
         self.pm.hook.stop()
 
         super().stopped()
+
+    def list_plugins(self) -> list[str]:
+        plugins: list[str] = []
+
+        for name, _ in self.pm.list_name_plugin():
+            plugins.append(name)
+
+        return plugins
+
+    @staticmethod
+    def is_configurable_plugin(plugin: BasePlugin) -> bool:
+        try:
+            plugin.get_current()
+        except AttributeError:
+            return False
+        else:
+            return True
+
+    @staticmethod
+    def get_plugin_configuration(plugin: BasePlugin):
+        return plugin._config
+
+    def list_configurable_plugins(self) -> list[str]:
+        configurable_plugins: list[str] = []
+
+        for name, plugin in self.pm.list_name_plugin():
+            if self.is_configurable_plugin(plugin):
+                configurable_plugins.append(name)
+
+        return configurable_plugins

@@ -9,12 +9,13 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import jsonref
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
+SchemaTypes = Literal["default", "dereferenced"]
 logger = logging.getLogger(__name__)
 
 
@@ -107,16 +108,19 @@ class BaseConfig(BaseSettings):
 
         return dictionary
 
-    @classmethod
-    def get_schema(cls, schema_type: str = "default"):
+    # @classmethod
+    def get_schema(self, schema_type: SchemaTypes = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
-        schema = cls.model_json_schema()
-        cls._fix_single_allof(schema)
+        schema = self.model_json_schema()
+        self._fix_single_allof(schema)
         if schema_type == "dereferenced":
             # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
             return jsonref.loads(json.dumps(schema))
         else:
             return schema
+
+    def get_current(self, secrets_is_allowed: bool = False):
+        return self.model_dump(context={"secrets_is_allowed": secrets_is_allowed}, mode="json")
 
     def reset_defaults(self):
         self.__dict__.update(__class__())

@@ -23,6 +23,10 @@ class PluginConfigSpec:
     def deleteconfig() -> None:
         pass
 
+    @hookspec
+    def get_current(secrets_is_allowed: bool) -> None:
+        pass
+
 
 class PluginStatemachineSpec:
     @hookspec
