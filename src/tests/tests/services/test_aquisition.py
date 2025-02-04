@@ -10,7 +10,6 @@ from PIL import Image
 
 from photobooth.container import Container, container
 from photobooth.services.aquisition import AquisitionService
-from photobooth.services.sse.sse_ import SseService
 from photobooth.services.wled import WledService
 
 logger = logging.getLogger(name=None)
@@ -75,7 +74,7 @@ def test_simulated_init_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "__init__", error_mock):
         try:
-            _: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
+            _: AquisitionService = AquisitionService(WledService())
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
 
@@ -89,7 +88,7 @@ def test_simulated_start_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "start", error_mock):
         try:
-            aq: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
+            aq: AquisitionService = AquisitionService(WledService())
             aq.start()
 
         except Exception as exc:
@@ -105,7 +104,7 @@ def test_simulated_stop_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "stop", error_mock):
         try:
-            aq: AquisitionService = AquisitionService(SseService(), WledService(SseService()))
+            aq: AquisitionService = AquisitionService(WledService())
             aq.stop()
 
         except Exception as exc:
