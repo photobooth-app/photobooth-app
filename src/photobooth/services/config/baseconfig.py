@@ -123,7 +123,7 @@ class BaseConfig(BaseSettings):
         return self.model_dump(context={"secrets_is_allowed": secrets_is_allowed}, mode="json")
 
     def reset_defaults(self):
-        self.__dict__.update(__class__())
+        self.__dict__.update(self.__class__())
 
     def persist(self):
         """Persist config to file"""
