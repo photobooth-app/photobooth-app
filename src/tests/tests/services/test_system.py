@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 
-from photobooth.services.sse.sse_ import SseService
 from photobooth.services.system import SystemService
 
 logger = logging.getLogger(name=None)
@@ -13,7 +12,7 @@ logger = logging.getLogger(name=None)
 
 @pytest.mark.skipif(not sys.platform == "linux", reason="requires linux platform")
 def test_systemd_control():
-    systemservice: SystemService = SystemService(SseService())
+    systemservice: SystemService = SystemService()
 
     with patch.object(subprocess, "run"):
         systemservice.util_systemd_control("start")
