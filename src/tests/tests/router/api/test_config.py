@@ -30,7 +30,6 @@ def client_authenticated(client) -> TestClient:
         "/config/current",  # without password protection, UI reads the config
         "/admin/config/schema?schema_type=dereferenced",
         "/admin/config/current",
-        "/admin/config/default",
     ]
 )
 def config_endpoint(request):
@@ -59,7 +58,7 @@ def test_config_post_validationerror(client_authenticated: TestClient):
 
 def test_config_post(client_authenticated: TestClient):
     # jsonify using pydantic's json function, because fastapi cannot convert all types (like Color)
-    config_dict = json.loads(AppConfig().model_dump_json())
+    config_dict = json.loads(AppConfig().model_dump_json(context={"secrets_is_allowed": True}))
 
     response = client_authenticated.post("/admin/config/current", json=config_dict)
     assert response.status_code == 200

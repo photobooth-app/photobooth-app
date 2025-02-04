@@ -2,6 +2,8 @@ import logging
 from typing import Any, AnyStr
 
 from fastapi import APIRouter
+from fastapi.exceptions import RequestValidationError
+from pydantic_core import ValidationError
 
 from ...container import container
 from ...services.config.baseconfig import SchemaTypes
@@ -41,4 +43,7 @@ def api_post_config_current(updated_config: dict[AnyStr, Any], plugin_name: str 
     """
 
     # persists also automatically
-    container.config_service.set_current(updated_config, plugin_name=plugin_name)
+    try:
+        container.config_service.set_current(updated_config, plugin_name=plugin_name)
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from exc

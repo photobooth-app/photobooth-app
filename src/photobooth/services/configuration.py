@@ -50,7 +50,7 @@ class ConfigurationService(BaseService):
     def set_current(self, updated_config: dict[AnyStr, Any], plugin_name: str = None):
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
 
-        appconfig_or_plugin_config.model_validate(updated_config)
-        appconfig_or_plugin_config.__dict__.update(updated_config)
+        updated_config_validated = appconfig_or_plugin_config.model_validate(updated_config)
+        appconfig_or_plugin_config.__dict__.update(updated_config_validated)
 
         self.save()
