@@ -32,7 +32,7 @@ class ConfigurationService(BaseService):
         else:
             plugin = self._pms.pm.get_plugin(plugin_name)
             if not plugin:
-                raise RuntimeError(f"plugin_name {plugin_name} not found!")
+                raise FileNotFoundError(f"plugin_name {plugin_name} not found!")
 
             if not self._pms.is_configurable_plugin(plugin):
                 raise RuntimeError(f"{plugin_name} has no configuration!")

@@ -15,6 +15,11 @@ router = APIRouter(
 )
 
 
+@router.get("/list")
+def api_get_configurable_plugins():
+    return container.config_service.list_configurable_plugins()
+
+
 @router.get("/schema")
 def api_get_config_schema(schema_type: SchemaTypes = "default", plugin_name: str = None):
     return container.config_service.get_schema(schema_type=schema_type, plugin_name=plugin_name)
