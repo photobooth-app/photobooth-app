@@ -15,12 +15,12 @@ class ConfigurationService(BaseService):
 
         self._pms = pluginmanager_service
 
-    def save(self, plugin_name: str):
-        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
+    def save(self, configurable: str):
+        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         appconfig_or_plugin_config.persist()
 
-    def reset(self, plugin_name: str):
-        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
+    def reset(self, configurable: str):
+        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         appconfig_or_plugin_config.deleteconfig()
         appconfig_or_plugin_config.reset_defaults()
 
@@ -28,33 +28,33 @@ class ConfigurationService(BaseService):
         configurable_elements = ["app"] + self._pms.list_configurable_plugins()
         return configurable_elements
 
-    def get_schema(self, schema_type: SchemaTypes = "default", plugin_name: str = None):
-        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
+    def get_schema(self, configurable: str, schema_type: SchemaTypes = "default"):
+        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         return appconfig_or_plugin_config.get_schema(schema_type=schema_type)
 
-    def get_current(self, secrets_is_allowed: bool = False, plugin_name: str = None) -> dict[str, Any]:
-        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
+    def get_current(self, configurable: str, secrets_is_allowed: bool = False) -> dict[str, Any]:
+        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         return appconfig_or_plugin_config.get_current(secrets_is_allowed=secrets_is_allowed)
 
-    def validate_and_set_current_and_persist(self, updated_config: dict[AnyStr, Any], plugin_name: str = None):
-        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(plugin_name)
+    def validate_and_set_current_and_persist(self, configurable: str, updated_config: dict[AnyStr, Any]):
+        appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         updated_config_validated = appconfig_or_plugin_config.model_validate(updated_config)
         appconfig_or_plugin_config.__dict__.update(updated_config_validated)
 
         appconfig_or_plugin_config.persist()
 
-    def _get_appconfig_or_pluginconfig(self, plugin_name: str) -> BaseConfig:
-        if not plugin_name:
+    def _get_appconfig_or_pluginconfig(self, configurable: str) -> BaseConfig:
+        if not configurable:
             raise ValueError("no configurable given, cannot get config.")
 
-        if plugin_name == "app":  # None or "" evals to False
+        if configurable == "app":  # None or "" evals to False
             return appconfig
         else:
-            plugin = self._pms.pm.get_plugin(plugin_name)
+            plugin = self._pms.pm.get_plugin(configurable)
             if not plugin:
-                raise FileNotFoundError(f"plugin_name {plugin_name} not found!")
+                raise FileNotFoundError(f"plugin '{configurable}' not found!")
 
             if not self._pms.is_configurable_plugin(plugin):
-                raise RuntimeError(f"{plugin_name} has no configuration!")
+                raise RuntimeError(f"plugin {configurable} has no configuration!")
 
             return self._pms.get_plugin_configuration(plugin)
