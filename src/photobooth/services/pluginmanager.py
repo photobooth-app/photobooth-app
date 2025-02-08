@@ -7,7 +7,7 @@ from importlib.metadata import entry_points
 import pluggy
 
 from ..plugins import hookspecs
-from ..plugins.base_plugin import BasePlugin
+from ..plugins.base_plugin import BaseConfig, BasePlugin
 from .base import BaseService
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,6 @@ class PluginManagerService(BaseService):
         self.pm = pluggy.PluginManager("photobooth-app")
         # self.pm.add_hookspecs(hookspecs)
         self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
-        self.pm.add_hookspecs(hookspecs.PluginConfigSpec)
         self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
 
         # included predefined and externally installable plugins
@@ -89,7 +88,7 @@ class PluginManagerService(BaseService):
             return True
 
     @staticmethod
-    def get_plugin_configuration(plugin: BasePlugin):
+    def get_plugin_configuration(plugin: BasePlugin) -> BaseConfig:
         return plugin._config
 
     def list_configurable_plugins(self) -> list[str]:

@@ -11,6 +11,6 @@ router = APIRouter(
 )
 
 
-@router.get("/current")
+@router.get("")
 def api_get_config_current_active():
-    return container.config_service.get_current(False, None)  # no secrets, None=AppConfig
+    return container.config_service.get_current(False, "app")  # no secrets, app=AppConfig

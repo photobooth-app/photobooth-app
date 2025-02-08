@@ -16,27 +16,32 @@ router = APIRouter(
 
 
 @router.get("/list")
-def api_get_configurable_plugins():
-    return container.config_service.list_configurable_plugins()
+def api_get_configurables():
+    return container.config_service.list_configurables()
 
 
-@router.get("/schema")
-def api_get_config_schema(schema_type: SchemaTypes = "default", plugin_name: str = None):
+@router.delete("")
+def api_reset_all_config():
+    container.config_service.reset_all()
+
+
+@router.delete("/{plugin_name}")
+def api_reset_config(plugin_name: str):
+    container.config_service.reset(plugin_name=plugin_name)
+
+
+@router.get("/{plugin_name}/schema")
+def api_get_config_schema(plugin_name: str, schema_type: SchemaTypes = "default"):
     return container.config_service.get_schema(schema_type=schema_type, plugin_name=plugin_name)
 
 
-@router.get("/reset")
-def api_reset_config():
-    container.config_service.reset()
-
-
-@router.get("/current")
+@router.get("/{plugin_name}")
 def api_get_config_current_active(plugin_name: str = None):
     return container.config_service.get_current(secrets_is_allowed=True, plugin_name=plugin_name)
 
 
-@router.post("/current")
-def api_post_config_current(updated_config: dict[AnyStr, Any], plugin_name: str = None):
+@router.patch("/{plugin_name}")
+def api_post_config_current(updated_config: dict[AnyStr, Any], plugin_name: str):
     """Update the configuration for appconfig (plugin_name=None) or a plugin (example plugin_name="photobooth.plugins.gpio_lights")
     The configuration is persisted also after update.
     updated_config is a generic type valid to receive json objects instead of a pydantic model because depending on the plugin_name
@@ -49,6 +54,6 @@ def api_post_config_current(updated_config: dict[AnyStr, Any], plugin_name: str 
 
     # persists also automatically
     try:
-        container.config_service.set_current(updated_config, plugin_name=plugin_name)
+        container.config_service.validate_and_set_current_and_persist(updated_config, plugin_name)
     except ValidationError as exc:
         raise RequestValidationError(exc.errors()) from exc
