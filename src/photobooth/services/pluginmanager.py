@@ -3,6 +3,7 @@ import logging
 import pkgutil
 import sys
 from importlib.metadata import entry_points
+from typing import cast
 
 from pluggy import PluginManager
 
@@ -81,6 +82,14 @@ class PluginManagerService(BaseService):
 
         super().stopped()
 
+    def get_plugin(self, plugin_name: str) -> BasePlugin:
+        _plugin = self.pm.get_plugin(plugin_name)
+
+        if not _plugin:
+            raise ValueError(f"there is no plugin with name '{plugin_name}'!")
+
+        return _plugin
+
     def list_plugins(self) -> list[str]:
         plugins: list[str] = []
 
@@ -106,7 +115,7 @@ class PluginManagerService(BaseService):
         configurable_plugins: list[str] = []
 
         for name, plugin in self.pm.list_name_plugin():
-            if self.is_configurable_plugin(plugin):
+            if self.is_configurable_plugin(cast(BasePlugin, plugin)):
                 configurable_plugins.append(name)
 
         return configurable_plugins

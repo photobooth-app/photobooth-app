@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +12,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client

@@ -41,10 +41,10 @@ def dummy_item(tmp_path):
 
 
 def test_start_maintain(cs: MediacollectionService):
-    with patch.object(cs, "on_start_maintain"):
+    with patch.object(cs, "on_start_maintain") as mock:
         cs.start()
 
-        cs.on_start_maintain.assert_called()
+        mock.assert_called()
 
 
 def test_start_stop(cs: MediacollectionService):

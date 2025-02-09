@@ -1,4 +1,5 @@
 import os
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ from photobooth.container import container
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/") as client:
         container.start()
         yield client

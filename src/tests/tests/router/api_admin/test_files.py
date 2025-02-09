@@ -1,5 +1,6 @@
 import os
 import shutil
+from collections.abc import Generator
 from dataclasses import asdict
 from pathlib import Path
 from unittest import mock
@@ -15,7 +16,7 @@ from photobooth.routers.api_admin.files import PathListItem
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client
@@ -23,7 +24,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture
-def client_authenticated(client) -> TestClient:
+def client_authenticated(client) -> Generator[TestClient, None, None]:
     response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
     token = response.json()["access_token"]
     client.headers = {"Authorization": f"Bearer {token}"}

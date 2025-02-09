@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
@@ -11,7 +12,7 @@ from photobooth.services.collection import MediacollectionService
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client

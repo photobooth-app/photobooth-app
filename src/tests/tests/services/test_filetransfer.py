@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 from unittest.mock import patch
 
 import psutil
@@ -11,7 +12,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="module")
-def _container() -> Container:
+def _container() -> Generator[Container, None, None]:
     # setup
     container.start()
 

@@ -54,25 +54,25 @@ def test_resize_mp4(tmp_path):
 def test_generate_resized():
     import photobooth.utils.resizer
 
-    with patch.object(photobooth.utils.resizer, "resize_jpeg"):
+    with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
         generate_resized(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.utils.resizer.resize_jpeg.assert_called_once()
+        mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_jpeg"):
+    with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
         generate_resized(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.utils.resizer.resize_jpeg.assert_called_once()
+        mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_gif"):
+    with patch.object(photobooth.utils.resizer, "resize_gif") as mock:
         generate_resized(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.utils.resizer.resize_gif.assert_called_once()
+        mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_mp4"):
+    with patch.object(photobooth.utils.resizer, "resize_mp4") as mock:
         generate_resized(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
-        photobooth.utils.resizer.resize_mp4.assert_called_once()
+        mock.assert_called_once()
 
 
 def test_generate_resized_raise_nonavail_format():
@@ -91,5 +91,9 @@ def test_exif_transpose():
     assert Image.open(jpeg_bytes_io).size == dim  # no orientation flag here, so same as input.
     assert Image.open(updated_jpeg_bytes_io).size == dim  # dim is not reversed because exif_transpose was not applied
 
-    assert ImageOps.exif_transpose(Image.open(jpeg_bytes_io)).size == dim  # no orientation flag here, so same as input.
-    assert ImageOps.exif_transpose(Image.open(updated_jpeg_bytes_io)).size == dim[::-1]  # dim reversed because orientation 5=90°
+    img_transposed = ImageOps.exif_transpose(Image.open(jpeg_bytes_io))
+    assert img_transposed
+    assert img_transposed.size == dim  # no orientation flag here, so same as input.
+    update_img_transpose = ImageOps.exif_transpose(Image.open(updated_jpeg_bytes_io))
+    assert update_img_transpose
+    assert update_img_transpose.size == dim[::-1]  # dim reversed because orientation 5=90°

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client
@@ -21,7 +22,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture
-def client_authenticated(client) -> TestClient:
+def client_authenticated(client) -> Generator[TestClient, None, None]:
     response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
     token = response.json()["access_token"]
     client.headers = {"Authorization": f"Bearer {token}"}

@@ -94,6 +94,9 @@ omit = ["test_*.py", "./src/tests/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
 
 [tool.ruff]
 line-length = 150

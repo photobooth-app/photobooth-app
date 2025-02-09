@@ -1,6 +1,7 @@
 import io
 import logging
 import subprocess
+from pathlib import Path
 
 import piexif
 from PIL import Image, ImageChops
@@ -46,7 +47,7 @@ def is_same(img1: Image.Image, img2: Image.Image):
     return not bool(diff.getbbox())
 
 
-def video_duration(input_video: str):
+def video_duration(input_video: Path | str):
     result = subprocess.run(
         [
             "ffprobe",
@@ -56,7 +57,7 @@ def video_duration(input_video: str):
             "format=duration",
             "-of",
             "csv=p=0",
-            input_video,
+            str(input_video),
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

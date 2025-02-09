@@ -1,4 +1,5 @@
 import time
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 from uuid import uuid4
@@ -13,7 +14,7 @@ from photobooth.services.config import appconfig
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         container.processing_service.trigger_action("image", 0)

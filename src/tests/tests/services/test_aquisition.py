@@ -2,6 +2,7 @@ import io
 import logging
 import subprocess
 import time
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="module")
-def _container() -> Container:
+def _container() -> Generator[Container, None, None]:
     container.start()
     yield container
     container.stop()

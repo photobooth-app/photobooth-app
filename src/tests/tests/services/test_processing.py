@@ -1,5 +1,6 @@
 import logging
 import time
+from collections.abc import Generator
 
 import pytest
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(name=None)
 
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
-def _container() -> Container:
+def _container() -> Generator[Container, None, None]:
     # setup
     container.start()
 

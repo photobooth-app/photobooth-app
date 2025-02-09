@@ -50,9 +50,7 @@ class ConfigurationService(BaseService):
         if configurable == "app":  # None or "" evals to False
             return appconfig
         else:
-            plugin = self._pms.pm.get_plugin(configurable)
-            if not plugin:
-                raise FileNotFoundError(f"plugin '{configurable}' not found!")
+            plugin = self._pms.get_plugin(configurable)
 
             if not self._pms.is_configurable_plugin(plugin):
                 raise RuntimeError(f"plugin {configurable} has no configuration!")

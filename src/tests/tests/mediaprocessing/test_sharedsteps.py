@@ -14,7 +14,7 @@ logger = logging.getLogger(name=None)
 
 def test_collage_shared():
     canvas = Image.new("RGBA", (1500, 1500), color=None)
-    images = [
+    images: list[Image.Image] = [
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
@@ -32,7 +32,7 @@ def test_collage_shared():
 
 
 def test_animation_shared():
-    images = [
+    images: list[Image.Image] = [
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
@@ -50,7 +50,7 @@ def test_animation_shared():
 
 
 def test_animation_shared_wrongnumbers_runtime():
-    images = [
+    images: list[Image.Image] = [
         Image.open("src/tests/assets/input.jpg"),
         Image.open("src/tests/assets/input.jpg"),
     ]

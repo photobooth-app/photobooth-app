@@ -1,4 +1,5 @@
 import os
+from collections.abc import Generator
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -12,7 +13,7 @@ from photobooth.routers.userdata import api_get_userfiles
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/") as client:
         container.start()
         yield client

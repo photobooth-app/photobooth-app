@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         yield client
@@ -22,48 +23,48 @@ def client() -> TestClient:
 
 
 def test_chose_1pic(client: TestClient):
-    with patch.object(container.processing_service, "trigger_action"):
+    with patch.object(container.processing_service, "trigger_action") as mock:
         # emulate action
         response = client.get("/actions/image/0")
         assert response.status_code == 200
 
-        container.processing_service.trigger_action.assert_called()
+        mock.assert_called()
 
 
 def test_chose_collage(client: TestClient):
-    with patch.object(container.processing_service, "trigger_action"):
+    with patch.object(container.processing_service, "trigger_action") as mock:
         # emulate action
         response = client.get("/actions/collage/0")
         assert response.status_code == 200
 
-        container.processing_service.trigger_action.assert_called()
+        mock.assert_called()
 
 
 def test_chose_animation(client: TestClient):
-    with patch.object(container.processing_service, "trigger_action"):
+    with patch.object(container.processing_service, "trigger_action") as mock:
         # emulate action
         response = client.get("/actions/animation/0")
         assert response.status_code == 200
 
-        container.processing_service.trigger_action.assert_called()
+        mock.assert_called()
 
 
 def test_chose_video(client: TestClient):
-    with patch.object(container.processing_service, "trigger_action"):
+    with patch.object(container.processing_service, "trigger_action") as mock:
         # emulate action
         response = client.get("/actions/video/0")
         assert response.status_code == 200
 
-        container.processing_service.trigger_action.assert_called()
+        mock.assert_called()
 
 
 def test_chose_video_stoprecording(client: TestClient):
-    with patch.object(container.processing_service, "stop_recording"):
+    with patch.object(container.processing_service, "stop_recording") as mock:
         # emulate action
         response = client.get("/actions/stop")
         assert response.status_code == 200
 
-        container.processing_service.stop_recording.assert_called()
+        mock.assert_called()
 
 
 def test_chose_1pic_occupied(client: TestClient):
@@ -85,26 +86,26 @@ def test_chose_1pic_otherexception(client: TestClient):
 
 
 def test_confirm_reject_abort(client: TestClient):
-    with patch.object(container.processing_service, "confirm_capture"):
+    with patch.object(container.processing_service, "confirm_capture") as mock:
         # emulate action
         response = client.get("/actions/confirm")
         assert response.status_code == 200
 
-        container.processing_service.confirm_capture.assert_called()
+        mock.assert_called()
 
-    with patch.object(container.processing_service, "reject_capture"):
+    with patch.object(container.processing_service, "reject_capture") as mock:
         # emulate action
         response = client.get("/actions/reject")
         assert response.status_code == 200
 
-        container.processing_service.reject_capture.assert_called()
+        mock.assert_called()
 
-    with patch.object(container.processing_service, "abort_process"):
+    with patch.object(container.processing_service, "abort_process") as mock:
         # emulate action
         response = client.get("/actions/abort")
         assert response.status_code == 200
 
-        container.processing_service.abort_process.assert_called()
+        mock.assert_called()
 
 
 def test_confirm_exception(client: TestClient):

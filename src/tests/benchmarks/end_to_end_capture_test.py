@@ -1,25 +1,29 @@
 import logging
+from collections.abc import Generator
+from typing import cast
 
 import pytest
 
 from photobooth.container import Container, container
 from photobooth.database.types import DimensionTypes
 from photobooth.routers.media import api_getitems
+from photobooth.services.backends.virtualcamera import VirtualCameraBackend
+from photobooth.services.jobmodels.base import action_type_literal
 
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="module")
-def _container() -> Container:
+def _container() -> Generator[Container, None, None]:
     container.start()
     container.aquisition_service._get_stills_backend().block_until_device_is_running()
-    container.aquisition_service._get_stills_backend()._config.emulate_hires_static_still = True
+    cast(VirtualCameraBackend, container.aquisition_service._get_stills_backend())._config.emulate_hires_static_still = True
 
     yield container
     container.stop()
 
 
-def do_end_to_end(_container: Container, action: str):
+def do_end_to_end(_container: Container, action: action_type_literal):
     # 1: capture an image
     _container.processing_service.trigger_action(action, 0)
     _container.processing_service.wait_until_job_finished()

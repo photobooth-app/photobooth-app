@@ -1,5 +1,6 @@
 import io
 import logging
+from collections.abc import Generator
 from uuid import uuid4
 
 import pytest
@@ -25,7 +26,7 @@ if not is_valid_service:
 
 
 @pytest.fixture(scope="module")
-def _container() -> Container:
+def _container() -> Generator[Container, None, None]:
     appconfig.qrshare.enabled = True
 
     container.start()
@@ -35,7 +36,7 @@ def _container() -> Container:
 
 # @pytest.fixture()
 @pytest.fixture(params=["image", "collage", "animation", "video"])
-def _mediaitem(request, _container: Container) -> Mediaitem:
+def _mediaitem(request, _container: Container) -> Generator[Mediaitem, None, None]:
     _container.processing_service.trigger_action(request.param)
     container.processing_service.wait_until_job_finished()
     yield _container.mediacollection_service.get_item_latest()
@@ -89,7 +90,7 @@ def test_shareservice_download_all_mediaitem_types(_mediaitem: Mediaitem):
     logger.info(f"check to download {_mediaitem.id=}, {_mediaitem.media_type=}")
     r = requests.get(
         appconfig.qrshare.shareservice_url,
-        params={"action": "download", "id": _mediaitem.id},
+        params={"action": "download", "id": str(_mediaitem.id)},
     )
 
     # valid status code

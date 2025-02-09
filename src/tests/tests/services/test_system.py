@@ -14,6 +14,6 @@ logger = logging.getLogger(name=None)
 def test_systemd_control():
     systemservice: SystemService = SystemService()
 
-    with patch.object(subprocess, "run"):
+    with patch.object(subprocess, "run") as mock:
         systemservice.util_systemd_control("start")
-        subprocess.run.assert_called()
+        mock.assert_called()
