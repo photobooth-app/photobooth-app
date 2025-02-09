@@ -2,9 +2,10 @@ import logging
 
 from gpiozero import DigitalOutputDevice
 from gpiozero.exc import BadPinFactory
+from statemachine import Event, State
 
+from .. import hookimpl
 from ..base_plugin import BasePlugin
-from ..hookspecs import hookimpl
 from .config import GpioLightsConfig
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,23 @@ class GpioLights(BasePlugin):
         self.uninit_io()
 
         logger.info("gpio lights stopped")
+
+    @hookimpl
+    def sm_on_enter_state(self, source: State, target: State, event: Event):
+        if target.id == "counting":
+            self.light(True)
+
+        if target.id == "finished":
+            self.light(False)
+
+    @hookimpl
+    def sm_on_exit_state(self, source: State, target: State, event: Event):
+        if self._config.gpio_light_off_after_capture:
+            if source.id == "capture":
+                self.light(False)
+
+        if source.id == "record":
+            self.light(False)
 
     def init_io(self):
         # shutdown

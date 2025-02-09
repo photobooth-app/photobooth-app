@@ -7,18 +7,17 @@ from queue import Empty, Queue
 from threading import Thread
 from uuid import uuid4
 
-from statemachine import State, StateMachine
-
-from photobooth.database.types import DimensionTypes
+from statemachine import Event, State, StateMachine
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
 from ..database.models import Mediaitem, MediaitemTypes
+from ..database.types import DimensionTypes
+from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisition import AquisitionService
 from .base import BaseService
 from .collection import MediacollectionService
 from .config import appconfig
-from .gpioout import GpiooutService
 from .information import InformationService
 from .jobmodels.animation import JobModelAnimation
 from .jobmodels.base import JobModelBase, action_type_literal
@@ -42,6 +41,27 @@ MEDIAITEM_TYPE_TO_FILEENDING_MAPPING = {
 }
 
 
+class PluginEventHooks:
+    def __init__(self):
+        # https://python-statemachine.readthedocs.io/en/latest/actions.html#ordering
+        pass
+
+    def before_transition(self, source: State, target: State, event: Event):
+        pluggy_pm.hook.sm_before_transition(source=source, target=target, event=event)
+
+    def on_exit_state(self, source: State, target: State, event: Event):
+        pluggy_pm.hook.sm_on_exit_state(source=source, target=target, event=event)
+
+    def on_transition(self, source: State, target: State, event: Event):
+        pluggy_pm.hook.sm_on_transition(source=source, target=target, event=event)
+
+    def on_enter_state(self, source: State, target: State, event: Event):
+        pluggy_pm.hook.sm_on_enter_state(source=source, target=target, event=event)
+
+    def after_transition(self, source: State, target: State, event: Event):
+        pluggy_pm.hook.sm_after_transition(source=source, target=target, event=event)
+
+
 class ProcessingService(BaseService):
     """_summary_"""
 
@@ -51,7 +71,6 @@ class ProcessingService(BaseService):
         mediacollection_service: MediacollectionService,
         wled_service: WledService,
         information_service: InformationService,
-        gpioout_service: GpiooutService,
     ):
         super().__init__()
 
@@ -59,7 +78,6 @@ class ProcessingService(BaseService):
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._wled_service: WledService = wled_service
         self._information_service: InformationService = information_service
-        self._gpioout_service: GpiooutService = gpioout_service
 
         # objects
         self._state_machine: ProcessingMachine = None
@@ -118,10 +136,12 @@ class ProcessingService(BaseService):
             self._aquisition_service,
             self._mediacollection_service,
             self._wled_service,
-            self._gpioout_service,
             self._external_cmd_queue,
             job_model,
         )
+
+        # add listener to the machine
+        self._state_machine.add_listener(PluginEventHooks())
 
         ## run in separate thread
         logger.debug("starting _process_thread")
@@ -232,14 +252,12 @@ class ProcessingMachine(StateMachine):
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
         wled_service: WledService,
-        gpioout_service: GpiooutService,
         _external_cmd_queue: Queue,
         jobmodel: JobModelBase,
     ):
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._wled_service: WledService = wled_service
-        self._gpioout_service: GpiooutService = gpioout_service
         self._external_cmd_queue: Queue = _external_cmd_queue
 
         self.model: JobModelBase  # for linting, initialized in super-class actually below
@@ -281,7 +299,6 @@ class ProcessingMachine(StateMachine):
         """_summary_"""
         # wled signaling
         self._wled_service.preset_thrill()
-        self._gpioout_service.light(True)
 
         # set backends to capture mode; backends take their own actions if needed.
         if isinstance(self.model, JobModelVideo):
@@ -321,9 +338,6 @@ class ProcessingMachine(StateMachine):
         filepath = self._aquisition_service.wait_for_still_file()
 
         logger.info(f"-- process time: {round((time.time() - start_time_capture), 2)}s to capture still")
-
-        if appconfig.hardwareinputoutput.gpio_light_off_after_capture:
-            self._gpioout_service.light(False)
 
         ## PHASE 1:
         # postprocess each capture individually
@@ -502,7 +516,6 @@ class ProcessingMachine(StateMachine):
         """_summary_"""
 
         self._wled_service.preset_standby()
-        self._gpioout_service.light(False)
 
         self._aquisition_service.stop_recording()
 
@@ -571,7 +584,6 @@ class ProcessingMachine(StateMachine):
         # final state, nothing to do. just for UI to have a dedicated state.
 
         self._wled_service.preset_standby()
-        self._gpioout_service.light(False)
 
         # switch backend to preview mode always when returning to idle.
         self._aquisition_service.signalbackend_configure_optimized_for_idle()

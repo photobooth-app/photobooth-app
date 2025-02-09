@@ -1,6 +1,8 @@
 import logging
 
-from photobooth.plugins.hookspecs import hookimpl
+from statemachine import Event, State
+
+from photobooth.plugins import hookimpl
 
 logger = logging.getLogger(__name__)
 
@@ -11,4 +13,12 @@ class UserpluginExample:
 
     @hookimpl
     def start(self):
-        print("start CALLED!!!")
+        logger.warning("start CALLED!!!")
+
+    @hookimpl
+    def before_transition(self, source: State, target: State, event: Event):
+        logger.warning(self)
+        logger.warning(repr(source))
+        logger.warning(repr(target))
+        logger.warning(repr(event))
+        logger.warning("state called in plugin!!!!")

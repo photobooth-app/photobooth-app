@@ -6,7 +6,6 @@ from .services.collection import MediacollectionService
 from .services.configuration import ConfigurationService
 from .services.filtetransfer import FileTransferService
 from .services.gpio import GpioService
-from .services.gpioout import GpiooutService
 from .services.information import InformationService
 from .services.logging import LoggingService
 from .services.pluginmanager import PluginManagerService
@@ -28,8 +27,7 @@ class Container:
     aquisition_service = AquisitionService(wled_service)
     mediacollection_service = MediacollectionService()
     information_service = InformationService(aquisition_service)
-    gpioout_service = GpiooutService()
-    processing_service = ProcessingService(aquisition_service, mediacollection_service, wled_service, information_service, gpioout_service)
+    processing_service = ProcessingService(aquisition_service, mediacollection_service, wled_service, information_service)
     system_service = SystemService()
     share_service = ShareService()
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)

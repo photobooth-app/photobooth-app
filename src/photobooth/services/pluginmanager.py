@@ -4,9 +4,10 @@ import pkgutil
 import sys
 from importlib.metadata import entry_points
 
-import pluggy
+from pluggy import PluginManager
 
 from ..plugins import hookspecs
+from ..plugins import pm as pluggy_pm
 from ..plugins.base_plugin import BaseConfig, BasePlugin
 from .base import BaseService
 
@@ -17,10 +18,11 @@ class PluginManagerService(BaseService):
     def __init__(self):
         super().__init__()
 
-        # create a manager and add the spec
-        self.pm = pluggy.PluginManager("photobooth-app")
+        # use central singleton pluggy pluginmanager
+        self.pm: PluginManager = pluggy_pm
         # self.pm.add_hookspecs(hookspecs)
         self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
+        self.pm.add_hookspecs(hookspecs.PluginAcquisitionSpec)
         self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
 
         # included predefined and externally installable plugins
@@ -81,7 +83,7 @@ class PluginManagerService(BaseService):
     @staticmethod
     def is_configurable_plugin(plugin: BasePlugin) -> bool:
         try:
-            plugin.get_current()
+            plugin._config.get_current()
         except AttributeError:
             return False
         else:
