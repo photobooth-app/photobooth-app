@@ -82,7 +82,7 @@ class PluginManagerService(BaseService):
 
         super().stopped()
 
-    def get_plugin(self, plugin_name: str) -> BasePlugin:
+    def get_plugin(self, plugin_name: str) -> BasePlugin[BaseConfig]:
         _plugin = self.pm.get_plugin(plugin_name)
 
         if not _plugin:
@@ -99,7 +99,7 @@ class PluginManagerService(BaseService):
         return plugins
 
     @staticmethod
-    def is_configurable_plugin(plugin: BasePlugin) -> bool:
+    def is_configurable_plugin(plugin: BasePlugin[BaseConfig]) -> bool:
         try:
             plugin._config.get_current()
         except AttributeError:
@@ -108,14 +108,14 @@ class PluginManagerService(BaseService):
             return True
 
     @staticmethod
-    def get_plugin_configuration(plugin: BasePlugin) -> BaseConfig:
+    def get_plugin_configuration(plugin: BasePlugin[BaseConfig]) -> BaseConfig:
         return plugin._config
 
     def list_configurable_plugins(self) -> list[str]:
         configurable_plugins: list[str] = []
 
         for name, plugin in self.pm.list_name_plugin():
-            if self.is_configurable_plugin(cast(BasePlugin, plugin)):
+            if self.is_configurable_plugin(cast(BasePlugin[BaseConfig], plugin)):
                 configurable_plugins.append(name)
 
         return configurable_plugins

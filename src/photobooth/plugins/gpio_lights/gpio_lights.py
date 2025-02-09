@@ -11,13 +11,12 @@ from .config import GpioLightsConfig
 logger = logging.getLogger(__name__)
 
 
-class GpioLights(BasePlugin):
+class GpioLights(BasePlugin[GpioLightsConfig]):
     def __init__(self):
         super().__init__()
 
         self._config: GpioLightsConfig = GpioLightsConfig()
-
-        self.light_out: DigitalOutputDevice = None
+        self.light_out: DigitalOutputDevice | None = None
 
     @hookimpl
     def start(self):
@@ -63,7 +62,7 @@ class GpioLights(BasePlugin):
 
     def init_io(self):
         # shutdown
-        self.light_out: DigitalOutputDevice = DigitalOutputDevice(self._config.gpio_pin_light, active_high=False)
+        self.light_out = DigitalOutputDevice(self._config.gpio_pin_light, active_high=False)
 
     def uninit_io(self):
         if self.light_out:
