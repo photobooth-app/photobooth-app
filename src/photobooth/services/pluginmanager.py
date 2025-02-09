@@ -20,10 +20,19 @@ class PluginManagerService(BaseService):
 
         # use central singleton pluggy pluginmanager
         self.pm: PluginManager = pluggy_pm
-        # self.pm.add_hookspecs(hookspecs)
-        self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
-        self.pm.add_hookspecs(hookspecs.PluginAcquisitionSpec)
-        self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
+
+        try:
+            # self.pm.add_hookspecs(hookspecs)
+            self.pm.add_hookspecs(hookspecs.PluginManagementSpec)
+            self.pm.add_hookspecs(hookspecs.PluginAcquisitionSpec)
+            self.pm.add_hookspecs(hookspecs.PluginStatemachineSpec)
+        except ValueError:
+            logger.info(
+                "hookspecs already registered, that means pluginmanager was init'ed already once. "
+                "Since pluggy is used from global space this can happen if PluginManagerService is instanciated more than once during tests..."
+                "The initialization is skipped at this point."
+            )
+            return
 
         # included predefined and externally installable plugins
         ENTRY_POINT_GROUP = "photobooth.plugins"  # see pyproject.toml section

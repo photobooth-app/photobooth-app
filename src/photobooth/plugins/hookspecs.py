@@ -40,8 +40,10 @@ class PluginAcquisitionSpec:
     def acq_capture_before_trigger(self) -> None:
         pass
 
+    @hookspec
     def acq_capture_after_trigger(self) -> None:
         pass
 
+    @hookspec
     def acq_capture_captured(self) -> None:
         pass

@@ -129,6 +129,8 @@ dev = [
   "httpx-sse",
   "pytest-httpserver",
   "pydot",
+  "pre-commit",
+  "pyright"
 ]
 benchmarks = [
   "pyvips",

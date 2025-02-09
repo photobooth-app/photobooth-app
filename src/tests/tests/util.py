@@ -102,3 +102,14 @@ def get_jpeg(dim: tuple[int, int]) -> io.BytesIO:
     jpeg_bytes_io = io.BytesIO()
     im.save(jpeg_bytes_io, "jpeg")
     return jpeg_bytes_io
+
+
+def get_impl_func_for_plugin(plugin, hook):
+    # FIXME: not sure yet, why patch.object(GpioLights,"sm_on_enter_state") does not assert_called() eval True but is still correctly called...
+    # working around currently with this function:
+    for hookimpl in hook.get_hookimpls():
+        if hookimpl.plugin == plugin:  # Match specific plugin instance
+            return hookimpl
+
+    else:
+        raise RuntimeError("Plugin's hook implementation was not found!")

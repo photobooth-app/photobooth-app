@@ -3,14 +3,11 @@ import time
 from unittest.mock import patch
 
 import pytest
-from gpiozero import Device
-from gpiozero.pins.mock import MockFactory, MockPin
 
 from photobooth.container import Container, container
 from photobooth.services.config import appconfig
 from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
-Device.pin_factory = MockFactory()
 logger = logging.getLogger(name=None)
 
 
@@ -87,42 +84,3 @@ def test_button_share(mock_run, _container: Container):
     mock_run.assert_called()
 
     assert len(_container.gpio_service.share_btns) == mock_run.call_count
-
-
-def test_light_switched_during_process(_container: Container):
-    # emulate gpio active low driven (simulates button press)
-
-    pin: MockPin = _container.gpioout_service.light_out.pin
-    pin.clear_states()
-
-    _container.processing_service.trigger_action("image", 0)
-    _container.processing_service.wait_until_job_finished()
-
-    # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True], strict=True):
-        assert actual.state == expected
-
-
-def test_light_switched_during_process_turn_off_after_capture(_container: Container):
-    # emulate gpio active low driven (simulates button press)
-    appconfig.hardwareinputoutput.gpio_light_off_after_capture = True
-
-    pin: MockPin = _container.gpioout_service.light_out.pin
-    pin.clear_states()
-
-    _container.processing_service.trigger_action("collage", 0)
-    _container.processing_service.wait_until_job_finished()
-
-    # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True, False, True], strict=True):
-        assert actual.state == expected
-
-    appconfig.hardwareinputoutput.gpio_light_off_after_capture = False
-    pin.clear_states()
-
-    _container.processing_service.trigger_action("collage", 0)
-    _container.processing_service.wait_until_job_finished()
-
-    # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True], strict=True):
-        assert actual.state == expected
