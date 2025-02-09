@@ -68,6 +68,7 @@ photobooth = "photobooth.__main__:main"
 [project.entry-points.'photobooth.plugins']
 # TODO: add docs how to write plugins later, like https://github.com/pytest-dev/pytest/blob/main/doc/en/how-to/writing_plugins.rst
 gpio_lights = 'photobooth.plugins.gpio_lights'
+wled = 'photobooth.plugins.wled'
 
 
 [project.urls]
