@@ -16,7 +16,7 @@ class JobModelMulticamera(JobModelBase):
 
         # self._validate_job()
 
-    def get_phase1_singlepicturedefinition_per_index(self, index: int = None) -> SinglePictureDefinition:
+    def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         processing: MulticameraProcessing = self._configuration_set.processing
 
         # until now just a very basic filter avail applied over all images

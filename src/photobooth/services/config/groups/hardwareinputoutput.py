@@ -19,16 +19,6 @@ class GroupHardwareInputOutput(BaseModel):
         description="Enable keyboard input globally. Keyup is catched in browsers connected to the app.",
     )
 
-    # WledService Config
-    wled_enabled: bool = Field(
-        default=False,
-        description="Enable WLED integration for user feedback during countdown and capture by LEDs.",
-    )
-    wled_serial_port: str = Field(
-        default="",
-        description="Serial port the WLED device is connected to.",
-    )
-
     # GpioService Config
     gpio_enabled: bool = Field(
         default=False,

@@ -17,7 +17,7 @@ class JobModelCollage(JobModelBase):
 
         # self._validate_job()
 
-    def get_phase1_singlepicturedefinition_per_index(self, index: int = None) -> SinglePictureDefinition:
+    def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         processing: CollageProcessing = self._configuration_set.processing
         # list only captured_images from merge_definition (excludes predefined)
         captured_images = [item for item in processing.merge_definition if not item.predefined_image]

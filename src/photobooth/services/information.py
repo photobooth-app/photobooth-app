@@ -153,14 +153,14 @@ class InformationService(BaseService):
             ),
         )
 
-    def _gather_limits_counter(self) -> list[ShareLimitsPublic]:
+    def _gather_limits_counter(self) -> list[dict[str, Any]]:
         with Session(engine) as session:
             statement = select(ShareLimits)
             results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
             return [ShareLimitsPublic.model_validate(result).model_dump(mode="json") for result in results]
 
-    def _gather_stats_counter(self) -> list[UsageStatsPublic]:
+    def _gather_stats_counter(self) -> list[dict[str, Any]]:
         with Session(engine) as session:
             statement = select(UsageStats)
             results = session.scalars(statement).all()
@@ -225,7 +225,7 @@ class InformationService(BaseService):
 
         return model
 
-    def _gather_battery(self) -> int:
+    def _gather_battery(self) -> int | None:
         battery_percent = None
 
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
@@ -241,8 +241,13 @@ class InformationService(BaseService):
         temperatures = {}
 
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_temperatures
-        psutil_temperatures = psutil.sensors_temperatures() if hasattr(psutil, "sensors_temperatures") else {}
-        for name, entry in psutil_temperatures.items():
-            temperatures[name] = round(entry[0].current, 1)  # there could be multiple sensors to one zone, we just use the first.
+        try:
+            psutil_temperatures = psutil.sensors_temperatures()  # type: ignore
+        except AttributeError:
+            # ignore, not supported on win
+            pass
+        else:
+            for name, entry in psutil_temperatures.items():
+                temperatures[name] = round(entry[0].current, 1)  # there could be multiple sensors to one zone, we just use the first.
 
         return temperatures

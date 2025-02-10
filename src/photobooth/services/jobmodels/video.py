@@ -15,7 +15,7 @@ class JobModelVideo(JobModelBase):
 
         # self._validate_job()
 
-    def get_phase1_singlepicturedefinition_per_index(self, index: int = None) -> SinglePictureDefinition:
+    def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         raise RuntimeError("no filter available for videos")
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):

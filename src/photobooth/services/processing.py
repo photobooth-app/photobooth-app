@@ -18,6 +18,7 @@ from .aquisition import AquisitionService
 from .base import BaseService
 from .collection import MediacollectionService
 from .config import appconfig
+from .config.groups.actions import MultiImageJobControl, VideoProcessing
 from .information import InformationService
 from .jobmodels.animation import JobModelAnimation
 from .jobmodels.base import JobModelBase, action_type_literal
@@ -28,7 +29,6 @@ from .jobmodels.video import JobModelVideo
 from .mediaprocessing.processes import process_image_collageimage_animationimage, process_video
 from .sse import sse_service
 from .sse.sse_ import SseEventFrontendNotification, SseEventProcessStateinfo
-from .wled import WledService
 
 logger = logging.getLogger(__name__)
 
@@ -69,20 +69,18 @@ class ProcessingService(BaseService):
         self,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
-        wled_service: WledService,
         information_service: InformationService,
     ):
         super().__init__()
 
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._wled_service: WledService = wled_service
         self._information_service: InformationService = information_service
 
         # objects
-        self._state_machine: ProcessingMachine = None
-        self._process_thread: Thread = None
-        self._external_cmd_queue: Queue = None
+        self._state_machine: ProcessingMachine | None = None
+        self._process_thread: Thread | None = None
+        self._external_cmd_queue: Queue | None = None
 
     def _check_occupied(self):
         if self._state_machine is not None:
@@ -135,7 +133,6 @@ class ProcessingService(BaseService):
         self._state_machine = ProcessingMachine(
             self._aquisition_service,
             self._mediacollection_service,
-            self._wled_service,
             self._external_cmd_queue,
             job_model,
         )
@@ -201,6 +198,8 @@ class ProcessingService(BaseService):
         self._process_thread.join()
 
     def send_event(self, event: str):
+        assert self._external_cmd_queue
+
         if not self._state_machine:
             raise RuntimeError("no job ongoing, cannot send event!")
 
@@ -251,13 +250,11 @@ class ProcessingMachine(StateMachine):
         self,
         aquisition_service: AquisitionService,
         mediacollection_service: MediacollectionService,
-        wled_service: WledService,
         _external_cmd_queue: Queue,
         jobmodel: JobModelBase,
     ):
         self._aquisition_service: AquisitionService = aquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._wled_service: WledService = wled_service
         self._external_cmd_queue: Queue = _external_cmd_queue
 
         self.model: JobModelBase  # for linting, initialized in super-class actually below
@@ -296,10 +293,6 @@ class ProcessingMachine(StateMachine):
         logger.info("state idle entered.")
 
     def on_enter_counting(self):
-        """_summary_"""
-        # wled signaling
-        self._wled_service.preset_thrill()
-
         # set backends to capture mode; backends take their own actions if needed.
         if isinstance(self.model, JobModelVideo):
             # signal the backend we need hq still in every case, except video.
@@ -441,12 +434,12 @@ class ProcessingMachine(StateMachine):
 
             # add to collection
             self._mediacollection_service.add_item(mediaitem)  # and to the db.
+            logger.info(f"capture {mediaitem=} successful")
 
         self.model._last_captured_mediaitem_id = mediaitems[-1].id
         self._update_captures_taken()
 
         logger.info(f"-- process time: {round((time.time() - tms), 2)}s to process")
-        logger.info(f"capture {mediaitem=} successful")
 
         # capture finished, go to next state
         self._captured()
@@ -456,6 +449,7 @@ class ProcessingMachine(StateMachine):
 
         # if job is collage, each single capture could be confirmed or not:
         if self.model.ask_user_for_approval():
+            assert isinstance(self.model._configuration_set.jobcontrol, MultiImageJobControl)
             # present capture with buttons to approve.
             logger.info(f"waiting {self.model._configuration_set.jobcontrol.approve_autoconfirm_timeout}s for user to confirm, reject or abort")
 
@@ -496,10 +490,7 @@ class ProcessingMachine(StateMachine):
                 self._mediacollection_service.delete_item(job_item)
 
     def on_enter_record(self):
-        """_summary_"""
-
-        self._wled_service.preset_record()
-
+        assert isinstance(self.model._configuration_set.processing, VideoProcessing)
         self._aquisition_service.start_recording(self.model._configuration_set.processing.video_framerate)
 
         try:
@@ -513,10 +504,6 @@ class ProcessingMachine(StateMachine):
         self.stop_recording()
 
     def on_exit_record(self):
-        """_summary_"""
-
-        self._wled_service.preset_standby()
-
         self._aquisition_service.stop_recording()
 
         # get video in h264 format for further processing.
@@ -551,7 +538,7 @@ class ProcessingMachine(StateMachine):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        phase2_mediaitem: Mediaitem = None
+        phase2_mediaitem: Mediaitem | None = None
         if isinstance(self.model, JobModelCollage | JobModelAnimation | JobModelMulticamera):
             original_filenamepath = self._new_filename(self.model._media_type)
             phase2_mediaitem = Mediaitem(
@@ -582,8 +569,6 @@ class ProcessingMachine(StateMachine):
 
     def on_enter_finished(self):
         # final state, nothing to do. just for UI to have a dedicated state.
-
-        self._wled_service.preset_standby()
 
         # switch backend to preview mode always when returning to idle.
         self._aquisition_service.signalbackend_configure_optimized_for_idle()

@@ -29,13 +29,13 @@ class JobModelBase(ABC):
         | MulticameraConfigurationSet,
     ):
         self._job_identifier: UUID = uuid4()
-        self._media_type: MediaitemTypes = None
+        self._media_type: MediaitemTypes | None = None
         self._configuration_set = configuration_set
 
         self._total_captures_to_take: int = 0
         self._captures_taken: int = 0
         self._ask_approval_each_capture: bool = False
-        self._last_captured_mediaitem_id: UUID = None
+        self._last_captured_mediaitem_id: UUID | None = None
 
         # job model timer
         self._duration_user: float = 0
@@ -73,8 +73,8 @@ class JobModelBase(ABC):
         """
 
         out = dict(
-            state=self.state,
-            typ=self._media_type.value,
+            state=self.state,  # type: ignore
+            typ=self._media_type.value,  # type: ignore
             total_captures_to_take=self.total_captures_to_take(),
             remaining_captures_to_take=self.remaining_captures_to_take(),
             number_captures_taken=self.get_captures_taken(),
@@ -137,7 +137,7 @@ class JobModelBase(ABC):
         self._duration_user = 0
 
     @abstractmethod
-    def get_phase1_singlepicturedefinition_per_index(index: int = None) -> SinglePictureDefinition:
+    def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         pass
 
     @abstractmethod

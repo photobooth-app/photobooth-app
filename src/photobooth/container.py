@@ -13,7 +13,6 @@ from .services.processing import ProcessingService
 from .services.qrshare import QrShareService
 from .services.share import ShareService
 from .services.system import SystemService
-from .services.wled import WledService
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +22,10 @@ class Container:
     logging_service = LoggingService()
     pluginmanager_service = PluginManagerService()
 
-    wled_service = WledService()
-    aquisition_service = AquisitionService(wled_service)
+    aquisition_service = AquisitionService()
     mediacollection_service = MediacollectionService()
     information_service = InformationService(aquisition_service)
-    processing_service = ProcessingService(aquisition_service, mediacollection_service, wled_service, information_service)
+    processing_service = ProcessingService(aquisition_service, mediacollection_service, information_service)
     system_service = SystemService()
     share_service = ShareService()
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)

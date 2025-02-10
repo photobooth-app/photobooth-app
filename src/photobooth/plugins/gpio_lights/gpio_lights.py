@@ -48,16 +48,16 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
         if target.id == "counting":
             self.light(True)
 
-        if target.id == "finished":
+        elif target.id == "finished":
             self.light(False)
 
     @hookimpl
     def sm_on_exit_state(self, source: State, target: State, event: Event):
-        if self._config.gpio_light_off_after_capture:
-            if source.id == "capture":
+        if source.id == "capture":
+            if self._config.gpio_light_off_after_capture:
                 self.light(False)
 
-        if source.id == "record":
+        elif source.id == "record":
             self.light(False)
 
     def init_io(self):

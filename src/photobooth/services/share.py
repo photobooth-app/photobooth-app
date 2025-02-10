@@ -17,8 +17,6 @@ TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
 
 
 class ShareService(BaseService):
-    """Handle all image related stuff"""
-
     def __init__(self):
         super().__init__()
 

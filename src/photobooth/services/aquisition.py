@@ -11,30 +11,30 @@ from importlib import import_module
 from io import BytesIO
 from pathlib import Path
 from threading import current_thread
+from typing import cast
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from ..plugins import pm as pluggy_pm
 from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
 from .base import BaseService
 from .config import appconfig
-from .wled import WledService
 
 logger = logging.getLogger(__name__)
 
 
 class AquisitionService(BaseService):
-    def __init__(self, wled_service: WledService):
+    def __init__(self):
         super().__init__()
-        self._wled_service: WledService = wled_service
 
-        self._backends: list[AbstractBackend] = None
-        self._supervisor_thread: StoppableThread = None
+        self._backends: list[AbstractBackend] = []
+        self._supervisor_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
 
-        self._backends: list[AbstractBackend] = []
+        self._backends = []
 
         # get backend obj and instanciate
         for backend_config in appconfig.backends.group_backends:
@@ -105,7 +105,7 @@ class AquisitionService(BaseService):
         logger.info("device supervisor started, checking for clock, then starting device")
         flag_stopped_orphaned_already = False
 
-        while not current_thread().stopped():
+        while not cast(StoppableThread, current_thread()).stopped():
             if not self._device_alive() or any([backend.is_marked_faulty.is_set() for backend in self._backends]):
                 logger.info("starting devices...")
                 if not flag_stopped_orphaned_already:
@@ -127,7 +127,7 @@ class AquisitionService(BaseService):
             # break out of the sleep loop. since .stopped is true, the outer while is also left.
             for _ in range(30):
                 time.sleep(0.1)
-                if current_thread().stopped():
+                if cast(StoppableThread, current_thread()).stopped():
                     break
 
         logger.info("device supervisor exit, stopping devices")
@@ -186,7 +186,7 @@ class AquisitionService(BaseService):
         function blocks until high quality image is available
         """
 
-        self._wled_service.preset_shoot()
+        pluggy_pm.hook.acq_before_get_still()
 
         try:
             still_backend = self._get_stills_backend()
@@ -195,14 +195,14 @@ class AquisitionService(BaseService):
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
-            self._wled_service.preset_standby()
+            pluggy_pm.hook.acq_captured()
 
     def wait_for_multicam_files(self):
         """
         function blocks until high quality image is available
         """
 
-        self._wled_service.preset_shoot()
+        pluggy_pm.hook.acq_before_get_multicam()
 
         try:
             multicam_backend = self._get_multicam_backend()
@@ -211,7 +211,7 @@ class AquisitionService(BaseService):
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
-            self._wled_service.preset_standby()
+            pluggy_pm.hook.acq_captured()
 
     def start_recording(self, video_framerate: int = 25):
         self._get_video_backend().start_recording(video_framerate)

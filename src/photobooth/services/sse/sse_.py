@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 class SseEventBase:
     """basic class for sse events"""
 
-    # event: str = None
-    # data: str = None
+    # event: str
+    # data: str
 
 
 @dataclass
@@ -36,9 +36,9 @@ class SseEventFrontendNotification(SseEventBase):
 
     caption: str = ""
     message: str = ""
-    color: str = None  # could a color or "positive", "negative", "warning", "info" or None, the UI default
-    icon: str = None  # could a quasar icon or None, the UI default
-    spinner: str = None  # could be True or False, None same as False
+    color: str | None = None  # could a color or "positive", "negative", "warning", "info" or None, the UI default
+    icon: str | None = None  # could a quasar icon or None, the UI default
+    spinner: bool | None = None  # could be True or False, None same as False
 
     event: str = "FrontendNotification"
 
@@ -59,7 +59,7 @@ class SseEventFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
-    jobmodel: JobModelBase = None
+    jobmodel: JobModelBase | None
 
     event: str = "ProcessStateinfo"
 
@@ -76,8 +76,9 @@ class SseEventProcessStateinfo(SseEventBase):
 class SseEventDbInsert(SseEventBase):
     """basic class for sse events"""
 
+    mediaitem: MediaitemPublic
+
     event: str = "DbInsert"
-    mediaitem: MediaitemPublic = None
 
     @property
     def data(self) -> str:
@@ -88,8 +89,9 @@ class SseEventDbInsert(SseEventBase):
 class SseEventDbRemove(SseEventBase):
     """basic class for sse events"""
 
+    mediaitem: MediaitemPublic
+
     event: str = "DbRemove"
-    mediaitem: MediaitemPublic = None
 
     @property
     def data(self) -> str:
@@ -100,13 +102,13 @@ class SseEventDbRemove(SseEventBase):
 class SseEventLogRecord(SseEventBase):
     """basic class for sse events"""
 
-    time: str = None
-    level: str = None
-    message: str = None
-    name: str = None
-    funcName: str = None
-    lineno: str = None
-    # display_notification: bool = None
+    time: str
+    level: str
+    message: str
+    name: str
+    funcName: str
+    lineno: str
+    # display_notification: bool
 
     event: str = "LogRecord"
 
@@ -129,19 +131,19 @@ class SseEventLogRecord(SseEventBase):
 class SseEventOnetimeInformationRecord(SseEventBase):
     """basic class for sse events"""
 
-    event: str = "InformationRecord"
+    version: str
+    platform_system: str
+    platform_release: str
+    platform_machine: str
+    platform_python_version: str
+    platform_node: str
+    platform_cpu_count: int | None
+    model: str
+    data_directory: Path
+    python_executable: str
+    disk: dict[str, Any]
 
-    version: str = None
-    platform_system: str = None
-    platform_release: str = None
-    platform_machine: str = None
-    platform_python_version: str = None
-    platform_node: str = None
-    platform_cpu_count: int = None
-    model: str = None
-    data_directory: Path = None
-    python_executable: str = None
-    disk: dict[str, Any] = None
+    event: str = "InformationRecord"
 
     @property
     def data(self) -> str:
@@ -166,18 +168,17 @@ class SseEventOnetimeInformationRecord(SseEventBase):
 class SseEventIntervalInformationRecord(SseEventBase):
     """basic class for sse events"""
 
-    event: str = "InformationRecord"
+    cpu_percent: float
+    memory: dict[str, Any]
+    cma: dict[str, Any]
+    backends: dict[str, dict[str, Any]]
+    stats_counter: list[dict[str, Any]]
+    limits_counter: list[dict[str, Any]]
+    battery_percent: int | None
+    temperatures: dict[str, Any]
+    mediacollection: dict[str, Any]
 
-    cpu_percent: float = None
-    memory: dict[str, Any] = None
-    cma: dict[str, Any] = None
-    backends: dict[str, dict[str, Any]] = None
-    printer: dict[str, Any] = None
-    stats_counter: dict[str, Any] = None
-    limits_counter: dict[str, Any] = None
-    battery_percent: int = None
-    temperatures: dict[str, Any] = None
-    mediacollection: dict[str, Any] = None
+    event: str = "InformationRecord"
 
     @property
     def data(self) -> str:
@@ -187,7 +188,6 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 memory=self.memory,
                 cma=self.cma,
                 backends=self.backends,
-                printer=self.printer,
                 stats_counter=self.stats_counter,
                 limits_counter=self.limits_counter,
                 battery_percent=self.battery_percent,
@@ -201,8 +201,8 @@ class SseEventIntervalInformationRecord(SseEventBase):
 class Client:
     """Class each individual client connected"""
 
-    request: Request = None
-    queue: Queue = None
+    request: Request
+    queue: Queue
 
 
 class SseService:
@@ -227,12 +227,9 @@ class SseService:
                 logger.debug(f"SSE subscription removed for {removed_client.request.client}")
                 break
 
-        if not removed_client:
-            logger.warning("the client was not found in the list, continue")
-
         logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
 
-    def dispatch_event(self, sse_event_data: SseEventBase):
+    def dispatch_event(self, sse_event_data):
         for client in self._clients:
             try:
                 client.queue.put_nowait(

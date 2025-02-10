@@ -14,7 +14,7 @@ class JobModelImage(JobModelBase):
 
         # self._validate_job()
 
-    def get_phase1_singlepicturedefinition_per_index(self, index: int = None) -> SinglePictureDefinition:
+    def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         # index for jobmodelimage not used, just pass 1:1 to out
         return SinglePictureDefinition(
             **self._configuration_set.processing.model_dump(),
