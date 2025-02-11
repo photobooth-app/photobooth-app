@@ -12,7 +12,7 @@ class PipelineError(Exception):
     pass
 
 
-NextStep = Callable[[Context], Iterable[Exception | Context]]
+NextStep = Callable[[Context], Iterable[Exception | Context] | None]
 ErrorHandler = Callable[[Exception, Context, NextStep], None]
 
 
