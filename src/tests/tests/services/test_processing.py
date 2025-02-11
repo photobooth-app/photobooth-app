@@ -100,9 +100,8 @@ def test_collage_manual_approval(_container: Container):
     _container.processing_service.trigger_action("collage", 0)
 
     # observer that is used to confirm the captures.
+    assert _container.processing_service._state_machine is not None  # statemachine was created after trigger_action
     _container.processing_service._state_machine.add_listener(ConfirmRejectUserinputObserver(_container.processing_service))
-
-    assert _container.processing_service._state_machine is not None
 
     _container.processing_service.wait_until_job_finished()
 
@@ -118,9 +117,9 @@ def test_collage_manual_abort(_container: Container):
     appconfig.actions.collage[0].jobcontrol.ask_approval_each_capture = True
 
     _container.processing_service.trigger_action("collage", 0)
-    _container.processing_service._state_machine.add_listener(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
 
     assert _container.processing_service._state_machine is not None
+    _container.processing_service._state_machine.add_listener(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
 
     _container.processing_service.wait_until_job_finished()
 
