@@ -18,7 +18,7 @@ def configuration_service():
 
 def test_plugin_config_get_current(configuration_service: ConfigurationService):
     for configurables in configuration_service.list_configurables():
-        print(configuration_service.get_current(configurables, False))
+        assert configuration_service.get_current(configurables, False)
 
 
 def test_plugin_config_get_schema(configuration_service: ConfigurationService):
