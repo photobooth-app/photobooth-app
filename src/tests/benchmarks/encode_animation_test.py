@@ -36,31 +36,32 @@ def pil_to_mp4_cv2(images: list[Image.Image], _tmp_path):
 
     # needs https://github.com/opencv/opencv/tree/master/3rdparty/ffmpeg cisco openh264 installed!
     # warning: no error messages about failed creation!
-    # fourcc = cv2.VideoWriter_fourcc(*"H264")
+    # fourcc = cv2.VideoWriter.fourcc(*"H264")
     # video = cv2.VideoWriter(f"{_tmp_path}/test.h264.mp4", fourcc, 1, (width, height))
     # for image in images:
     #     video.write(cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR))
     # video.release()
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    fourcc = cv2.VideoWriter.fourcc(*"mp4v")
     video = cv2.VideoWriter(f"{_tmp_path}/test.mp4v.mp4", fourcc, 1, (width, height))
     for image in images:
         video.write(cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR))
     video.release()
 
-    # fourcc = cv2.VideoWriter_fourcc(*"XVID")
+    # fourcc = cv2.VideoWriter.fourcc(*"XVID")
     # video = cv2.VideoWriter(f"{_tmp_path}/test.xvid.mp4", fourcc, 1, (width, height))
     # for image in images:
     #     video.write(cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR))
     # video.release()
 
-    # fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    # fourcc = cv2.VideoWriter.fourcc(*"MJPG")
     # video = cv2.VideoWriter(f"{_tmp_path}/test.mjpg", fourcc, 1, (width, height))
     # for image in images:
     #     video.write(cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR))
     # video.release()
 
-    # fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+    # fourcc = cv2.VideoWriter.fourcc(*"MJPG")
+    # print(fourcc)
     # video = cv2.VideoWriter(f"{_tmp_path}/test.avi", fourcc, 1, (width, height))
     # for image in images:
     #     video.write(cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR))
@@ -78,22 +79,6 @@ def images() -> list[Image.Image]:
     return imgs
 
 
-def create_gif_opencv(image_folder, output_gif, fps=10):
-    import imageio
-
-    images = []
-    # Make it pause at the end so that the viewers can ponder
-    for _ in range(5):
-        images.append(imageio.imread(image_folder))
-
-    imageio.mimsave(output_gif, images)
-
-
 @pytest.mark.benchmark(group="merge_frame")
 def test_pil_to_mp4_cv2(benchmark, tmp_path):
     benchmark(pil_to_mp4_cv2, images=images(), _tmp_path=tmp_path)
-
-
-@pytest.mark.benchmark(group="merge_frame")
-def test_jpg_to_gif_cv2(benchmark, tmp_path):
-    benchmark(create_gif_opencv, image_folder="src/tests/assets/input_lores.jpg", output_gif=tmp_path / "output.gif")

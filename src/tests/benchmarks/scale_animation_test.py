@@ -62,6 +62,7 @@ def ffmpeg_stdin_scale(gif_bytes, tmp_path):
         ],
         stdin=PIPE,
     )
+    assert ffmpeg_subprocess.stdin
     ffmpeg_subprocess.stdin.write(gif_bytes)
     ffmpeg_subprocess.stdin.close()
     code = ffmpeg_subprocess.wait()
@@ -75,7 +76,7 @@ def pyvips_scale(gif_bytes, tmp_path):
     lgr.setLevel(logging.WARNING)
     lgr.propagate = True
 
-    out = pyvips.Image.thumbnail_buffer(gif_bytes, 500, option_string="n=-1")
+    out = pyvips.Image.thumbnail_buffer(gif_bytes, 500, option_string="n=-1")  # type: ignore
     bytes = out.gifsave_buffer()
 
     return bytes
@@ -85,7 +86,7 @@ def pil_scale(gif_bytes, tmp_path):
     gif_image = Image.open(io.BytesIO(gif_bytes), formats=["gif"])
 
     # Wrap on-the-fly thumbnail generator
-    def thumbnails(frames: list[Image.Image]):
+    def thumbnails(frames: ImageSequence.Iterator):
         for frame in frames:
             thumbnail = frame.copy()
             thumbnail.thumbnail(size=target_size, resample=Image.Resampling.BICUBIC)
@@ -93,9 +94,8 @@ def pil_scale(gif_bytes, tmp_path):
 
     # to recover the original durations in scaled versions
     durations = []
-    for i in range(gif_image.n_frames):
-        gif_image.seek(i)
-        duration = gif_image.info.get("duration", 1000)  # fallback 1sec if info not avail.
+    for frame in ImageSequence.Iterator(gif_image):
+        duration = frame.info.get("duration", 1000)  # fallback 1sec if info not avail.
         durations.append(duration)
 
     # determine target size

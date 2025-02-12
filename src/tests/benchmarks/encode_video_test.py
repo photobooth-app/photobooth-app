@@ -76,6 +76,7 @@ def process_ffmpeg(tmp_path):
         ],
         stdin=PIPE,
     )
+    assert ffmpeg_subprocess.stdin
     logger.info("popen'ed")
     logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 

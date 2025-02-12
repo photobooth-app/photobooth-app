@@ -22,7 +22,7 @@ def pyvips_encode(frame_from_camera):
     lgr.propagate = True
     # frame_from_camera = cv2.cvtColor(frame_from_camera, cv2.COLOR_BGR2RGB)
     out = pyvips.Image.new_from_array(frame_from_camera)
-    bytes = out.write_to_buffer(".jpg[Q=85]")
+    bytes = out.write_to_buffer(".jpg[Q=85]")  # type: ignore
     # im = Image.open(io.BytesIO(bytes))
     # im.show()
 

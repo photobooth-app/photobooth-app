@@ -101,7 +101,7 @@ class WebcamCv2Backend(AbstractBackend):
             _video = cv2.VideoCapture(self._config.device_index)
 
         # activate preview mode on init
-        _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        _video_set_check(_video, cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc(*"MJPG"))
         _video_set_check(_video, cv2.CAP_PROP_FPS, 25.0)
         _video_set_check(_video, cv2.CAP_PROP_FRAME_WIDTH, self._config.CAM_RESOLUTION_WIDTH)
         _video_set_check(_video, cv2.CAP_PROP_FRAME_HEIGHT, self._config.CAM_RESOLUTION_HEIGHT)
