@@ -7,11 +7,15 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
-from linuxpy.video.device import Device, VideoCapture  # type: ignore
-
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
+
+try:
+    import linuxpy.video.device as linuxpy_video_device  # type: ignore
+except ImportError:
+    linuxpy_video_device = None
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +25,11 @@ class WebcamV4lBackend(AbstractBackend):
         self._config: GroupBackendV4l2 = config
         super().__init__(orientation=config.orientation)
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        if linuxpy_video_device is None:
+            raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
+
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -43,7 +50,7 @@ class WebcamV4lBackend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -62,7 +69,7 @@ class WebcamV4lBackend(AbstractBackend):
             f.write(self._wait_for_lores_image())
             return Path(f.name)
 
-    def _wait_for_lores_image(self):
+    def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
 
         with self._lores_data.condition:
@@ -84,12 +91,15 @@ class WebcamV4lBackend(AbstractBackend):
         logger.info("_worker_fun starts")
         logger.info(f"trying to open camera index={self._config.device_index=}")
 
-        with Device.from_id(self._config.device_index) as device:
+        assert linuxpy_video_device
+        assert self._worker_thread
+
+        with linuxpy_video_device.Device.from_id(self._config.device_index) as device:
             logger.info(f"webcam devices index {self._config.device_index} opened")
             logger.info(f"webcam info: {device.info.card}")
 
             try:
-                capture = VideoCapture(device)
+                capture = linuxpy_video_device.VideoCapture(device)
                 capture.set_fps(25)
                 capture.set_format(self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT, "MJPG")
                 fmt = capture.get_format()
@@ -150,9 +160,12 @@ def is_valid_camera_index(index):
     Returns:
         _type_: _description_
     """
+    if linuxpy_video_device is None:
+        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
+
     try:
-        with Device.from_id(index) as device:
-            capture = VideoCapture(device)
+        with linuxpy_video_device.Device.from_id(index) as device:
+            capture = linuxpy_video_device.VideoCapture(device)
             capture.set_format(640, 480, "MJPG")
 
             for _ in device:

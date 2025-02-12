@@ -32,14 +32,15 @@ class BackendStats:
     """
 
     backend_name: str = __name__
-    fps: int = None
-    exposure_time_ms: float = None
-    lens_position: float = None
-    again: float = None
-    dgain: float = None
-    lux: float = None
-    colour_temperature: int = None
-    sharpness: int = None
+
+    fps: int | None = None
+    exposure_time_ms: float | None = None
+    lens_position: float | None = None
+    again: float | None = None
+    dgain: float | None = None
+    lux: float | None = None
+    colour_temperature: int | None = None
+    sharpness: int | None = None
 
 
 # @dataclass
@@ -60,29 +61,29 @@ class BackendStats:
 @dataclass
 class GeneralBytesResult:
     # jpeg data as bytes
-    data: bytes = None
+    data: bytes
     # condition when frame is avail
-    condition: threading.Condition = None
+    condition: threading.Condition
 
 
 @dataclass
 class GeneralFileResult:
     # jpeg data file for hires
-    filepath: Path = None
+    filepath: Path | None
     # signal to producer that requesting thread is ready to be notified
-    request: threading.Event = None
+    request: threading.Event
     # condition when frame is avail
-    condition: threading.Condition = None
+    condition: threading.Condition
 
 
 @dataclass
 class GeneralMultifileResult:
     # jpeg data file for hires
-    filepath: list[Path] = None
+    filepath: list[Path] | None
     # signal to producer that requesting thread is ready to be notified
-    request: threading.Event = None
+    request: threading.Event
     # condition when frame is avail
-    condition: threading.Condition = None
+    condition: threading.Condition
 
 
 @dataclass
@@ -95,11 +96,11 @@ class Framerate:
         int: Framerate
     """
 
-    _last_timestamp: int = None
-    _current_timestamp: int = None
+    _last_timestamp: int | None = None
+    _current_timestamp: int | None = None
 
     @property
-    def current_timestamp(self) -> int:
+    def current_timestamp(self) -> int | None:
         return self._current_timestamp
 
     @current_timestamp.setter
@@ -110,7 +111,7 @@ class Framerate:
     @property
     def fps(self) -> int:
         if self._last_timestamp and self._current_timestamp:
-            return round(1.0 / ((self._current_timestamp - self._last_timestamp) * 1.0e-9), 0)
+            return int(round(1.0 / ((self._current_timestamp - self._last_timestamp) * 1.0e-9), 0))
         else:
             return 0
 
@@ -137,9 +138,9 @@ class AbstractBackend(ABC):
 
         # video feature
         self._video_worker_capture_started: Event = Event()
-        self._video_worker_thread: StoppableThread = None
-        self._video_recorded_videofilepath: Path = None
-        self._video_framerate: int = None
+        self._video_worker_thread: StoppableThread | None = None
+        self._video_recorded_videofilepath: Path | None = None
+        self._video_framerate: int | None = None
 
         super().__init__()
 
@@ -428,6 +429,7 @@ class AbstractBackend(ABC):
                 # stdout=subprocess.PIPE,
                 # stderr=subprocess.STDOUT,
             )
+            assert ffmpeg_subprocess.stdin
         except Exception as exc:
             logger.error(f"starting ffmpeg failed: {exc}")
             return
@@ -438,6 +440,7 @@ class AbstractBackend(ABC):
         # inform calling function, that ffmpeg received first image now
         self._video_worker_capture_started.set()
 
+        assert self._video_worker_thread
         while not self._video_worker_thread.stopped():
             try:
                 # retry with a low number because video would be messed anyways if needs to retry

@@ -1,8 +1,9 @@
 import logging
-import platform
 
 import pytest
 
+from photobooth.services.backends.webcamv4l import WebcamV4lBackend, linuxpy_video_device
+from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
 from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendV4l2
 
@@ -18,24 +19,13 @@ def run_around_tests():
     yield
 
 
-"""
-prepare config for testing
-"""
-
-
 ## check skip if wrong platform
-if not platform.system() == "Linux":
-    pytest.skip(
-        "tests are linux only platform, skipping test",
-        allow_module_level=True,
-    )
+if linuxpy_video_device is None:
+    pytest.skip("tests are linux only platform, skipping test", allow_module_level=True)
 
 
 @pytest.fixture()
 def backend_v4l():
-    from photobooth.services.backends.webcamv4l import WebcamV4lBackend
-    from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
-
     # setup
     backend = WebcamV4lBackend(GroupBackendV4l2())
 
