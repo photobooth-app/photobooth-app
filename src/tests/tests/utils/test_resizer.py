@@ -8,7 +8,7 @@ from turbojpeg import TurboJPEG
 
 from photobooth.database.types import DimensionTypes
 from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
-from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, resize_mp4
+from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, resize_jpeg_pillow, resize_jpeg_turbojpeg, resize_mp4
 
 from ..util import get_exiforiented_jpeg, get_jpeg
 
@@ -27,6 +27,26 @@ def test_resize_jpg(tmp_path):
     output = tmp_path / "output.jpg"
 
     resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+
+    with Image.open(output) as img:
+        img.verify()
+
+
+def test_resize_jpg_force_turbojpeg(tmp_path):
+    input = Path("src/tests/assets/input.jpg")
+    output = tmp_path / "output.jpg"
+
+    resize_jpeg_turbojpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+
+    with Image.open(output) as img:
+        img.verify()
+
+
+def test_resize_jpg_force_pillow(tmp_path):
+    input = Path("src/tests/assets/input.jpg")
+    output = tmp_path / "output.jpg"
+
+    resize_jpeg_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
