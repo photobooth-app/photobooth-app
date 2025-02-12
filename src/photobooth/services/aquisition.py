@@ -186,6 +186,7 @@ class AquisitionService(BaseService):
         function blocks until high quality image is available
         """
 
+        pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_still()
 
         try:
@@ -195,13 +196,14 @@ class AquisitionService(BaseService):
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
-            pluggy_pm.hook.acq_captured()
+            pluggy_pm.hook.acq_after_shot()
 
     def wait_for_multicam_files(self):
         """
         function blocks until high quality image is available
         """
 
+        pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_multicam()
 
         try:
@@ -211,7 +213,7 @@ class AquisitionService(BaseService):
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
-            pluggy_pm.hook.acq_captured()
+            pluggy_pm.hook.acq_after_shot()
 
     def start_recording(self, video_framerate: int = 25):
         self._get_video_backend().start_recording(video_framerate)
