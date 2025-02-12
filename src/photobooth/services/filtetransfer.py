@@ -20,7 +20,7 @@ class FileTransferService(BaseService):
     def __init__(self):
         super().__init__()
 
-        self._worker_thread: StoppableThread = None
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -48,6 +48,7 @@ class FileTransferService(BaseService):
         super().stopped()
 
     def _worker_fun(self):
+        assert self._worker_thread
         # init worker, get devices first time
         _previous_devices = self.get_current_removable_media()
 

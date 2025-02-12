@@ -37,7 +37,7 @@ class EventstreamLogHandler(logging.Handler):
             message=record.getMessage(),
             name=record.name,
             funcName=record.funcName,
-            lineno=record.lineno,
+            lineno=str(record.lineno),
         )
 
         sse_service.dispatch_event(sse_logrecord)
@@ -177,5 +177,5 @@ class LoggingService(BaseService):
         # report the failure
         logging.getLogger(name="__main__").exception(
             f"Uncaught exception in thread {args.thread}: {args.exc_type} {args.exc_value}",
-            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+            exc_info=(args.exc_type, BaseException(args.exc_value), args.exc_traceback),
         )

@@ -71,7 +71,7 @@ class Database:
 
     def list_items(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)).all()
+            galleryitems = list(session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)).all())
 
             return galleryitems
 
@@ -199,7 +199,7 @@ class Cache:
             # check files also, otherwise delete the item:
             if cacheditem_exists and not cacheditem_exists.filepath.exists():
                 logger.warning("deleting cached item from DB because file representation does not exist any more.")
-                session.execute(delete(cacheditem_exists))
+                session.delete(cacheditem_exists)
                 session.commit()
 
                 return None
@@ -331,12 +331,14 @@ class MediacollectionService(BaseService):
     def get_item_latest(self) -> Mediaitem:
         try:
             with Session(engine) as session:
-                return session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc())).first()
+                return session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc()).limit(1)).one()
         except NoResultFound as exc:
             raise FileNotFoundError("could not find an item") from exc
 
     def get_items_relto_job(self, job_identifier: UUID) -> list[Mediaitem]:
         with Session(engine) as session:
-            galleryitems = session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc()).where(Mediaitem.job_identifier == job_identifier)).all()
+            galleryitems = list(
+                session.scalars(select(Mediaitem).order_by(Mediaitem.rowid.desc()).where(Mediaitem.job_identifier == job_identifier)).all()
+            )
 
             return galleryitems

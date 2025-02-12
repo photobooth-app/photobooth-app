@@ -1,12 +1,13 @@
 import io
 import logging
 import os
-import platform
 import time
 
 import pytest
 from PIL import Image
 
+from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
+from photobooth.services.backends.gphoto2 import available_camera_indexes as gp2_avail
 from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendGphoto2
 
@@ -26,14 +27,12 @@ prepare config for testing
 
 
 ## check skip if wrong platform
-if not platform.system() == "Linux":
-    pytest.skip("tests are linux only platform, skipping test", allow_module_level=True)
+if gp is None:
+    pytest.skip("gphoto2 not available", allow_module_level=True)
 
 
 @pytest.fixture()
 def backend_gphoto2():
-    from photobooth.services.backends.gphoto2 import Gphoto2Backend
-    from photobooth.services.backends.gphoto2 import available_camera_indexes as gp2_avail
     # ensure virtual camera is available (starting from gphoto2 2.5.0 always true)
     # assert has_vcam() # on selfhosted-runner currently a problem. TODO: setup new RPI runner
 
@@ -41,8 +40,6 @@ def backend_gphoto2():
     # only one DSLR is connected at a time.
 
     def use_vcam():
-        import gphoto2 as gp
-
         logger.info(f"python-gphoto2: {gp.__version__}")
 
         # virtual camera delivers images from following path:
@@ -56,8 +53,6 @@ def backend_gphoto2():
         logger.info(os.environ["IOLIBS"])
 
     def has_vcam():
-        import gphoto2 as gp
-
         if "IOLIBS" not in os.environ:
             logger.warning("missing IOLIBS in os.environ! installation is off.")
             return False
@@ -170,8 +165,6 @@ def test_get_gphoto2_camera_info(backend_gphoto2):
 
 
 def test_get_gphoto2_info():
-    import gphoto2 as gp
-
     logger.info(f"python-gphoto2: {gp.__version__}")
     logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
     logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")

@@ -86,7 +86,7 @@ def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
         raise RuntimeError(f"filetype not supported, error: {exc}") from exc
 
     # Wrap on-the-fly thumbnail generator
-    def thumbnails(frames: list[Image.Image], target_size: tuple[float, float]):
+    def thumbnails(frames: ImageSequence.Iterator, target_size: tuple[int, int]):
         for frame in frames:
             thumbnail = frame.copy()
             thumbnail.thumbnail(size=target_size, resample=Image.Resampling.LANCZOS)
@@ -94,14 +94,12 @@ def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
     # to recover the original durations in scaled versions
     durations = []
-    for i in range(gif_image.n_frames):
-        gif_image.seek(i)
-        duration = gif_image.info.get("duration", 1000)  # fallback 1sec if info not avail.
+    for frame in ImageSequence.Iterator(gif_image):
+        duration = frame.info.get("duration", 1000)  # fallback 1sec if info not avail.
         durations.append(duration)
 
     # Get sequence iterator
-    frames = ImageSequence.Iterator(gif_image)
-    resized_frames = thumbnails(frames, [scaled_min_length, scaled_min_length])
+    resized_frames = thumbnails(ImageSequence.Iterator(gif_image), (scaled_min_length, scaled_min_length))
 
     # Save output
     om = next(resized_frames)  # Handle first frame separately

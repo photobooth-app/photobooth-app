@@ -23,8 +23,8 @@ class WebcamCv2Backend(AbstractBackend):
         self._config: GroupBackendOpenCv2 = config
         super().__init__(orientation=config.orientation)
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -45,7 +45,7 @@ class WebcamCv2Backend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -92,6 +92,7 @@ class WebcamCv2Backend(AbstractBackend):
     #
 
     def _worker_fun(self):
+        assert self._worker_thread
         logger.info("_worker_fun starts")
 
         if platform.system() == "Windows":

@@ -28,6 +28,7 @@ DEBOUNCE_TIME = 0.04
 
 class Button(ZeroButton):
     def _fire_held(self):
+        assert self.pin_factory
         # workaround for bug in gpiozero https://github.com/gpiozero/gpiozero/issues/697
         # https://github.com/gpiozero/gpiozero/issues/697#issuecomment-1480117579
         # Sometimes the kernel omits edges, so if the last
@@ -70,10 +71,10 @@ class GpioService(BaseService):
         self._mediacollection_service = mediacollection_service
 
         # input buttons
-        self.shutdown_btn: Button = None
-        self.reboot_btn: Button = None
-        self.action_btns: list[ActionButton] = None
-        self.share_btns: list[ShareButton] = None
+        self.shutdown_btn: Button | None = None
+        self.reboot_btn: Button | None = None
+        self.action_btns: list[ActionButton] = []
+        self.share_btns: list[ShareButton] = []
 
         # output signals
         # none yet
@@ -99,8 +100,8 @@ class GpioService(BaseService):
         try:
             mediaitem = self._mediacollection_service.get_item_latest()
             self._share_service.share(mediaitem, btn.action_index)
-        except BlockingIOError:
-            logger.warning(f"Wait {self._share_service.remaining_time_blocked():.0f}s until next print is possible.")
+        except BlockingIOError as exc:
+            logger.warning(exc)
         except Exception as exc:
             # other errors
             logger.critical(exc)
@@ -166,7 +167,7 @@ class GpioService(BaseService):
 
     def init_io(self):
         # shutdown
-        self.shutdown_btn: Button = Button(
+        self.shutdown_btn = Button(
             appconfig.hardwareinputoutput.gpio_pin_shutdown,
             hold_time=HOLD_TIME_SHUTDOWN,
             bounce_time=DEBOUNCE_TIME,
@@ -174,7 +175,7 @@ class GpioService(BaseService):
         self.shutdown_btn.when_held = self._shutdown
 
         # reboot
-        self.reboot_btn: Button = Button(
+        self.reboot_btn = Button(
             appconfig.hardwareinputoutput.gpio_pin_reboot,
             hold_time=HOLD_TIME_REBOOT,
             bounce_time=DEBOUNCE_TIME,
@@ -211,10 +212,10 @@ class GpioService(BaseService):
 
         self.uninit_io()
 
-        self.shutdown_btn: Button = None
-        self.reboot_btn: Button = None
-        self.action_btns: list[ActionButton] = []
-        self.share_btns: list[ShareButton] = []
+        self.shutdown_btn = None
+        self.reboot_btn = None
+        self.action_btns = []
+        self.share_btns = []
 
         if not appconfig.hardwareinputoutput.gpio_enabled:
             super().disabled()

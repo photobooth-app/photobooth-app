@@ -16,7 +16,7 @@ GREEN_RANGE_MAX_HSV = (65, 255, 255)
 ## chromakey algorithm implementation benchmark
 
 
-def pil_chromakey(pil_image: Image):
+def pil_chromakey(pil_image: Image.Image):
     # https://github.com/kimmobrunfeldt/howto-everything/blob/master/remove-green.md
     def rgb_to_hsv(r, g, b):
         maxc = max(r, g, b)
@@ -41,6 +41,7 @@ def pil_chromakey(pil_image: Image):
 
     # Go through all pixels and turn each 'green' pixel to transparent
     pix = pil_image.load()
+    assert pix
     width, height = pil_image.size
     min_h, min_s, min_v = GREEN_RANGE_MIN_HSV
     max_h, max_s, max_v = GREEN_RANGE_MAX_HSV
@@ -57,14 +58,14 @@ def pil_chromakey(pil_image: Image):
     return pil_image
 
 
-def opencv_chromakey(pil_image: Image):
+def opencv_chromakey(pil_image: Image.Image):
     BLUR_SIZE = 2
     DILATE_SIZE = 4
 
-    def convert_from_cv2_to_image(img: np.ndarray) -> Image:
+    def convert_from_cv2_to_image(img: np.ndarray) -> Image.Image:
         return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
 
-    def convert_from_image_to_cv2(img: Image) -> np.ndarray:
+    def convert_from_image_to_cv2(img: Image.Image) -> np.ndarray:
         return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     # choose hsv parameters: https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html
@@ -107,13 +108,13 @@ def opencv_chromakey(pil_image: Image):
     return convert_from_cv2_to_image(result)
 
 
-def opencv_chromakey_live(pil_image: Image):
+def opencv_chromakey_live(pil_image: Image.Image):
     # reduced quality optimized for higher speed.
 
-    def convert_from_cv2_to_image(img: np.ndarray) -> Image:
+    def convert_from_cv2_to_image(img: np.ndarray) -> Image.Image:
         return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
 
-    def convert_from_image_to_cv2(img: Image) -> np.ndarray:
+    def convert_from_image_to_cv2(img: Image.Image) -> np.ndarray:
         return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     # choose hsv parameters: https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html

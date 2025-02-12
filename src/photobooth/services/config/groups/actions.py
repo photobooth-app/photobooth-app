@@ -99,7 +99,7 @@ class SingleImageProcessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     fill_background_color: Color = Field(
-        default=Color("blue").as_hex(),
+        default=Color("blue"),
         description="Solid color used to fill background.",
     )
     img_background_enable: bool = Field(
@@ -140,7 +140,7 @@ class CollageProcessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     capture_fill_background_color: Color = Field(
-        default=Color("blue").as_hex(),
+        default=Color("blue"),
         description="Solid color used to fill background.",
     )
     capture_img_background_enable: bool = Field(
@@ -170,7 +170,7 @@ class CollageProcessing(BaseModel):
         description="Apply solid color background to collage",
     )
     canvas_fill_background_color: Color = Field(
-        default=Color("green").as_hex(),
+        default=Color("green"),
         description="Solid color used to fill background.",
     )
     canvas_img_background_enable: bool = Field(
@@ -362,7 +362,7 @@ class GroupActions(BaseModel):
                             pos_y=1250,
                             rotate=0,
                             font_size=30,
-                            color=Color("#333").as_hex(),
+                            color=Color("#333"),
                         )
                     ],
                 ),
@@ -384,7 +384,6 @@ class GroupActions(BaseModel):
                     show_individual_captures_in_gallery=True,
                 ),
                 processing=CollageProcessing(
-                    ask_approval_each_capture=True,
                     canvas_width=1920,
                     canvas_height=1280,
                     merge_definition=[
@@ -426,7 +425,7 @@ class GroupActions(BaseModel):
                             pos_x=200,
                             pos_y=1100,
                             rotate=1,
-                            color=Color("#333").as_hex(),
+                            color=Color("#333"),
                         )
                     ],
                 ),

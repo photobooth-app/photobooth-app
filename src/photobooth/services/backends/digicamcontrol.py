@@ -58,8 +58,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
         self._enabled_liveview: bool = False
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -91,7 +91,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -119,6 +119,7 @@ class DigicamcontrolBackend(AbstractBackend):
                 self._hires_data.request.clear()  # clear hq request even if failed, parent class might retry again
                 raise TimeoutError("timeout receiving frames")
 
+            assert self._hires_data.filepath
             return self._hires_data.filepath
 
     #
@@ -170,6 +171,7 @@ class DigicamcontrolBackend(AbstractBackend):
     # INTERNAL IMAGE GENERATOR
     #
     def _worker_fun(self):
+        assert self._worker_thread
         logger.debug("starting digicamcontrol worker function")
 
         # start in preview mode

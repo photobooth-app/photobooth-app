@@ -172,6 +172,7 @@ def create_upload_file(upload_target_folder: Annotated[str, Body()], uploaded_fi
 
     try:
         for uploaded_file in uploaded_files:
+            assert uploaded_file.filename
             file_location = upload_target_folder_path.joinpath(uploaded_file.filename)
             with open(file_location, "wb+") as file_object:
                 shutil.copyfileobj(uploaded_file.file, file_object)
@@ -194,6 +195,8 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
     if not new_folder_name:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "no new_folder_name given")
 
+    new_path = None
+
     try:
         new_path = filenames_sanitize(new_folder_name)
         new_path.mkdir(exist_ok=False, parents=True)
@@ -208,7 +211,7 @@ async def post_folder_new(new_folder_name: Annotated[str, Body()]):
 
 
 @router.post("/delete", status_code=status.HTTP_204_NO_CONTENT)
-async def post_delete(selected_paths: list[PathListItem] = None):
+async def post_delete(selected_paths: list[PathListItem]):
     """ """
     filenames_to_process = [filenames_sanitize(selected_path.filepath) for selected_path in selected_paths]
     logger.info(f"request delete, {filenames_to_process=}")
@@ -242,7 +245,7 @@ async def post_delete(selected_paths: list[PathListItem] = None):
 
 
 @router.post("/zip")
-def post_zip(selected_paths: list[PathListItem] = None):
+def post_zip(selected_paths: list[PathListItem]):
     zip_filename = f"photobooth_archive_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}.zip"
 
     try:

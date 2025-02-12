@@ -10,11 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from threading import Condition, Event
 
-from libcamera import controls
-from picamera2 import Picamera2
-from picamera2.allocators import PersistentAllocator
-from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality
-from picamera2.outputs import FfmpegOutput, FileOutput
+from libcamera import controls  # type: ignore
+from picamera2 import Picamera2  # type: ignore
+from picamera2.allocators import PersistentAllocator  # type: ignore
+from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
+from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...utils.stoppablethread import StoppableThread
 from ..config import appconfig
@@ -36,10 +36,12 @@ class PicamLoresData(io.BufferedIOBase):
         self.frame = None
         self.condition = Condition()
 
-    def write(self, buf):
+    def write(self, buf) -> int:
         with self.condition:
             self.frame = buf
             self.condition.notify_all()
+
+        return len(buf)
 
 
 class Picamera2Backend(AbstractBackend):
@@ -52,8 +54,8 @@ class Picamera2Backend(AbstractBackend):
         self._mjpeg_encoder: MJPEGEncoder = None  # livestream encoder
 
         # lores and hires data output
-        self._lores_data: PicamLoresData = None
-        self._hires_data: GeneralFileResult = None
+        self._lores_data: PicamLoresData | None = None
+        self._hires_data: GeneralFileResult | None = None
 
         # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
         self._video_recorded_videofilepath = None
@@ -61,7 +63,7 @@ class Picamera2Backend(AbstractBackend):
         self._video_output = None
 
         # worker threads
-        self._worker_thread: StoppableThread = None
+        self._worker_thread: StoppableThread | None = None
 
         self._capture_config = None
         self._preview_config = None
@@ -77,8 +79,8 @@ class Picamera2Backend(AbstractBackend):
             logger.info("closing camera before starting to ensure it's available")
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
-        self._lores_data: PicamLoresData = PicamLoresData()
-        self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
+        self._lores_data = PicamLoresData()
+        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
 
         tuning = None
         if self._config.optimized_lowlight_short_exposure:
@@ -164,7 +166,7 @@ class Picamera2Backend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -211,6 +213,8 @@ class Picamera2Backend(AbstractBackend):
         raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
+        assert self._hires_data
+
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
@@ -225,6 +229,8 @@ class Picamera2Backend(AbstractBackend):
                 raise TimeoutError("timeout receiving frames")
 
             self._hires_data.request.clear()
+            assert self._hires_data.filepath
+
             return self._hires_data.filepath
 
     @staticmethod
@@ -245,12 +251,15 @@ class Picamera2Backend(AbstractBackend):
 
         return round(value, digits)
 
-    def _wait_for_lores_image(self):
+    def _wait_for_lores_image(self) -> bytes:
+        assert self._lores_data
+
         """for other threads to receive a lores JPEG image"""
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
+            assert self._lores_data.frame
             return self._lores_data.frame
 
     def start_recording(self, video_framerate: int):
@@ -338,8 +347,10 @@ class Picamera2Backend(AbstractBackend):
     #
 
     def _worker_fun(self):
-        _metadata = None
+        assert self._worker_thread
+        assert self._hires_data
 
+        _metadata = None
         self._device_set_is_ready_to_deliver()
 
         while not self._worker_thread.stopped():  # repeat until stopped

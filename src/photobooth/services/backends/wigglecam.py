@@ -21,10 +21,10 @@ class WigglecamBackend(AbstractBackend):
         self._config: GroupBackendWigglecam = config
         super().__init__()
 
-        self._camera_pool: CameraPool = None
+        self._camera_pool: CameraPool | None = None
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -40,7 +40,7 @@ class WigglecamBackend(AbstractBackend):
             nodes.append(node)
 
         self._config_camera_pool = ConfigCameraPool(**self._config.model_dump())  # extract the campoolconfig from wiggle element
-        self._camera_pool: CameraPool = CameraPool(ConfigCameraPool, nodes=nodes)
+        self._camera_pool = CameraPool(ConfigCameraPool, nodes=nodes)
 
         logger.info(self._camera_pool.get_nodes_status())
         logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
@@ -61,7 +61,7 @@ class WigglecamBackend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -70,6 +70,7 @@ class WigglecamBackend(AbstractBackend):
         # TODO: need something to check? Like:  return self._camera_pool.is_healthy()
 
     def _wait_for_multicam_files(self) -> list[Path]:
+        assert self._camera_pool
         camerapooljobrequest = ConnectorJobRequest(number_captures=1)
 
         try:
@@ -91,6 +92,8 @@ class WigglecamBackend(AbstractBackend):
             return out
 
     def _wait_for_still_file(self) -> Path:
+        assert self._camera_pool
+
         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="wigglecam_", suffix=".jpg") as f:
             f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
 
@@ -131,6 +134,7 @@ class WigglecamBackend(AbstractBackend):
     #
 
     def _worker_fun(self):
+        assert self._worker_thread
         logger.info("_worker_fun starts")
 
         self._device_set_is_ready_to_deliver()
@@ -145,6 +149,7 @@ class WigglecamBackend(AbstractBackend):
                 except Exception as exc:
                     time.sleep(1)
                     logger.error(f"error requesting stream, keep trying. error: {exc}")
+                    continue
 
                 bytes = b""
                 for chunk in r.iter_content(chunk_size=1024):

@@ -16,9 +16,7 @@ class JobModelImage(JobModelBase):
 
     def get_phase1_singlepicturedefinition_per_index(self, index: int) -> SinglePictureDefinition:
         # index for jobmodelimage not used, just pass 1:1 to out
-        return SinglePictureDefinition(
-            **self._configuration_set.processing.model_dump(),
-        )
+        return SinglePictureDefinition(**self._configuration_set.processing.model_dump())
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
         raise RuntimeError("no phase2 mediageneration for images")

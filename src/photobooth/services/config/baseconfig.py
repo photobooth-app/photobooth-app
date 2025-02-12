@@ -31,7 +31,7 @@ class JsonConfigSettingsSource(PydanticBaseSettingsSource):
     def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
         field_value = None
         try:
-            file_content_json = json.loads(Path(self.config.get("json_file")).read_text(self.config.get("env_file_encoding")))
+            file_content_json = json.loads(Path(str(self.config.get("json_file"))).read_text(self.config.get("env_file_encoding")))
             field_value = file_content_json.get(field_name)
         except FileNotFoundError:
             # ignore file not found, because it could have been deleted or not yet initialized
@@ -132,7 +132,7 @@ class BaseConfig(BaseSettings):
         self._backup_config()
 
         # write model to disk to persist
-        with open(self.model_config.get("json_file"), mode="w", encoding=self.model_config.get("json_file_encoding")) as write_file:
+        with open(str(self.model_config.get("json_file")), mode="w", encoding=self.model_config.get("json_file_encoding")) as write_file:
             write_file.write(self.model_dump_json(context={"secrets_is_allowed": True}, indent=2))
 
         logger.debug(f"persisted config to {self.model_config.get('json_file')}")
@@ -143,23 +143,24 @@ class BaseConfig(BaseSettings):
     def deleteconfig(self):
         """Reset to defaults"""
         logger.debug("config reset to default")
+        json_file = None
 
         try:
-            json_file = self.model_config.get("json_file")
+            json_file = str(self.model_config.get("json_file"))
             os.remove(json_file)
             logger.debug(f"deleted {json_file} file.")
         except (FileNotFoundError, PermissionError):
             logger.warning(f"delete {json_file} file failed.")
 
     def _backup_config(self):
-        json_file = self.model_config.get("json_file")
+        json_file = str(self.model_config.get("json_file"))
         if Path(json_file).exists():
             datetimestr = datetime.now().strftime("%Y%m%d-%H%M%S")
             shutil.copy2(json_file, f"{json_file}_backup-{datetimestr}")
 
     def _remove_old_configs(self):
         KEEP_NO = 10
-        json_file_folder = Path(self.model_config.get("json_file")).parent
+        json_file_folder = Path(str(self.model_config.get("json_file"))).parent
         paths = sorted(json_file_folder.glob("*_backup*"), key=os.path.getmtime, reverse=True)
 
         if len(paths) > KEEP_NO:

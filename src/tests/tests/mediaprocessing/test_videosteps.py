@@ -23,6 +23,7 @@ def test_align_sizes_stage():
     steps = [BoomerangStep()]
     pipeline = Pipeline[VideoContext](*steps)
     pipeline(context)
+    assert context.video_processed
     video_out = context.video_processed
 
     # boomerang reverses video so double length

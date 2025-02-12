@@ -9,7 +9,11 @@ import time
 from pathlib import Path
 from threading import Condition, Event
 
-import gphoto2 as gp
+try:
+    import gphoto2 as gp  # type: ignore
+except ImportError:
+    gp = None
+
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendGphoto2
@@ -22,6 +26,9 @@ class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendGphoto2):
         self._config: GroupBackendGphoto2 = config
         super().__init__(orientation=config.orientation)
+
+        if gp is None:
+            raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
         self._camera = gp.Camera()
         self._camera_context = gp.Context()
@@ -44,8 +51,8 @@ class Gphoto2Backend(AbstractBackend):
             self.event_texts[getattr(gp, name)] = name
 
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
         logger.info(f"python-gphoto2: {gp.__version__}")
         logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
@@ -66,6 +73,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def start(self):
         super().start()
+        assert gp
 
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
         self._camera = gp.Camera()  # better use fresh object.
@@ -97,7 +105,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -124,6 +132,8 @@ class Gphoto2Backend(AbstractBackend):
             if not self._hires_data.condition.wait(timeout=8):
                 self._hires_data.request.clear()  # clear hq request even if failed, parent class might retry again
                 raise TimeoutError("timeout receiving frames")
+
+            assert self._hires_data.filepath
 
             return self._hires_data.filepath
 
@@ -169,6 +179,8 @@ class Gphoto2Backend(AbstractBackend):
             self._shutter_speed(self._config.shutter_speed_liveview)
 
     def _capturetarget(self, val: str = ""):
+        assert gp
+
         if not val:
             logger.debug("capturetarget empty, ignore")
             return
@@ -179,6 +191,8 @@ class Gphoto2Backend(AbstractBackend):
             logger.warning(f"cannot set capturetarget, command ignored {exc}")
 
     def _iso(self, val: str = ""):
+        assert gp
+
         if not val:
             logger.debug("iso empty, ignore")
             return
@@ -189,6 +203,8 @@ class Gphoto2Backend(AbstractBackend):
             logger.warning(f"cannot set iso, command ignored {exc}")
 
     def _shutter_speed(self, val: str = ""):
+        assert gp
+
         if not val:
             logger.debug("shutter speed empty, ignore")
             return
@@ -199,6 +215,8 @@ class Gphoto2Backend(AbstractBackend):
             logger.warning(f"cannot set shutter speed, command ignored {exc}")
 
     def _viewfinder(self, val=0):
+        assert gp
+
         try:
             self._gp_set_config("viewfinder", val)
         except gp.GPhoto2Error as exc:
@@ -215,6 +233,9 @@ class Gphoto2Backend(AbstractBackend):
     #
 
     def _worker_fun(self):
+        assert self._worker_thread
+        assert gp
+
         preview_failcounter = 0
 
         self._device_set_is_ready_to_deliver()
@@ -268,7 +289,7 @@ class Gphoto2Backend(AbstractBackend):
                 # hold a list of captured files during capture. this is needed if JPG+RAW is shot.
                 # there is no guarantee that the first is the JPG and second the RAW image. Also depending on the capturetarget
                 # the sequence the images appear can be different. gp.GP_CAPTURE_IMAGE vs gp.GP_CAPTURE_RAW seems not reliable to rely on
-                captured_files: list[tuple[str:str]] = []
+                captured_files: list[tuple[str, str]] = []
 
                 # disable viewfinder;
                 # allows camera to autofocus fast in native mode not contrast mode
@@ -356,6 +377,9 @@ def available_camera_indexes():
     """
     find available cameras, return valid indexes.
     """
+
+    if gp is None:
+        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
     camera_list = gp.Camera.autodetect()
     if len(camera_list) == 0:

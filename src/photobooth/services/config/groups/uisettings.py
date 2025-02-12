@@ -20,12 +20,12 @@ class GroupUiSettings(BaseModel):
     model_config = ConfigDict(title="Personalize the User Interface")
 
     PRIMARY_COLOR: Color = Field(
-        default=Color("#196cb0").as_hex(),
+        default=Color("#196cb0"),
         description="Primary color (e.g. buttons, title bar).",
     )
 
     SECONDARY_COLOR: Color = Field(
-        default=Color("#b8124f").as_hex(),
+        default=Color("#b8124f"),
         description="Secondary color (admin interface, accents).",
     )
 

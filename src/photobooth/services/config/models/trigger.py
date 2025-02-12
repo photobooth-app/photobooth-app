@@ -28,11 +28,9 @@ class UiTrigger(BaseModel):
         description="Use custom color for button.",
     )
     custom_color: Color = Field(
-        default=Color("#196cb0").as_hex(),
+        default=Color("#196cb0"),
         description="Custom color for the button.",
     )
-
-
 
 
 class KeyboardTrigger(BaseModel):

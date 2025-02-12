@@ -10,7 +10,7 @@ class KeyboardTriggerMapAction(BaseModel):
 
 
 class GpioTriggerMapAction(BaseModel):
-    pin: int = None
+    pin: int | None = None
     on: str = "pressed,hold,released"
     action: str = ""
 
@@ -71,13 +71,13 @@ class TextsConfig(BaseModel):
     rotate: int = 0
     font_size: PositiveInt = 40
     font: str = "userdata/fonts/Roboto-Bold.ttf"
-    color: Color = Color("red").as_hex()
+    color: Color = Color("red")
 
 
 class SinglePictureDefinition(BaseModel):
     filter: PilgramFilter = PilgramFilter.original
     fill_background_enable: bool = False
-    fill_background_color: Color = Color("blue").as_hex()
+    fill_background_color: Color = Color("blue")
     img_background_enable: bool = False
     img_background_file: str = "userdata/backgrounds/pink-7761356_1920.jpg"
     img_frame_enable: bool = False

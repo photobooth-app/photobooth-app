@@ -25,7 +25,7 @@ class QrShareService(BaseService):
 
         # objects
         self._mediacollection_service: MediacollectionService = mediacollection_service
-        self._worker_thread: StoppableThread = None
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -52,6 +52,7 @@ class QrShareService(BaseService):
         super().stopped()
 
     def _worker_fun(self):
+        assert self._worker_thread
         # init
         logger.info("starting shareservice worker_thread")
 

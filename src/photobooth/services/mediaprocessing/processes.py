@@ -103,6 +103,7 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
     pipeline(context)
 
     # get result
+    assert context.video_processed
     video_processed = context.video_processed
 
     # create final video
@@ -137,7 +138,7 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     # assemble pipeline
 
     if config.canvas_img_background_enable:
-        steps.append(ImageMountStep(canvas, config.canvas_img_background_file))
+        steps.append(ImageMountStep(config.canvas_img_background_file))
 
     if config.canvas_fill_background_enable:
         steps.append(FillBackgroundStep(config.canvas_fill_background_color))
@@ -233,7 +234,7 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def get_filter_preview(filepath_in: Path, filter: str = None) -> io.BytesIO:
+def get_filter_preview(filepath_in: Path, filter: str | None = None) -> io.BytesIO:
     try:
         image = Image.open(filepath_in)
         ImageOps.exif_transpose(image, in_place=True)  # needed to allow all backends set the orientation properly

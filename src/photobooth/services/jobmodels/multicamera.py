@@ -21,9 +21,7 @@ class JobModelMulticamera(JobModelBase):
 
         # until now just a very basic filter avail applied over all images
 
-        return SinglePictureDefinition(
-            filter=processing.filter.value,
-        )
+        return SinglePictureDefinition(filter=processing.filter)
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
         process_and_generate_wigglegram(phase1_files, phase2_mediaitem)

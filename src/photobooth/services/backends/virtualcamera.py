@@ -22,7 +22,7 @@ class CyclicImageSource:
         self.jpeg_chunks_iter = cycle(self.__preprocess__source())  # cycle iterable to offset, len --> seek(offset), read(len)
 
     def __preprocess__source(self):
-        jpeg_chunks: tuple[int, int] = []  # offset, len --> seek(offset), read(len)
+        jpeg_chunks: list[tuple[int, int]] = []  # offset, len --> seek(offset), read(len)
         last_offset = 0
 
         with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "demovideo.mjpg").resolve(), "rb") as stream_file_obj:
@@ -56,9 +56,9 @@ class VirtualCameraBackend(AbstractBackend):
         self._config: GroupBackendVirtualcamera = config
         super().__init__(orientation=config.orientation)
 
-        self._images_iterator: CyclicImageSource = CyclicImageSource().images()
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=None, condition=Condition())
-        self._worker_thread: StoppableThread = None
+        self._images_iterator = CyclicImageSource().images()
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
@@ -79,7 +79,7 @@ class VirtualCameraBackend(AbstractBackend):
 
     def _device_alive(self) -> bool:
         super_alive = super()._device_alive()
-        worker_alive = self._worker_thread and self._worker_thread.is_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
 
@@ -130,6 +130,7 @@ class VirtualCameraBackend(AbstractBackend):
     #
 
     def _worker_fun(self):
+        assert self._worker_thread
         logger.info("virtualcamera thread function starts")
 
         self._device_set_is_ready_to_deliver()

@@ -10,7 +10,7 @@ class CountdownTimer:
         self._duration: float = 0
         self._countdown: float = 0
 
-        self._ticker_thread: Thread = None
+        self._ticker_thread: Thread | None = None
         self._finished_condition: Condition = Condition()
 
     def start(self, duration: float):

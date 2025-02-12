@@ -21,7 +21,7 @@ def run_around_tests():
 
 ## check skip if wrong platform
 if linuxpy_video_device is None:
-    pytest.skip("tests are linux only platform, skipping test", allow_module_level=True)
+    pytest.skip("linuxpy module not available", allow_module_level=True)
 
 
 @pytest.fixture()

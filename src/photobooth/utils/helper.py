@@ -22,10 +22,10 @@ def filenames_sanitize(path_str: str, basepath: Path = Path.cwd()) -> Path:
     Returns:
         list[Path]: _description_
     """
-    basepath = str(basepath)
-    fullpath = os.path.normpath(os.path.join(basepath, path_str))
+    basepath_str = str(basepath)
+    fullpath = os.path.normpath(os.path.join(basepath_str, path_str))
 
-    if not fullpath.startswith(basepath):
+    if not fullpath.startswith(basepath_str):
         raise ValueError(f"illegal file requested: {fullpath}")
 
     return Path(fullpath)
@@ -39,14 +39,14 @@ def get_user_file(filepath: Path | str) -> Path:
 
     """
 
-    file_user_path = filenames_sanitize(Path(filepath))
+    file_user_path = filenames_sanitize(str(filepath))
     if file_user_path.is_file():
         return file_user_path
 
     # now check to fallback to demoassets
     demoassets_path = Path(__file__).parent.parent.resolve().joinpath("demoassets")
 
-    file_demoassets_path = filenames_sanitize(Path(demoassets_path, filepath), demoassets_path)
+    file_demoassets_path = filenames_sanitize(str(Path(demoassets_path, filepath)), demoassets_path)
     if file_demoassets_path.is_file():
         logger.info(f"file {filepath} found in demoassets {file_demoassets_path}")
         return file_demoassets_path

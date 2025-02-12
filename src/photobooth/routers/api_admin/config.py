@@ -36,7 +36,7 @@ def api_get_config_schema(configurable: str, schema_type: SchemaTypes = "default
 
 
 @router.get("/{configurable}")
-def api_get_config_current_active(configurable: str = None):
+def api_get_config_current_active(configurable: str):
     return container.config_service.get_current(configurable, True)
 
 

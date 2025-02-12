@@ -25,7 +25,7 @@ class JobModelAnimation(JobModelBase):
         return SinglePictureDefinition(
             texts_enable=False,
             img_frame_enable=False,
-            filter=captured_images[index].filter.value if index is not None else PilgramFilter.original.value,
+            filter=captured_images[index].filter if index is not None else PilgramFilter.original,
         )
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
