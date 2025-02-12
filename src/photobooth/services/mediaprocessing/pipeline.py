@@ -1,6 +1,6 @@
 from abc import abstractmethod
-from collections.abc import Callable, Generator, Iterable
-from typing import Generic, Protocol, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, Generic, TypeVar
 
 # implementation from article:
 # https://github.com/dkraczkowski/dkraczkowski.github.io
@@ -16,12 +16,12 @@ NextStep = Callable[[Context], Iterable[Exception | Context] | None]
 ErrorHandler = Callable[[Exception, Context, NextStep], None]
 
 
-class PipelineStep(Protocol[Context]):
+class PipelineStep(Generic[Context]):
     @abstractmethod
-    def __call__(self, context: Context, next_step: NextStep) -> Generator[Context]: ...
+    def __call__(self, context: Context, next_step: NextStep) -> None: ...
 
 
-def _default_error_handler(error: Exception, context: Context, next_step: NextStep) -> None:
+def _default_error_handler(error: Exception, context: Any, next_step: NextStep) -> None:
     raise error
 
 
@@ -43,10 +43,10 @@ class PipelineCursor(Generic[Context]):
 
 
 class Pipeline(Generic[Context]):
-    def __init__(self, *steps: PipelineStep):
+    def __init__(self, *steps: PipelineStep[Context]):
         self.queue = [step for step in steps]
 
-    def append(self, step: PipelineStep) -> None:
+    def append(self, step: PipelineStep[Context]) -> None:
         self.queue.append(step)
 
     def __call__(self, context: Context, error_handler: ErrorHandler | None = None) -> None:

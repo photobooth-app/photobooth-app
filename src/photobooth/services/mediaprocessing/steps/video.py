@@ -8,12 +8,12 @@ from pathlib import Path
 
 from .... import LOG_PATH
 from ..context import VideoContext
-from ..pipeline import NextStep
+from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
 
 
-class BoomerangStep:
+class BoomerangStep(PipelineStep):
     def __init__(self) -> None:
         pass  # no init config yet
 

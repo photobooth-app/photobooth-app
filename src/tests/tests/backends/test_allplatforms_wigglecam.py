@@ -5,6 +5,7 @@ from multiprocessing import Process
 
 import pytest
 import uvicorn
+from pydantic import HttpUrl
 from wigglecam import __main__
 from wigglecam.container import Container
 
@@ -33,7 +34,7 @@ def emulated_node() -> Generator[Container, None, None]:
 def backend_wigglecam() -> Generator[WigglecamBackend, None, None]:
     backend = WigglecamBackend(
         GroupBackendWigglecam(
-            nodes=[ConfigCameraNode(description="test", base_url="http://127.0.0.1:8081")],
+            nodes=[ConfigCameraNode(description="test", base_url=HttpUrl("http://127.0.0.1:8081"))],
         )
     )
 

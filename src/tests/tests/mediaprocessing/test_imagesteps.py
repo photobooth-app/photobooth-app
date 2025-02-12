@@ -3,6 +3,7 @@ Testing mediaprocessing singleimages pipeline
 """
 
 import logging
+from collections.abc import Generator
 
 import pytest
 from PIL import Image
@@ -28,7 +29,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def pil_image() -> Image.Image:
+def pil_image() -> Generator[Image.Image, None, None]:
     yield Image.open("src/tests/assets/input.jpg")
 
 

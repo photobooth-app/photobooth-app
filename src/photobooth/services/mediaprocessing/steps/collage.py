@@ -6,12 +6,12 @@ from PIL import Image, ImageOps
 
 from ...config.models.models import CollageMergeDefinition
 from ..context import CollageContext
-from ..pipeline import NextStep
+from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
 
 
-class MergeCollageStep:
+class MergeCollageStep(PipelineStep):
     def __init__(self, collage_merge_definition: list[CollageMergeDefinition]) -> None:
         self.collage_merge_definition = collage_merge_definition
 

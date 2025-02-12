@@ -17,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 def test_collage_stage():
     canvas = Image.new("RGBA", (1500, 1500), color=None)
-    images = [
+    images: list[Image.Image] = [
         Image.open("src/tests/assets/input.jpg"),
         Image.open("src/tests/assets/input.jpg"),
         Image.open("src/tests/assets/input.jpg"),
@@ -43,7 +43,7 @@ def test_collage_stage():
 def test_collage_stage_definition_not_matching_with_no_captured():
     # 2 captures vs. 3 required per definition
     canvas = Image.new("RGBA", (1500, 1500), color=None)
-    images = [
+    images: list[Image.Image] = [
         Image.open("src/tests/assets/input.jpg"),
         Image.open("src/tests/assets/input.jpg"),
     ]

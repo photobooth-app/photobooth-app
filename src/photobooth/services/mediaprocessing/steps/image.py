@@ -14,12 +14,12 @@ from ....utils.exceptions import PipelineError
 from ....utils.helper import get_user_file
 from ...config.models.models import TextsConfig
 from ..context import ImageContext
-from ..pipeline import NextStep
+from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
 
 
-class Pilgram2Step:
+class Pilgram2Step(PipelineStep):
     def __init__(self, filter: str) -> None:
         self.filter = filter
 
@@ -45,10 +45,10 @@ class Pilgram2Step:
             filtered_transparent_image = Image.merge(context.image.mode, (r, g, b, a))
 
             filtered_image = filtered_transparent_image
+            del filtered_transparent_image
 
         context.image = filtered_image
-        filtered_image = None
-        filtered_transparent_image = None
+        del filtered_image
 
         next_step(context)
 
@@ -56,8 +56,8 @@ class Pilgram2Step:
         return self.__class__.__name__
 
 
-class FillBackgroundStep:
-    def __init__(self, color: Color) -> None:
+class FillBackgroundStep(PipelineStep):
+    def __init__(self, color: Color | str) -> None:
         self.color = color
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
@@ -79,7 +79,7 @@ class FillBackgroundStep:
         return self.__class__.__name__
 
 
-class ImageMountStep:
+class ImageMountStep(PipelineStep):
     def __init__(self, background_file: Path | str, reverse: bool = False) -> None:
         self.background_file = background_file
         self.reverse = reverse
@@ -124,7 +124,7 @@ class ImageMountStep:
         return self.__class__.__name__
 
 
-class ImageFrameStep:
+class ImageFrameStep(PipelineStep):
     """optimized function for use on single images.
     resulting size is derived from the frame, since frame is considered as the "master"
     detects transparent area in frame and fits captured image best as possible
@@ -182,7 +182,7 @@ class ImageFrameStep:
         return self.__class__.__name__
 
 
-class TextStep:
+class TextStep(PipelineStep):
     def __init__(self, textstageconfig: list[TextsConfig]) -> None:
         self.textstageconfig = textstageconfig
 
@@ -227,7 +227,7 @@ class TextStep:
         return self.__class__.__name__
 
 
-class RemoveChromakeyStep:
+class RemoveChromakeyStep(PipelineStep):
     """
     References:
         choose hsv parameters: https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html

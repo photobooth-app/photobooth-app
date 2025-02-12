@@ -28,14 +28,14 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
         # every second frame is the last_image delivered to test the exception handling.
 
         try:
-            output_bytes = handler_liveview_response.last_image  # local static var
-            del handler_liveview_response.last_image
+            output_bytes = handler_liveview_response.last_image  # type: ignore # local static var
+            del handler_liveview_response.last_image  # type: ignore # local static var
         except Exception:
             image = Image.new(mode="RGB", size=(20, 20), color=(randrange(255), randrange(255), randrange(255)))
             with io.BytesIO() as output:
                 image.save(output, format="jpeg")
                 output_bytes = output.getvalue()
-                handler_liveview_response.last_image = output_bytes  # local static var
+                handler_liveview_response.last_image = output_bytes  # type: ignore # local static var
 
         return Response(output_bytes, mimetype="image/jpeg")
 
@@ -43,8 +43,9 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
         logger.warning("hit custom handler_set_tempfolder_and_prepare_output_image")
         if request.args.get("slc") == "set" and request.args.get("param1") == "session.folder" and request.args.get("param2"):
             logger.info(request.args)
-            target_folder = Path(request.args.get("param2"))
-            shutil.copy2("src/tests/assets/input.jpg", Path(target_folder, "input.jpg"))
+            param2 = request.args.get("param2")
+            assert param2
+            shutil.copy2("src/tests/assets/input.jpg", Path(param2, "input.jpg"))
 
             return Response("OK", content_type="text/plain")
         logger.warning("hit custom handler 500 out")

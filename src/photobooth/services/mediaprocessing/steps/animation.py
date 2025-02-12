@@ -5,12 +5,12 @@ import logging
 from PIL import Image, ImageOps
 
 from ..context import AnimationContext
-from ..pipeline import NextStep
+from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
 
 
-class AlignSizesStep:
+class AlignSizesStep(PipelineStep):
     def __init__(self, canvas_size: tuple[int, int]) -> None:
         self.canvas_size = canvas_size  # W x H
 
@@ -22,7 +22,7 @@ class AlignSizesStep:
 
         # update all after finished and unset var to help garbage collection
         context.images = sequenced_images
-        sequenced_images = None
+        del sequenced_images
 
         next_step(context)
 

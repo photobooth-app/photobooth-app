@@ -1,5 +1,6 @@
 import io
 import logging
+from collections.abc import Generator
 from subprocess import PIPE, Popen
 
 import cv2
@@ -28,6 +29,7 @@ def ffmpeg_scale(jpeg_bytes, tmp_path):
         ],
         stdin=PIPE,
     )
+    assert ffmpeg_subprocess.stdin
     ffmpeg_subprocess.stdin.write(jpeg_bytes)
     ffmpeg_subprocess.stdin.close()
     code = ffmpeg_subprocess.wait()
@@ -42,10 +44,11 @@ def pyvips_scale(jpeg_bytes, tmp_path):
     lgr.propagate = True
 
     image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
-    out: pyvips.Image = image.thumbnail_image(
-        int(image.width / 2),  # width
+
+    out: pyvips.Image = image.thumbnail_image(  # type: ignore
+        int(image.width / 2),  # width # type: ignore
     )
-    bytes = out.jpegsave_buffer(Q=85)
+    bytes = out.jpegsave_buffer(Q=85)  # type: ignore
 
     return bytes
 
@@ -57,8 +60,8 @@ def pyvips_resize_scale(jpeg_bytes, tmp_path):
     lgr.propagate = True
 
     image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
-    out: pyvips.Image = image.resize(0.5)
-    bytes = out.jpegsave_buffer(Q=85)
+    out: pyvips.Image = image.resize(0.5)  # type: ignore
+    bytes = out.jpegsave_buffer(Q=85)  # type: ignore
     # im = Image.open(io.BytesIO(bytes))
     # im.show()
 
@@ -137,12 +140,12 @@ def image(file) -> bytes:
 
 
 @pytest.fixture()
-def image_hires() -> bytes:
+def image_hires() -> Generator[bytes, None, None]:
     yield image("src/tests/assets/input.jpg")
 
 
 @pytest.fixture()
-def image_lores() -> bytes:
+def image_lores() -> Generator[bytes, None, None]:
     yield image("src/tests/assets/input_lores.jpg")
 
 

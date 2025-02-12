@@ -4,11 +4,11 @@ from ....utils.exceptions import PipelineError
 from ....utils.helper import get_user_file
 from ...config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..context import AnimationContext, CollageContext, ImageContext
-from ..pipeline import NextStep, Pipeline
+from ..pipeline import NextStep, Pipeline, PipelineStep
 from .image import Pilgram2Step
 
 
-class AddPredefinedImagesStep:
+class AddPredefinedImagesStep(PipelineStep):
     def __init__(self, merge_definition: list[CollageMergeDefinition] | list[AnimationMergeDefinition]) -> None:
         self.merge_definition = merge_definition
 
@@ -29,7 +29,7 @@ class AddPredefinedImagesStep:
         return self.__class__.__name__
 
 
-class PostPredefinedImagesStep:
+class PostPredefinedImagesStep(PipelineStep):
     """
     captures are postprocessed during capture, predefined not.
     the mergedefinition allows for pilgram2 filter to apply, so we need to apply these here.

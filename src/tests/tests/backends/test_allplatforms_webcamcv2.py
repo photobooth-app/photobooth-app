@@ -3,6 +3,7 @@ Testing VIRTUALCAMERA Backend
 """
 
 import logging
+from collections.abc import Generator
 
 import pytest
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def backend_cv2() -> WebcamCv2Backend:
+def backend_cv2() -> Generator[WebcamCv2Backend, None, None]:
     # setup
     backend = WebcamCv2Backend(GroupBackendOpenCv2())
 
