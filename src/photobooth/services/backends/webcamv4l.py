@@ -55,10 +55,10 @@ class WebcamV4lBackend(AbstractBackend):
         return super_alive and worker_alive
 
     def _device_available(self):
-        """
-        For v4l we check to open device is possible
-        """
-        return is_valid_camera_index(self._config.device_index)
+        if self._config.device_index in available_camera_indexes():
+            return True
+        else:
+            return False
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -130,49 +130,18 @@ class WebcamV4lBackend(AbstractBackend):
         logger.info("v4l_img_aquisition finished, exit")
 
 
-def available_camera_indexes():
-    """
-    detect usb camera indexes
-
-    Returns:
-        _type_: _description_
-    """
-    # checks the first 10 indexes.
-
-    index = 0
-    arr = []
-    i = 10
-    while i > 0:
-        if is_valid_camera_index(index):
-            arr.append(index)
-        index += 1
-        i -= 1
-
-    return arr
-
-
-def is_valid_camera_index(index):
-    """test whether index is valid device
-
-    Args:
-        index (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
+def available_camera_indexes() -> list[int]:
     if linuxpy_video_device is None:
         raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
-    try:
-        with linuxpy_video_device.Device.from_id(index) as device:
-            capture = linuxpy_video_device.VideoCapture(device)
-            capture.set_format(640, 480, "MJPG")
+    mjpeg_stream_devices: list[int] = []
 
-            for _ in device:
-                # got frame, close cam and return true; otherwise false.
-                break
+    devices_list = list(linuxpy_video_device.iter_video_capture_devices())
 
-            return True
+    for device_list in devices_list:
+        with linuxpy_video_device.Device(device_list.filename) as device:
+            if any(device_format.pixel_format == linuxpy_video_device.PixelFormat.MJPEG for device_format in device.info.formats):
+                if device.index is not None:
+                    mjpeg_stream_devices.append(device.index)
 
-    except Exception:
-        return False
+    return mjpeg_stream_devices
