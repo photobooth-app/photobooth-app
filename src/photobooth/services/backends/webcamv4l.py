@@ -128,6 +128,8 @@ class WebcamV4lBackend(AbstractBackend):
                     self._hires_data.request.clear()
 
                     capture.set_format(self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT, "MJPG")
+                    fmt = capture.get_format()
+                    logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
 
                     # capture hq picture
                     for frame in device:  # forever
@@ -143,6 +145,8 @@ class WebcamV4lBackend(AbstractBackend):
                         self._hires_data.condition.notify_all()
                 else:
                     capture.set_format(self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT, "MJPG")
+                    fmt = capture.get_format()
+                    logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
 
                     for frame in device:  # forever
                         # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib

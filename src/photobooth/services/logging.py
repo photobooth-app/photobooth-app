@@ -124,8 +124,6 @@ class LoggingService(BaseService):
             "PIL.PngImagePlugin",
             "PIL.TiffImagePlugin",
             "multipart",
-            "v4l2py",
-            "linuxpy",
             "requests",
             "urllib3",
         ]:
@@ -136,6 +134,8 @@ class LoggingService(BaseService):
 
         for name in [
             "pywifi",
+            "v4l2py",
+            "linuxpy",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
