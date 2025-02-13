@@ -188,13 +188,22 @@ class GroupBackendV4l2(BaseBackendModel):
         default=0,
         description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
     )
-    CAM_RESOLUTION_WIDTH: int = Field(
-        default=10000,
-        description="Resolution width requested from camera.",
+
+    CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
+        default=4192,
+        description="camera resolution width to capture high resolution photo",
     )
-    CAM_RESOLUTION_HEIGHT: int = Field(
-        default=10000,
-        description="Resolution height requested from camera.",
+    CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=3104,
+        description="camera resolution height to capture high resolution photo",
+    )
+    PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
+        default=640,
+        description="camera resolution width to capture live video",
+    )
+    PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=480,
+        description="camera resolution height to capture live video",
     )
 
 
