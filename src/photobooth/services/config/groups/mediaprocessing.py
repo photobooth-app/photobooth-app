@@ -66,3 +66,7 @@ class GroupMediaprocessing(BaseModel):
         le=50,
         description="Tolerance for color (H) on chromakey color removal.",
     )
+    filtertype: Literal["none", "pilgram2", "stablediffusion"] = Field(
+        default="pilgram2",
+        description="Select the type of filter system available to the user.",
+    )

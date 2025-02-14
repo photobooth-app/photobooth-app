@@ -8,6 +8,7 @@ from ...database.models import DimensionTypes
 from ...services.config.models.models import PilgramFilter, SinglePictureDefinition
 from ...services.mediaprocessing.processes import get_filter_preview, process_image_collageimage_animationimage
 from ...utils.exceptions import PipelineError
+from ...services.config import appconfig
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -19,20 +20,30 @@ router = APIRouter(
 @router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
 def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
     try:
-        item = container.mediacollection_service.get_item(mediaitem_id)
-        thumbnail = container.mediacollection_service.cache.get_cached_repr(
-            item=item,
-            dimension=DimensionTypes.thumbnail,
-            processed=False,
-        )
+        if appconfig.mediaprocessing.filtertype == "pilgram2":
+            item = container.mediacollection_service.get_item(mediaitem_id)
+            thumbnail = container.mediacollection_service.cache.get_cached_repr(
+                item=item,
+                dimension=DimensionTypes.thumbnail,
+                processed=False,
+            )
 
-        buffer_preview_pipeline_applied = get_filter_preview(thumbnail.filepath, filter)
+            buffer_preview_pipeline_applied = get_filter_preview(thumbnail.filepath, filter)
 
-        return Response(
-            content=buffer_preview_pipeline_applied.getvalue(),
-            media_type="image/jpeg",
-            headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
-        )
+            return Response(
+                content=buffer_preview_pipeline_applied.getvalue(),
+                media_type="image/jpeg",
+                headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
+            )
+        elif appconfig.mediaprocessing.filtertype == "stablediffusion":
+            with open("../../../assets/filters/" + filter + ".png") as f:
+                content = f.read()
+            return Response(
+                # @TODO: should add check if the file exists and if the "filter" is in the userselectable filters
+                content=content,
+                media_type="image/png",
+                headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
+            )
 
     except FileNotFoundError as exc:
         # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found

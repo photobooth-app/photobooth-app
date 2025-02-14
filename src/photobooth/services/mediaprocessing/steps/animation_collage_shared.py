@@ -51,7 +51,7 @@ class PostPredefinedImagesStep(PipelineStep):
 
                 filter = self.merge_definition[idx].filter
                 if filter and filter != "original":
-                    sub_steps.append(Pilgram2Step(filter))
+                    sub_steps.append(FilterStep(filter))
 
                 sub_pipeline = Pipeline[ImageContext](*sub_steps)
                 sub_pipeline(sub_context)

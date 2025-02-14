@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
-from ..models.models import PilgramFilter
+from ..models.models import PilgramFilter, StableDiffusionFilter
 
 
 class GroupUiSettings(BaseModel):

@@ -245,7 +245,7 @@ def get_filter_preview(filepath_in: Path, filter: str | None = None) -> io.Bytes
     steps = []
 
     if filter and filter != "original":
-        steps.append(Pilgram2Step(filter))
+        steps.append(FilterStep(filter))
 
     # setup pipeline.
     pipeline = Pipeline[ImageContext](*steps)
