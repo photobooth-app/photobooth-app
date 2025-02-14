@@ -140,7 +140,7 @@ class WebcamV4lBackend(AbstractBackend):
 
         with linuxpy_video_device.Device.from_id(self._config.device_index) as device:
             logger.info(f"webcam device index: {self._config.device_index}")
-            logger.info(f"webcam: {device.info.card}")
+            logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
 
             capture = linuxpy_video_device.VideoCapture(device)
             capture.set_fps(25)
@@ -203,6 +203,7 @@ def available_camera_indexes() -> list[int]:
 
     for device_list in devices_list:
         with linuxpy_video_device.Device(device_list.filename) as device:
+            assert device.info
             if any(device_format.pixel_format == linuxpy_video_device.PixelFormat.MJPEG for device_format in device.info.formats):
                 if device.index is not None:
                     mjpeg_stream_devices.append(device.index)
