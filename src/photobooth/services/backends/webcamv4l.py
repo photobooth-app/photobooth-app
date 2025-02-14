@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition, Event
+from typing import Literal
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendV4l2
@@ -65,14 +66,21 @@ class WebcamV4lBackend(AbstractBackend):
         raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
-        assert self._hires_data
-
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
         this function blocks until frame is received
         raise TimeoutError if no frame was received
         """
+
+        if self._config.switch_to_high_resolution_for_stills:
+            return self._wait_for_still_file_switch_hires()
+        else:
+            return self._wait_for_still_file_noswitch_lores()
+
+    def _wait_for_still_file_switch_hires(self) -> Path:
+        assert self._hires_data
+
         with self._hires_data.condition:
             self._hires_data.request.set()
 
@@ -84,6 +92,11 @@ class WebcamV4lBackend(AbstractBackend):
             assert self._hires_data.filepath
 
             return self._hires_data.filepath
+
+    def _wait_for_still_file_noswitch_lores(self) -> Path:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_lores_", suffix=".jpg") as f:
+            f.write(self._wait_for_lores_image())
+            return Path(f.name)
 
     def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
@@ -103,6 +116,21 @@ class WebcamV4lBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _switch_mode(self, capture, mode: Literal["hires", "lores"]):
+        logger.info(f"switch_mode to {mode} requested")
+
+        if mode == "hires":
+            width, height = self._config.HIRES_CAM_RESOLUTION_WIDTH, self._config.HIRES_CAM_RESOLUTION_HEIGHT
+        else:
+            width, height = self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT
+
+        try:
+            capture.set_format(width, height, "MJPG")
+            fmt = capture.get_format()
+            logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
+        except Exception as exc:
+            logger.error(f"error switching mode due to {exc}")
+
     def _worker_fun(self):
         logger.info("_worker_fun starts")
         logger.info(f"trying to open camera index={self._config.device_index=}")
@@ -117,23 +145,18 @@ class WebcamV4lBackend(AbstractBackend):
             capture = linuxpy_video_device.VideoCapture(device)
             capture.set_fps(25)
 
-            capture.set_format(self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT, "MJPG")
-            fmt = capture.get_format()
-            fps = capture.get_fps()
-            logger.info(f"Starting capture {fmt.width}x{fmt.height} at {fps} fps in {fmt.pixel_format.name}")
+            self._switch_mode(capture, "lores")
 
             while not self._worker_thread.stopped():
                 if self._hires_data.request.is_set():
                     # only capture one pic and return to lores streaming afterwards
                     self._hires_data.request.clear()
 
-                    capture.set_format(self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT, "MJPG")
-                    fmt = capture.get_format()
-                    logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
+                    self._switch_mode(capture, "hires")
 
                     # capture hq picture
                     for frame in device:  # forever
-                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_", suffix=".jpg") as f:
+                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
                             f.write(bytes(frame))
 
                         self._hires_data.filepath = Path(f.name)
@@ -144,9 +167,7 @@ class WebcamV4lBackend(AbstractBackend):
                     with self._hires_data.condition:
                         self._hires_data.condition.notify_all()
                 else:
-                    capture.set_format(self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT, "MJPG")
-                    fmt = capture.get_format()
-                    logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
+                    self._switch_mode(capture, "lores")
 
                     for frame in device:  # forever
                         # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib

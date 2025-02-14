@@ -189,21 +189,26 @@ class GroupBackendV4l2(BaseBackendModel):
         description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
     )
 
-    CAPTURE_CAM_RESOLUTION_WIDTH: int = Field(
+    CAM_RESOLUTION_WIDTH: int = Field(
+        default=640,
+        description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+    )
+    CAM_RESOLUTION_HEIGHT: int = Field(
+        default=480,
+        description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+    )
+
+    switch_to_high_resolution_for_stills: int = Field(
+        default=4192,
+        description="Enable to close camera, switch to higher resolution and grab one frame with below configuration. Resolution used for stills.",
+    )
+    HIRES_CAM_RESOLUTION_WIDTH: int = Field(
         default=4192,
         description="camera resolution width to capture high resolution photo",
     )
-    CAPTURE_CAM_RESOLUTION_HEIGHT: int = Field(
+    HIRES_CAM_RESOLUTION_HEIGHT: int = Field(
         default=3104,
         description="camera resolution height to capture high resolution photo",
-    )
-    PREVIEW_CAM_RESOLUTION_WIDTH: int = Field(
-        default=640,
-        description="camera resolution width to capture live video",
-    )
-    PREVIEW_CAM_RESOLUTION_HEIGHT: int = Field(
-        default=480,
-        description="camera resolution height to capture live video",
     )
 
 
