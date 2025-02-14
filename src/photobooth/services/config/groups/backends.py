@@ -198,8 +198,8 @@ class GroupBackendV4l2(BaseBackendModel):
         description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
     )
 
-    switch_to_high_resolution_for_stills: int = Field(
-        default=4192,
+    switch_to_high_resolution_for_stills: bool = Field(
+        default=True,
         description="Enable to close camera, switch to higher resolution and grab one frame with below configuration. Resolution used for stills.",
     )
     HIRES_CAM_RESOLUTION_WIDTH: int = Field(
