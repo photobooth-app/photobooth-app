@@ -1,5 +1,5 @@
 import webuiapi
-
+from .sdpresets.basefiltersd import BaseFilterSD
 from ..services.mediaprocessing.context import ImageContext
 from ..utils.exceptions import PipelineError
 
