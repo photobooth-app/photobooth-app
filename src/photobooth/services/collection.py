@@ -22,7 +22,7 @@ from ..utils.resizer import generate_resized
 from .base import BaseService
 from .config import appconfig
 from .sse import sse_service
-from .sse.sse_ import SseEventDbInsert, SseEventDbRemove
+from .sse.sse_ import SseEventDbInsert, SseEventDbRemove, SseEventDbUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +291,9 @@ class MediacollectionService(BaseService):
         self.fs.check_representing_files_raise(item)
 
         self.db.update_item(item)
+
+        # send update not to clients, so they can load updated images in case needed.
+        sse_service.dispatch_event(SseEventDbUpdate(mediaitem=MediaitemPublic.model_validate(item)))
 
     def delete_item(self, item: Mediaitem):
         self.db.delete_item(item)
