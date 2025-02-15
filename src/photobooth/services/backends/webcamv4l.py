@@ -143,7 +143,12 @@ class WebcamV4lBackend(AbstractBackend):
             logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
 
             capture = linuxpy_video_device.VideoCapture(device)
-            capture.set_fps(25)
+
+            try:
+                capture.set_fps(25)
+            except OSError as exc:
+                logger.warning(f"cannot set_fps due to error: {exc}")
+                # continue even if error occured, camera might not support fps setting...
 
             self._switch_mode(capture, "lores")
 
@@ -155,7 +160,14 @@ class WebcamV4lBackend(AbstractBackend):
                     self._switch_mode(capture, "hires")
 
                     # capture hq picture
-                    for frame in device:  # forever
+                    for frame in device:
+                        # throw away the first x frames to allow the camera to settle again.
+                        if frame.frame_nb <= self._config.flush_number_frames_after_switch:
+                            continue
+
+                        if self._config.flush_number_frames_after_switch:
+                            logger.info("skipped {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+
                         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
                             f.write(bytes(frame))
 
