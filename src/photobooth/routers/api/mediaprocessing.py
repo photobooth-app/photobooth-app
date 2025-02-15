@@ -1,4 +1,5 @@
 import logging
+import os.path
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Response, status
@@ -36,7 +37,8 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
                 headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
             )
         elif appconfig.mediaprocessing.filtertype == "stablediffusion":
-            with open("../../../assets/filters/" + filter + ".png") as f:
+            dirname = os.path.dirname(__file__) or '.'
+            with open(dirname + "/../../../../assets/filters/" + str(filter) + ".png", "rb") as f:
                 content = f.read()
             return Response(
                 # @TODO: should add check if the file exists and if the "filter" is in the userselectable filters

@@ -129,6 +129,9 @@ class GroupUiSettings(BaseModel):
     gallery_filter_userselectable: list[PilgramFilter] = Field(
         default=[e for e in PilgramFilter],
     )
+    gallery_filter_stablediffusion_userselectable: list[StableDiffusionFilter] = Field(
+        default=[e for e in StableDiffusionFilter],
+    )
     gallery_show_download: bool = Field(
         default=True,
         description="Show a download button in gallery.",

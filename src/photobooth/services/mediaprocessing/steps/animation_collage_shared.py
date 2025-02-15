@@ -5,7 +5,7 @@ from ....utils.helper import get_user_file
 from ...config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..context import AnimationContext, CollageContext, ImageContext
 from ..pipeline import NextStep, Pipeline, PipelineStep
-from .image import Pilgram2Step
+from .image import FilterStep
 
 
 class AddPredefinedImagesStep(PipelineStep):

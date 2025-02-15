@@ -17,7 +17,7 @@ from photobooth.services.mediaprocessing.steps.image import (
     FillBackgroundStep,
     ImageFrameStep,
     ImageMountStep,
-    Pilgram2Step,
+    FilterStep,
     RemoveChromakeyStep,
     TextStep,
 )
@@ -63,7 +63,7 @@ def test_validate_test_method_different():
 
 def test_pilgram_stage(pil_image: Image.Image):
     context = ImageContext(pil_image)
-    steps = [Pilgram2Step("aden")]
+    steps = [FilterStep("aden")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -79,7 +79,7 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
 
     context = ImageContext(pil_image)
-    steps = [Pilgram2Step("aden")]
+    steps = [FilterStep("aden")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -95,7 +95,7 @@ def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
     with pytest.raises(PipelineError):
         # yes right! original is no filter ;)
         context = ImageContext(pil_image)
-        steps = [Pilgram2Step("original")]
+        steps = [FilterStep("original")]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 
