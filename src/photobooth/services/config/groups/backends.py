@@ -210,6 +210,12 @@ class GroupBackendV4l2(BaseBackendModel):
         default=3104,
         description="camera resolution height to capture high resolution photo",
     )
+    flush_number_frames_after_switch: int = Field(
+        default=2,
+        ge=0,
+        le=20,
+        description="After switching the format, to high resolution, the camera might need some frames to accomodate to the light again. Use the lowest numer of frames that gives the same image as before in preview mode. If too low, images might apper darker or lighter than expected.",
+    )
 
 
 class GroupBackendDigicamcontrol(BaseBackendModel):

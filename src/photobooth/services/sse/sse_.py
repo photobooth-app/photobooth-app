@@ -74,8 +74,6 @@ class SseEventProcessStateinfo(SseEventBase):
 
 @dataclass
 class SseEventDbInsert(SseEventBase):
-    """basic class for sse events"""
-
     mediaitem: MediaitemPublic
 
     event: str = "DbInsert"
@@ -86,9 +84,18 @@ class SseEventDbInsert(SseEventBase):
 
 
 @dataclass
-class SseEventDbRemove(SseEventBase):
-    """basic class for sse events"""
+class SseEventDbUpdate(SseEventBase):
+    mediaitem: MediaitemPublic
 
+    event: str = "DbUpdate"
+
+    @property
+    def data(self) -> str:
+        return self.mediaitem.model_dump_json()
+
+
+@dataclass
+class SseEventDbRemove(SseEventBase):
     mediaitem: MediaitemPublic
 
     event: str = "DbRemove"

@@ -56,7 +56,7 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
 
 
 @router.get("/applyfilter/{mediaitem_id}/{filter}")
-def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
+def api_get_applyfilter(mediaitem_id: UUID, filter: str | None = None):
     try:
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
 
@@ -65,8 +65,6 @@ def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
         _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
-        container.mediacollection_service.update_item(mediaitem)
-
         mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(
             item=mediaitem,
             dimension=DimensionTypes.full,
@@ -74,6 +72,9 @@ def api_get_applyfilter(mediaitem_id: UUID, filter: str = None):
         )
 
         process_image_collageimage_animationimage(mediaitem_cached_repr_full.filepath, mediaitem)
+
+        # update at last in db after processing is finished because in that moment the clients get their sseUpdate notification and cache is busted
+        container.mediacollection_service.update_item(mediaitem)
     except Exception as exc:
         logger.exception(exc)
         logger.error(f"apply pipeline failed, reason: {exc}.")

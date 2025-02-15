@@ -51,6 +51,7 @@ Feel free to send pull request to the [documentation repository](https://github.
 git clone https://github.com/photobooth-app/photobooth-app.git
 cd photobooth-app
 
+uv venv --system-site-packages # allow acces to system packages for libcamera/picamera2
 uv sync
 ```
 
