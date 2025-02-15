@@ -36,7 +36,7 @@ class PluginManagerService(BaseService):
             return
 
         # included predefined and externally installable plugins
-        ENTRY_POINT_GROUP = "photobooth.plugins"  # see pyproject.toml section
+        ENTRY_POINT_GROUP = "photobooth11"  # see pyproject.toml section
         entry_points_app = entry_points(group=ENTRY_POINT_GROUP)
         included_plugins = [importlib.import_module(entry_point.value) for entry_point in entry_points_app]
         logger.info(
