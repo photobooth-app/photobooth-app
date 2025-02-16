@@ -100,7 +100,7 @@ class GroupShare(BaseModel):
                 processing=ShareProcessing(
                     share_command="echo {filename} {copies}",
                     share_blocked_time=10,
-                    parameters=[ShareProcessingParameters()],
+                    parameters=[ShareProcessingParameters(), ShareProcessingParameters(name="test123", ui_type="input", default="test123VALUE")],
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
