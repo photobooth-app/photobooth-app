@@ -6,7 +6,8 @@ from fastapi import APIRouter, HTTPException, Response, status
 
 from ...container import container
 from ...database.models import DimensionTypes
-from ...services.config.models.models import PilgramFilter, SinglePictureDefinition
+from ...filters.stablediffusion import StableDiffusionFilter
+from ...services.config.models.models import PilgramFilter, StableDiffusionFilterList, SinglePictureDefinition
 from ...services.mediaprocessing.processes import get_filter_preview, process_image_collageimage_animationimage
 from ...utils.exceptions import PipelineError
 from ...services.config import appconfig
@@ -64,7 +65,10 @@ def api_get_applyfilter(mediaitem_id: UUID, filter: str | None = None):
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         _config = SinglePictureDefinition(**mediaitem.pipeline_config)
-        _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
+        if appconfig.mediaprocessing.filtertype == "pilgram2":
+            _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
+        elif appconfig.mediaprocessing.filtertype == "stablediffusion":
+            _config.filter = StableDiffusionFilterList(filter)
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
         mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(

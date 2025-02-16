@@ -1,8 +1,11 @@
-import webuiapi
+from webuiapi import *
+from pydoc import locate
 from .sdpresets.basefiltersd import BaseFilterSD
+from .sdpresets.filterpresets_sd import *
 from ..services.mediaprocessing.context import ImageContext
+from PIL import Image
 from ..utils.exceptions import PipelineError
-
+from re import sub
 # ! stable-diffusion models needed
 #  absolutereality181.n8IR.safetensors [463d6a9fe8]
 #  animepasteldreamSoft.lTTK.safetensors [4be38c1a17]
@@ -26,45 +29,70 @@ class StableDiffusionFilter:
     def __init__(self, filter: str) -> None:
         self.filter = filter
 
-    def __call__(self, filter: str, context: ImageContext) -> None:
+    def __call__(self, filter: str, image: Image.Image ) -> None:
         try:
             baseparams = {
                 key: value
                 for key, value in BaseFilterSD.__dict__.items()
                 if not key.startswith("__") and not callable(value) and not callable(getattr(value, "__get__", None))
             }
-            sdfilter = __import__("filterpresets_sd")
+            filterclass = to_camelcase( filter )
+            # e.g. for style "anime" import AnimeFilterSD
+            mod = locate('photobooth.filters.sdpresets.filterpresets_sd.' + filterclass +"FilterSD")
+            sdfilter = mod()
             filterparams = sdfilter.getParams()
-            # Combine the Base Paramters and the special filter paramters
-            params = {**baseparams, **filterparams}
-
+            # Combine the Base Paramters and the special filter parameters
+            
+            params = merge_nested_dicts(baseparams, filterparams )
+            
             # create API client with custom host, port
             # TODO: create configuration parameters
-            api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
+            #api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
+            api = WebUIApi(host="192.168.78.76", port=7860)
+            options = {}
+            options['sd_model_checkpoint'] = params["model"]
+            
+            api.set_options(options)
+            params.pop('model', None)
+
             controlnets = []
             openpose = ControlNetUnit(
-                module=params.Controlnet["openpose"]["module"],
-                model=params.Controlnet["openpose"]["model"],
-                weight=params.Controlnet["openpose"]["weight"],
+                module=params["openpose"]["module"],
+                model=params["openpose"]["model"],
+                weight=params["openpose"]["weight"],
             )
+
+            params.pop('openpose', None)
             controlnets.append(openpose)
 
             depth = ControlNetUnit(
-                module=params.Controlnet["depth"]["module"], model=params.Controlnet["depth"]["model"], weight=params.Controlnet["depth"]["weight"]
+                module=params["depth"]["module"], model=params["depth"]["model"], weight=params["depth"]["weight"]
             )
             controlnets.append(depth)
+            params.pop('depth', None)
 
             softedge = ControlNetUnit(
-                module=params.Controlnet["softedge"]["module"],
-                model=params.Controlnet["softedge"]["model"],
-                weight=params.Controlnet["softedge"]["weight"],
+                module=params["softedge"]["module"],
+                model=params["softedge"]["model"],
+                weight=params["softedge"]["weight"],
             )
             controlnets.append(softedge)
-            params[controlnet_units] = controlnets
-            params[images] = [ImageContext.image]
 
+            params.pop('softedge', None)
+
+            params["controlnet_units"] = controlnets
+            params["images"] = [image]
+            params["negative_prompt"] = str(params["negative_prompt"][0])
+            params["seed"] = int(params["seed"][0])
+            params["batch_size"] = int(params["batch_size"][0])
+            params["steps"] =  int(params["steps"][0])
+            params["height"] = int(params["height"][0])
+            params["width"] = int(params["width"][0])
+
+            params["denoising_strength"] = float(params["denoising_strength"][0])
+            params["cfg_scale"] = float(params["cfg_scale"][0])
             result = api.img2img(**params)
-
+            print( repr(result.json) )
             return result.image
 
             # optionally set username, password when --api-auth=username:password is set on webui.
@@ -77,3 +105,18 @@ class StableDiffusionFilter:
 
     def __repr__(self) -> str:
         return self.__class__.__name__
+
+def to_camelcase(s):
+  s = sub(r"(_|-)+", " ", s).title().replace(" ", "").replace("*","")
+  return ''.join([s[0].upper(), s[1:]])
+
+def merge_nested_dicts(dict1, dict2):
+    res = {}
+    for key, value in dict1.items():
+        if key in dict2:
+            res[key] = merge_nested_dicts(dict1[key], dict2[key])
+            del dict2[key]
+        else:
+            res[key]=value
+    res.update(dict2)
+    return res

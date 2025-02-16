@@ -43,8 +43,8 @@ def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaite
     if appconfig.mediaprocessing.removechromakey_enable:
         steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
 
-    if config.filter and config.filter.value and config.filter.value != "original":
-        steps.append(FilterStep(config.filter.value))
+    if config.filter and config.filter != "original":
+        steps.append(FilterStep(config.filter))
 
     if config.img_background_enable:
         steps.append(ImageMountStep(config.img_background_file))

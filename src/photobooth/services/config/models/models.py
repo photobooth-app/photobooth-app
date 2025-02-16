@@ -14,7 +14,7 @@ class GpioTriggerMapAction(BaseModel):
     on: str = "pressed,hold,released"
     action: str = ""
 
-class StableDiffusionFilter(str, Enum):
+class StableDiffusionFilterList(str, Enum):
     """Choose Stable Diffusion Styles to apply to images. Original means no style to apply"""
 
     # TODO: This should really not be hardcoded, plugin filters or modifyable styles should be the way to go
@@ -99,7 +99,7 @@ class TextsConfig(BaseModel):
 
 
 class SinglePictureDefinition(BaseModel):
-    filter: PilgramFilter = PilgramFilter.original
+    filter: str = ""
     fill_background_enable: bool = False
     fill_background_color: Color = Color("blue")
     img_background_enable: bool = False
@@ -118,10 +118,10 @@ class CollageMergeDefinition(BaseModel):
     height: NonNegativeInt = 600
     rotate: int = 0
     predefined_image: str = ""
-    filter: PilgramFilter = PilgramFilter.original
+    filter: str = ""
 
 
 class AnimationMergeDefinition(BaseModel):
     duration: NonNegativeInt = 2000
     predefined_image: str = ""
-    filter: PilgramFilter = PilgramFilter.original
+    filter: str = ""

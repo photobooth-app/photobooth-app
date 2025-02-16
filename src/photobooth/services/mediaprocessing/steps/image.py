@@ -52,7 +52,8 @@ class FilterStep(PipelineStep):
 
         elif appconfig.mediaprocessing.filtertype == "stablediffusion":
             try:
-                filtered_image: Image.Image = StableDiffusionFilter(filter, context.image.copy())
+                filterObj = StableDiffusionFilter( self.filter )
+                filtered_image: Image.Image = filterObj( self.filter, context.image.copy() )
             except Exception as exc:
                 raise PipelineError(f"error processing the filter {self.filter}") from exc
 
