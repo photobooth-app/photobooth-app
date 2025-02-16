@@ -58,4 +58,4 @@ class BaseService:
 
     def _set_status(self, new_status: EnumStatus):
         self._status = new_status
-        logger.info(f"service {self.__class__.__name__} now {self._status}")
+        logger.info(f"service {self.__class__.__name__} now {self._status.name}")
