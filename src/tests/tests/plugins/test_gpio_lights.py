@@ -17,7 +17,7 @@ logger = logging.getLogger(name=None)
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
-    gpio_lights_plugin = cast(GpioLights, container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights"))
+    gpio_lights_plugin = cast(GpioLights, container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
     gpio_lights_plugin._config.plugin_enabled = True
 
     container.start()
@@ -26,7 +26,7 @@ def _container() -> Generator[Container, None, None]:
 
 
 def test_hooks_integration(_container: Container):
-    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights"))
+    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
     assert gpio_lights_plugin is not None
 
     mock_hookimpl = get_impl_func_for_plugin(gpio_lights_plugin, _container.pluginmanager_service.pm.hook.sm_on_enter_state)
@@ -38,7 +38,7 @@ def test_hooks_integration(_container: Container):
 
 
 def test_light_switched_during_process(_container: Container):
-    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights"))
+    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
 
     assert gpio_lights_plugin.light_out
     pin = cast(MockPin, gpio_lights_plugin.light_out.pin)
@@ -53,7 +53,7 @@ def test_light_switched_during_process(_container: Container):
 
 
 def test_light_switched_during_process_turn_off_after_capture(_container: Container):
-    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights"))
+    gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
     gpio_lights_plugin._config.gpio_light_off_after_capture = True
 
     assert gpio_lights_plugin.light_out
