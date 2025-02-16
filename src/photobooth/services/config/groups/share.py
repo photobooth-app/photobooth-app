@@ -3,9 +3,34 @@ AppConfig class providing central config
 
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
+
+ParameterUiType = Literal["input", "int"]
+
+
+class ShareProcessingParameters(BaseModel):
+    """Configure additional parameter for the share command to input by the user."""
+
+    model_config = ConfigDict(title="Additional parameters")
+
+    name: str = Field(
+        default="copies",
+        min_length=4,
+        pattern=r"^[a-zA-Z0-9]+$",
+        description="Define the parameter name that is replaced in the command. Example: Set to 'copies' to replace {copies} in the command by the value.",
+    )
+    ui_type: ParameterUiType = Field(
+        default="int",
+        description="Display type of the parameter in the UI. 'int' displays ➕➖ buttons in the UI. 'input' displays an input box. This affects only the UI, all parameter are interpreted as strings.",
+    )
+    default: str = Field(
+        default="1",
+        description="Default value if the user does not change it.",
+    )
 
 
 class ShareProcessing(BaseModel):
@@ -17,6 +42,9 @@ class ShareProcessing(BaseModel):
         # default="",
         description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed.",
     )
+
+    parameters: list[ShareProcessingParameters]
+
     share_blocked_time: int = Field(
         # default=10,
         description="Block queue print until time is passed. Time in seconds.",
@@ -54,7 +82,7 @@ class GroupShare(BaseModel):
     model_config = ConfigDict(title="Define Share and Print Actions")
 
     sharing_enabled: bool = Field(
-        default=False,
+        default=True,
         description="Enable sharing service in general.",
     )
 
@@ -70,8 +98,9 @@ class GroupShare(BaseModel):
             ShareConfigurationSet(
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="mspaint /p {filename}",
+                    share_command="echo {filename} {copies}",
                     share_blocked_time=10,
+                    parameters=[ShareProcessingParameters()],
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
