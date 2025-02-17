@@ -18,7 +18,7 @@ from .pipeline import NextStep, Pipeline
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, Pilgram2Step, RemoveChromakeyStep, TextStep
+from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, FilterStep, RemoveChromakeyStep, TextStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -43,8 +43,8 @@ def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaite
     if appconfig.mediaprocessing.removechromakey_enable:
         steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
 
-    if config.filter and config.filter.value and config.filter.value != "original":
-        steps.append(Pilgram2Step(config.filter.value))
+    if config.filter and config.filter != "original":
+        steps.append(FilterStep(config.filter))
 
     if config.img_background_enable:
         steps.append(ImageMountStep(config.img_background_file))
@@ -245,7 +245,7 @@ def get_filter_preview(filepath_in: Path, filter: str | None = None) -> io.Bytes
     steps = []
 
     if filter and filter != "original":
-        steps.append(Pilgram2Step(filter))
+        steps.append(FilterStep(filter))
 
     # setup pipeline.
     pipeline = Pipeline[ImageContext](*steps)

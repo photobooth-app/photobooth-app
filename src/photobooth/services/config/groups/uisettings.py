@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
-from ..models.models import PilgramFilter
+from ..models.models import PilgramFilter, StableDiffusionFilterList
 
 
 class GroupUiSettings(BaseModel):
@@ -128,6 +128,9 @@ class GroupUiSettings(BaseModel):
     )
     gallery_filter_userselectable: list[PilgramFilter] = Field(
         default=[e for e in PilgramFilter],
+    )
+    gallery_filter_stablediffusion_userselectable: list[StableDiffusionFilterList] = Field(
+        default=[e for e in StableDiffusionFilterList],
     )
     gallery_show_download: bool = Field(
         default=True,
