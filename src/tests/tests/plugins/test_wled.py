@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from photobooth.plugins.wled import Wled
+from photobooth.plugins.wled.wled import Wled
 
 logger = logging.getLogger(name=None)
 

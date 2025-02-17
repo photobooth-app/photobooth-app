@@ -11,81 +11,64 @@ from photobooth.container import container
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
+    with TestClient(app=app, base_url="http://test/api/system") as client:
         container.start()
         yield client
         container.stop()
 
 
-@pytest.fixture(
-    params=[
-        "/system/service/start",
-        "/system/service/restart",
-        "/system/service/stop",
-    ]
-)
-def system_service_startstop_endpoint(request):
+@pytest.fixture(params=["/host/reboot", "/host/shutdown"])
+def system_host_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(
-    params=[
-        "/system/service/reload",
-    ]
-)
-def system_service_reload_endpoint(request):
+@pytest.fixture(params=["/service/reload"])
+def system_service_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(
-    params=[
-        "/system/server/reboot",
-        "/system/server/shutdown",
-    ]
-)
-def system_server_endpoint(request):
+@pytest.fixture(params=["/systemctl/start", "/systemctl/restart", "/systemctl/stop"])
+def system_systemctl_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(
-    params=[
-        "/system/service/install",
-        "/system/service/uninstall",
-    ]
-)
-def system_service_installuninstall_endpoint(request):
+@pytest.fixture(params=["/systemctl/install", "/systemctl/uninstall"])
+def system_systemctl_installuninstall_endpoint(request):
     yield request.param
 
 
-def test_system_service_startstop_endpoints(client: TestClient, system_service_startstop_endpoint):
-    with patch.object(container.system_service, "util_systemd_control") as mock:
-        response = client.get(system_service_startstop_endpoint)
-        assert response.status_code == 200
-
-        mock.assert_called()
-
-
-def test_system_service_reload_endpoints(client: TestClient, system_service_reload_endpoint):
-    with patch.object(container, "start") as mock_start:
-        with patch.object(container, "stop") as mock_stop:
-            response = client.get(system_service_reload_endpoint)
-            assert response.status_code == 200
-
-            mock_start.assert_called()
-            mock_stop.assert_called()
+@pytest.fixture(params=["/host/xxx", "/service/xxx", "/systemctl/xxx"])
+def system_nonexistant_endpoint(request):
+    yield request.param
 
 
 @patch("os.system")
-def test_system_server_endpoints(mock_system: MagicMock, client: TestClient, system_server_endpoint):
-    response = client.get(system_server_endpoint)
+def test_system_host_endpoints(mock_system: MagicMock, client: TestClient, system_host_endpoint):
+    response = client.get(system_host_endpoint)
     assert response.status_code == 200
 
     mock_system.assert_called()
 
 
+def test_system_service_endpoints(client: TestClient, system_service_endpoint):
+    with patch.object(container, "reload") as mock_reload:
+        response = client.get(system_service_endpoint)
+        assert response.status_code == 200
+
+        mock_reload.assert_called()
+
+
+def test_system_systemctl_endpoints(client: TestClient, system_systemctl_endpoint):
+    with patch.object(container.system_service, "util_systemd_control") as mock:
+        response = client.get(system_systemctl_endpoint)
+        assert response.status_code == 200
+
+        mock.assert_called()
+
+
 @patch("subprocess.run")
-def test_system_service_installuninstall_endpoints(mock_run: MagicMock, client: TestClient, system_service_installuninstall_endpoint):
-    response = client.get(system_service_installuninstall_endpoint)
+def test_system_systemctl_installuninstall_endpoints(mock_run: MagicMock, client: TestClient, system_systemctl_installuninstall_endpoint):
+    response = client.get(system_systemctl_installuninstall_endpoint)
 
     if platform.system() == "Linux":
         assert response.status_code == 200
@@ -94,6 +77,6 @@ def test_system_service_installuninstall_endpoints(mock_run: MagicMock, client: 
         assert response.status_code == 500
 
 
-def test_system_nonexistant_endpoint(client: TestClient):
-    response = client.get("/system/actionis/forsurenonexistent")
-    assert response.status_code == 500
+def test_system_nonexistant_endpoint(client: TestClient, system_nonexistant_endpoint):
+    response = client.get(system_nonexistant_endpoint)
+    assert response.status_code == 422

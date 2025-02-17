@@ -127,7 +127,7 @@ class WebcamV4lBackend(AbstractBackend):
         try:
             capture.set_format(width, height, "MJPG")
             fmt = capture.get_format()
-            logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for hires still in {fmt.pixel_format.name}")
+            logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for {mode}-mode using format {fmt.pixel_format.name}")
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
