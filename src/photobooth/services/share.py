@@ -2,7 +2,6 @@ import logging
 import subprocess
 from datetime import datetime
 
-from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -15,13 +14,6 @@ from .sse.sse_ import SseEventFrontendNotification
 
 logger = logging.getLogger(__name__)
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
-
-
-class ShareProcessingParametersPublic(BaseModel):
-    """Configure additional parameter for the share command to input by the user."""
-
-    name: str
-    value: str
 
 
 class ShareService(BaseService):
@@ -44,7 +36,7 @@ class ShareService(BaseService):
         pass
         super().stopped()
 
-    def share(self, mediaitem: Mediaitem, config_index: int = 0, parameters: list[ShareProcessingParametersPublic] | None = None):
+    def share(self, mediaitem: Mediaitem, config_index: int = 0, parameters: dict[str, str] | None = None):
         """print mediaitem"""
 
         if not appconfig.share.sharing_enabled:
@@ -106,13 +98,11 @@ class ShareService(BaseService):
             share_parameters = {parameter.name: parameter.default for parameter in action_config.processing.parameters}
             logger.info(f"no share parameters given by user, continue using the defaults: {share_parameters}")
         else:
-            share_parameters = {parameter.name: parameter.value for parameter in parameters}
+            share_parameters = parameters
             logger.info(f"share parameters given by user: {share_parameters}")
 
         share_parameters.pop("filename", None)  # if filename is configured by user, remove it, because the app sets it.
 
-        # print(str(action_config.processing.share_command))
-        # print(share_parameters)
         try:
             formatted_command = str(action_config.processing.share_command).format(filename=filename, **share_parameters)
         except KeyError as exc:

@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException, status
 
 from ...container import container
 from ...database.models import Mediaitem
-from ...services.share import ShareProcessingParametersPublic
 
 logger = logging.getLogger(__name__)
 router = APIRouter(
@@ -14,7 +13,7 @@ router = APIRouter(
 )
 
 
-def _share(mediaitem: Mediaitem, index: int, parameters: list[ShareProcessingParametersPublic] | None):
+def _share(mediaitem: Mediaitem, index: int, parameters: dict[str, str] | None):
     try:
         container.share_service.share(mediaitem, index, parameters)
     except BlockingIOError:
@@ -30,7 +29,7 @@ def _share(mediaitem: Mediaitem, index: int, parameters: list[ShareProcessingPar
 
 @router.post("/actions/{index}")
 @router.post("/actions/latest/{index}")
-def api_share_latest(index: int = 0, parameters: list[ShareProcessingParametersPublic] | None = None):
+def api_share_latest(index: int = 0, parameters: dict[str, str] | None = None):
     try:
         latest_mediaitem = container.mediacollection_service.get_item_latest()
     except FileNotFoundError as exc:
@@ -40,7 +39,7 @@ def api_share_latest(index: int = 0, parameters: list[ShareProcessingParametersP
 
 
 @router.post("/actions/{id}/{index}")
-def api_share_item_id(id: UUID, index: int = 0, parameters: list[ShareProcessingParametersPublic] | None = None):
+def api_share_item_id(id: UUID, index: int = 0, parameters: dict[str, str] | None = None):
     try:
         requested_mediaitem = container.mediacollection_service.get_item(id)
     except FileNotFoundError as exc:
