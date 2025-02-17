@@ -29,7 +29,7 @@ def client() -> Generator[TestClient, None, None]:
 def test_printing_disabled(client: TestClient):
     # default printing is disabled, try to print gives a 405
 
-    response = client.get("/share/actions/latest/0")
+    response = client.post("/share/actions/latest/0")
 
     assert response.status_code == 200
 
@@ -39,7 +39,7 @@ def test_print_latest(mock_run: mock.Mock, client: TestClient):
     # enable printing
     appconfig.share.sharing_enabled = True
 
-    response = client.get("/share/actions/latest/0")
+    response = client.post("/share/actions/latest/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -52,7 +52,7 @@ def test_print_specific_id(mock_run: mock.Mock, client: TestClient):
     # get an image to print
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/share/actions/{mediaitem.id}/0")
+    response = client.post(f"/share/actions/{mediaitem.id}/0")
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -65,7 +65,7 @@ def test_print_exception(mock_run: mock.Mock, client: TestClient):
 
     appconfig.share.sharing_enabled = True
 
-    response = client.get("/share/actions/latest/0")
+    response = client.post("/share/actions/latest/0")
 
     assert response.status_code == 500
     mock_run.assert_called()
@@ -77,11 +77,11 @@ def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     appconfig.share.sharing_enabled = True
     appconfig.share.actions[0].processing.share_blocked_time = 2
 
-    response = client.get("/share/actions/latest/0")
+    response = client.post("/share/actions/latest/0")
 
     time.sleep(appconfig.share.actions[0].processing.share_blocked_time / 2)
 
-    response = client.get("/share/actions/latest/0")  # should be blocked and error
+    response = client.post("/share/actions/latest/0")  # should be blocked and error
 
     assert response.status_code == 200  # gives 200 nowadays, triggers separate event.
     mock_run.assert_called()
@@ -89,7 +89,7 @@ def test_print_check_blocking(mock_run: mock.Mock, client: TestClient):
     # wait a little more until printing is fine again
     time.sleep((appconfig.share.actions[0].processing.share_blocked_time / 2) + 0.2)
 
-    response = client.get("/share/actions/latest/0")  # should give no error again
+    response = client.post("/share/actions/latest/0")  # should give no error again
 
     assert response.status_code == 200
     mock_run.assert_called()
@@ -100,12 +100,12 @@ def test_latest_filenotfound_exception(client: TestClient):
     error_mock.side_effect = FileNotFoundError()
 
     with patch.object(MediacollectionService, "get_item_latest", error_mock):
-        response = client.get("/share/actions/latest/0")
+        response = client.post("/share/actions/latest/0")
         assert response.status_code == 404
         assert "detail" in response.json()
 
 
 def test_id_filenotfound_exception(client: TestClient):
-    response = client.get(f"/share/actions/{uuid4()}/0")
+    response = client.post(f"/share/actions/{uuid4()}/0")
     assert response.status_code == 404
     assert "detail" in response.json()

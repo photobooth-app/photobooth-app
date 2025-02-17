@@ -43,7 +43,10 @@ class ShareProcessing(BaseModel):
         description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed.",
     )
 
-    parameters: list[ShareProcessingParameters]
+    parameters: list[ShareProcessingParameters] = Field(
+        default=[],
+        description="Define input fields the user needs to enter on share.",
+    )
 
     share_blocked_time: int = Field(
         # default=10,
