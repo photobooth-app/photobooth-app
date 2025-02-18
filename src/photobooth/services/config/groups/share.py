@@ -56,6 +56,15 @@ class ShareProcessing(BaseModel):
         default="Make your choice!",
         description="Caption of the dialog popup displaying the parameters.",
     )
+    parameters_dialog_action_icon: str = Field(
+        default="print",
+        description="Icon used for the action button (any icon from material icons, see documentation).",
+    )
+    parameters_dialog_action_label: str = Field(
+        default="GO",
+        description="Text used for the action button as label.",
+    )
+
     parameters: list[ShareProcessingParameters] = Field(
         default=[],
         description="Define input fields the user needs to enter on share.",
@@ -132,6 +141,8 @@ class GroupShare(BaseModel):
                     share_command="echo {filename} {copies} {mail}",
                     ask_user_for_parameter_input=True,
                     parameters_dialog_caption="Print and mail...",
+                    parameters_dialog_action_icon="mail",
+                    parameters_dialog_action_label="send",
                     share_blocked_time=3,
                     parameters=[
                         ShareProcessingParameters(),
