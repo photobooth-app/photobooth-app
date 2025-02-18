@@ -775,7 +775,7 @@ name = "linuxpy"
 version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' and sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9b/29/68e915cd8b2e35161830c06afd7527e0fae8cd4f44f203ffc1b7df484368/linuxpy-0.20.0.tar.gz", hash = "sha256:98d5a6ce5e7618465410bdeaf1c3f9f6ac4c76e1b58a382cbc6a03e5d7521bde", size = 450101 }
 wheels = [
@@ -1072,7 +1072,7 @@ requires-dist = [
     { name = "pilgram2", specifier = ">=2.0.6" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pluggy", specifier = ">=1.5.0" },
-    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.7.0" },
     { name = "pydantic-extra-types", specifier = ">=2.3.0" },
     { name = "pydantic-settings", specifier = ">=2.1.0" },
