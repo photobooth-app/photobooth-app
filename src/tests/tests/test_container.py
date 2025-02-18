@@ -12,6 +12,13 @@ from photobooth.services.information import InformationService
 logger = logging.getLogger(name=None)
 
 
+def test_container_reload():
+    """container reloading works reliable"""
+
+    for _ in range(1, 5):
+        container.reload()
+
+
 def test_service_start_exceptions():
     """container start services do not re-raise exceptions again if during start/stop to avoid breaking the whole program"""
     error_mock = mock.MagicMock()
