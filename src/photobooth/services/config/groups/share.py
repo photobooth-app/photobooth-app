@@ -35,8 +35,8 @@ class ShareProcessingParameters(BaseModel):
         default="1",
         description="Default value if the user does not change it.",
     )
-    valid_min: str = Field(default="")
-    valid_max: str = Field(default="")
+    valid_min: str = Field(default="1")
+    valid_max: str = Field(default="3")
 
 
 class ShareProcessing(BaseModel):
@@ -133,7 +133,17 @@ class GroupShare(BaseModel):
                     ask_user_for_parameter_input=True,
                     parameters_dialog_caption="Print and mail...",
                     share_blocked_time=3,
-                    parameters=[ShareProcessingParameters(), ShareProcessingParameters(key="mail", ui_type="input", default="me@mgineer85.de")],
+                    parameters=[
+                        ShareProcessingParameters(),
+                        ShareProcessingParameters(
+                            key="mail",
+                            label="E-Mail address",
+                            ui_type="input",
+                            default="me@mgineer85.de",
+                            valid_min="5",
+                            valid_max="128",
+                        ),
+                    ],
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
