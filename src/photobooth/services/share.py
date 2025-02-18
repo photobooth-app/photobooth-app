@@ -95,7 +95,7 @@ class ShareService(BaseService):
         logger.info(f"share/print {filename=}")
 
         if parameters is None:
-            share_parameters = {parameter.name: parameter.default for parameter in action_config.processing.parameters}
+            share_parameters = {parameter.key: parameter.default for parameter in action_config.processing.parameters}
             logger.info(f"no share parameters given by user, continue using the defaults: {share_parameters}")
         else:
             share_parameters = parameters

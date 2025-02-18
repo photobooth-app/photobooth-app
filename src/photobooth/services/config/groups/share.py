@@ -17,11 +17,15 @@ class ShareProcessingParameters(BaseModel):
 
     model_config = ConfigDict(title="Additional parameters")
 
-    name: str = Field(
+    key: str = Field(
         default="copies",
         min_length=4,
         pattern=r"^[a-zA-Z0-9]+$",
-        description="Define the parameter name that is replaced in the command. Example: Set to 'copies' to replace {copies} in the command by the value.",
+        description="Define the parameter key that is replaced in the command. Example: Set to 'copies' to replace {copies} in the command by the value.",
+    )
+    label: str = Field(
+        default="Copies",
+        description="Label the field, displayed to the user.",
     )
     ui_type: ParameterUiType = Field(
         default="int",
@@ -31,6 +35,8 @@ class ShareProcessingParameters(BaseModel):
         default="1",
         description="Default value if the user does not change it.",
     )
+    valid_min: str = Field(default="")
+    valid_max: str = Field(default="")
 
 
 class ShareProcessing(BaseModel):
@@ -39,10 +45,17 @@ class ShareProcessing(BaseModel):
     model_config = ConfigDict(title="Share/Print Actions")
 
     share_command: str = Field(
-        # default="",
+        default="echo {filename}",
         description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed.",
     )
-
+    ask_user_for_parameter_input: bool = Field(
+        default=False,
+        description="If enabled, when the share button is activated, a dialog pops up to input below configured parameters.",
+    )
+    parameters_dialog_caption: str = Field(
+        default="Make your choice!",
+        description="Caption of the dialog popup displaying the parameters.",
+    )
     parameters: list[ShareProcessingParameters] = Field(
         default=[],
         description="Define input fields the user needs to enter on share.",
@@ -99,11 +112,28 @@ class GroupShare(BaseModel):
     actions: list[ShareConfigurationSet] = Field(
         default=[
             ShareConfigurationSet(
-                handles_images_only=True,
+                handles_images_only=False,
                 processing=ShareProcessing(
                     share_command="echo {filename} {copies}",
-                    share_blocked_time=10,
-                    parameters=[ShareProcessingParameters(), ShareProcessingParameters(name="email", ui_type="input", default="me@mgineer85.de")],
+                    ask_user_for_parameter_input=False,
+                    parameters_dialog_caption="How many copies?",
+                    share_blocked_time=3,
+                    parameters=[ShareProcessingParameters()],
+                ),
+                trigger=Trigger(
+                    ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
+                    gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
+                    keyboard_trigger=KeyboardTrigger(keycode="p"),
+                ),
+            ),
+            ShareConfigurationSet(
+                handles_images_only=True,
+                processing=ShareProcessing(
+                    share_command="echo {filename} {copies} {mail}",
+                    ask_user_for_parameter_input=True,
+                    parameters_dialog_caption="Print and mail...",
+                    share_blocked_time=3,
+                    parameters=[ShareProcessingParameters(), ShareProcessingParameters(key="mail", ui_type="input", default="me@mgineer85.de")],
                 ),
                 trigger=Trigger(
                     ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
