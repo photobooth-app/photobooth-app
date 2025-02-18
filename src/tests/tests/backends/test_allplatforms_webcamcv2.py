@@ -40,6 +40,14 @@ def backend_cv2() -> Generator[WebcamCv2Backend, None, None]:
     backend.stop()
 
 
+def test_service_reload(backend_cv2):
+    """container reloading works reliable"""
+
+    for _ in range(1, 5):
+        backend_cv2.start()
+        backend_cv2.stop()
+
+
 def test_assert_is_alive(backend_cv2):
     assert backend_cv2._device_alive()
 
