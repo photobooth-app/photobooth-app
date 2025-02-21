@@ -2,7 +2,8 @@ from photobooth.filters.sdpresets.basefiltersd import BaseFilterSD
 
 
 class ClayFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "clay"
         self.icon = "clay.png"
         self.label = "Clay Figure"
@@ -17,7 +18,8 @@ class ClayFilterSD(BaseFilterSD):
         return super().getParams()
 
 class GotchaFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "gotcha"
         self.icon = "gotcha.png"
         self.label = "Gotcha!"
@@ -35,7 +37,8 @@ class GotchaFilterSD(BaseFilterSD):
 
 
 class ImpastoFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "impasto"
         self.icon = "impasto.png"
         self.label = "Impasto Painting"
@@ -51,7 +54,8 @@ class ImpastoFilterSD(BaseFilterSD):
 
 
 class KidsFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "kids"
         self.icon = "kids.png"
         self.label = "Kids Illustration"
@@ -69,7 +73,8 @@ class KidsFilterSD(BaseFilterSD):
 
 
 class MarbleFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "marble"
         self.icon = "marble.png"
         self.label = "marble sculpture in a museum"
@@ -85,7 +90,8 @@ class MarbleFilterSD(BaseFilterSD):
 
 
 class PencilFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "pencil"
         self.icon = "pencil.png"
         self.label = "Pencil Sketch"
@@ -101,7 +107,8 @@ class PencilFilterSD(BaseFilterSD):
 
 
 class RetroFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "retro"
         self.icon = "retro.png"
         self.label = "Retro Stylized"
@@ -117,7 +124,8 @@ class RetroFilterSD(BaseFilterSD):
 
 
 class ScifiFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "scifi"
         self.icon = "scifi.png"
         self.label = "Sci-Fi"
@@ -133,7 +141,8 @@ class ScifiFilterSD(BaseFilterSD):
 
 
 class ComicFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "comic"
         self.icon = "western.png"
         self.label = "Western Comic"
@@ -145,11 +154,11 @@ class ComicFilterSD(BaseFilterSD):
         self.enabled = 1
 
     def getParams(self):
-        return super().getParams()s
+        return super().getParams()
 
 
 class AnimeFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.name = "anime"
         self.icon = "anime.png"
@@ -166,7 +175,8 @@ class AnimeFilterSD(BaseFilterSD):
         return super().getParams()
 
 class MedievalFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "medieval"
         self.icon = "medieval.png"
         self.label = "Medieval Painting"
@@ -182,7 +192,8 @@ class MedievalFilterSD(BaseFilterSD):
 
 
 class AstronautFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "astronaut"
         self.icon = "astronaut.png"
         self.label = "Astronaut"
@@ -201,7 +212,8 @@ class AstronautFilterSD(BaseFilterSD):
 
 
 class CaricatureFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "caricature"
         self.icon = "caricature.png"
         self.label = "Heavily caricaturized painting"
@@ -216,8 +228,9 @@ class CaricatureFilterSD(BaseFilterSD):
         return super().getParams()
 
 
-class neotokyoFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+class NeotokyoFilterSD(BaseFilterSD):
+    def __init__(self):
+        super().__init__()
         self.name = "neotokyo"
         self.icon = "neotokyo.png"
         self.label = "NEOTOKIO"
@@ -234,7 +247,8 @@ class neotokyoFilterSD(BaseFilterSD):
 
 
 class VaporwaveFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "vaporwave"
         self.icon = "vaporwave.png"
         self.label = "NEOTOKIO"
@@ -250,7 +264,8 @@ class VaporwaveFilterSD(BaseFilterSD):
 
 
 class WatercolorFilterSD(BaseFilterSD):
-    def __init__(self) -> None:
+    def __init__(self):
+        super().__init__()
         self.name = "watercolor"
         self.icon = "watercolor.png"
         self.label = "Watercolor"
