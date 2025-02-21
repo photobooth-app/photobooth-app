@@ -28,6 +28,14 @@ def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     backend.stop()
 
 
+def test_service_reload(backend_virtual: VirtualCameraBackend):
+    """container reloading works reliable"""
+
+    for _ in range(1, 5):
+        backend_virtual.start()
+        backend_virtual.stop()
+
+
 def test_assert_is_alive(backend_virtual: VirtualCameraBackend):
     assert backend_virtual._device_alive()
 

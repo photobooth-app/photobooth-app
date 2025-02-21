@@ -36,7 +36,7 @@ class ShareService(BaseService):
         pass
         super().stopped()
 
-    def share(self, mediaitem: Mediaitem, config_index: int = 0):
+    def share(self, mediaitem: Mediaitem, config_index: int = 0, parameters: dict[str, str] | None = None):
         """print mediaitem"""
 
         if not appconfig.share.sharing_enabled:
@@ -91,36 +91,52 @@ class ShareService(BaseService):
         # filename absolute to print, use in printing command
         filename = mediaitem.processed.absolute()
 
+        # print command
+        logger.info(f"share/print {filename=}")
+
+        if parameters is None:
+            share_parameters = {parameter.key: parameter.default for parameter in action_config.processing.parameters}
+            logger.info(f"no share parameters given by user, continue using the defaults: {share_parameters}")
+        else:
+            share_parameters = parameters
+            logger.info(f"share parameters given by user: {share_parameters}")
+
+        share_parameters.pop("filename", None)  # if filename is configured by user, remove it, because the app sets it.
+
         try:
-            # print command
-            logger.info(f"share/print {filename=}")
+            formatted_command = str(action_config.processing.share_command).format(filename=filename, **share_parameters)
+        except KeyError as exc:
+            raise RuntimeError(f"Error in configuration! Parameter {exc} is defined in command but was not configured as parameter!") from exc
+        except TypeError as exc:
+            # usually this error is prevented by having the pattern= in the pydantic field in config already.
+            raise RuntimeError(f"Error in configuration! Probably illegal parameter name defined, error: {exc}") from exc
 
-            sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="positive",
-                    message=f"Process '{action_config.name}' started.",
-                    caption="Share Service",
-                    spinner=True,
-                )
+        sse_service.dispatch_event(
+            SseEventFrontendNotification(
+                color="positive",
+                message=f"Process '{action_config.name}' started.",
+                caption="Share Service",
+                spinner=True,
             )
-
+        )
+        try:
             completed_process = subprocess.run(
-                str(action_config.processing.share_command).format(filename=filename),
+                formatted_command,
                 capture_output=True,
                 check=True,
                 timeout=TIMEOUT_PROCESS_RUN,
                 shell=True,  # needs to be shell so a string as command is accepted.
             )
 
+        except Exception as exc:
+            sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Share/Print Error"))
+            raise RuntimeError(f"Process failed, error {exc}") from exc
+        else:
             logger.info(f"cmd={completed_process.args}")
             logger.info(f"stdout={completed_process.stdout}")
             logger.debug(f"stderr={completed_process.stderr}")
 
             logger.info(f"command started successfully {mediaitem}")
-
-        except Exception as exc:
-            sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Share/Print Error"))
-            raise RuntimeError(f"Process failed, error {exc}") from exc
 
         updated_current_shares = self.limit_counter_increment(action_config.name)
 

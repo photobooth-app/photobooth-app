@@ -46,6 +46,14 @@ def backend_picamera2():
 ## tests
 
 
+def test_service_reload(backend_picamera2):
+    """container reloading works reliable"""
+
+    for _ in range(1, 5):
+        backend_picamera2.start()
+        backend_picamera2.stop()
+
+
 def test_picamera2_switch_modes(backend_picamera2):
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
         backend_picamera2._on_configure_optimized_for_hq_capture()

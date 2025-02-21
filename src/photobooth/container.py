@@ -60,18 +60,9 @@ class Container:
                 logger.critical("could not stop service")
 
     def reload(self):
-        for service in self._service_list():
-            try:
-                logger.info(f"reload called for {service.__class__.__name__}")
-
-                # for now reloading means to just stop and start all services
-                # could be improved in future to actually reload and check if stop/start is actually needed
-                service.stop()
-                service.start()
-
-            except Exception as exc:
-                logger.exception(exc)
-                logger.critical(f"could not reload service: {exc}")
+        """stop all services first (reverse order), then start them again."""
+        self.stop()
+        self.start()
 
 
 container = Container()

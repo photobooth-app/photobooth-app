@@ -1073,7 +1073,7 @@ requires-dist = [
     { name = "pilgram2", specifier = ">=2.0.6" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "pluggy", specifier = ">=1.5.0" },
-    { name = "psutil", specifier = ">=5.9.0" },
+    { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.7.0" },
     { name = "pydantic-extra-types", specifier = ">=2.3.0" },
     { name = "pydantic-settings", specifier = ">=2.1.0" },

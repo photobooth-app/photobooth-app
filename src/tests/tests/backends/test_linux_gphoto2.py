@@ -92,6 +92,14 @@ def backend_gphoto2():
 ## tests
 
 
+def test_service_reload(backend_gphoto2):
+    """container reloading works reliable"""
+
+    for _ in range(1, 5):
+        backend_gphoto2.start()
+        backend_gphoto2.stop()
+
+
 def test_assert_is_alive(backend_gphoto2):
     assert backend_gphoto2._device_alive()
 
