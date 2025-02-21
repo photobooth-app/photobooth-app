@@ -14,7 +14,7 @@ class BaseFilterSD:
         self.sampler_name = "DPM++ 2M Karras"
         self.openpose = {
                 "module": "openpose_full",
-                "model": "control_v11p_sd15_openpose",
+                "model": "control_v11p_sd15_openpose [cab727d4]",
                 "enabled": 1,
                 "weight": 0.5,
                 "control_mode": "Balanced",
@@ -24,7 +24,7 @@ class BaseFilterSD:
         
         self.depth =  {
                 "module": "depth_midas",
-                "model": "control_v11f1p_sd15_depth",
+                "model": "control_v11f1p_sd15_depth [cfd03158]",
                 "enabled": 1,
                 "weight": 0.5,
                 "control_mode": "Balanced",
@@ -34,7 +34,7 @@ class BaseFilterSD:
         
         self.softedge = {
                 "module": "softedge_pidinet",
-                "model": "control_v11p_sd15_softedge",
+                "model": "control_v11p_sd15_softedge [a8575a2a]",
                 "enabled": 1,
                 "weight": 0.5,
                 "control_mode": "Balanced",

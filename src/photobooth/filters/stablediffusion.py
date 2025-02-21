@@ -29,7 +29,7 @@ class StableDiffusionFilter:
     def __init__(self, filter: str) -> None:
         self.filter = filter
 
-    def __call__(self, filter: str, image: Image.Image ) -> None:
+    def __call__(self, filter: str, image: Image.Image ) -> Image.Image:
         try:
             baseparams = {
                 key: value
@@ -60,13 +60,23 @@ class StableDiffusionFilter:
                 module=params["openpose"]["module"],
                 model=params["openpose"]["model"],
                 weight=params["openpose"]["weight"],
+                threshold_a = 0.5,
+                threshold_b = 0.5,
+                resize_mode="Crop and Resize"
             )
-
+            #openpose.input_mode = "simple"
+            #openpose.save_detected_map=True
+            #openpose.use_preview_as_input= False,
             params.pop('openpose', None)
             controlnets.append(openpose)
 
             depth = ControlNetUnit(
-                module=params["depth"]["module"], model=params["depth"]["model"], weight=params["depth"]["weight"]
+                module=params["depth"]["module"], 
+                model=params["depth"]["model"], 
+                weight=params["depth"]["weight"],
+                threshold_a = 0.5,
+                threshold_b = 0.5,
+                resize_mode="Crop and Resize"
             )
             controlnets.append(depth)
             params.pop('depth', None)
@@ -75,6 +85,9 @@ class StableDiffusionFilter:
                 module=params["softedge"]["module"],
                 model=params["softedge"]["model"],
                 weight=params["softedge"]["weight"],
+                threshold_a = 0.5,
+                threshold_b = 0.5,
+                resize_mode="Crop and Resize"
             )
             controlnets.append(softedge)
 
@@ -88,11 +101,13 @@ class StableDiffusionFilter:
             params["steps"] =  int(params["steps"][0])
             params["height"] = int(params["height"][0])
             params["width"] = int(params["width"][0])
-
+            params["sampler_index"] = ""
             params["denoising_strength"] = float(params["denoising_strength"][0])
             params["cfg_scale"] = float(params["cfg_scale"][0])
             result = api.img2img(**params)
-            print( repr(result.json) )
+            #for x in params["images"]:
+            #    print( b64_img(x))
+            #print( repr(params) )
             return result.image
 
             # optionally set username, password when --api-auth=username:password is set on webui.
