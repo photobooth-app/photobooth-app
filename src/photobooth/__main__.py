@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import uvicorn
+import mimetypes
 
 from .__version__ import __version__
 from .database.database import create_db_and_tables
@@ -19,6 +20,7 @@ parser.add_argument("--port", action="store", type=int, default=8000, help="Port
 
 logger = logging.getLogger(f"{__name__}")
 
+mimetypes.add_type("application/javascript", ".js", True)
 
 def main(args=None, run_server: bool = True):
     args = parser.parse_args(args)  # parse here, not above because pytest system exit 2
