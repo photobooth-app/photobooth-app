@@ -60,7 +60,7 @@ def test_preview_filter_1977(client: TestClient):
 
 
 def test_preview_filter_nonexistentitem(client: TestClient):
-    response = client.get(f"/filter/{uuid4()}?filter=theresnofilterlikethis")
+    response = client.get(f"/filter/{uuid4()}?filter=original")
 
     assert response.status_code == 404
 
