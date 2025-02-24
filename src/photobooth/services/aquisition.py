@@ -280,6 +280,8 @@ class AquisitionService(BaseService):
         while self.is_running():
             try:
                 output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
+            except StopIteration:
+                return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
             except Exception as exc:
                 # this error probably cannot recover.
                 logger.exception(exc)

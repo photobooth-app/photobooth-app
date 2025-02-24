@@ -302,12 +302,12 @@ class AbstractBackend(ABC):
                 img_bytes = self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
                 img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
                 return img
-            except TimeoutError:
+            except TimeoutError as exc:
                 if self._device_alive():
                     continue
                 else:
                     logger.debug("device not alive any more, stopping early lores image delivery.")
-                    break
+                    raise StopIteration from exc
             except Exception as exc:
                 # other exceptions fail immediately
                 logger.warning("device raised exception (maybe lost connection to device?)")
