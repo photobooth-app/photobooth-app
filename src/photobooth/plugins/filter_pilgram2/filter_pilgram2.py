@@ -18,23 +18,21 @@ class FilterPilgram2(BasePlugin[config.FilterPilgram2Config]):
 
         self._config: config.FilterPilgram2Config = config.FilterPilgram2Config()
 
-    @staticmethod
-    def _this_filter_requested(plugin_filter: Enum):
-        (plugin_filter_enum_name, filter_value) = str(plugin_filter.value).split(".", 2)
-        return hasattr(config, plugin_filter_enum_name)
-
     @hookimpl
     def mp_avail_filter(self) -> list[str]:
         return [str(e) for e in config.PilgramFilter]
 
     @hookimpl
-    def mp_display_filter(self) -> list[str]:
-        return [str(e) for e in self._config.allowed_filter]
+    def mp_userselectable_filter(self) -> list[str]:
+        if self._config.add_userselectable_filter:
+            return [str(e) for e in self._config.userselectable_filter]
+        else:
+            return []
 
     @hookimpl
     def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: Enum, preview: bool) -> Image.Image | None:
         (plugin_filter_enum_name, filter_value) = str(plugin_filter.value).split(".", 2)
-        if getattr(config, plugin_filter_enum_name, None):  # if not None, this filter is requested.
+        if hasattr(config, plugin_filter_enum_name):  # if true, this filter is requested.
             return self.do_filter(image, config.PilgramFilter(filter_value))
 
     def do_filter(self, image: Image.Image, config: config.PilgramFilter) -> Image.Image:

@@ -60,13 +60,13 @@ PilgramFilter = Enum(
 class FilterPilgram2Config(BaseConfig):
     model_config = SettingsConfigDict(title="Filter Stage Pilgram2 Plugin Config", json_file=f"{CONFIG_PATH}plugin_filter_pilgram2.json")
 
-    plugin_enabled: bool = Field(
-        default=False,
-        description="Enable to start the plugin with app startup",
+    add_userselectable_filter: bool = Field(
+        default=True,
+        description="Add userselectable filter to the list the user can choose from.",
     )
-    allowed_filter: list[PilgramFilter] = Field(
+    userselectable_filter: list[PilgramFilter] = Field(
         default=[e for e in PilgramFilter],
     )
-    # allowed_filter1: list[str] = Field(
+    # userselectable_filter: list[str] = Field(
     #     default=[flt for flt in available_filter],
     # )

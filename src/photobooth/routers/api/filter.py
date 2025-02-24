@@ -8,7 +8,7 @@ from ...container import container
 from ...database.models import DimensionTypes
 from ...services.config.models.models import PluginFilters, SinglePictureDefinition
 from ...services.mediaprocessing.processes import process_image_collageimage_animationimage, process_image_inner
-from ...services.mediaprocessing.steps.image import get_plugin_display_filters
+from ...services.mediaprocessing.steps.image import get_plugin_userselectable_filters
 from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,9 @@ router = APIRouter(prefix="/filter", tags=["filter"])
 
 
 @router.get("/")
-def api_get_display_filters():
+def api_get_userselectable_filters():
     try:
-        plugin_results: list[str] = [e[1] for e in get_plugin_display_filters()]
+        plugin_results: list[str] = [e[1] for e in get_plugin_userselectable_filters()]
 
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting selected filters: {exc}") from exc

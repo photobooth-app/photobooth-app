@@ -22,15 +22,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_plugin_avail_filters():
-    return (("original", "original"),) + tuple(
-        ((available_filter, f"{available_filter}")) for available_filter in chain(*plugins.pm.hook.mp_avail_filter())
-    )
+    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*plugins.pm.hook.mp_avail_filter()))
 
 
-def get_plugin_display_filters():
-    return (("original", "original"),) + tuple(
-        ((available_filter, f"{available_filter}")) for available_filter in chain(*plugins.pm.hook.mp_display_filter())
-    )
+def get_plugin_userselectable_filters():
+    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*plugins.pm.hook.mp_userselectable_filter()))
 
 
 PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)
