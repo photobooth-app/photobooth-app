@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
-from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PilgramFilter, TextsConfig
+from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PluginFilters, TextsConfig
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
 
 
@@ -92,7 +92,7 @@ class SingleImageProcessing(BaseModel):
 
     model_config = ConfigDict(title="Single captures processing after capture")
 
-    filter: PilgramFilter = Field(default=PilgramFilter.original)
+    filter: PluginFilters = Field(default=PluginFilters("original"))
 
     fill_background_enable: bool = Field(
         default=False,
@@ -258,8 +258,8 @@ class MulticameraProcessing(BaseModel):
         default=125,
         description="Duration of each frame in milliseconds. Wigglegrams look good usually between 100-200ms duration.",
     )
-    filter: PilgramFilter = Field(
-        default=PilgramFilter.original,
+    filter: PluginFilters = Field(
+        default=PluginFilters("original"),
     )
 
 
@@ -394,7 +394,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PilgramFilter.earlybird,
+                            filter=PluginFilters("PilgramFilter.earlybird"),
                         ),
                         CollageMergeDefinition(
                             description="middle predefined",
@@ -404,7 +404,7 @@ class GroupActions(BaseModel):
                             height=725,
                             rotate=0,
                             predefined_image="userdata/predefined_images/photobooth-collage-predefined-image.png",
-                            filter=PilgramFilter.original,
+                            filter=PluginFilters("original"),
                         ),
                         CollageMergeDefinition(
                             description="right",
@@ -413,7 +413,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PilgramFilter.reyes,
+                            filter=PluginFilters("PilgramFilter.reyes"),
                         ),
                     ],
                     canvas_img_front_enable=True,
@@ -451,13 +451,13 @@ class GroupActions(BaseModel):
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
-                        AnimationMergeDefinition(filter=PilgramFilter.crema),
-                        AnimationMergeDefinition(filter=PilgramFilter.inkwell),
-                        AnimationMergeDefinition(filter=PilgramFilter.clarendon),
-                        AnimationMergeDefinition(filter=PilgramFilter.toaster),
+                        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter.crema")),
+                        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter.inkwell")),
+                        AnimationMergeDefinition(),
+                        AnimationMergeDefinition(),
                         AnimationMergeDefinition(
                             duration=4000,
-                            filter=PilgramFilter.original,
+                            filter=PluginFilters("original"),
                             predefined_image="userdata/predefined_images/photobooth-gif-animation-predefined-image.png",
                         ),
                     ],
