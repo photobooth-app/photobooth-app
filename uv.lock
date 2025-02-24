@@ -1083,7 +1083,7 @@ requires-dist = [
     { name = "python-statemachine", specifier = ">=2.3.3" },
     { name = "pyturbojpeg", specifier = ">=1.7.0" },
     { name = "requests", specifier = ">=2.31.0" },
-    { name = "simplejpeg", specifier = ">=1.7.4" },
+    { name = "simplejpeg", specifier = "==1.7.6" },
     { name = "sqlalchemy", specifier = ">=2.0.37" },
     { name = "sse-starlette", specifier = ">=2.2.0" },
     { name = "uvicorn", specifier = ">=0.24" },
@@ -1645,33 +1645,33 @@ wheels = [
 
 [[package]]
 name = "simplejpeg"
-version = "1.8.1"
+version = "1.7.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/35/09/b8a6565fafd8ddf64d34d6bc5383878b9bd5fd2424d8a44f416140a6a589/simplejpeg-1.8.1.tar.gz", hash = "sha256:35bfc840f40c1e10f64f4e3e4c870e1b9c420e5eead3630539efe2cb53b5fd04", size = 5482958 }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/7f/48ed799e98f96a853cf903899880632f8a96a94de895db4f98a45309c13a/simplejpeg-1.7.6.tar.gz", hash = "sha256:89ea4784eaa09edd11b0caded9c40326c4872ba9232ff1705d5b732492e7aca8", size = 5793293 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/51/5fd34f96da5ece6a905204dc7ce46c98443e51035eb3565abc012aa0a145/simplejpeg-1.8.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7b51b60e2b97954ecc72289acebd5dcf942520e121a3cb362a2067bae363fbb5", size = 492328 },
-    { url = "https://files.pythonhosted.org/packages/da/92/fb0b0119571c494e68a9eb0ffc9d510c6818535ec87115a0448c3e191ccc/simplejpeg-1.8.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:56c903cbd98e6ec3133e74f04d7fc2bd7a22d36075fb4a762a459c92b2e5fd9c", size = 442974 },
-    { url = "https://files.pythonhosted.org/packages/ec/f3/4832f7aebec36120c0af64bb3d117383aa62738e9f73edcedc157b19cce3/simplejpeg-1.8.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:596eba539e05f90ae9e08c9ce4c53bebe5abdaa1419411d08dcb8c73af0eed93", size = 446260 },
-    { url = "https://files.pythonhosted.org/packages/f3/d4/934f483693fad049744e32d062b332454b836f3556f1476a27fc098e6563/simplejpeg-1.8.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d5213505247db1b829b976c4a4f99eef4ab9a0bf3db80a1096fb985d5ba30422", size = 427356 },
-    { url = "https://files.pythonhosted.org/packages/ba/22/776e8f684c393f35a061baae00a37a588c449891175d1adba31bca445435/simplejpeg-1.8.1-cp310-cp310-win_amd64.whl", hash = "sha256:2fe42158ab63fae1b398c5c9c7fe58d9354fd2b2773374cb02cf64cc3b103bca", size = 306848 },
-    { url = "https://files.pythonhosted.org/packages/89/38/39c9fab1cf4052d7cbac85de5db8836e0e0577f958529a1f1a78d0bcaaa7/simplejpeg-1.8.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:8f1e16a0c7c1766210d031f0c66aaa8e0b508893b55fc1e3cec466c6f11a6169", size = 492192 },
-    { url = "https://files.pythonhosted.org/packages/ef/ad/036109700f806fbe919f9dcbc57082f74013778dcbc4c2cc25650d370dfc/simplejpeg-1.8.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:95bb8a2d8ad7df61f35e83b6c36bcd8f0e9e543fe37a804f6970363bec91e7bf", size = 442773 },
-    { url = "https://files.pythonhosted.org/packages/7f/ff/161aa1ec48b7c470b26068fc26ed7e9221ecf049f8d9b6c9ea76fdc37fe2/simplejpeg-1.8.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:aa45a5b4d52d7b1ebe818b6d7df2f2887765f845b79fab93a9074553070a58a7", size = 446965 },
-    { url = "https://files.pythonhosted.org/packages/54/f9/fe26f68b027ec1b8d5d7b8ade6cc42a7423f0d6815d90ecd268c6ea61267/simplejpeg-1.8.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4527cc8379736c970455491d366936c4e3a8a497bd4d6e3b7f88913215f914d7", size = 427573 },
-    { url = "https://files.pythonhosted.org/packages/b9/69/489f5435274c4358f19a613d881f143e6966ac6fddd6511331c6fddf26f6/simplejpeg-1.8.1-cp311-cp311-win_amd64.whl", hash = "sha256:51e065dc970add6a105d398ca9acc34e5005a354b9a771d4cf90445f8971b100", size = 306729 },
-    { url = "https://files.pythonhosted.org/packages/69/1f/f36e8d67f5b9514fd32875367cc7fd0a705ab5d39dbc3ee0f9db7485bc7c/simplejpeg-1.8.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:bff39798d2df5e21a881206981b851564aa82cf6ff830f819627a62b7368c5c7", size = 492670 },
-    { url = "https://files.pythonhosted.org/packages/da/6b/8b1fe754b16d867127b38accd58f2ca3fac393c7f10b683816a4eac1d0e3/simplejpeg-1.8.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:258f468770c4c757a056cc57f078c982b966d51c3964df005675777926a9ae32", size = 443197 },
-    { url = "https://files.pythonhosted.org/packages/3c/d0/b394ab7563bf913d32fef3a4d569fb4804fcf16b1bee2b49b5e5a6d26c54/simplejpeg-1.8.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c124ceead37c70dca10c0680c5e25ce2fb2d12a6ad570e4d596ceacd7b88338d", size = 445406 },
-    { url = "https://files.pythonhosted.org/packages/da/ef/7ac89ec596fac985a2b5cf348db8a7425ecb68857dd53ab1bdc1fe856412/simplejpeg-1.8.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8c728b386d6350edd27fbf783bc4cdf6cd2cd253411ade34164dc9d8e28626c2", size = 425582 },
-    { url = "https://files.pythonhosted.org/packages/48/a1/96fd9e0f0e273caea4edccdfa68b4b4f0514f7766efc78aef262e4edd1fa/simplejpeg-1.8.1-cp312-cp312-win_amd64.whl", hash = "sha256:e08fbb96e51d65848910530a973bdb3f3e69ba4c9ce47557cad81b67689021ea", size = 306964 },
-    { url = "https://files.pythonhosted.org/packages/dc/59/fec20a7953be3f5426fe33af2d4089d6f1cd531a5d9adc50b5db5aef03fd/simplejpeg-1.8.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:a14f5c4f93e3bd9d237bc12cd24dda572c58722daf2657fe25caa6edad03d3ec", size = 491750 },
-    { url = "https://files.pythonhosted.org/packages/00/01/bdcbd397f5d54797d5089e4c391a4f90103ffd06c044ab2ab79756e1d11c/simplejpeg-1.8.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:5a49f50ca8b3d210e2af94ec3ff4fa1c97a3785671cea13079803cf31e3daa15", size = 441864 },
-    { url = "https://files.pythonhosted.org/packages/b1/1c/352f09c54f33cf6adad619f0ac1ed437c12731ebe9ee5879098ec9b9542a/simplejpeg-1.8.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e28fe1598557c753d6be95d0ce9d5ca9b5b07e70fad07e45062444516f18165e", size = 443485 },
-    { url = "https://files.pythonhosted.org/packages/60/ef/2cdddbc7f052e1b236cb4911f8708359e355eb9f3e89995f7a03db665266/simplejpeg-1.8.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ed863d7a4945723a77fddb4fde6bee7c37f9a0bfd5718223191b3fc6c0bd36fc", size = 423760 },
-    { url = "https://files.pythonhosted.org/packages/cb/d1/8b97cdd92b378bddaa3e7b2ff75e0778ca022c079dc8e2d3ffccf09c1bed/simplejpeg-1.8.1-cp313-cp313-win_amd64.whl", hash = "sha256:253b5fcbf73f2f3a19cff300330ff1751c8dec87d82305a1c824f8de6456051d", size = 306627 },
+    { url = "https://files.pythonhosted.org/packages/9d/9d/63406b40fbfc6e28e3661ffd2a52a652cff5d070f9d6e7d6c0010b54d26b/simplejpeg-1.7.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d38ad57a5d8b44830f4f4dd328b78b65b735ad1a4feda84aaaf3190c0a12057b", size = 493727 },
+    { url = "https://files.pythonhosted.org/packages/da/ea/464c854c6f842d1023ae2800e85353d53c6de6456089e9753dfc53d5886a/simplejpeg-1.7.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:75f11a43e6be866203c28cc00a295530ed5098fc0f423acc34f537ba522c3eb3", size = 430499 },
+    { url = "https://files.pythonhosted.org/packages/f2/24/185eeef60c832d2a758ad0af73a4bdc3fb1e5f63c9cf56402fd9c394fc8b/simplejpeg-1.7.6-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2a4a9a5ef5b9bd02d385e58ceb7802016b20ee4f99963dfd5da2bc3a52c30213", size = 431260 },
+    { url = "https://files.pythonhosted.org/packages/0d/48/45a36666a663cd9f9bb4b44e8a570b325450e26f02a7e6511eb76c3c4e76/simplejpeg-1.7.6-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d95a3a636512339838de01b9f5e05a85d6631a86f77035fe9880560d5ba7092b", size = 408478 },
+    { url = "https://files.pythonhosted.org/packages/e8/95/fbfd1a733d778adaa806266cfb35fc3d4e1502889426e0d938c0da559498/simplejpeg-1.7.6-cp310-cp310-win_amd64.whl", hash = "sha256:e45642e805463e05236cf45f65521d995fcbd13347efd87b7defaf7622db2031", size = 295427 },
+    { url = "https://files.pythonhosted.org/packages/db/b2/015cbf433900c1a101bc7c60048852f892ed2aaaded6d59785cf4fbaaac8/simplejpeg-1.7.6-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:a729e38dfe8254bdefc062dcb37597db5ea47412b6ed77bb42c5e6476567d2f9", size = 493474 },
+    { url = "https://files.pythonhosted.org/packages/19/dc/d9ba97a5ae34625337fd0f01c03ef0bb2924ffcec19a2910eb0ecd81a3ba/simplejpeg-1.7.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:bcecde64d55ac6dac34e32e8c4f944139b0b65d34a5ae90d97cacf31f77e46c1", size = 430395 },
+    { url = "https://files.pythonhosted.org/packages/84/bd/53b4599d4d594438ec99c7fbb4c6e50ffac7258d33842f09d9181e97a4ef/simplejpeg-1.7.6-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d77602b573fb017ad2dde774ace91f448d755ff7c4bb05a05aac8fc7f50edec0", size = 432383 },
+    { url = "https://files.pythonhosted.org/packages/b8/04/5520ded57be48a62929df87257bf7066b65e1c8a674c5f207cdb8be589c1/simplejpeg-1.7.6-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7d96b7ea5d0293299a692bb526500ad051093705d807e8e55f034d27084015f7", size = 408814 },
+    { url = "https://files.pythonhosted.org/packages/bc/05/d7eaf2ef9683788e220b5f439372e6e508a7d1ccc51fee53bd985f14bf8e/simplejpeg-1.7.6-cp311-cp311-win_amd64.whl", hash = "sha256:fd9d755a3b42d9a89cf13c408852e0b11b1ab630073d3c47ee98f5ab51ac2c99", size = 295744 },
+    { url = "https://files.pythonhosted.org/packages/e4/e0/9bf79ec9bd993dff64d6ea4fbc3046172fa61e16209571d85c478cc67013/simplejpeg-1.7.6-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:3f34fd17bb5347fc9251c936425ef5342e16b2a46f40ec2df3cda063519566ad", size = 494223 },
+    { url = "https://files.pythonhosted.org/packages/3e/6a/0e2be7a56b440c085a3159a31833248f0db1620951286c98434eeacd2ae6/simplejpeg-1.7.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0a078ab7c242608137aae62a57d08677a6b4d2f974f51679aa0fa7db6127872b", size = 430405 },
+    { url = "https://files.pythonhosted.org/packages/51/8b/0c9059be3e4246f80b8688822d1ef3fab27d117a08bac72c4cef37bbc6ae/simplejpeg-1.7.6-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:12319e9045f7f5ae5d3af985aeed86bd438e240a1feb348f5535f7f3fb14c9d0", size = 430696 },
+    { url = "https://files.pythonhosted.org/packages/e5/17/46741913917b68f1f31041077e84c23cfddad1d79312be6fe3d6ef20fd61/simplejpeg-1.7.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9b0387029b26f2c7f85443320f7af6ad75cd9ee958ff3925214cba0210208251", size = 407309 },
+    { url = "https://files.pythonhosted.org/packages/08/a4/466d874c9cd6d6d561a4c193568779f1e50ba97c65d33c49ed4bb4259dca/simplejpeg-1.7.6-cp312-cp312-win_amd64.whl", hash = "sha256:bc9434378e30a485aded0fc9deff401981224737237db901e801da7719fc6026", size = 296026 },
+    { url = "https://files.pythonhosted.org/packages/b1/43/4baf44c50e503d01087f628fd365d28eface2c8084479369dc7730f1f598/simplejpeg-1.7.6-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:dfe768fb8b79253a3c9f49b86760f4c1c48c98870113856c98c37865c7ae8ae5", size = 492345 },
+    { url = "https://files.pythonhosted.org/packages/c0/68/ccc77aff0b6a8d6547712417aac3631ee74474f6547a17d7dea95be0606e/simplejpeg-1.7.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:8505a335fd4bc92e46d9b97f51780a1ba782780fdd9036cc68e1a248a08f9e7c", size = 428999 },
+    { url = "https://files.pythonhosted.org/packages/39/d0/5a204419a6eec6e988979f9750af7d59feae5618ec72a4a996c9339d6e7f/simplejpeg-1.7.6-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4b19f967d0b3aa7d8294a1ddc103d269f53044f9827068b5a2b98c7197003c92", size = 429078 },
+    { url = "https://files.pythonhosted.org/packages/f1/85/a6bb8773d431cd96e28b923c3d6795d1e18a93aa3a5b147e158cf6a6fc98/simplejpeg-1.7.6-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b03f6dc376a139473704955503b64582d289335b09f267c2097451aad3224c8a", size = 405822 },
+    { url = "https://files.pythonhosted.org/packages/a8/5e/0a6238d987af2953ae7c1fb5d51b6f945f85846fb39642343ac1656f93ae/simplejpeg-1.7.6-cp313-cp313-win_amd64.whl", hash = "sha256:635a3bb01ccc330ea8672bf451805641525c37a60769124705280ad5ccb726cc", size = 295691 },
 ]
 
 [[package]]
