@@ -5,10 +5,10 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
 from .base import BaseService
-from .config import appconfig
 from .sse import sse_service
 from .sse.sse_ import SseEventFrontendNotification
 

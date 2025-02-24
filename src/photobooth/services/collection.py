@@ -15,12 +15,12 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from .. import CACHE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
+from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
 from ..utils.resizer import generate_resized
 from .base import BaseService
-from .config import appconfig
 from .sse import sse_service
 from .sse.sse_ import SseEventDbInsert, SseEventDbRemove, SseEventDbUpdate
 

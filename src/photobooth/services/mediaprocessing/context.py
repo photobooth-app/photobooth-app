@@ -7,6 +7,7 @@ from PIL import Image
 @dataclass
 class ImageContext:
     image: Image.Image
+    preview: bool
 
 
 @dataclass

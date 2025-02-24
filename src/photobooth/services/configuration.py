@@ -1,8 +1,8 @@
 import logging
 from typing import Any, AnyStr
 
+from ..appconfig import appconfig
 from .base import BaseService
-from .config import appconfig
 from .config.baseconfig import BaseConfig, SchemaTypes
 from .pluginmanager import PluginManagerService
 

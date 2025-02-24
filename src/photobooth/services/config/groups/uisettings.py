@@ -11,8 +11,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
-from ..models.models import PilgramFilter
-
 
 class GroupUiSettings(BaseModel):
     """Personalize the booth's UI."""
@@ -124,11 +122,11 @@ class GroupUiSettings(BaseModel):
     )
     gallery_show_filter: bool = Field(
         default=True,
-        description="Show instagramlike filter (pilgram2).",
+        description="Show filter provided by plugins. Pilgram2 filter are included in the app. See documentation to extend and build your own plugin.",
     )
-    gallery_filter_userselectable: list[PilgramFilter] = Field(
-        default=[e for e in PilgramFilter],
-    )
+    # gallery_filter_userselectable: list[PilgramFilter] = Field(
+    #     default=[e for e in PilgramFilter],
+    # )
     gallery_show_download: bool = Field(
         default=True,
         description="Show a download button in gallery.",

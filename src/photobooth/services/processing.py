@@ -10,6 +10,7 @@ from uuid import uuid4
 from statemachine import Event, State, StateMachine
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
+from ..appconfig import appconfig
 from ..database.models import Mediaitem, MediaitemTypes
 from ..database.types import DimensionTypes
 from ..plugins import pm as pluggy_pm
@@ -17,7 +18,6 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .aquisition import AquisitionService
 from .base import BaseService
 from .collection import MediacollectionService
-from .config import appconfig
 from .config.groups.actions import MultiImageJobControl, VideoProcessing
 from .information import InformationService
 from .jobmodels.animation import JobModelAnimation

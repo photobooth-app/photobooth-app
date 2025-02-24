@@ -11,10 +11,10 @@ import subprocess
 from gpiozero import Button as ZeroButton
 from gpiozero.exc import BadPinFactory
 
+from ..appconfig import appconfig
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .base import BaseService
 from .collection import MediacollectionService
-from .config import appconfig
 from .config.groups.actions import GpioTrigger
 from .jobmodels.base import action_type_literal
 from .processing import ProcessingService

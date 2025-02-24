@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import io
 import logging
 import shutil
 import time
 import traceback
 from pathlib import Path
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps
 
+from ...appconfig import appconfig
 from ...database.models import Mediaitem
-from ..config import appconfig
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, VideoProcessing
 from ..config.models.models import SinglePictureDefinition
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
@@ -18,13 +17,13 @@ from .pipeline import NextStep, Pipeline
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, Pilgram2Step, RemoveChromakeyStep, TextStep
+from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemoveChromakeyStep, TextStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
 
 
-def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaitem):
+def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview: bool):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
@@ -34,17 +33,15 @@ def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaite
     image = Image.open(file_in)
     ImageOps.exif_transpose(image, in_place=True)  # to correct for any orientation set.
 
-    config = SinglePictureDefinition(**mediaitem.pipeline_config)  # get config from mediaitem, that is passed as json dict (model_dump) along with it
-
-    context = ImageContext(image)
+    context = ImageContext(image, preview)
     steps = []
 
     # assemble pipeline
     if appconfig.mediaprocessing.removechromakey_enable:
         steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
 
-    if config.filter and config.filter.value and config.filter.value != "original":
-        steps.append(Pilgram2Step(config.filter.value))
+    if config.filter:
+        steps.append(PluginFilterStep(config.filter))
 
     if config.img_background_enable:
         steps.append(ImageMountStep(config.img_background_file))
@@ -75,11 +72,16 @@ def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaite
 
     # get result
     manipulated_image = context.image
+    manipulated_image = manipulated_image.convert("RGB") if manipulated_image.mode in ("RGBA", "P") else manipulated_image
+
+    return manipulated_image
+
+
+def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaitem):
+    manipulated_image = process_image_inner(file_in, SinglePictureDefinition(**mediaitem.pipeline_config), preview=False)
 
     # finish up creating mediafiles representants.
-
     ## final: save full result and create scaled versions
-    manipulated_image = manipulated_image.convert("RGB") if manipulated_image.mode in ("RGBA", "P") else manipulated_image
     # complete processed version (unprocessed and processed are different here)
     manipulated_image.save(mediaitem.processed, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
 
@@ -132,7 +134,7 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     canvas = context.canvas
 
     ## phase 2
-    context = ImageContext(canvas)
+    context = ImageContext(canvas, False)
     steps = []
 
     # assemble pipeline
@@ -232,34 +234,3 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
 
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
-
-
-def get_filter_preview(filepath_in: Path, filter: str | None = None) -> io.BytesIO:
-    try:
-        image = Image.open(filepath_in)
-        ImageOps.exif_transpose(image, in_place=True)  # needed to allow all backends set the orientation properly
-    except UnidentifiedImageError as exc:
-        raise RuntimeError(f"apply filter to file {filepath_in} not supported, error {exc}") from exc
-
-    context = ImageContext(image)
-    steps = []
-
-    if filter and filter != "original":
-        steps.append(Pilgram2Step(filter))
-
-    # setup pipeline.
-    pipeline = Pipeline[ImageContext](*steps)
-
-    # execute pipeline
-    pipeline(context)
-
-    # get result
-    manipulated_image = context.image
-
-    if manipulated_image.mode == "P":  # convert GIF palette to RGB so it can be stored as jpeg
-        manipulated_image = manipulated_image.convert("RGB")
-
-    buffer_preview_pipeline_applied = io.BytesIO()
-    manipulated_image.save(buffer_preview_pipeline_applied, format="jpeg", quality=80, optimize=False)
-
-    return buffer_preview_pipeline_applied

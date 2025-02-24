@@ -9,10 +9,10 @@ from uuid import UUID
 
 import requests
 
+from ..appconfig import appconfig
 from ..utils.stoppablethread import StoppableThread
 from .base import BaseService
 from .collection import MediacollectionService
-from .config import appconfig
 
 logger = logging.getLogger(__name__)
 

@@ -2,53 +2,62 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from enum import Enum
+from itertools import chain
 from pathlib import Path
 
 import cv2
 import numpy as np
-import pilgram2
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
+from .... import plugins
 from ....utils.exceptions import PipelineError
 from ....utils.helper import get_user_file
-from ...config.models.models import TextsConfig
+from ...config.models import models
 from ..context import ImageContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
 
 
-class Pilgram2Step(PipelineStep):
-    def __init__(self, filter: str) -> None:
-        self.filter = filter
+def get_plugin_avail_filters():
+    return (("original", "original"),) + tuple(
+        ((available_filter, f"{available_filter}")) for available_filter in chain(*plugins.pm.hook.mp_avail_filter())
+    )
+
+
+def get_plugin_display_filters():
+    return (("original", "original"),) + tuple(
+        ((available_filter, f"{available_filter}")) for available_filter in chain(*plugins.pm.hook.mp_display_filter())
+    )
+
+
+PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)
+
+
+class PluginFilterStep(PipelineStep):
+    def __init__(self, plugin_filter: PluginFilters) -> None:
+        self.plugin_filter: PluginFilters = plugin_filter
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
+        if (not self.plugin_filter) or (self.plugin_filter and self.plugin_filter.value == "original"):
+            # nothing to do here...
+            next_step(context)
+            return  # needed, otherwise remaining code will be executed after returning from next_step
+
         try:
-            pilgram2_filter_fun = getattr(pilgram2, self.filter)
+            manipulated_image = plugins.pm.hook.mp_filter_pipeline_step(
+                image=context.image.copy(),
+                plugin_filter=self.plugin_filter,
+                preview=context.preview,
+            )
         except Exception as exc:
-            raise PipelineError(f"pilgram2 filter {self.filter} does not exist") from exc
+            raise PipelineError(f"plugin filter error: {exc}") from exc
 
-        # apply filter
-        filtered_image: Image.Image = pilgram2_filter_fun(context.image.copy())
+        assert isinstance(manipulated_image, Image.Image), "plugin filter result is wrong type!"
 
-        if context.image.mode == "RGBA":
-            # remark: "P" mode is palette (like GIF) that could have a transparent color defined also
-            # since we do not use transparent GIFs currently we can ignore here.
-            # P would not have an alphachannel but only a transparent color defined.
-            logger.debug("need to convert to rgba and readd transparency mask to filtered image")
-            # get alpha from original image
-            a = context.image.getchannel("A")
-            # get rgb from filtered image
-            r, g, b = filtered_image.split()
-            # and merge both
-            filtered_transparent_image = Image.merge(context.image.mode, (r, g, b, a))
-
-            filtered_image = filtered_transparent_image
-            del filtered_transparent_image
-
-        context.image = filtered_image
-        del filtered_image
+        context.image = manipulated_image
 
         next_step(context)
 
@@ -183,7 +192,7 @@ class ImageFrameStep(PipelineStep):
 
 
 class TextStep(PipelineStep):
-    def __init__(self, textstageconfig: list[TextsConfig]) -> None:
+    def __init__(self, textstageconfig: list[models.TextsConfig]) -> None:
         self.textstageconfig = textstageconfig
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:

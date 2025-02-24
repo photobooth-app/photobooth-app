@@ -15,11 +15,11 @@ from typing import cast
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
 from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
 from .base import BaseService
-from .config import appconfig
 
 logger = logging.getLogger(__name__)
 

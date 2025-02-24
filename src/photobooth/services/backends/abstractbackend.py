@@ -17,8 +17,8 @@ from threading import Event
 import piexif
 
 from ... import LOG_PATH
+from ...appconfig import appconfig
 from ...utils.stoppablethread import StoppableThread
-from ..config import appconfig
 from ..config.groups.backends import Orientation
 
 logger = logging.getLogger(__name__)

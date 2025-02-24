@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-import photobooth.routers.api.mediaprocessing
+import photobooth.routers.api.filter
 from photobooth.application import app
 from photobooth.container import container
 
@@ -71,7 +71,7 @@ def test_preview_otherexception(client: TestClient):
 
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    with patch.object(photobooth.routers.api.mediaprocessing, "get_filter_preview", error_mock):
+    with patch.object(photobooth.routers.api.filter, "get_filter_preview", error_mock):
         response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
 
     assert response.status_code == 500

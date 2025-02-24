@@ -1,3 +1,4 @@
+import io
 import logging
 from uuid import UUID
 
@@ -5,28 +6,40 @@ from fastapi import APIRouter, HTTPException, Response, status
 
 from ...container import container
 from ...database.models import DimensionTypes
-from ...services.config.models.models import PilgramFilter, SinglePictureDefinition
-from ...services.mediaprocessing.processes import get_filter_preview, process_image_collageimage_animationimage
+from ...services.config.models.models import PluginFilters, SinglePictureDefinition
+from ...services.mediaprocessing.processes import process_image_collageimage_animationimage, process_image_inner
+from ...services.mediaprocessing.steps.image import get_plugin_display_filters
 from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/mediaprocessing",
-    tags=["mediaprocessing"],
-)
+router = APIRouter(prefix="/filter", tags=["filter"])
 
 
-@router.get("/preview/{mediaitem_id}/{filter}", response_class=Response)
-def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
+@router.get("/")
+def api_get_display_filters():
     try:
-        item = container.mediacollection_service.get_item(mediaitem_id)
-        thumbnail = container.mediacollection_service.cache.get_cached_repr(
-            item=item,
-            dimension=DimensionTypes.thumbnail,
-            processed=False,
-        )
+        plugin_results: list[str] = [e[1] for e in get_plugin_display_filters()]
 
-        buffer_preview_pipeline_applied = get_filter_preview(thumbnail.filepath, filter)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting selected filters: {exc}") from exc
+
+    return plugin_results
+
+
+@router.get("/{mediaitem_id}", response_class=Response)
+def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
+    try:
+        mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
+        thumbnail = container.mediacollection_service.cache.get_cached_repr(item=mediaitem, dimension=DimensionTypes.thumbnail, processed=False)
+
+        # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
+        # all other pipeline-steps need to be disabled here for fast preview. false is default so no need to set here.
+        config = SinglePictureDefinition(filter=PluginFilters(filter))
+
+        manipulated_image = process_image_inner(file_in=thumbnail.filepath, config=config, preview=True)
+
+        buffer_preview_pipeline_applied = io.BytesIO()
+        manipulated_image.save(buffer_preview_pipeline_applied, format="jpeg", quality=80, optimize=False)
 
         return Response(
             content=buffer_preview_pipeline_applied.getvalue(),
@@ -44,14 +57,14 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter=None):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creating filtered preview: {exc}") from exc
 
 
-@router.get("/applyfilter/{mediaitem_id}/{filter}")
-def api_get_applyfilter(mediaitem_id: UUID, filter: str | None = None):
+@router.patch("/{mediaitem_id}")
+def api_get_applyfilter(mediaitem_id: UUID, filter: str):
     try:
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         _config = SinglePictureDefinition(**mediaitem.pipeline_config)
-        _config.filter = PilgramFilter(filter)  # manually overwrite filter definition
+        _config.filter = PluginFilters(filter)  # manually overwrite filter definition
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
         mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(

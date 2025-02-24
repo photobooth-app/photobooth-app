@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ...database.models import Mediaitem, MediaitemTypes
 from ..config.groups.actions import AnimationConfigurationSet, AnimationProcessing
-from ..config.models.models import PilgramFilter, SinglePictureDefinition
+from ..config.models.models import PluginFilters, SinglePictureDefinition
 from ..mediaprocessing.processes import process_and_generate_animation
 from .base import JobModelBase
 
@@ -25,7 +25,7 @@ class JobModelAnimation(JobModelBase):
         return SinglePictureDefinition(
             texts_enable=False,
             img_frame_enable=False,
-            filter=captured_images[index].filter if index is not None else PilgramFilter.original,
+            filter=captured_images[index].filter if index is not None else PluginFilters.original,
         )
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):

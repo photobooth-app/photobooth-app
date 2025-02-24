@@ -12,8 +12,8 @@ from logging import FileHandler, LogRecord
 from pathlib import Path
 
 from .. import LOG_PATH
+from ..appconfig import appconfig
 from .base import BaseService
-from .config import appconfig
 from .sse import sse_service
 from .sse.sse_ import SseEventLogRecord
 

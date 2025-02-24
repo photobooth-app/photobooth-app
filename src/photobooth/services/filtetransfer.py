@@ -9,8 +9,8 @@ import psutil
 from photobooth.utils.stoppablethread import StoppableThread
 
 from .. import PATH_PROCESSED, PATH_UNPROCESSED
+from ..appconfig import appconfig
 from .base import BaseService
-from .config import appconfig
 
 logger = logging.getLogger(__name__)
 LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED]
