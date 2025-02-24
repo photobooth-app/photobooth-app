@@ -68,20 +68,10 @@ class PluginMediaprocessingSpec:
     def mp_userselectable_filter(self) -> list[str]: ...
 
 
-# try:
-# self.pm.add_hookspecs(hookspecs)
 pm.add_hookspecs(PluginManagementSpec)
 pm.add_hookspecs(PluginAcquisitionSpec)
 pm.add_hookspecs(PluginStatemachineSpec)
 pm.add_hookspecs(PluginMediaprocessingSpec)
-# except ValueError:
-#     print(
-#         "hookspecs already registered, that means pluginmanager was init'ed already once. "
-#         "Since pluggy is used from global space this can happen if PluginManagerService is instanciated more than once during tests..."
-#         "The initialization is skipped at this point."
-#     )
-#     # return
-# print("registered")
 
 # included predefined and externally installable plugins
 ENTRY_POINT_GROUP = "photobooth11"  # see pyproject.toml section
@@ -91,7 +81,7 @@ print(f"discovered {len(included_plugins)} plugins by entry point group '{ENTRY_
 
 # user plugins. additionally scan folder below working directlry for quick tinkering
 sys.path.append("./plugins/")
-user_plugins = [importlib.import_module(name) for _, name, ispkg in pkgutil.iter_modules(["./plugins/"]) if ispkg]
+user_plugins = [importlib.import_module(f"{name}.{name}") for _, name, ispkg in pkgutil.iter_modules(["./plugins/"]) if ispkg]
 print(f"discovered {len(user_plugins)} user-plugins: {[plugin.__name__ for plugin in user_plugins]} in ./plugins/")
 
 # register all plugins
@@ -108,5 +98,3 @@ for discovered_plugin in included_plugins + user_plugins:
         continue
 
     pm.register(instance, name=discovered_plugin.__name__)  # Register the plugin instance
-
-print(f"registered plugins: {[name for name, _ in pm.list_name_plugin()]}")

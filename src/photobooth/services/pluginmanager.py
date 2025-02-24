@@ -16,8 +16,8 @@ class PluginManagerService(BaseService):
 
         # use central singleton pluggy pluginmanager
         self.pm: PluginManager = pluggy_pm
-        print("here")
-        print(pluggy_pm.get_plugins())
+
+        logger.info(f"registered plugins: {self.list_plugins()}")
 
     def start(self):
         """When the pluginmanager is started, it will start all registered plugins that have the start hook registered"""
