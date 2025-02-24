@@ -4,8 +4,8 @@ from collections.abc import Generator
 
 import pytest
 
+from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
 from photobooth.services.processing import ProcessingService
 
 from ..util import video_duration

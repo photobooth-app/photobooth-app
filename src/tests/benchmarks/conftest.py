@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
+from photobooth.appconfig import appconfig
 from photobooth.database.database import create_db_and_tables
-from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 

@@ -4,7 +4,7 @@ from subprocess import PIPE, Popen
 
 import pytest
 
-from photobooth.services.config import appconfig
+from photobooth.appconfig import appconfig
 
 logger = logging.getLogger(name=None)
 

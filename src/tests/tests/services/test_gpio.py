@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from gpiozero.pins.mock import MockPin
 
+from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
 from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
 
 logger = logging.getLogger(name=None)

@@ -5,8 +5,8 @@ from unittest.mock import patch
 import psutil
 import pytest
 
+from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 

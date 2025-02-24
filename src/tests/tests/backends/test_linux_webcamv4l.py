@@ -2,9 +2,9 @@ import logging
 
 import pytest
 
+from photobooth.appconfig import appconfig
 from photobooth.services.backends.webcamv4l import WebcamV4lBackend, linuxpy_video_device
 from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendV4l2
 
 from ..util import get_images

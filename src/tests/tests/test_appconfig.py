@@ -6,7 +6,7 @@ import logging
 
 import pytest
 
-from photobooth.services.config import AppConfig, appconfig
+from photobooth.appconfig import AppConfig, appconfig
 from photobooth.services.config.groups.common import GroupCommon
 
 logger = logging.getLogger(name=None)

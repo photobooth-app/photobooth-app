@@ -4,7 +4,7 @@ import pytest
 from PIL import Image
 
 from photobooth.services.config.groups.actions import AnimationMergeDefinition, CollageMergeDefinition
-from photobooth.services.config.models.models import PilgramFilter
+from photobooth.services.config.models.models import PluginFilters
 from photobooth.services.mediaprocessing.context import AnimationContext, CollageContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
 from photobooth.services.mediaprocessing.steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
@@ -18,8 +18,8 @@ def test_collage_shared():
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        CollageMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
-        CollageMergeDefinition(filter=PilgramFilter._1977),
+        CollageMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PluginFilters("PilgramFilter._1977")),
+        CollageMergeDefinition(filter=PluginFilters("PilgramFilter._1977")),
     ]
 
     context = CollageContext(canvas, images)
@@ -36,8 +36,8 @@ def test_animation_shared():
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
-        AnimationMergeDefinition(filter=PilgramFilter._1977),
+        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PluginFilters("PilgramFilter._1977")),
+        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter._1977")),
     ]
 
     context = AnimationContext(images)
@@ -56,8 +56,8 @@ def test_animation_shared_wrongnumbers_runtime():
     ]
     merge_definition = [
         # we have two captured images and two definitions but one is already a predefined. thats bad because we should have only one captured
-        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PilgramFilter._1977),
-        AnimationMergeDefinition(filter=PilgramFilter._1977),
+        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", filter=PluginFilters("PilgramFilter._1977")),
+        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter._1977")),
     ]
 
     context = AnimationContext(images)

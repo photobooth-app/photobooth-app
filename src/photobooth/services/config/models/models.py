@@ -15,7 +15,7 @@ class TextsConfig(BaseModel):
 
 
 class SinglePictureDefinition(BaseModel):
-    filter: PluginFilters = PluginFilters.original
+    filter: PluginFilters = PluginFilters("original")
     fill_background_enable: bool = False
     fill_background_color: Color = Color("blue")
     img_background_enable: bool = False
@@ -34,10 +34,10 @@ class CollageMergeDefinition(BaseModel):
     height: NonNegativeInt = 600
     rotate: int = 0
     predefined_image: str = ""
-    filter: PluginFilters = PluginFilters.original
+    filter: PluginFilters = PluginFilters("original")
 
 
 class AnimationMergeDefinition(BaseModel):
     duration: NonNegativeInt = 2000
     predefined_image: str = ""
-    filter: PluginFilters = PluginFilters.original
+    filter: PluginFilters = PluginFilters("original")

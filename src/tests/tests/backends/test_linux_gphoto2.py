@@ -6,9 +6,9 @@ import time
 import pytest
 from PIL import Image
 
+from photobooth.appconfig import appconfig
 from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
 from photobooth.services.backends.gphoto2 import available_camera_indexes as gp2_avail
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.backends import GroupBackendGphoto2
 
 logger = logging.getLogger(name=None)

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from photobooth.services.config import appconfig
+from photobooth.appconfig import appconfig
 from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 

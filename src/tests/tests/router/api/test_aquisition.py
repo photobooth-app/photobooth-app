@@ -9,10 +9,10 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from photobooth.appconfig import appconfig
 from photobooth.application import app
 from photobooth.container import container
 from photobooth.services.aquisition import AquisitionService
-from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 

@@ -29,12 +29,17 @@ def api_get_display_filters():
 @router.get("/{mediaitem_id}", response_class=Response)
 def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
     try:
+        plugin_filter = PluginFilters(filter)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"Filter not available, error: {exc}") from exc
+
+    try:
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
         thumbnail = container.mediacollection_service.cache.get_cached_repr(item=mediaitem, dimension=DimensionTypes.thumbnail, processed=False)
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         # all other pipeline-steps need to be disabled here for fast preview. false is default so no need to set here.
-        config = SinglePictureDefinition(filter=PluginFilters(filter))
+        config = SinglePictureDefinition(filter=plugin_filter)
 
         manipulated_image = process_image_inner(file_in=thumbnail.filepath, config=config, preview=True)
 
@@ -58,7 +63,7 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
 
 
 @router.patch("/{mediaitem_id}")
-def api_get_applyfilter(mediaitem_id: UUID, filter: str):
+def api_applyfilter(mediaitem_id: UUID, filter: str):
     try:
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
 

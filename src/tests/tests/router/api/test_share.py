@@ -7,10 +7,10 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from photobooth.appconfig import appconfig
 from photobooth.application import app
 from photobooth.container import container
 from photobooth.services.collection import MediacollectionService
-from photobooth.services.config import appconfig
 
 
 @pytest.fixture

@@ -23,8 +23,8 @@ def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()
         # need an image for sure as last item because this is safe to filter
-        container.processing_service.trigger_action("image", 0)
-        container.processing_service.wait_until_job_finished()
+        # container.processing_service.trigger_action("image", 0)
+        # container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
 
@@ -33,7 +33,7 @@ def test_preview_filter_original(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
+    response = client.get(f"/filter/{mediaitem.id}?filter=original")
 
     assert response.status_code == 200
 
@@ -48,7 +48,7 @@ def test_preview_filter_1977(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/_1977")
+    response = client.get(f"/filter/{mediaitem.id}?filter=PilgramFilter._1977")
 
     assert response.status_code == 200
 
@@ -60,7 +60,7 @@ def test_preview_filter_1977(client: TestClient):
 
 
 def test_preview_filter_nonexistentitem(client: TestClient):
-    response = client.get(f"/mediaprocessing/preview/{uuid4()}/theresnofilterlikethis")
+    response = client.get(f"/filter/{uuid4()}?filter=theresnofilterlikethis")
 
     assert response.status_code == 404
 
@@ -71,8 +71,9 @@ def test_preview_otherexception(client: TestClient):
 
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    with patch.object(photobooth.routers.api.filter, "get_filter_preview", error_mock):
-        response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/original")
+    # https://docs.python.org/3/library/unittest.mock.html#where-to-patch
+    with patch.object(photobooth.routers.api.filter, "process_image_inner", error_mock):
+        response = client.get(f"/filter/{mediaitem.id}?filter=original")
 
     assert response.status_code == 500
 
@@ -81,7 +82,7 @@ def test_preview_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/mediaprocessing/preview/{mediaitem.id}/theresnofilterlikethis")
+    response = client.get(f"/filter/{mediaitem.id}?filter=theresnofilterlikethis")
 
     assert response.status_code == 406
 
@@ -90,7 +91,7 @@ def test_apply_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/theresnofilterlikethis")
+    response = client.patch(f"/filter/{mediaitem.id}?filter=PilgramFilter.theresnofilterlikethis")
 
     assert response.status_code == 406
 
@@ -102,7 +103,7 @@ def test_apply_filter(client: TestClient):
     image_before = Image.open(mediaitem.processed)
     image_before.load()  # force load (open is lazy!)
 
-    response = client.get(f"/mediaprocessing/applyfilter/{mediaitem.id}/_1977")
+    response = client.patch(f"/filter/{mediaitem.id}?filter=PilgramFilter._1977")
 
     assert response.status_code == 200
 

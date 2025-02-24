@@ -9,7 +9,7 @@ import pytest
 from PIL import Image
 from pydantic_extra_types.color import Color
 
-from photobooth.services.config import AppConfig
+from photobooth.appconfig import AppConfig
 from photobooth.services.config.groups.actions import TextsConfig
 from photobooth.services.mediaprocessing.context import ImageContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
@@ -17,7 +17,8 @@ from photobooth.services.mediaprocessing.steps.image import (
     FillBackgroundStep,
     ImageFrameStep,
     ImageMountStep,
-    Pilgram2Step,
+    PluginFilters,
+    PluginFilterStep,
     RemoveChromakeyStep,
     TextStep,
 )
@@ -63,7 +64,7 @@ def test_validate_test_method_different():
 
 def test_pilgram_stage(pil_image: Image.Image):
     context = ImageContext(pil_image)
-    steps = [Pilgram2Step("aden")]
+    steps = [PluginFilterStep(PluginFilters("PilgramFilter.aden"))]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -79,7 +80,7 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
 
     context = ImageContext(pil_image)
-    steps = [Pilgram2Step("aden")]
+    steps = [PluginFilterStep(PluginFilters("PilgramFilter.aden"))]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -92,10 +93,10 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
 
 
 def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
-    with pytest.raises(PipelineError):
+    with pytest.raises(ValueError):
         # yes right! original is no filter ;)
         context = ImageContext(pil_image)
-        steps = [Pilgram2Step("original")]
+        steps = [PluginFilterStep(PluginFilters("PilgramFilter.original"))]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 

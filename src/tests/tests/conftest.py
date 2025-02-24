@@ -4,9 +4,9 @@ import pytest
 from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
 
+from photobooth.appconfig import appconfig
 from photobooth.container import container
 from photobooth.database.database import create_db_and_tables
-from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 

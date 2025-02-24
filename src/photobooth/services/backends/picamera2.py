@@ -16,8 +16,8 @@ from picamera2.allocators import PersistentAllocator  # type: ignore
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
 from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
+from ...appconfig import appconfig
 from ...utils.stoppablethread import StoppableThread
-from ..config import appconfig
 from ..config.groups.backends import GroupBackendPicamera2
 from .abstractbackend import AbstractBackend, GeneralFileResult
 

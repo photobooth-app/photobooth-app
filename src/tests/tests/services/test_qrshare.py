@@ -7,9 +7,9 @@ import pytest
 import requests
 from PIL import Image
 
+from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
 from photobooth.database.models import Mediaitem
-from photobooth.services.config import appconfig
 
 logger = logging.getLogger(name=None)
 

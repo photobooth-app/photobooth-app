@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
+from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.config import appconfig
 from photobooth.services.config.groups.share import ShareConfigurationSet, ShareProcessing
 from photobooth.services.config.models.trigger import Trigger
 
