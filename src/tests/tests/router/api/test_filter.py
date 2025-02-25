@@ -48,7 +48,7 @@ def test_preview_filter_1977(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/filter/{mediaitem.id}?filter=PilgramFilter._1977")
+    response = client.get(f"/filter/{mediaitem.id}?filter=FilterPilgram2._1977")
 
     assert response.status_code == 200
 
@@ -91,7 +91,7 @@ def test_apply_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.patch(f"/filter/{mediaitem.id}?filter=PilgramFilter.theresnofilterlikethis")
+    response = client.patch(f"/filter/{mediaitem.id}?filter=FilterPilgram2.theresnofilterlikethis")
 
     assert response.status_code == 406
 
@@ -103,7 +103,7 @@ def test_apply_filter(client: TestClient):
     image_before = Image.open(mediaitem.processed)
     image_before.load()  # force load (open is lazy!)
 
-    response = client.patch(f"/filter/{mediaitem.id}?filter=PilgramFilter._1977")
+    response = client.patch(f"/filter/{mediaitem.id}?filter=FilterPilgram2._1977")
 
     assert response.status_code == 200
 
