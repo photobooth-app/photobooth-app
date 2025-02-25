@@ -1,4 +1,4 @@
-from enum import Enum
+from typing import Literal, get_args
 
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
@@ -6,11 +6,11 @@ from pydantic_settings import SettingsConfigDict
 from photobooth import CONFIG_PATH
 from photobooth.services.config.baseconfig import BaseConfig
 
-available_filter = (
+available_filter = Literal[
     "_1977",
     "aden",
-    "ashby",
     "amaro",
+    "ashby",
     "brannan",
     "brooklyn",
     "charmes",
@@ -47,14 +47,7 @@ available_filter = (
     "walden",
     "willow",
     "xpro2",
-)
-
-PilgramFilter = Enum(
-    "PilgramFilter",
-    ((curr, f"{curr}") for curr in available_filter),
-    type=str,
-)
-# PilgramFilterLiteral = Literal[available_filter]
+]
 
 
 class FilterPilgram2Config(BaseConfig):
@@ -64,9 +57,7 @@ class FilterPilgram2Config(BaseConfig):
         default=True,
         description="Add userselectable filter to the list the user can choose from.",
     )
-    userselectable_filter: list[PilgramFilter] = Field(
-        default=[e for e in PilgramFilter],
+    userselectable_filter: list[available_filter] = Field(
+        default=[f for f in get_args(available_filter)],
+        description="Select filter, the user can choose from. Even if unselected here, the filter is still available in the admin configuration.",
     )
-    # userselectable_filter: list[str] = Field(
-    #     default=[flt for flt in available_filter],
-    # )

@@ -394,7 +394,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PluginFilters("PilgramFilter.earlybird"),
+                            filter=PluginFilters("FilterPilgram2.earlybird"),
                         ),
                         CollageMergeDefinition(
                             description="middle predefined",
@@ -413,7 +413,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PluginFilters("PilgramFilter.reyes"),
+                            filter=PluginFilters("FilterPilgram2.reyes"),
                         ),
                     ],
                     canvas_img_front_enable=True,
@@ -451,8 +451,8 @@ class GroupActions(BaseModel):
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
-                        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter.crema")),
-                        AnimationMergeDefinition(filter=PluginFilters("PilgramFilter.inkwell")),
+                        AnimationMergeDefinition(filter=PluginFilters("FilterPilgram2.crema")),
+                        AnimationMergeDefinition(filter=PluginFilters("FilterPilgram2.inkwell")),
                         AnimationMergeDefinition(),
                         AnimationMergeDefinition(),
                         AnimationMergeDefinition(

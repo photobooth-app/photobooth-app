@@ -45,7 +45,7 @@ class PluginFilterStep(PipelineStep):
         try:
             manipulated_image = plugins.pm.hook.mp_filter_pipeline_step(
                 image=context.image.copy(),
-                plugin_filter=self.plugin_filter,
+                plugin_filter=self.plugin_filter.value,
                 preview=context.preview,
             )
         except Exception as exc:

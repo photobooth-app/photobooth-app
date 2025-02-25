@@ -64,7 +64,7 @@ def test_validate_test_method_different():
 
 def test_pilgram_stage(pil_image: Image.Image):
     context = ImageContext(pil_image)
-    steps = [PluginFilterStep(PluginFilters("PilgramFilter.aden"))]
+    steps = [PluginFilterStep(PluginFilters("FilterPilgram2.aden"))]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -80,7 +80,7 @@ def test_pilgram_stage_rgba_kept(pil_image: Image.Image):
     pil_image = pil_image.convert("RGBA")
 
     context = ImageContext(pil_image)
-    steps = [PluginFilterStep(PluginFilters("PilgramFilter.aden"))]
+    steps = [PluginFilterStep(PluginFilters("FilterPilgram2.aden"))]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -96,7 +96,7 @@ def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
     with pytest.raises(ValueError):
         # yes right! original is no filter ;)
         context = ImageContext(pil_image)
-        steps = [PluginFilterStep(PluginFilters("PilgramFilter.original"))]
+        steps = [PluginFilterStep(PluginFilters("FilterPilgram2.original"))]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 

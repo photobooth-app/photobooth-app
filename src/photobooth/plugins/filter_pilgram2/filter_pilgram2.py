@@ -1,45 +1,45 @@
 import logging
-from enum import Enum
+from typing import cast, get_args
 
 import pilgram2
 from PIL import Image
 
-# from photobooth.services.mediaprocessing.steps.image import PluginFilters
 from .. import hookimpl
-from ..base_plugin import BasePlugin
-from . import config
+from ..base_plugin import BaseFilter
+from .config import FilterPilgram2Config, available_filter
 
 logger = logging.getLogger(__name__)
 
 
-class FilterPilgram2(BasePlugin[config.FilterPilgram2Config]):
+class FilterPilgram2(BaseFilter[FilterPilgram2Config]):
     def __init__(self):
         super().__init__()
 
-        self._config: config.FilterPilgram2Config = config.FilterPilgram2Config()
+        self._config: FilterPilgram2Config = FilterPilgram2Config()
 
     @hookimpl
     def mp_avail_filter(self) -> list[str]:
-        return [str(e) for e in config.PilgramFilter]
+        return [self.unify(f) for f in get_args(available_filter)]
 
     @hookimpl
     def mp_userselectable_filter(self) -> list[str]:
         if self._config.add_userselectable_filter:
-            return [str(e) for e in self._config.userselectable_filter]
+            return [self.unify(f) for f in self._config.userselectable_filter]
         else:
             return []
 
     @hookimpl
-    def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: Enum, preview: bool) -> Image.Image | None:
-        (plugin_filter_enum_name, filter_value) = str(plugin_filter.value).split(".", 2)
-        if hasattr(config, plugin_filter_enum_name):  # if true, this filter is requested.
-            return self.do_filter(image, config.PilgramFilter(filter_value))
+    def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: str, preview: bool) -> Image.Image | None:
+        filter = self.deunify(plugin_filter)
 
-    def do_filter(self, image: Image.Image, config: config.PilgramFilter) -> Image.Image:
+        if filter:  # if anything, then filter, else for None this plugin is not requested, leave.
+            return self.do_filter(image, cast(available_filter, filter))
+
+    def do_filter(self, image: Image.Image, filter: available_filter) -> Image.Image:
         try:
-            pilgram2_filter_fun = getattr(pilgram2, config.value)
+            pilgram2_filter_fun = getattr(pilgram2, filter)
         except Exception as exc:
-            raise ValueError(f"pilgram2 filter {config} does not exist") from exc
+            raise ValueError(f"pilgram2 filter {filter} does not exist") from exc
 
         # apply filter
         filtered_image: Image.Image = pilgram2_filter_fun(image.copy())

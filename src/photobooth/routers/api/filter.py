@@ -67,9 +67,10 @@ def api_applyfilter(mediaitem_id: UUID, filter: str):
     try:
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
 
-        # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
-        _config = SinglePictureDefinition(**mediaitem.pipeline_config)
-        _config.filter = PluginFilters(filter)  # manually overwrite filter definition
+        # along with mediaitem the config was stored. cast it back to original pydantic type.
+        # update filter before validating so if there is a filter applied that is not avail any more,
+        # ther eis no validation error and just proceeded with the new filter.
+        _config = SinglePictureDefinition.model_validate(mediaitem.pipeline_config | {"filter": filter})
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
         mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(
