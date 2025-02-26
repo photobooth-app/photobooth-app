@@ -49,7 +49,7 @@ class PostPredefinedImagesStep(PipelineStep):
                 sub_context = ImageContext(image)
                 sub_steps = []
 
-                filter = self.merge_definition[idx].filter
+                filter = self.merge_definition[idx].image_filter
                 if filter:
                     sub_steps.append(PluginFilterStep(filter))
 

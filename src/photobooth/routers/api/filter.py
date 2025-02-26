@@ -39,7 +39,7 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         # all other pipeline-steps need to be disabled here for fast preview. false is default so no need to set here.
-        config = SinglePictureDefinition(filter=plugin_filter)
+        config = SinglePictureDefinition(image_filter=plugin_filter)
 
         manipulated_image = process_image_inner(file_in=thumbnail.filepath, config=config, preview=True)
 

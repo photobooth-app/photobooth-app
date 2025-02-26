@@ -94,7 +94,7 @@ class SingleImageProcessing(BaseModel):
 
     model_config = ConfigDict(title="Single captures processing after capture")
 
-    filter: PluginFilters = Field(default=PluginFilters("original"))
+    image_filter: PluginFilters = Field(default=PluginFilters("original"))
 
     fill_background_enable: bool = Field(
         default=False,
@@ -260,7 +260,7 @@ class MulticameraProcessing(BaseModel):
         default=125,
         description="Duration of each frame in milliseconds. Wigglegrams look good usually between 100-200ms duration.",
     )
-    filter: PluginFilters = Field(
+    image_filter: PluginFilters = Field(
         default=PluginFilters("original"),
     )
 
@@ -366,7 +366,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PluginFilters("FilterPilgram2.earlybird"),
+                            image_filter=PluginFilters("FilterPilgram2.earlybird"),
                         ),
                         CollageMergeDefinition(
                             description="middle predefined",
@@ -376,7 +376,7 @@ class GroupActions(BaseModel):
                             height=725,
                             rotate=0,
                             predefined_image="userdata/predefined_images/photobooth-collage-predefined-image.png",
-                            filter=PluginFilters("original"),
+                            image_filter=PluginFilters("original"),
                         ),
                         CollageMergeDefinition(
                             description="right",
@@ -385,7 +385,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            filter=PluginFilters("FilterPilgram2.reyes"),
+                            image_filter=PluginFilters("FilterPilgram2.reyes"),
                         ),
                     ],
                     canvas_img_front_enable=True,
@@ -423,13 +423,13 @@ class GroupActions(BaseModel):
                     canvas_width=1500,
                     canvas_height=900,
                     merge_definition=[
-                        AnimationMergeDefinition(filter=PluginFilters("FilterPilgram2.crema")),
-                        AnimationMergeDefinition(filter=PluginFilters("FilterPilgram2.inkwell")),
+                        AnimationMergeDefinition(image_filter=PluginFilters("FilterPilgram2.crema")),
+                        AnimationMergeDefinition(image_filter=PluginFilters("FilterPilgram2.inkwell")),
                         AnimationMergeDefinition(),
                         AnimationMergeDefinition(),
                         AnimationMergeDefinition(
                             duration=4000,
-                            filter=PluginFilters("original"),
+                            image_filter=PluginFilters("original"),
                             predefined_image="userdata/predefined_images/photobooth-gif-animation-predefined-image.png",
                         ),
                     ],

@@ -24,7 +24,7 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
         return SinglePictureDefinition(
             texts_enable=False,
             img_frame_enable=False,
-            filter=captured_images[index].filter if index is not None else PluginFilters.original,
+            image_filter=captured_images[index].image_filter if index is not None else PluginFilters.original,
         )
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
