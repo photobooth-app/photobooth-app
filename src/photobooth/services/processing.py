@@ -1,4 +1,4 @@
-# type: ignore[reportAttributeAccessIssue, reportCallIssue]
+# type: ignore
 # https://github.com/fgmacedo/python-statemachine/issues/515 ignore above errors in pyright until solved.
 
 import logging
@@ -278,10 +278,10 @@ class ProcessingMachine(StateMachine):
         number_captures_taken = len(self._mediacollection_service.get_items_relto_job(self.model._job_identifier))
         self.model.set_captures_taken(number_captures_taken)
 
-    def after_transition(self, event, source, target):
+    def after_transition(self, event: Event, source: State, target: State):
         pass
 
-    def on_enter_state(self, event, target):
+    def on_enter_state(self, event: Event, target: State):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._emit_model_state_update()
 
@@ -471,7 +471,7 @@ class ProcessingMachine(StateMachine):
             logger.info("automatic confirm enabled")
             self.confirm()
 
-    def on_exit_approve_capture(self, event):
+    def on_exit_approve_capture(self, event: Event):
         if event == self.confirm.name:
             # nothing to do
             pass
