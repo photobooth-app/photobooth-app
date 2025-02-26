@@ -1,3 +1,5 @@
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
@@ -263,79 +265,49 @@ class MulticameraProcessing(BaseModel):
     )
 
 
-class SingleImageConfigurationSet(BaseModel):
+t_JOBCONTROL = TypeVar("t_JOBCONTROL")
+t_PROCESSING = TypeVar("t_PROCESSING")
+
+
+class BaseConfigurationSet(BaseModel, Generic[t_JOBCONTROL, t_PROCESSING]):
+    name: str = Field(
+        default="default action",
+        description="Name to identify, only used for display in admin center.",
+    )
+
+    jobcontrol: t_JOBCONTROL
+    processing: t_PROCESSING
+    trigger: Trigger
+
+
+class SingleImageConfigurationSet(BaseConfigurationSet[SingleImageJobControl, SingleImageProcessing]):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess single captures")
 
-    name: str = Field(
-        default="default single image",
-        description="Name to identify, only used for display in admin center.",
-    )
 
-    jobcontrol: SingleImageJobControl
-    processing: SingleImageProcessing
-    trigger: Trigger
-
-
-class CollageConfigurationSet(BaseModel):
+class CollageConfigurationSet(BaseConfigurationSet[MultiImageJobControl, CollageProcessing]):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess collage captures")
 
-    name: str = Field(
-        default="default collage",
-        description="Name to identify, only used for display in admin center.",
-    )
 
-    jobcontrol: MultiImageJobControl
-    processing: CollageProcessing
-    trigger: Trigger
-
-
-class AnimationConfigurationSet(BaseModel):
+class AnimationConfigurationSet(BaseConfigurationSet[MultiImageJobControl, AnimationProcessing]):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess animation captures")
 
-    name: str = Field(
-        default="default animation",
-        description="Name to identify, only used for display in admin center.",
-    )
 
-    jobcontrol: MultiImageJobControl
-    processing: AnimationProcessing
-    trigger: Trigger
-
-
-class VideoConfigurationSet(BaseModel):
+class VideoConfigurationSet(BaseConfigurationSet[VideoJobControl, VideoProcessing]):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess video captures")
 
-    name: str = Field(
-        default="default video",
-        description="Name to identify, only used for display in admin center.",
-    )
 
-    jobcontrol: VideoJobControl
-    processing: VideoProcessing
-    trigger: Trigger
-
-
-class MulticameraConfigurationSet(BaseModel):
+class MulticameraConfigurationSet(BaseConfigurationSet[MulticameraJobControl, MulticameraProcessing]):
     """Configure stages how to process images after capture."""
 
     model_config = ConfigDict(title="Postprocess multicamera captures")
-
-    name: str = Field(
-        default="default wigglegram",
-        description="Name to identify, only used for display in admin center.",
-    )
-
-    jobcontrol: MulticameraJobControl
-    processing: MulticameraProcessing
-    trigger: Trigger
 
 
 class GroupActions(BaseModel):
