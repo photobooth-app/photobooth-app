@@ -8,8 +8,7 @@ from .base import JobModelBase
 
 class JobModelImage(JobModelBase):
     def __init__(self, configuration_set: SingleImageConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.image
+        super().__init__(configuration_set, MediaitemTypes.image)
         self._total_captures_to_take = 1
 
         # self._validate_job()

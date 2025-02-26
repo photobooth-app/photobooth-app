@@ -9,8 +9,7 @@ from .base import JobModelBase
 
 class JobModelMulticamera(JobModelBase):
     def __init__(self, configuration_set: MulticameraConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.multicamera
+        super().__init__(configuration_set, MediaitemTypes.multicamera)
 
         self._total_captures_to_take = 1
 

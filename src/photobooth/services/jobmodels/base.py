@@ -1,36 +1,25 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal
+from typing import Generic, Literal, TypeVar
 from uuid import UUID, uuid4
 
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import get_user_file
-from ..config.groups.actions import (
-    AnimationConfigurationSet,
-    CollageConfigurationSet,
-    MulticameraConfigurationSet,
-    MultiImageJobControl,
-    SingleImageConfigurationSet,
-    VideoConfigurationSet,
-)
+from ..config.groups.actions import BaseConfigurationSet, MultiImageJobControl
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition, SinglePictureDefinition
 
 action_type_literal = Literal["image", "collage", "animation", "video", "multicamera"]
 
+T = TypeVar("T", bound=BaseConfigurationSet)
 
-class JobModelBase(ABC):
-    def __init__(
-        self,
-        configuration_set: SingleImageConfigurationSet
-        | CollageConfigurationSet
-        | AnimationConfigurationSet
-        | VideoConfigurationSet
-        | MulticameraConfigurationSet,
-    ):
+
+class JobModelBase(ABC, Generic[T]):
+    def __init__(self, configuration_set: T, media_type: MediaitemTypes):
+        self._media_type: MediaitemTypes = media_type  # alternative, could be derived from print(type(self).__name__)?
+        self._configuration_set: T = configuration_set
+
         self._job_identifier: UUID = uuid4()
-        self._media_type: MediaitemTypes | None = None
-        self._configuration_set = configuration_set
 
         self._total_captures_to_take: int = 0
         self._captures_taken: int = 0
@@ -74,7 +63,7 @@ class JobModelBase(ABC):
 
         out = dict(
             state=self.state,  # type: ignore
-            typ=self._media_type.value,  # type: ignore
+            typ=self._media_type.value,
             total_captures_to_take=self.total_captures_to_take(),
             remaining_captures_to_take=self.remaining_captures_to_take(),
             number_captures_taken=self.get_captures_taken(),

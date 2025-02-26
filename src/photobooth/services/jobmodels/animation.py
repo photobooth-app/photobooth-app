@@ -7,10 +7,9 @@ from ..mediaprocessing.processes import process_and_generate_animation
 from .base import JobModelBase
 
 
-class JobModelAnimation(JobModelBase):
+class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
     def __init__(self, configuration_set: AnimationConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.animation
+        super().__init__(configuration_set, MediaitemTypes.animation)
 
         self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
         self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)

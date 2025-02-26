@@ -9,8 +9,7 @@ from .base import JobModelBase
 
 class JobModelCollage(JobModelBase):
     def __init__(self, configuration_set: CollageConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.collage
+        super().__init__(configuration_set, MediaitemTypes.collage)
 
         self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
         self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
