@@ -82,7 +82,7 @@ def test_preview_filter_nonexistentfilter(client: TestClient):
     # get the newest mediaitem
     mediaitem = container.mediacollection_service.get_item_latest()
 
-    response = client.get(f"/filter/{mediaitem.id}?filter=theresnofilterlikethis")
+    response = client.get(f"/filter/{mediaitem.id}?filter=FilterPilgram2.theresnofilterlikethis")
 
     assert response.status_code == 406
 
