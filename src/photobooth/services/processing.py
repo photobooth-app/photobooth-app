@@ -1,3 +1,6 @@
+# type: ignore[reportAttributeAccessIssue, reportCallIssue]
+# https://github.com/fgmacedo/python-statemachine/issues/515 ignore above errors in pyright until solved.
+
 import logging
 import shutil
 import time

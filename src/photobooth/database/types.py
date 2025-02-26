@@ -37,4 +37,5 @@ class PathType(TypeDecorator):
         return str(value)
 
     def process_result_value(self, value, dialect):
+        assert value is not None
         return Path(value)
