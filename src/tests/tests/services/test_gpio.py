@@ -31,6 +31,7 @@ def _container() -> Generator[Container, None, None]:
 
 @patch("subprocess.check_call")
 def test_button_shutdown(mock_check_call, _container: Container):
+    assert _container.gpio_service.shutdown_btn
     # emulate gpio active low driven (simulates button press)
     cast(MockPin, _container.gpio_service.shutdown_btn.pin).drive_low()
 
@@ -43,6 +44,7 @@ def test_button_shutdown(mock_check_call, _container: Container):
 
 @patch("subprocess.check_call")
 def test_button_reboot(mock_check_call, _container: Container):
+    assert _container.gpio_service.reboot_btn
     # emulate gpio active low driven (simulates button press)
     cast(MockPin, _container.gpio_service.reboot_btn.pin).drive_low()
 

@@ -38,6 +38,7 @@ def test_filetransfer_service_enabled(_container: Container):
     _container.filetransfer_service.stop()
     _container.filetransfer_service.start()
 
+    assert _container.filetransfer_service._worker_thread
     # check that worker_thread came up.
     assert _container.filetransfer_service._worker_thread.is_alive() is True
 
