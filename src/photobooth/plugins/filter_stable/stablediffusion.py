@@ -2,7 +2,6 @@ from pydoc import locate
 from re import sub
 
 from PIL import Image
-from webuiapi import *
 
 from .sdpresets.basefiltersd import BaseFilterSD
 from .sdpresets.filterpresets_sd import *

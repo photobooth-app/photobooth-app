@@ -41,21 +41,24 @@ class GetImgAIFilter:
             image.save(buffered, format="JPEG")
 
             img_str = base64.b64encode(buffered.getvalue())
-            url = "https://api.getimg.ai/v1/stable-diffusion/image-to-image"
+            url = "https://api.getimg.ai/v1/stable-diffusion/controlnet"
             # In tests it proved to be useful to add the following to the prompt:
             params["prompt"] += ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
             payload = {
                 "response_format": "b64",
                 "steps": 40,
-                "strength": 0.5,
+                "strength": 2.5,
+                "width": params["width"],
+                "height": params["height"],
                 "image": img_str.decode('utf-8'),
                 "prompt": params["prompt"],
-                "model": "dream-shaper-v8"
+                "model": "dream-shaper-v8",
+                "controlnet": "normal-1.1",
             }
             headers = {
                 "accept": "application/json",
                 "content-type": "application/json",
-                "authorization": "Bearer key-XXXXXXXX"
+                "authorization": "Bearer key-xxxxx"
             }
             
             response = requests.post(url, json=payload, headers=headers)
