@@ -10,9 +10,8 @@ import pilgram2
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
-#from ....filters.stablediffusion import StableDiffusionFilter
+from ....filters.stablediffusion import StableDiffusionFilter
 from ....filters.getimg_ai import GetImgAIFilter
-from ....filters.runware_ai import RunwareAIFilter
 from ....utils.exceptions import PipelineError
 from ....utils.helper import get_user_file
 from ...config import appconfig
@@ -54,8 +53,8 @@ class FilterStep(PipelineStep):
 
         elif appconfig.mediaprocessing.filtertype == "stablediffusion":
             try:
-                filterObj = RunwareAIFilter( self.filter )
-                #filterObj = StableDiffusionFilter( self.filter )
+                #filterObj = RunwareAIFilter( self.filter )
+                filterObj = StableDiffusionFilter( self.filter )
                 #filterObj = GetImgAIFilter( self.filter )
                 filtered_image: Image.Image = filterObj( self.filter, context.image.copy() )
             except Exception as exc:
