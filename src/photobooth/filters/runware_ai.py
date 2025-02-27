@@ -1,6 +1,6 @@
 
 from pydoc import locate
-from runware import Runware, IImageInference
+from runware import Runware, IImageInference, IControlNetA, EPreProcessor
 from .sdpresets.basefiltersd import BaseFilterSD
 from .sdpresets.filterpresets_sd import *
 from ..services.mediaprocessing.context import ImageContext
@@ -49,17 +49,20 @@ class RunwareAIFilter:
 
             controlnets = [
                 IControlNetA(
+                    start_step = None, end_step = None, control_mode = None,
                     preprocessor = EPreProcessor.openpose,
                     weight = params["openpose"]["weight"],
                     guide_image_unprocessed = img_str.decode('utf-8')
                 ),
                 IControlNetA(
-                    preprocessor = EPreProcessor.depth,
+                    start_step = None, end_step = None, control_mode = None,
+                    preprocessor = EPreProcessor.depth_midas,
                     guide_image_unprocessed = img_str.decode('utf-8'),
                     weight = params["depth"]["weight"]
                 ),
                 IControlNetA(
-                    preprocessor = EPreProcessor.softedge,
+                    start_step = None, end_step = None, control_mode = None,
+                    preprocessor = EPreProcessor.softedge_pidinet,
                     guide_image_unprocessed = img_str.decode('utf-8'),
                     weight = params["softedge"]["weight"]
                 )
@@ -83,9 +86,10 @@ class RunwareAIFilter:
             )
             
             images = await runware.imageInference(requestImage=request_image)
-            
-            #print( repr(json_response))
-            image = Image.open(io.BytesIO(base64.b64decode( json_response["image"] )))
+            for resImage in images:
+                print(f"Image URL: {resImage.imageBase64Data}")
+            print( repr( images ))
+            #image = Image.open(io.BytesIO(base64.b64decode( json_response["image"] )))
             return image
 
             # optionally set username, password when --api-auth=username:password is set on webui.
