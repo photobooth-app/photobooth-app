@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.5
+    rev: v0.9.9
     hooks:
       # Run the linter.
       - id: ruff
@@ -8,6 +8,6 @@ repos:
       # Run the formatter.
       - id: ruff-format
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.393
+    rev: v1.1.395
     hooks:
       - id: pyright
