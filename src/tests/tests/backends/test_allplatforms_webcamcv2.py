@@ -44,8 +44,8 @@ def test_service_reload(backend_cv2):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
-        backend_cv2.start()
         backend_cv2.stop()
+        backend_cv2.start()
 
 
 def test_assert_is_alive(backend_cv2):

@@ -48,8 +48,8 @@ def test_service_reload(backend_wigglecam):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
-        backend_wigglecam.start()
         backend_wigglecam.stop()
+        backend_wigglecam.start()
 
 
 def test_assert_is_alive(emulated_node, backend_wigglecam):
