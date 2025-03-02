@@ -11,7 +11,7 @@ class CommanderConfig(BaseConfig):
     model_config = SettingsConfigDict(title="Commander Plugin Config", json_file=f"{CONFIG_PATH}plugin_commander.json")
 
     enable_tasks_processing: bool = Field(
-        default=True,
+        default=False,
         description="Enable to process any of the defined tasks at all.",
     )
 
