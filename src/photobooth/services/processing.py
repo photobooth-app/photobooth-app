@@ -1,6 +1,3 @@
-# type: ignore
-# https://github.com/fgmacedo/python-statemachine/issues/515 ignore above errors in pyright until solved.
-
 import logging
 import shutil
 import time
@@ -97,6 +94,8 @@ class ProcessingService(BaseService):
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
     def _process_fun(self):
+        assert self._state_machine
+
         try:
             logger.info("starting job")
             self._state_machine.start()  # TODO: revisit later: https://github.com/fgmacedo/python-statemachine/issues/511
@@ -237,17 +236,17 @@ class ProcessingMachine(StateMachine):
     finished = State(final=True)  # final state
     ## TRANSITIONS
 
-    start = idle.to(counting)
-    _counted_capture = counting.to(capture)
-    _counted_record = counting.to(record)
-    _counted_multicapture = counting.to(multicapture)
-    _captured = capture.to(approve_capture) | multicapture.to(approve_capture)
-    confirm = approve_capture.to(counting, unless="all_captures_done") | approve_capture.to(captures_completed, cond="all_captures_done")
-    reject = approve_capture.to(counting)
-    abort = approve_capture.to(finished)
-    stop_recording = record.to(captures_completed)
-    _present = captures_completed.to(present_capture)
-    _finish = present_capture.to(finished)
+    start = Event(idle.to(counting))
+    _counted_capture = Event(counting.to(capture))
+    _counted_record = Event(counting.to(record))
+    _counted_multicapture = Event(counting.to(multicapture))
+    _captured = Event(capture.to(approve_capture) | multicapture.to(approve_capture))
+    confirm = Event(approve_capture.to(counting, unless="all_captures_done") | approve_capture.to(captures_completed, cond="all_captures_done"))
+    reject = Event(approve_capture.to(counting))
+    abort = Event(approve_capture.to(finished))
+    stop_recording = Event(record.to(captures_completed))
+    _present = Event(captures_completed.to(present_capture))
+    _finish = Event(present_capture.to(finished))
 
     def __init__(
         self,
