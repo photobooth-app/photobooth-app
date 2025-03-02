@@ -98,7 +98,7 @@ class ProcessingService(BaseService):
 
         try:
             logger.info("starting job")
-            self._state_machine.start()  # TODO: revisit later: https://github.com/fgmacedo/python-statemachine/issues/511
+            self._state_machine.start()
             logger.debug("job finished")
         except Exception as exc:
             logger.exception(exc)
