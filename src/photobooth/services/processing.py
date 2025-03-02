@@ -132,12 +132,7 @@ class ProcessingService(BaseService):
         self._external_cmd_queue = Queue()
 
         ## init statemachine
-        self._state_machine = ProcessingMachine(
-            self._aquisition_service,
-            self._mediacollection_service,
-            self._external_cmd_queue,
-            job_model,
-        )
+        self._state_machine = ProcessingMachine(self._aquisition_service, self._mediacollection_service, self._external_cmd_queue, job_model)
 
         # add listener to the machine
         self._state_machine.add_listener(PluginEventHooks())
@@ -471,11 +466,11 @@ class ProcessingMachine(StateMachine):
             self.confirm()
 
     def on_exit_approve_capture(self, event: Event):
-        if event == self.confirm.name:
+        if event == self.confirm:
             # nothing to do
             pass
 
-        if event == self.reject.name:
+        if event == self.reject:
             # remove rejected image
             latest_item = self._mediacollection_service.get_item_latest()
             logger.info(f"rejected: {latest_item=}")
@@ -483,7 +478,7 @@ class ProcessingMachine(StateMachine):
 
             self._update_captures_taken()
 
-        if event == self.abort.name:
+        if event == self.abort:
             # remove all images captured until now
             logger.info("aborting job, deleting captured items")
 
