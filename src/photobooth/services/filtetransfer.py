@@ -112,7 +112,6 @@ class FileTransferService(BaseService):
         logger.info(f"Start copying data to {destination_path}")
         for folder in LIST_FOLDERS_TO_COPY:
             try:
-                # TODO: improve to only copy modified files.
                 shutil.copytree(folder, Path(destination_path, folder), dirs_exist_ok=True)
             except Exception as exc:
                 logger.warning(f"Error copying files: {exc}")

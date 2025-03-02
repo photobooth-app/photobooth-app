@@ -27,14 +27,6 @@ def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
 
         return FileResponse(cacheditem.filepath, status_code=status.HTTP_200_OK, headers=headers)
 
-        # alternative option for cache strategy. This would work fine except there is currently
-        # no way to make vue rerender existing images in the kept-alive components
-        # TODO: keep here for reference some time, but delete soon:
-        # headers = {"Cache-Control": "no-cache, must-revalidate"}
-        # response = FileResponse(cacheditem.filepath, status_code=status.HTTP_200_OK, headers=headers, stat_result=os.stat(cacheditem.filepath))
-        # if StaticFiles.is_not_modified(None, response_headers=response.headers, request_headers=request.headers):  # type: ignore
-        #     return NotModifiedResponse(response.headers)
-        # return response
     except FileNotFoundError as exc:
         logger.warning(f"cannot find mediaitem by id {mediaitem_id}")
         raise HTTPException(status_code=404, detail=f"cannot find mediaitem by id {mediaitem_id}") from exc

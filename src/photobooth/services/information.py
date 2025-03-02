@@ -167,7 +167,7 @@ class InformationService(BaseService):
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
             return [UsageStatsPublic.model_validate(result).model_dump(mode="json") for result in results]
 
-    def _gather_mediacollection(self) -> dict:
+    def _gather_mediacollection(self) -> dict[str, Any]:
         out = {}
         with Session(engine) as session:
             statement = select(func.count(Mediaitem.id))
