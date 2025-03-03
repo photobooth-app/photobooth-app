@@ -14,21 +14,20 @@ class GetImgAIFilter(BaseRunner):
         super().__init__(api_key=api_key)
 
     def run(self, filter_preset: BaseFilterSD, image: Image.Image) -> Image.Image:
-        buffered = BytesIO()
-        size = 1024, 1024
+        img_bytesio = BytesIO()
+        size = (1024, 1024)
         image.thumbnail(size, Image.Resampling.LANCZOS)
-        image.save(buffered, format="JPEG")
+        image.save(img_bytesio, format="JPEG")
 
-        img_str = base64.b64encode(buffered.getvalue())
         url = "https://api.getimg.ai/v1/stable-diffusion/controlnet"
 
         payload = {
             "response_format": "b64",
             "steps": 40,
             "strength": 2.5,
-            "width": filter_preset.width,
-            "height": filter_preset.height,
-            "image": img_str.decode("utf-8"),
+            "width": 256,
+            "height": 256,
+            "image": base64.b64encode(img_bytesio.getvalue()).decode("ascii"),
             "prompt": filter_preset.prompt,
             "model": "dream-shaper-v8",
             "controlnet": "normal-1.1",
@@ -51,8 +50,6 @@ class GetImgAIFilter(BaseRunner):
                 raise RuntimeError("did not receive image from service")
 
         except requests.HTTPError as exc:
-            print(exc)
-            # logger.error(exc)
             raise RuntimeError(f"error processing the filter, error {exc}") from exc
         except Exception as exc:
             raise RuntimeError(f"error processing the filter, error {exc}") from exc

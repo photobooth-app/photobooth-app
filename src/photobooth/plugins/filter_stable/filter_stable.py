@@ -39,21 +39,16 @@ class FilterStable(BaseFilter[FilterStableConfig]):
 
     def do_filter(self, image: Image.Image, filter: available_filter) -> Image.Image:
         try:
-            # filterObj = RunwareAIFilter(filter)
             filter_runner = GetImgAIFilter(api_key=self._config.getimg_api_key)
-            # filterObj = StableDiffusionFilter(filter)
+
         except Exception as exc:
             raise RuntimeError(f"error processing the filter {filter}") from exc
-
-        print(filter_runner)
 
         # get preset
         try:
             filter_preset = getattr(filterpresets_sd, filter)
         except Exception as exc:
             raise ValueError(f"stable filter preset {filter} does not exist") from exc
-
-        print(filter_preset)
 
         # apply filter
         filtered_image: Image.Image = filter_runner.run(filter_preset, image)
