@@ -9,7 +9,6 @@ from ...database.models import DimensionTypes
 from ...services.config.models.models import PluginFilters, SinglePictureDefinition
 from ...services.mediaprocessing.processes import process_image_collageimage_animationimage, process_image_inner
 from ...services.mediaprocessing.steps.image import get_plugin_userselectable_filters
-from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/filter", tags=["filter"])
@@ -37,6 +36,11 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
         mediaitem = container.mediacollection_service.get_item(item_id=mediaitem_id)
         thumbnail = container.mediacollection_service.cache.get_cached_repr(item=mediaitem, dimension=DimensionTypes.thumbnail, processed=False)
 
+    except FileNotFoundError as exc:
+        # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{mediaitem_id=} cannot be found. {exc}") from exc
+
+    try:
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         # all other pipeline-steps need to be disabled here for fast preview. false is default so no need to set here.
         config = SinglePictureDefinition(image_filter=plugin_filter)
@@ -52,13 +56,8 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
             headers={"Cache-Control": "max-age=3600"},  # cache for 60mins in browser to avoid recomputing every time
         )
 
-    except FileNotFoundError as exc:
-        # either db_get_image_by_id or open both raise FileNotFoundErrors if file/db entry not found
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{mediaitem_id=} cannot be found. {exc}") from exc
-    except PipelineError as exc:
-        logger.error(f"apply pilgram_stage failed, reason: {exc}.")
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"{filter=} cannot be found. {exc}") from exc
     except Exception as exc:
+        logger.error(f"apply filter failed, reason: {exc}.")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creating filtered preview: {exc}") from exc
 
 
@@ -86,4 +85,4 @@ def api_applyfilter(mediaitem_id: UUID, filter: str):
     except Exception as exc:
         logger.exception(exc)
         logger.error(f"apply pipeline failed, reason: {exc}.")
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"apply pipeline failed, reason: {exc}.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"apply pipeline failed, reason: {exc}.") from exc
