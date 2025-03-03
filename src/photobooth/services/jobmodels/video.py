@@ -8,8 +8,7 @@ from .base import JobModelBase
 
 class JobModelVideo(JobModelBase):
     def __init__(self, configuration_set: VideoConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.video
+        super().__init__(configuration_set, MediaitemTypes.video)
 
         self._total_captures_to_take = 1
 

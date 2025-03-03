@@ -55,8 +55,8 @@ def test_service_reload(backend_v4l):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
-        backend_v4l.start()
         backend_v4l.stop()
+        backend_v4l.start()
 
 
 def test_assert_is_alive(backend_v4l):

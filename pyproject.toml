@@ -61,15 +61,20 @@ dependencies = [
     "SQLAlchemy>=2.0.37",
     "pyturbojpeg>=1.7.0",
     "pluggy>=1.5.0",
+    
+    "webuiapi",
+    "runware",
 ]
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
 
 [project.entry-points.photobooth11]
+commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
+filter_stable = 'photobooth.plugins.filter_stable.filter_stable'
 
 
 [project.urls]
@@ -151,6 +156,7 @@ default-groups = ["dev", "benchmarks"] # by default only dev is automatically in
 # [tool.uv.tasks]
 # test = "pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov"
 # benchmark = "pytest --basetemp=./tests_tmp/ -v ./src/tests/benchmarks"
+# check = "pyright"
 
 [tool.hatch.version]
 path = "./src/photobooth/__version__.py"

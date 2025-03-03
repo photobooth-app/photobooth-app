@@ -31,10 +31,11 @@ async def lifespan(_: FastAPI):
     # start app
     default_sigint_handler = signal.getsignal(signal.SIGINT)
 
-    def terminate_now(signum: int, frame: FrameType = None):
+    def terminate_now(signum: int, frame: FrameType | None = None):
         logger.info("shutting down app via signal handler")
         container.stop()
-        default_sigint_handler(signum, frame)
+        if callable(default_sigint_handler):
+            default_sigint_handler(signum, frame)
 
     if threading.current_thread() is not threading.main_thread():
         # https://github.com/encode/uvicorn/pull/871

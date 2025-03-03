@@ -40,8 +40,8 @@ def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview:
     if appconfig.mediaprocessing.removechromakey_enable:
         steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
 
-    if config.filter:
-        steps.append(PluginFilterStep(config.filter))
+    if config.image_filter:
+        steps.append(PluginFilterStep(config.image_filter))
 
     if config.img_background_enable:
         steps.append(ImageMountStep(config.img_background_file))

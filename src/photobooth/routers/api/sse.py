@@ -41,5 +41,5 @@ async def subscribe(request: Request):
     return EventSourceResponse(
         sse_service.event_iterator(client=client),
         ping=1,
-        ping_message_factory=lambda: ServerSentEvent(datetime.now(timezone.utc), event="ping").encode(),
+        ping_message_factory=lambda: ServerSentEvent(datetime.now(timezone.utc), event="ping"),
     )

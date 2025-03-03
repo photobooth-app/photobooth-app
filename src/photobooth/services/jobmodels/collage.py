@@ -9,8 +9,7 @@ from .base import JobModelBase
 
 class JobModelCollage(JobModelBase):
     def __init__(self, configuration_set: CollageConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.collage
+        super().__init__(configuration_set, MediaitemTypes.collage)
 
         self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
         self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
@@ -29,7 +28,7 @@ class JobModelCollage(JobModelBase):
             img_background_file=processing.capture_img_background_file,
             texts_enable=False,
             img_frame_enable=False,
-            filter=captured_images[index].filter if index is not None else PluginFilters.original,
+            image_filter=captured_images[index].image_filter if index is not None else PluginFilters.original,
         )
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):

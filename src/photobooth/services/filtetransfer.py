@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import psutil
+from psutil import _common
 
 from photobooth.utils.stoppablethread import StoppableThread
 
@@ -68,7 +69,7 @@ class FileTransferService(BaseService):
             # poll every 1 seconds
             time.sleep(1)
 
-    def handle_mount(self, device: psutil._common.sdiskpart):
+    def handle_mount(self, device: _common.sdiskpart):
         logger.info(f"Device {device.device} has been newly detected.")
 
         if device.mountpoint:
@@ -79,7 +80,7 @@ class FileTransferService(BaseService):
         else:
             logger.error(f"USB device not correctly mounted {device}.")
 
-    def handle_unmount(self, device: psutil._common.sdiskpart):
+    def handle_unmount(self, device: _common.sdiskpart):
         logger.info(f"Device {device.device} has been removed.")
 
     @staticmethod
@@ -111,7 +112,6 @@ class FileTransferService(BaseService):
         logger.info(f"Start copying data to {destination_path}")
         for folder in LIST_FOLDERS_TO_COPY:
             try:
-                # TODO: improve to only copy modified files.
                 shutil.copytree(folder, Path(destination_path, folder), dirs_exist_ok=True)
             except Exception as exc:
                 logger.warning(f"Error copying files: {exc}")

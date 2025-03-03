@@ -160,8 +160,10 @@ class BaseConfig(BaseSettings):
 
     def _remove_old_configs(self):
         KEEP_NO = 10
-        json_file_folder = Path(str(self.model_config.get("json_file"))).parent
-        paths = sorted(json_file_folder.glob("*_backup*"), key=os.path.getmtime, reverse=True)
+        json_file = Path(str(self.model_config.get("json_file")))
+        json_file_name = json_file.name
+        json_file_folder = json_file.parent
+        paths = sorted(json_file_folder.glob(f"{json_file_name}_backup-*"), key=os.path.getmtime, reverse=True)
 
         if len(paths) > KEEP_NO:
             for path in paths[KEEP_NO:]:

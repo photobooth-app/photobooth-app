@@ -9,8 +9,7 @@ from .base import JobModelBase
 
 class JobModelMulticamera(JobModelBase):
     def __init__(self, configuration_set: MulticameraConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.multicamera
+        super().__init__(configuration_set, MediaitemTypes.multicamera)
 
         self._total_captures_to_take = 1
 
@@ -21,7 +20,7 @@ class JobModelMulticamera(JobModelBase):
 
         # until now just a very basic filter avail applied over all images
 
-        return SinglePictureDefinition(filter=processing.filter)
+        return SinglePictureDefinition(image_filter=processing.image_filter)
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):
         process_and_generate_wigglegram(phase1_files, phase2_mediaitem)

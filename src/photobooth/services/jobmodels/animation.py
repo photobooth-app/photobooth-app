@@ -7,10 +7,9 @@ from ..mediaprocessing.processes import process_and_generate_animation
 from .base import JobModelBase
 
 
-class JobModelAnimation(JobModelBase):
+class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
     def __init__(self, configuration_set: AnimationConfigurationSet):
-        super().__init__(configuration_set)
-        self._media_type: MediaitemTypes = MediaitemTypes.animation
+        super().__init__(configuration_set, MediaitemTypes.animation)
 
         self._ask_approval_each_capture = configuration_set.jobcontrol.ask_approval_each_capture
         self._total_captures_to_take = self._get_number_of_captures_from_merge_definition(configuration_set.processing.merge_definition)
@@ -25,7 +24,7 @@ class JobModelAnimation(JobModelBase):
         return SinglePictureDefinition(
             texts_enable=False,
             img_frame_enable=False,
-            filter=captured_images[index].filter if index is not None else PluginFilters.original,
+            image_filter=captured_images[index].image_filter if index is not None else PluginFilters.original,
         )
 
     def do_phase2_process_and_generate(self, phase1_files: list[Path], phase2_mediaitem: Mediaitem):

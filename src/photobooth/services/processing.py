@@ -94,9 +94,11 @@ class ProcessingService(BaseService):
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
     def _process_fun(self):
+        assert self._state_machine
+
         try:
             logger.info("starting job")
-            self._state_machine.start()  # TODO: revisit later: https://github.com/fgmacedo/python-statemachine/issues/511
+            self._state_machine.start()
             logger.debug("job finished")
         except Exception as exc:
             logger.exception(exc)
@@ -130,12 +132,7 @@ class ProcessingService(BaseService):
         self._external_cmd_queue = Queue()
 
         ## init statemachine
-        self._state_machine = ProcessingMachine(
-            self._aquisition_service,
-            self._mediacollection_service,
-            self._external_cmd_queue,
-            job_model,
-        )
+        self._state_machine = ProcessingMachine(self._aquisition_service, self._mediacollection_service, self._external_cmd_queue, job_model)
 
         # add listener to the machine
         self._state_machine.add_listener(PluginEventHooks())
@@ -234,17 +231,17 @@ class ProcessingMachine(StateMachine):
     finished = State(final=True)  # final state
     ## TRANSITIONS
 
-    start = idle.to(counting)
-    _counted_capture = counting.to(capture)
-    _counted_record = counting.to(record)
-    _counted_multicapture = counting.to(multicapture)
-    _captured = capture.to(approve_capture) | multicapture.to(approve_capture)
-    confirm = approve_capture.to(counting, unless="all_captures_done") | approve_capture.to(captures_completed, cond="all_captures_done")
-    reject = approve_capture.to(counting)
-    abort = approve_capture.to(finished)
-    stop_recording = record.to(captures_completed)
-    _present = captures_completed.to(present_capture)
-    _finish = present_capture.to(finished)
+    start = Event(idle.to(counting))
+    _counted_capture = Event(counting.to(capture))
+    _counted_record = Event(counting.to(record))
+    _counted_multicapture = Event(counting.to(multicapture))
+    _captured = Event(capture.to(approve_capture) | multicapture.to(approve_capture))
+    confirm = Event(approve_capture.to(counting, unless="all_captures_done") | approve_capture.to(captures_completed, cond="all_captures_done"))
+    reject = Event(approve_capture.to(counting))
+    abort = Event(approve_capture.to(finished))
+    stop_recording = Event(record.to(captures_completed))
+    _present = Event(captures_completed.to(present_capture))
+    _finish = Event(present_capture.to(finished))
 
     def __init__(
         self,
@@ -275,10 +272,10 @@ class ProcessingMachine(StateMachine):
         number_captures_taken = len(self._mediacollection_service.get_items_relto_job(self.model._job_identifier))
         self.model.set_captures_taken(number_captures_taken)
 
-    def after_transition(self, event, source, target):
+    def after_transition(self, event: Event, source: State, target: State):
         pass
 
-    def on_enter_state(self, event, target):
+    def on_enter_state(self, event: Event, target: State):
         # always send current state on enter so UI can react (display texts, wait message on postproc, ...)
         self._emit_model_state_update()
 
@@ -468,12 +465,12 @@ class ProcessingMachine(StateMachine):
             logger.info("automatic confirm enabled")
             self.confirm()
 
-    def on_exit_approve_capture(self, event):
-        if event == self.confirm.name:
+    def on_exit_approve_capture(self, event: Event):
+        if event == self.confirm:
             # nothing to do
             pass
 
-        if event == self.reject.name:
+        if event == self.reject:
             # remove rejected image
             latest_item = self._mediacollection_service.get_item_latest()
             logger.info(f"rejected: {latest_item=}")
@@ -481,7 +478,7 @@ class ProcessingMachine(StateMachine):
 
             self._update_captures_taken()
 
-        if event == self.abort.name:
+        if event == self.abort:
             # remove all images captured until now
             logger.info("aborting job, deleting captured items")
 

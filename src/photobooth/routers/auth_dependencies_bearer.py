@@ -20,7 +20,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    username: str
 
 
 class User(BaseModel):
@@ -53,7 +53,7 @@ def get_users() -> dict[str, UserInDB]:
     return users_db
 
 
-def get_user(db: dict[str, UserInDB], user_id: str) -> UserInDB:
+def get_user(db: dict[str, UserInDB], user_id: str) -> UserInDB | None:
     if user_id in db:
         return db[user_id]
 
@@ -84,11 +84,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     try:
         payload = jwt.decode(token, appconfig.misc.secret_key, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        if username is None:
+        if not username:
             raise credentials_exception
         token_data = TokenData(username=username)
     except InvalidTokenError as exc:
         raise credentials_exception from exc
+
     user = get_user(get_users(), user_id=token_data.username)
     if user is None:
         raise credentials_exception
