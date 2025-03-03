@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import shutil
 import time
-import traceback
 from pathlib import Path
 
 from PIL import Image, ImageOps
@@ -61,7 +60,7 @@ def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview:
     pipeline = Pipeline[ImageContext](*steps)
 
     def _error_handler(error: Exception, context: ImageContext, next_step: NextStep) -> None:
-        traceback.print_exception(error)
+        logger.exception(error)
         logger.error(f"Error applying step, error: {error}")
         raise error
 
