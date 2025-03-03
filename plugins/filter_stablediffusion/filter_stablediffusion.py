@@ -38,7 +38,7 @@ class FilterStablediffusion(BaseFilter[config.FilterStablediffusionConfig]):
         filter = self.deunify(plugin_filter)
         if( preview ):
             dirname = os.path.dirname(__file__) or '.'
-            previewImage = Image.open(dirname + "/assets/filters/" + str(filter) + ".png")
+            previewImage = Image.open(dirname + "/filterpreviews/" + str(filter) + ".png")
             return previewImage
         else:
             return self.do_filter(image, cast(available_filter, filter))
