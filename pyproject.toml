@@ -60,6 +60,9 @@ dependencies = [
     "SQLAlchemy>=2.0.37",
     "pyturbojpeg>=1.7.0",
     "pluggy>=1.5.0",
+    
+    "webuiapi",
+    "runware",
 ]
 
 [project.scripts]
@@ -70,6 +73,7 @@ commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
+filter_stable = 'photobooth.plugins.filter_stable.filter_stable'
 
 
 [project.urls]
