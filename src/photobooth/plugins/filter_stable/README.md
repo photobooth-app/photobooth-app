@@ -1,17 +1,16 @@
 # Stunning Image Styles using Stable Diffusion from within the Photobooth-App
 
-There are dozens of online services with allow to modify or enhance your images using "AI", but this approach uses local-only services with https://github.com/lllyasviel/stable-diffusion-webui-forge running in the background either on the machine running photobooth-app or a separate computer.
+There are dozens of online services with allow to modify or enhance your images using "AI", but this approach uses local-only services with <https://github.com/lllyasviel/stable-diffusion-webui-forge> running in the background either on the machine running photobooth-app or a separate computer.
 Stable Diffusion WebUI Forge runs on both Windows and Linux - but it requires a dedicated graphics adapter with 8GB or more VRAM.
 WebUI Forge can be used via API, so we can use it from the Photobooth-App.
 
 ## Installation of Stable-Diffusion-WebUI Forge and Setup
 
 For the general installation, just follow the setup instructions in [their Github Page](https://github.com/lllyasviel/stable-diffusion-webui-forge).
-You **must** enable the API with `--api` in the `COMMANDLINE_ARGS` variable. If you don't run the photobooth-app on the same computer, you also need to listen on a reachable IP with `--listen`. So on a Windows system, open up the file (/webui/webui-user.bat) and change 
+You **must** enable the API with `--api` in the `COMMANDLINE_ARGS` variable. If you don't run the photobooth-app on the same computer, you also need to listen on a reachable IP with `--listen`. So on a Windows system, open up the file (/webui/webui-user.bat) and change
 set COMMANDLINE_ARGS=
 to
 set COMMANDLINE_ARGS=--api --listen
-
 
 ## Stable-Diffusion-WebUI Models
 
@@ -62,4 +61,3 @@ For ControlNets, use the [ControlNet v1.1 models by lllyasviel](https://huggingf
 * Canny: [control_v11p_sd15_canny.pth](https://huggingface.co/lllyasviel/ControlNet-v1-1/resolve/main/control_v11p_sd15_canny.pth?download=true)<br>`f99cfe4c70910e38e3fece9918a4979ed7d3dcf9b81cee293e1755363af5406a`
 
 The Controlnets need to be placed in the folder "/webui/models/ControlNet".
-

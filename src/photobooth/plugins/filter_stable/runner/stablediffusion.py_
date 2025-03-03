@@ -2,10 +2,10 @@ from pydoc import locate
 from re import sub
 
 from PIL import Image
-from webuiapi import *
+from webuiapi import ControlNetUnit, WebUIApi
 
+from .sdpresets import filterpresets_sd
 from .sdpresets.basefiltersd import BaseFilterSD
-from .sdpresets.filterpresets_sd import *
 
 # ! stable-diffusion models needed
 #  absolutereality181.n8IR.safetensors [463d6a9fe8]
@@ -30,7 +30,7 @@ class StableDiffusionFilter:
     def __init__(self, filter: str) -> None:
         self.filter = filter
 
-    def __call__(self, filter: str, image: Image.Image) -> Image.Image:
+    def run(self, filter: str, image: Image.Image) -> Image.Image:
         try:
             baseparams = {
                 key: value
@@ -39,7 +39,7 @@ class StableDiffusionFilter:
             }
             filterclass = to_camelcase(filter)
             # e.g. for style "anime" import AnimeFilterSD
-            mod = locate("photobooth.filters.sdpresets.filterpresets_sd." + filterclass + "FilterSD")
+            mod = locate(filterpresets_sd + filterclass + "FilterSD")
             sdfilter = mod()
             filterparams = sdfilter.getParams()
             # Combine the Base Paramters and the special filter parameters
@@ -117,7 +117,7 @@ class StableDiffusionFilter:
             # api.set_auth('username', 'password')
 
         except Exception as exc:
-            raise PipelineError(f"error processing the filter {self.filter}") from exc
+            raise RuntimeError(f"error processing the filter {self.filter}") from exc
 
     def __repr__(self) -> str:
         return self.__class__.__name__
