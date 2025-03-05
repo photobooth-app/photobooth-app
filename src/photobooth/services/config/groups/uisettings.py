@@ -124,9 +124,6 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show filter provided by plugins. Pilgram2 filter are included in the app. See documentation to extend and build your own plugin.",
     )
-    # gallery_filter_userselectable: list[PilgramFilter] = Field(
-    #     default=[e for e in PilgramFilter],
-    # )
     gallery_show_download: bool = Field(
         default=True,
         description="Show a download button in gallery.",
