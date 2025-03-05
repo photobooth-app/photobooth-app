@@ -14,9 +14,11 @@ class BaseNet:
 
 @dataclass
 class BaseFilterSD:
-    prompt: str = " , energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, "
-    "volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
-    negative_prompt: str = ""
+    prompt: str = (
+        ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, "
+        "volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
+    )
+    negative_prompt: str = "Disfigured, cartoon, blurry"
     model: str = "dreamshaper8Pruned.hz5Q.safetensors"
     seed: int = -1
     steps: int = 20

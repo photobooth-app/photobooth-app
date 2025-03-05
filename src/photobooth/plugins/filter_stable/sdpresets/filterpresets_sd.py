@@ -3,7 +3,7 @@ from .basefiltersd import BaseFilterSD
 clay = BaseFilterSD()
 
 clay.prompt = (
-    "clazy style, claymation, stopmotion, small clay figure, vibrant colors, fantastic plastic <lora:ClayAnimationRedmond15-ClayAnimation-Clay:0.7>"
+    "Clay Animation, Clay, clazy style, claymation, stopmotion, small clay figure, vibrant colors, fantastic plastic <lora:ClayAnimationRedmond15-ClayAnimation-Clay:0.7>"
     + clay.prompt
 )
 # ClayFilterSD.depth.weight = 0.7

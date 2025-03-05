@@ -20,16 +20,19 @@ class GetImgAIFilter(BaseRunner):
         image.save(img_bytesio, format="JPEG")
 
         url = "https://api.getimg.ai/v1/stable-diffusion/controlnet"
-
+        # url = "https://api.getimg.ai/v1/stable-diffusion/image-to-image"
+        # print(filter_preset)
+        # print(filter_preset.prompt)
         payload = {
             "response_format": "b64",
             "steps": 40,
-            "strength": 2.5,
-            "width": 256,
-            "height": 256,
+            "strength": 0.5,
+            "width": 768,
+            "height": 512,
             "image": base64.b64encode(img_bytesio.getvalue()).decode("ascii"),
             "prompt": filter_preset.prompt,
             "model": "dream-shaper-v8",
+            "sampler": "DPM++ 2M SDE Karras",
             "controlnet": "normal-1.1",
         }
         headers = {
