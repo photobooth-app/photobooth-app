@@ -3,7 +3,7 @@ from typing import Any, AnyStr
 
 from ..appconfig import appconfig
 from .base import BaseService
-from .config.baseconfig import BaseConfig, SchemaTypes
+from .config.baseconfig import BaseConfig
 from .pluginmanager import PluginManagerService
 
 logger = logging.getLogger(__name__)
@@ -28,9 +28,9 @@ class ConfigurationService(BaseService):
         configurable_elements = ["app"] + self._pms.list_configurable_plugins()
         return configurable_elements
 
-    def get_schema(self, configurable: str, schema_type: SchemaTypes = "default"):
+    def get_schema(self, configurable: str):
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
-        return appconfig_or_plugin_config.get_schema(schema_type=schema_type)
+        return appconfig_or_plugin_config.get_schema()
 
     def get_current(self, configurable: str, secrets_is_allowed: bool = False) -> dict[str, Any]:
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
