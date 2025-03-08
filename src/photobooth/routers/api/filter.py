@@ -10,7 +10,6 @@ from ...services.config.models.models import PluginFilters, SinglePictureDefinit
 from ...services.mediaprocessing.processes import process_image_collageimage_animationimage, process_image_inner
 from ...services.mediaprocessing.steps.image import get_plugin_userselectable_filters
 from ...utils.exceptions import PipelineError
-from ...services.config import appconfig
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/filter", tags=["filter"])

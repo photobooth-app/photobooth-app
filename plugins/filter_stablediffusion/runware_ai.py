@@ -1,99 +1,202 @@
 import base64
+import json
+import io
 from io import BytesIO
-from pydoc import locate
 from re import sub
-
+import logging
+import requests
 from PIL import Image
-from runware import EPreProcessor, IControlNetA, IImageInference, Runware
 
-from .sdpresets.basefiltersd import BaseFilterSD
-from .sdpresets.filterpresets_sd import *
-
+logger = logging.getLogger(__name__)
 
 class RunwareAIFilter:
     def __init__(self, filter: str) -> None:
         self.filter = filter
 
-    async def __call__(self, filter: str, image: Image.Image) -> Image.Image:
+    def __call__(self, params, image: Image.Image) -> Image.Image:
         try:
-            baseparams = {
-                key: value
-                for key, value in BaseFilterSD.__dict__.items()
-                if not key.startswith("__") and not callable(value) and not callable(getattr(value, "__get__", None))
-            }
-            filterclass = to_camelcase(filter)
-            # e.g. for style "anime" import AnimeFilterSD
-            mod = locate("photobooth.filters.sdpresets.filterpresets_sd." + filterclass + "FilterSD")
-            sdfilter = mod()
-            filterparams = sdfilter.getParams()
-            # Combine the Base Paramters and the special filter parameters
-
-            params = merge_nested_dicts(baseparams, filterparams)
-
-            # create API client with custom host, port
-            # TODO: create configuration parameters
-            # api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
+            
             buffered = BytesIO()
             size = 1024, 1024
             image.thumbnail(size, Image.Resampling.LANCZOS)
             image.save(buffered, format="JPEG")
 
             img_str = base64.b64encode(buffered.getvalue())
-
+            img_str = img_str.decode("ascii")
+            session = requests.Session()
+            url = "https://api.runware.ai/v1"
             apiKey = ""
-            runware = Runware(api_key=apiKey)
-            await runware.connect()
+            headers = { "Authorization": "Bearer " + apiKey }
+            import uuid
 
-            controlnets = [
-                IControlNetA(
-                    start_step=None,
-                    end_step=None,
-                    control_mode=None,
-                    preprocessor=EPreProcessor.openpose,
-                    weight=params["openpose"]["weight"],
-                    guide_image_unprocessed=img_str.decode("utf-8"),
-                ),
-                IControlNetA(
-                    start_step=None,
-                    end_step=None,
-                    control_mode=None,
-                    preprocessor=EPreProcessor.depth_midas,
-                    guide_image_unprocessed=img_str.decode("utf-8"),
-                    weight=params["depth"]["weight"],
-                ),
-                IControlNetA(
-                    start_step=None,
-                    end_step=None,
-                    control_mode=None,
-                    preprocessor=EPreProcessor.softedge_pidinet,
-                    guide_image_unprocessed=img_str.decode("utf-8"),
-                    weight=params["softedge"]["weight"],
-                ),
+            taskuuid = str( uuid.uuid4() )
+
+            imageUploadPayload =  [{
+                "taskType": "imageUpload",
+                "taskUUID": taskuuid,
+                "image": img_str
+            }]
+            response = session.post(url=url, json=imageUploadPayload, headers=headers)
+            if response.ok :
+                r = json.loads( response.text )
+            else:
+                logger.debug( "Imageupload request to runware.ai failed: " + repr ( response ))
+                raise RuntimeError("Imageupload request to runware.ai failed")
+            data = r["data"];
+            #print( repr( data ))
+            imageUUID = data[0]["imageUUID"]
+            # fluxPayload =  [
+            #     {
+            #         "taskType": "imageInference",
+            #         "taskUUID": str(uuid.uuid4()),
+            #         "model": "runware:101@1",
+            #         "positivePrompt": params["prompt"],
+            #         "width": 768,
+            #         "height": 512,
+            #         "steps": 30,
+            #         "strength": 0.35,
+            #         "outputType": "base64Data",
+            #         #"ipAdapter": [
+            #         # {
+            #         #    "guideImage": imageUUID,
+            #         #    "model": "runware:105@1"
+            #         # }
+            #         # ]
+            #         "controlNet": [
+            #         {
+            #             "model": "runware:27@1",
+            #             "guideImage": imageUUID,
+            #             "startStep": 1,
+            #             "endStep": 15,
+            #             "weight": 1
+            #         }
+            #         ]
+            #     }
+            #     ]
+            # fluxPayload =  [
+            #     {
+            #         "taskType": "imageInference",
+            #         "taskUUID": str(uuid.uuid4()),
+            #         "model": "runware:101@1",
+            #         "positivePrompt": params["prompt"],
+            #         "width": params["width"],
+            #         "height": params["height"],
+            #         "outputType": "base64Data",
+            #         "steps": 30,
+            #         "ipAdapter": [
+            #         {
+            #             "guideImage": imageUUID,
+            #             "model": "runware:105@1"
+            #         }
+            #         ]
+            #     }
+            #     ]
+            openposeTaskUUID = str(uuid.uuid4())
+            depthTaskUUID = str(uuid.uuid4())
+            softedgeTaskUUID = str(uuid.uuid4())
+            controlnetPayload = [
+                {
+                "taskType": "imageControlNetPreProcess",
+                "taskUUID": openposeTaskUUID,
+                "inputImage": imageUUID,
+                "preProcessorType": "openpose",
+                "height": 512,
+                "width": 768
+                },
+                {
+                "taskType": "imageControlNetPreProcess",
+                "taskUUID": depthTaskUUID,
+                "inputImage": imageUUID,
+                "preProcessorType": "depth",
+                "height": 512,
+                "width": 768
+                },
+                {
+                "taskType": "imageControlNetPreProcess",
+                "taskUUID": softedgeTaskUUID,
+                "inputImage": imageUUID,
+                "preProcessorType": "softedge",
+                "height": 512,
+                "width": 768
+                }
             ]
-            # Dreamshaper 8
-            model = "civitai:4384@131004"
-            # In tests it proved to be useful to add the following to the prompt:
-            params["prompt"] += (
-                ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
-            )
 
-            request_image = IImageInference(
-                positivePrompt=params["prompt"],
-                model=model,
-                seedImage=img_str.decode("utf-8"),
-                outputType="base64Data",
-                controlNet=controlnets,
-                numberResults=1,
-                negativePrompt="disfigured, blurry, nude",
-                height=512,
-                width=768,
-            )
+            response = session.post(url=url, json=controlnetPayload, headers=headers)
+            if response.ok :
+                r = json.loads(response.text)
+            else:
+                logger.debug( "Controlnet request to runware.ai failed")
+                raise RuntimeError("Controlnet request to runware.ai failed")
+            guideImages = {
+                "depth": "", "openpose": "", "softedge": ""
+            }
+            data = r["data"];
 
-            images = await runware.imageInference(requestImage=request_image)
-            for resImage in images:
-                print(f"Image URL: {resImage.imageBase64Data}")
-            print(repr(images))
-            # image = Image.open(io.BytesIO(base64.b64decode( json_response["image"] )))
+            for controlnetResponse in data:
+                if( controlnetResponse["taskUUID"] == openposeTaskUUID ):
+                    guideImages["openpose"] = controlnetResponse["guideImageUUID"]
+                if( controlnetResponse["taskUUID"] == depthTaskUUID ):
+                    guideImages["depth"] = controlnetResponse["guideImageUUID"]
+                if( controlnetResponse["taskUUID"] == softedgeTaskUUID ):
+                    guideImages["softedge"] = controlnetResponse["guideImageUUID"]
+
+            # Dreamshaper
+            model = "civitai:4384@128713"
+            
+            imageInferencePayload = [{
+                "taskType": "imageInference",
+                "taskUUID": str(uuid.uuid4()),
+                "positivePrompt": params["prompt"],
+                "negativePrompt": "disfigured, blurry, nude",
+                #"seedImage": imageUUID,
+                "scheduler": params["sampler_name"] + " " + params["scheduler"],
+                "model": model,
+                "height": int(params["height"]),
+                "width": int(params["width"]),
+                "strength": 0.25,
+                "outputType": "base64Data",
+                "controlNets": [{
+                    "model": "civitai:38784@44811", #openpose
+                    "startStepPercentage": 0,
+                    "endStepPercentage": 100,
+                    "guideImage": guideImages["openpose"],
+                    "weight": params["openpose"]["weight"],
+                    "controlMode": "balanced"
+                },{
+                    "model": "civitai:38784@44736", #depth
+                    "startStepPercentage": 0,
+                    "endStepPercentage": 100,
+                    "guideImage": guideImages["depth"],
+                    "weight": params["depth"]["weight"],
+                    "controlMode": "balanced"
+                },
+                {
+                    "model": "civitai:38784@44756", #softedge
+                    "startStepPercentage": 0,
+                    "endStepPercentage": 100,
+                    "guideImage": guideImages["softedge"],
+                    "weight": params["softedge"]["weight"],
+                    "controlMode": "balanced"
+                }
+                ]
+            }
+            ]
+            response = session.post(url=url, json=imageInferencePayload, headers=headers)
+            # response = session.post(url=url, json=fluxPayload, headers=headers) 
+            if response.ok :
+                r = json.loads(response.text)
+            else:
+                logger.debug( "imageReference request to runware.ai failed: " + repr( response ))
+            
+            data = r["data"]
+            #logger.debug( "ImageInference response from runware.ai: " + repr ( r ))
+            resImage = data[0]["imageBase64Data"]
+            #fluxPayload[0]["seedImage"]= ""
+            
+            
+
+            image = Image.open(io.BytesIO(base64.b64decode( resImage )))
+
             return image
 
             # optionally set username, password when --api-auth=username:password is set on webui.
@@ -102,7 +205,7 @@ class RunwareAIFilter:
             # api.set_auth('username', 'password')
 
         except Exception as exc:
-            raise PipelineError(f"error processing the filter {self.filter}") from exc
+            raise RuntimeError(f"error processing the filter {self.filter}") from exc
 
     def __repr__(self) -> str:
         return self.__class__.__name__

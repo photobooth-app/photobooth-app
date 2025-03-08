@@ -56,7 +56,7 @@ class ControlNetUnit:
     def __init__(
         self,
         image: Image = None,
-        mask: Image = None,
+        mask_image: Image = None,
         module: str = "none",
         model: str = "None",
         weight: float = 1.0,
@@ -72,9 +72,13 @@ class ControlNetUnit:
         guessmode: int = None,  # deprecated: use control_mode
         hr_option: str = "Both", # Both, Low res only, High res only
         enabled: bool = True,
+        input_mode: str = 'simple',
+        save_detected_map: bool = True,
+        generated_image: str = None,
+        use_preview_as_input: bool = False
     ):
         self.image = image
-        self.mask = mask
+        self.mask_image = mask_image
         self.module = module
         self.model = model
         self.weight = weight
@@ -103,11 +107,16 @@ class ControlNetUnit:
 
         self.pixel_perfect = pixel_perfect
         self.hr_option = hr_option
+    
+        self.input_mode = input_mode
+        self.save_detected_map = save_detected_map
+        self.generated_image = generated_image
+        self.use_preview_as_input = use_preview_as_input
 
     def to_dict(self):
         return {
             "image": raw_b64_img(self.image) if self.image else None,
-            "mask": raw_b64_img(self.mask) if self.mask is not None else None,
+            "mask_image": raw_b64_img(self.mask_image) if self.mask_image is not None else None,
             "module": self.module,
             "model": self.model,
             "weight": self.weight,
@@ -122,6 +131,10 @@ class ControlNetUnit:
             "pixel_perfect": self.pixel_perfect,
             "hr_option": self.hr_option,
             "enabled": self.enabled,
+            "input_mode": self.input_mode,
+            "save_detected_map": self.save_detected_map,
+            "generated_image": self.generated_image,
+            "use_preview_as_input": self.use_preview_as_input
         }
 
 class ADetailer:
@@ -801,7 +814,12 @@ class WebUIApi:
 
             return asyncio.ensure_future(self.async_post(url=url, json=json))
         else:
+
             response = self.session.post(url=url, json=json)
+            #json["init_images"][0] = "base64 placeholder"
+            # f = open("payload.txt", "w")
+            # f.write(repr(json))
+            # f.close()
             return self._to_api_result(response)
 
     async def async_post(self, url, json):
@@ -868,6 +886,7 @@ class WebUIApi:
         sag: Sag = None,
         use_deprecated_controlnet=False,
         use_async=False,
+        disable_extra_networks=False
     ):
         if sampler_name is None:
             sampler_name = self.default_sampler
@@ -893,6 +912,7 @@ class WebUIApi:
             "prompt": prompt,
             "styles": styles,
             "seed": seed,
+            "seed_enable_extras": True,
             "subseed": subseed,
             "subseed_strength": subseed_strength,
             "seed_resize_from_h": seed_resize_from_h,
@@ -925,6 +945,7 @@ class WebUIApi:
             "send_images": send_images,
             "save_images": save_images,
             "alwayson_scripts": alwayson_scripts,
+            "disable_extra_networks": disable_extra_networks
         }
         if mask_image is not None:
             payload["mask"] = b64_img(mask_image)

@@ -43,8 +43,8 @@ class FilterStablediffusion(BaseFilter[config.FilterStablediffusionConfig]):
         else:
             return self.do_filter(image, cast(available_filter, filter))
 
-    def do_filter(self, image: Image.Image, config_filter: available_filter) -> Image.Image:
-        filter = getattr(ImageFilter, config_filter)
+    def do_filter(self, image: Image.Image, filter: available_filter) -> Image.Image:
+        
         baseparams = {
             key: value
             for key, value in BaseFilterSD.__dict__.items()
@@ -52,17 +52,25 @@ class FilterStablediffusion(BaseFilter[config.FilterStablediffusionConfig]):
         }
         filterclass = to_camelcase( filter )
         # e.g. for style "anime" import AnimeFilterSD
-        mod = locate('.filterpresets_sd.' + filterclass +"FilterSD")
+        #mod = locate('.filterpresets_sd.' + filterclass +"FilterSD")
+        logger.debug("Loading Filter module %s", '.filterpresets_sd.' + filterclass +"FilterSD" )
+        mod = globals()[filterclass +"FilterSD"]
         sdfilter = mod()
         filterparams = sdfilter.getParams()
         # Combine the Base Paramters and the special filter parameters
         
         params = merge_nested_dicts(baseparams, filterparams )
-        
+        params["prompt"] += ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
+
+        # from .runware_ai import RunwareAIFilter
+        # runware = RunwareAIFilter( filter )
+        # image = runware( params, image )
+        # return image
+    
         # create API client with custom host, port
         # TODO: create configuration parameters
         #api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
-        api = WebUIApi(host="192.168.78.40", port=7860)
+        api = WebUIApi(host="192.168.56.1", port=7860)
         options = {}
         options['sd_model_checkpoint'] = params["model"]
         
@@ -109,15 +117,15 @@ class FilterStablediffusion(BaseFilter[config.FilterStablediffusionConfig]):
 
         params["controlnet_units"] = controlnets
         params["images"] = [image]
-        params["negative_prompt"] = str(params["negative_prompt"][0])
-        params["seed"] = int(params["seed"][0])
-        params["batch_size"] = int(params["batch_size"][0])
-        params["steps"] =  int(params["steps"][0])
-        params["height"] = int(params["height"][0])
-        params["width"] = int(params["width"][0])
+        params["negative_prompt"] = params["negative_prompt"]
+        params["seed"] = params["seed"]
+        params["batch_size"] = params["batch_size"]
+        params["steps"] =  params["steps"]
+        params["height"] = params["height"]
+        params["width"] = params["width"]
         params["sampler_index"] = ""
-        params["denoising_strength"] = float(params["denoising_strength"][0])
-        params["cfg_scale"] = float(params["cfg_scale"][0])
+        params["denoising_strength"] = float(params["denoising_strength"])
+        params["cfg_scale"] = float(params["cfg_scale"])
         result = api.img2img(**params)
         #for x in params["images"]:
         #    print( b64_img(x))
