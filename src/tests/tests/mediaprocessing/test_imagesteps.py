@@ -103,7 +103,7 @@ def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
 
 
 def test_text_stage(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="apply text")]
+    textconfig = [TextsConfig(text="apply text", font=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"))]
     context = ImageContext(pil_image)
     steps = [TextStep(textconfig)]
     pipeline = Pipeline[ImageContext](*steps)
@@ -114,7 +114,7 @@ def test_text_stage(pil_image: Image.Image):
 
 
 def test_text_stage_fontnotavail(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="asdf", font=Path("fontNoFile"))]
+    textconfig = [TextsConfig(text="asdf", font=None)]
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)

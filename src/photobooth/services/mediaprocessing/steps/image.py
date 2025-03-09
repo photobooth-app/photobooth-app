@@ -94,8 +94,6 @@ class ImageMountStep(PipelineStep):
             next_step(context)
             return  # needed, otherwise remaining code will be executed after returning from next_step
 
-        # check font is avail, otherwise send pipelineerror - so we can recover and continue
-        # default font Roboto comes with app, fallback to that one if avail
         try:
             background_path = self.background_file
             background_img = Image.open(background_path).convert("RGBA")
@@ -200,15 +198,14 @@ class TextStep(PipelineStep):
                 # skip this one because empty.
                 continue
 
-            # check font is avail, otherwise send pipelineerror - so we can recover and continue
-            # default font Roboto comes with app, fallback to that one if avail
-            try:
-                font_path = textconfig.font
-            except FileNotFoundError as exc:
-                logger.exception(exc)
-                raise PipelineError(f"font {str(textconfig.font)} not found!") from exc
+            # check font is avail, otherwise send pipelineerror
+            if not textconfig.font:
+                raise PipelineError("text to apply to image but no font defined!")
 
-            img_font = ImageFont.truetype(font=str(font_path), size=textconfig.font_size)
+            if not textconfig.font.is_file():
+                raise PipelineError(f"font {textconfig.font} not found!")
+
+            img_font = ImageFont.truetype(font=str(textconfig.font), size=textconfig.font_size)
 
             draw_rotated_text(
                 image=updated_image,
