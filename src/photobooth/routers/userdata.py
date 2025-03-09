@@ -16,7 +16,11 @@ userdata_router = APIRouter(
 @userdata_router.get("/{filepath:path}")
 def api_get_userfiles(filepath: str):
     try:
-        return FileResponse(path=filenames_sanitize(f"{USERDATA_PATH}{filepath}"))
+        file_out = filenames_sanitize(f"{USERDATA_PATH}{filepath}")
+        if not file_out.is_file():
+            raise FileNotFoundError(f"{filepath} not found")
+
+        return FileResponse(path=file_out)
     except FileNotFoundError as exc:
         logger.warning(exc)
         logger.warning(f"cannot find {filepath}")

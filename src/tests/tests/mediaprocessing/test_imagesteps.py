@@ -225,7 +225,7 @@ def test_img_background_stage(pil_image: Image.Image):
     pil_image.putalpha(100)
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -240,7 +240,7 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
     assert pil_image.mode == "RGB"  # before process it's RGB
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -255,7 +255,7 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageMountStep("./userdata/backgrounds/nonexistentfile")]
+        steps = [ImageMountStep("./userdata/demoassets/backgrounds/nonexistentfile")]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 

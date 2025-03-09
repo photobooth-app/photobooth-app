@@ -35,9 +35,9 @@ def test_get(client: TestClient):
     os.unlink(tmpfile.name)
 
 
-def test_get_fallback_demofolder(client: TestClient):
-    assert not Path("/userdata/frames/frame_image_photobooth-app.png").is_file()  # ensure file does not exist in userdata before test
-    response = client.get("/userdata/frames/frame_image_photobooth-app.png")
+def test_get_file_from_demofolder(client: TestClient):
+    assert Path("userdata/demoassets/frames/frame_image_photobooth-app.png").is_file()
+    response = client.get("/userdata/demoassets/frames/frame_image_photobooth-app.png")
     assert response.status_code == 200
 
 
