@@ -29,17 +29,14 @@ def test_main_instance_create_dirs_permission_errorreraised_stops_starting_app()
 def test_init_error_if_demoassets_is_no_symlink():
     target = Path(USERDATA_PATH, "demoassets")
 
-    try:
-        os.unlink(target)
-    except FileNotFoundError:
-        pass
-
-    Path(target).touch()
-
+    target.unlink(missing_ok=True)
+    target.touch()
     assert target.is_file()
 
     with pytest.raises(RuntimeError):
         __import__("photobooth.__init__")
+
+    target.unlink(missing_ok=False)
 
 
 def test_init_userdata_after_init_there_is_demoassets_symlink():
