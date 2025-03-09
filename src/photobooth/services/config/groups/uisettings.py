@@ -6,9 +6,10 @@ Remember to keep the settings in sync! Fields added here need to be added to the
 
 """
 
+from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, FilePath
 from pydantic_extra_types.color import Color
 
 
@@ -80,9 +81,10 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Enable to overlay livestream_frameoverlay_image the livestream.",
     )
-    livestream_frameoverlay_image: str = Field(
-        default="/userdata/frames/frame_image_photobooth-app.png",
+    livestream_frameoverlay_image: FilePath = Field(
+        default=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
         description="When enabled, the frame is overlayed the livestream. This image is not used in the postprocessing. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
 
     FRONTPAGE_TEXT: str = Field(

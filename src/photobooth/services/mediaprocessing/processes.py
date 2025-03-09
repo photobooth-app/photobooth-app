@@ -44,12 +44,16 @@ def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview:
         steps.append(PluginFilterStep(config.image_filter))
 
     if config.img_background_enable:
+        if not config.img_background_file:
+            raise ValueError("image background enabled, but no file given")
         steps.append(ImageMountStep(config.img_background_file))
 
     if config.fill_background_enable:
         steps.append(FillBackgroundStep(config.fill_background_color))
 
     if config.img_frame_enable:
+        if not config.img_frame_file:
+            raise ValueError("image frame enabled, but no file given")
         steps.append(ImageFrameStep(config.img_frame_file))
 
     if config.texts_enable:
@@ -140,12 +144,16 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     # assemble pipeline
 
     if config.canvas_img_background_enable:
+        if not config.canvas_img_background_file:
+            raise ValueError("image background enabled, but no file given")
         steps.append(ImageMountStep(config.canvas_img_background_file))
 
     if config.canvas_fill_background_enable:
         steps.append(FillBackgroundStep(config.canvas_fill_background_color))
 
     if config.canvas_img_front_enable:
+        if not config.canvas_img_front_file:
+            raise ValueError("image frame enabled, but no file given")
         steps.append(ImageMountStep(config.canvas_img_front_file, reverse=True))
 
     if config.canvas_texts_enable:

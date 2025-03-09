@@ -1,6 +1,7 @@
+from pathlib import Path
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field, FilePath, NonNegativeInt
 from pydantic_extra_types.color import Color
 
 from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PluginFilters, TextsConfig
@@ -108,17 +109,19 @@ class SingleImageProcessing(BaseModel):
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
-    img_background_file: str = Field(
-        default="",
+    img_background_file: FilePath | None = Field(
+        default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
     img_frame_enable: bool = Field(
         default=False,
         description="Mount captured image to frame.",
     )
-    img_frame_file: str = Field(
-        default="",
+    img_frame_file: FilePath | None = Field(
+        default=None,
         description="Image file to which the captured image is mounted to. Frame determines the output image size! Photos are visible through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
     texts_enable: bool = Field(
         default=False,
@@ -149,9 +152,10 @@ class CollageProcessing(BaseModel):
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
-    capture_img_background_file: str = Field(
-        default="",
+    capture_img_background_file: FilePath | None = Field(
+        default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
 
     ## phase 2 per collage settings.
@@ -179,17 +183,19 @@ class CollageProcessing(BaseModel):
         default=False,
         description="Add image from file to background.",
     )
-    canvas_img_background_file: str = Field(
-        default="",
+    canvas_img_background_file: FilePath | None = Field(
+        default=None,
         description="Image file to use as background filling transparent area. File needs to be located in userdata/*",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
     canvas_img_front_enable: bool = Field(
         default=False,
         description="Overlay image on canvas image.",
     )
-    canvas_img_front_file: str = Field(
-        default="",
+    canvas_img_front_file: FilePath | None = Field(
+        default=None,
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in working directory/userdata/*",
+        json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
     canvas_texts_enable: bool = Field(
         default=False,
@@ -323,9 +329,9 @@ class GroupActions(BaseModel):
                 jobcontrol=SingleImageJobControl(),
                 processing=SingleImageProcessing(
                     img_background_enable=True,
-                    img_background_file="userdata/backgrounds/pink-7761356_1920.jpg",
+                    img_background_file=Path("userdata/demoassets/backgrounds/pink-7761356_1920.jpg"),
                     img_frame_enable=True,
-                    img_frame_file="userdata/frames/frame_image_photobooth-app.png",
+                    img_frame_file=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
                     texts_enable=True,
                     texts=[
                         TextsConfig(
@@ -375,7 +381,7 @@ class GroupActions(BaseModel):
                             width=510,
                             height=725,
                             rotate=0,
-                            predefined_image="userdata/predefined_images/photobooth-collage-predefined-image.png",
+                            predefined_image=Path("userdata/demoassets/predefined_images/photobooth-collage-predefined-image.png"),
                             image_filter=PluginFilters("original"),
                         ),
                         CollageMergeDefinition(
@@ -389,7 +395,7 @@ class GroupActions(BaseModel):
                         ),
                     ],
                     canvas_img_front_enable=True,
-                    canvas_img_front_file="userdata/frames/pixabay-poster-2871536_1920.png",
+                    canvas_img_front_file=Path("userdata/demoassets/frames/pixabay-poster-2871536_1920.png"),
                     canvas_texts_enable=True,
                     canvas_texts=[
                         TextsConfig(
@@ -430,7 +436,7 @@ class GroupActions(BaseModel):
                         AnimationMergeDefinition(
                             duration=4000,
                             image_filter=PluginFilters("original"),
-                            predefined_image="userdata/predefined_images/photobooth-gif-animation-predefined-image.png",
+                            predefined_image=Path("userdata/demoassets/predefined_images/photobooth-gif-animation-predefined-image.png"),
                         ),
                     ],
                 ),

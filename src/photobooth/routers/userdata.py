@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from .. import USERDATA_PATH
-from ..utils.helper import get_user_file
+from ..utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
 userdata_router = APIRouter(
@@ -16,7 +16,7 @@ userdata_router = APIRouter(
 @userdata_router.get("/{filepath:path}")
 def api_get_userfiles(filepath: str):
     try:
-        return FileResponse(path=get_user_file(f"{USERDATA_PATH}{filepath}"))
+        return FileResponse(path=filenames_sanitize(f"{USERDATA_PATH}{filepath}"))
     except FileNotFoundError as exc:
         logger.warning(exc)
         logger.warning(f"cannot find {filepath}")

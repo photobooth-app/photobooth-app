@@ -4,6 +4,7 @@ Testing mediaprocessing singleimages pipeline
 
 import logging
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -113,7 +114,7 @@ def test_text_stage(pil_image: Image.Image):
 
 
 def test_text_stage_fontnotavail(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="asdf", font="fontNoFile")]
+    textconfig = [TextsConfig(text="asdf", font=Path("fontNoFile"))]
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)

@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
-from ...utils.helper import get_user_file
 from ..config.groups.actions import BaseConfigurationSet, MultiImageJobControl
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition, SinglePictureDefinition
 
@@ -35,11 +34,9 @@ class JobModelBase(ABC, Generic[T]):
         # item.predefined_image None or "" are considered as to capture aka not predefined
         predefined_images = [item.predefined_image for item in merge_definition if item.predefined_image]
         for predefined_image in predefined_images:
-            try:
-                # preflight check here without use.
-                _ = get_user_file(predefined_image)
-            except FileNotFoundError as exc:
-                raise RuntimeError(f"predefined image {predefined_image} not found!") from exc
+            # preflight check here without use.
+            if not Path(predefined_image).is_file():
+                raise RuntimeError(f"predefined image {predefined_image} not found!")
 
         total_images_in_collage = len(merge_definition)
         fixed_images = len(predefined_images)

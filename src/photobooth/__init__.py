@@ -1,5 +1,6 @@
 import locale
 import os
+from pathlib import Path
 
 # set locale to systems default
 locale.setlocale(locale.LC_ALL, "")
@@ -37,7 +38,20 @@ def _create_basic_folders():
     os.makedirs(RECYCLE_PATH, exist_ok=True)
 
 
+def _copy_demo_assets_to_userdata():
+    src_path = Path(__file__).parent.resolve().joinpath("demoassets/userdata")
+    dst_path = Path(USERDATA_PATH, "demoassets")
+
+    if not dst_path.exists():
+        os.symlink(src_path, dst_path, target_is_directory=True)
+    elif dst_path.is_symlink():
+        return
+    else:
+        raise RuntimeError(f"error setup demoassets, {dst_path} exists but is no symlink!")
+
+
 try:
     _create_basic_folders()
+    _copy_demo_assets_to_userdata()
 except Exception as exc:
     raise RuntimeError(f"cannot create data folders, error: {exc}") from exc

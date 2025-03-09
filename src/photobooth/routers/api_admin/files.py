@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, UploadFile, status
 from fastapi.exceptions import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
-from ... import RECYCLE_PATH
+from ... import RECYCLE_PATH, USERDATA_PATH
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,22 @@ def generate_zipstream(paths: list[Path]):
         logger.error(f"error creating the compressed data: {exc}")
 
 
-@router.get("/list/{dir:path}")
+@router.get("/search", response_model=list[PathListItem])
+async def get_search(q: str):
+    path = Path(USERDATA_PATH)
+
+    output: list[PathListItem] = []
+
+    for results in sorted(path.glob(f"**/*{q}*", case_sensitive=False, recurse_symlinks=True)):
+        try:
+            output.append(PathListItem(results.name, str(results), results.is_dir(), results.stat().st_size))
+        except Exception as exc:
+            logger.warning(f"skipped file {path.name}, due to error: {exc}")
+
+    return output
+
+
+@router.get("/list/{dir:path}", response_model=list[PathListItem])
 async def get_list(dir: str = "/"):
     """ """
     try:
@@ -116,7 +131,7 @@ async def get_list(dir: str = "/"):
     if not path.is_dir():
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"{dir} is not a file / does not exist!")
 
-    output = []
+    output: list[PathListItem] = []
 
     folders = [f for f in sorted(path.iterdir()) if f.is_dir()]
     for f in folders:
