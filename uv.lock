@@ -683,6 +683,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonref"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/0d/c1f3277e90ccdb50d33ed5ba1ec5b3f0a242ed8c1b1a85d3afeb68464dca/jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552", size = 8814 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/ec/e1db9922bceb168197a558a2b8c03a7963f1afe93517ddd3cf99f202f996/jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9", size = 9425 },
+]
+
+[[package]]
 name = "kiwisolver"
 version = "1.4.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1012,6 +1021,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "gphoto2", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "gpiozero" },
+    { name = "jsonref" },
     { name = "linuxpy", marker = "sys_platform == 'linux'" },
     { name = "numpy" },
     { name = "opencv-python-headless" },
@@ -1062,6 +1072,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.106.0" },
     { name = "gphoto2", marker = "sys_platform == 'darwin' or sys_platform == 'linux'", specifier = "~=2.5.0" },
     { name = "gpiozero", specifier = "~=2.0.0" },
+    { name = "jsonref", specifier = ">=1.1.0" },
     { name = "linuxpy", marker = "sys_platform == 'linux'", specifier = ">=0.10.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "opencv-python-headless", specifier = ">=4.10.0.84" },

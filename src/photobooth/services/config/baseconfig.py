@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
+import jsonref
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
@@ -107,12 +108,18 @@ class BaseConfig(BaseSettings):
 
         return dictionary
 
-    def get_schema(self):
+    def get_schema(self, schema_type: SchemaTypes = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
         schema = self.model_json_schema()
         self._fix_single_allof(schema)
 
-        return schema
+        if schema_type == "dereferenced":
+            # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
+
+            return jsonref.loads(json.dumps(schema))
+
+        else:
+            return schema
 
     def get_current(self, secrets_is_allowed: bool = False):
         return self.model_dump(context={"secrets_is_allowed": secrets_is_allowed}, mode="json")
