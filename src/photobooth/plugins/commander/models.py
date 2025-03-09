@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl
 
-eventHooks = Literal["start", "stop", "counting", "capture", "record", "captured", "finished"]
+eventHooks = Literal["init", "start", "stop", "counting", "capture", "record", "captured", "finished"]
 requestMethods = Literal["get", "post", "patch", "put", "delete"]
 locationOfAdditionalParameters = Literal["query", "body"]
 

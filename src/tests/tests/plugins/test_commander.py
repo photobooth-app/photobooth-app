@@ -18,6 +18,10 @@ def commander_plugin():
     yield cmdr
 
 
+def test_init(commander_plugin: Commander):
+    commander_plugin.init()
+
+
 def test_start(commander_plugin: Commander):
     commander_plugin.start()
 

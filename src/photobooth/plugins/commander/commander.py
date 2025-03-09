@@ -99,6 +99,10 @@ class Commander(BasePlugin[CommanderConfig]):
         self._config: CommanderConfig = CommanderConfig()
 
     @hookimpl
+    def init(self):
+        self.run_task("init")
+
+    @hookimpl
     def start(self):
         self.run_task("start")
 
