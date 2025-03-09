@@ -28,8 +28,8 @@ def test_main_instance_create_dirs_permission_errorreraised_stops_starting_app()
 
 def test_init_error_if_demoassets_is_no_symlink():
     target = Path(USERDATA_PATH, "demoassets")
-
     target.unlink(missing_ok=True)
+
     target.touch()
     assert target.is_file()
 
@@ -41,11 +41,7 @@ def test_init_error_if_demoassets_is_no_symlink():
 
 def test_init_userdata_after_init_there_is_demoassets_symlink():
     target = Path(USERDATA_PATH, "demoassets")
-
-    try:
-        os.unlink(target)
-    except FileNotFoundError:
-        pass
+    target.unlink(missing_ok=True)
 
     # starting the app creates the symlink
     __import__("photobooth.__init__")
@@ -54,11 +50,9 @@ def test_init_userdata_after_init_there_is_demoassets_symlink():
 
 
 def test_init_userdata_failing_symlink_raises_runtimeerr():
-    # ensure no link before testing sideeffect...
-    try:
-        os.unlink(Path(USERDATA_PATH, "demoassets"))
-    except FileNotFoundError:
-        pass
+    target = Path(USERDATA_PATH, "demoassets")
+    target.unlink(missing_ok=True)  # ensure no link before testing sideeffect...
+
     with patch.object(os, "symlink", side_effect=Exception("effect: failed creating symlink")):
         # emulate write access issue and ensure an exception is received to make the app fail starting.
         with pytest.raises(RuntimeError):
