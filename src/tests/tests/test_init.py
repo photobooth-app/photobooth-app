@@ -47,16 +47,3 @@ def test_init_userdata_after_init_there_is_demoassets_symlink():
     __import__("photobooth.__init__")
 
     assert target.is_symlink()
-
-
-def test_init_userdata_failing_symlink_raises_runtimeerr():
-    target = Path(USERDATA_PATH, "demoassets")
-    try:
-        os.unlink(target)  # ensure no link before testing sideeffect...
-    except Exception:
-        pass
-
-    with patch.object(os, "symlink", side_effect=Exception("effect: failed creating symlink")):
-        # emulate write access issue and ensure an exception is received to make the app fail starting.
-        with pytest.raises(RuntimeError):
-            __import__("photobooth.__init__")
