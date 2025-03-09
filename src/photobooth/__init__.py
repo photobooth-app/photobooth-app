@@ -54,4 +54,4 @@ try:
     _create_basic_folders()
     _copy_demo_assets_to_userdata()
 except Exception as exc:
-    raise RuntimeError(f"cannot create data folders, error: {exc}") from exc
+    raise RuntimeError(f"cannot initialize data folders, error: {exc}") from exc

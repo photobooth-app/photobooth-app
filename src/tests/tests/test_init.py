@@ -1,8 +1,11 @@
 import logging
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
+from photobooth import USERDATA_PATH
 
 logger = logging.getLogger(name=None)
 
@@ -18,6 +21,48 @@ def test_main_instance_create_dirs_permission_error():
 
 def test_main_instance_create_dirs_permission_errorreraised_stops_starting_app():
     with patch.object(os, "makedirs", side_effect=PermissionError("effect: failed creating folder")):
+        # emulate write access issue and ensure an exception is received to make the app fail starting.
+        with pytest.raises(RuntimeError):
+            __import__("photobooth.__init__")
+
+
+def test_init_error_if_demoassets_is_no_symlink():
+    target = Path(USERDATA_PATH, "demoassets")
+
+    try:
+        os.unlink(target)
+    except FileNotFoundError:
+        pass
+
+    Path(target).touch()
+
+    assert target.is_file()
+
+    with pytest.raises(RuntimeError):
+        __import__("photobooth.__init__")
+
+
+def test_init_userdata_after_init_there_is_demoassets_symlink():
+    target = Path(USERDATA_PATH, "demoassets")
+
+    try:
+        os.unlink(target)
+    except FileNotFoundError:
+        pass
+
+    # starting the app creates the symlink
+    __import__("photobooth.__init__")
+
+    assert target.is_symlink()
+
+
+def test_init_userdata_failing_symlink_raises_runtimeerr():
+    # ensure no link before testing sideeffect...
+    try:
+        os.unlink(Path(USERDATA_PATH, "demoassets"))
+    except FileNotFoundError:
+        pass
+    with patch.object(os, "symlink", side_effect=Exception("effect: failed creating symlink")):
         # emulate write access issue and ensure an exception is received to make the app fail starting.
         with pytest.raises(RuntimeError):
             __import__("photobooth.__init__")
