@@ -1,16 +1,10 @@
-"""
-AppConfig class providing central config for ui
-
-These settings are 1:1 sent to the vue frontend.
-Remember to keep the settings in sync! Fields added here need to be added to the frontend also.
-
-"""
-
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, FilePath
 from pydantic_extra_types.color import Color
+
+from ..validators import ensure_demoassets
 
 
 class GroupUiSettings(BaseModel):
@@ -81,7 +75,7 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Enable to overlay livestream_frameoverlay_image the livestream.",
     )
-    livestream_frameoverlay_image: FilePath = Field(
+    livestream_frameoverlay_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
         description="When enabled, the frame is overlayed the livestream. This image is not used in the postprocessing. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
         json_schema_extra={"files_list_api": "/api/admin/files/search"},
