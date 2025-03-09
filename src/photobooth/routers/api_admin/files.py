@@ -6,6 +6,7 @@ import shutil
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
+from glob import glob
 from pathlib import Path
 from typing import Annotated
 
@@ -108,15 +109,14 @@ def generate_zipstream(paths: list[Path]):
 
 @router.get("/search", response_model=list[PathListItem])
 async def get_search(q: str):
-    path = Path(USERDATA_PATH)
-
     output: list[PathListItem] = []
 
-    for results in sorted(path.glob(f"**/*{q}*", recurse_symlinks=True)):
+    for results in sorted(glob(f"{USERDATA_PATH}**/*{q}*", recursive=True)):
+        results = Path(results)
         try:
             output.append(PathListItem(results.name, str(results), results.is_dir(), results.stat().st_size))
         except Exception as exc:
-            logger.warning(f"skipped file {path.name}, due to error: {exc}")
+            logger.warning(f"skipped file {results.name}, due to error: {exc}")
 
     return output
 
