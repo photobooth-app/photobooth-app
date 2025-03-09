@@ -112,7 +112,7 @@ async def get_search(q: str):
 
     output: list[PathListItem] = []
 
-    for results in sorted(path.glob(f"**/*{q}*", case_sensitive=False, recurse_symlinks=True)):
+    for results in sorted(path.glob(f"**/*{q}*", recurse_symlinks=True)):
         try:
             output.append(PathListItem(results.name, str(results), results.is_dir(), results.stat().st_size))
         except Exception as exc:
