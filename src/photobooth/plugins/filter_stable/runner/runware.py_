@@ -1,0 +1,108 @@
+import base64
+from io import BytesIO
+from pydoc import locate
+
+from PIL import Image
+from runware import EPreProcessor, IControlNetA, IImageInference, Runware
+
+from .sdpresets.basefiltersd import BaseFilterSD
+from .sdpresets.filterpresets_sd import *
+
+
+class RunwareAIFilter:
+    def __init__(self, filter: str) -> None:
+        self.filter = filter
+
+    def run(self, filter: str, image: Image.Image) -> Image.Image:
+        try:
+            baseparams = {
+                key: value
+                for key, value in BaseFilterSD.__dict__.items()
+                if not key.startswith("__") and not callable(value) and not callable(getattr(value, "__get__", None))
+            }
+            filterclass = to_camelcase(filter)
+            # e.g. for style "anime" import AnimeFilterSD
+            mod = locate("photobooth.filters.sdpresets.filterpresets_sd." + filterclass + "FilterSD")
+            sdfilter = mod()
+            filterparams = sdfilter.getParams()
+            # Combine the Base Paramters and the special filter parameters
+
+            params = merge_nested_dicts(baseparams, filterparams)
+
+            # create API client with custom host, port
+            # TODO: create configuration parameters
+            # api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
+            buffered = BytesIO()
+            size = 1024, 1024
+            image.thumbnail(size, Image.Resampling.LANCZOS)
+            image.save(buffered, format="JPEG")
+
+            img_str = base64.b64encode(buffered.getvalue())
+
+            apiKey = ""
+            runware = Runware(api_key=apiKey)
+            runware.connect()
+
+            controlnets = [
+                IControlNetA(
+                    start_step=None,
+                    end_step=None,
+                    control_mode=None,
+                    preprocessor=EPreProcessor.openpose,
+                    weight=params["openpose"]["weight"],
+                    guide_image_unprocessed=img_str.decode("utf-8"),
+                ),
+                IControlNetA(
+                    start_step=None,
+                    end_step=None,
+                    control_mode=None,
+                    preprocessor=EPreProcessor.depth_midas,
+                    guide_image_unprocessed=img_str.decode("utf-8"),
+                    weight=params["depth"]["weight"],
+                ),
+                IControlNetA(
+                    start_step=None,
+                    end_step=None,
+                    control_mode=None,
+                    preprocessor=EPreProcessor.softedge_pidinet,
+                    guide_image_unprocessed=img_str.decode("utf-8"),
+                    weight=params["softedge"]["weight"],
+                ),
+            ]
+            # Dreamshaper 8
+            model = "civitai:4384@131004"
+            # In tests it proved to be useful to add the following to the prompt:
+            params["prompt"] += (
+                ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, "
+                "volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
+            )
+
+            request_image = IImageInference(
+                positivePrompt=params["prompt"],
+                model=model,
+                seedImage=img_str.decode("utf-8"),
+                outputType="base64Data",
+                controlNet=controlnets,
+                numberResults=1,
+                negativePrompt="disfigured, blurry, nude",
+                height=512,
+                width=768,
+            )
+
+            images = await runware.imageInference(requestImage=request_image)
+            for resImage in images:
+                print(f"Image URL: {resImage.imageBase64Data}")
+            print(repr(images))
+            # image = Image.open(io.BytesIO(base64.b64decode( json_response["image"] )))
+            return image
+
+            # optionally set username, password when --api-auth=username:password is set on webui.
+            # username, password are not protected and can be derived easily if the communication channel is not encrypted.
+            # you can also pass username, password to the WebUIApi constructor.
+            # api.set_auth('username', 'password')
+
+        except Exception as exc:
+            raise RuntimeError(f"error processing the filter {self.filter}") from exc
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__
