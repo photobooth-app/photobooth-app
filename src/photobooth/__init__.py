@@ -1,5 +1,6 @@
 import locale
 import os
+import subprocess
 from pathlib import Path
 
 # set locale to systems default
@@ -39,12 +40,25 @@ def _create_basic_folders():
 
 
 def _copy_demo_assets_to_userdata():
-    src_path = Path(__file__).parent.resolve().joinpath("demoassets/userdata")
-    dst_path = Path(USERDATA_PATH, "demoassets")
+    def create_link(src_path: Path, dst_path: Path):
+        # https://discuss.python.org/t/add-os-junction-pathlib-path-junction-to/50394
+
+        if os.name == "nt":
+            cmd = ["mklink", "/j", os.fsdecode(dst_path), os.fsdecode(src_path)]
+            # mklink junction no need for privileges on win systems.
+
+            proc = subprocess.run(cmd, shell=True, capture_output=True)
+            if proc.returncode:
+                raise OSError(proc.stderr.decode().strip())
+        else:
+            os.symlink(src_path, dst_path, target_is_directory=True)
+
+    src_path = Path(__file__).parent.resolve().joinpath("demoassets/userdata").absolute()
+    dst_path = Path(USERDATA_PATH, "demoassets").absolute()
 
     if not dst_path.exists():
-        os.symlink(src_path, dst_path, target_is_directory=True)
-    elif dst_path.is_symlink():
+        create_link(src_path, dst_path)
+    elif dst_path.is_symlink() or dst_path.is_junction():
         return
     else:
         raise RuntimeError(f"error setup demoassets, {dst_path} exists but is no symlink!")
