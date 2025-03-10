@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from typing import Any
 
@@ -12,19 +11,18 @@ def ensure_demoassets(value: Any) -> Any:
         return None
 
     # have it always relative!
-    value=str(value).strip("/\\")
+    value = str(value).strip("/\\")
 
-    path=Path(value)
+    path = Path(value)
     if not path.exists():
-        list_path=list(path.parts)
-        list_path.insert(1,"demoassets")
-        demoassets_path=Path().joinpath(*list_path)
+        list_path = list(path.parts)
+        list_path.insert(1, "demoassets")
+        demoassets_path = Path().joinpath(*list_path)
 
         if demoassets_path.exists():
             return str(demoassets_path)
         else:
             raise ValueError(f"{value} could not be validated and automatic migration failed")
-
 
     else:
         return value
