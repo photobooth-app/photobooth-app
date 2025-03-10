@@ -60,20 +60,20 @@ class FilterStablediffusion(BaseFilter[config.FilterStablediffusionConfig]):
         # Combine the Base Paramters and the special filter parameters
         
         params = merge_nested_dicts(baseparams, filterparams )
-        params["prompt"] += ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
-
-        # from .runware_ai import RunwareAIFilter
-        # runware = RunwareAIFilter( filter )
-        # image = runware( params, image )
-        # return image
-    
+        
+        from .stability_ai import StabilityAIFilter
+        stability_ai = StabilityAIFilter( filter )
+        image = stability_ai( params, image )
+        return image
+        
         # create API client with custom host, port
         # TODO: create configuration parameters
         #api = webuiapi.WebUIApi(host="127.0.0.1", port=7860)
         api = WebUIApi(host="192.168.56.1", port=7860)
         options = {}
         options['sd_model_checkpoint'] = params["model"]
-        
+        params["prompt"] += ", energetic atmosphere capturing thrill of the moment, clear details, best quality, extremely detailed cg 8k wallpaper, volumetric lighting, 4k, best quality, masterpiece, ultrahigh res, group photo, sharp focus, (perfect image composition)"
+
         api.set_options(options)
         params.pop('model', None)
 

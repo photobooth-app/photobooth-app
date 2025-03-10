@@ -10,7 +10,7 @@ class BaseFilterSD:
         self.cfg_scale = 7
         self.n_iter = 1
         self.batch_size = 1
-        self.denoising_strength = 0.95
+        self.denoising_strength = 0.9
         self.sampler_name = "DPM++ 2M"
         self.scheduler = "Karras"
         self.openpose = {
