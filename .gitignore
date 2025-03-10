@@ -9,7 +9,6 @@
 /userdata
 /tmp
 /recycle
-/plugins
 
 
 # python files
@@ -38,3 +37,4 @@ diagram_ProcessingPicture.png
 
 # testing
 /experimental
+uv.lock
