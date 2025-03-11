@@ -46,4 +46,7 @@ def test_init_userdata_after_init_there_is_demoassets_symlink():
     # starting the app creates the symlink
     __import__("photobooth.__init__")
 
-    assert target.is_symlink()
+    if os.name == "nt":
+        assert target.is_junction()
+    else:
+        assert target.is_symlink()
