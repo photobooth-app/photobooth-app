@@ -106,9 +106,10 @@ def generate_zipstream(paths: list[Path]):
 
 @router.get("/search", response_model=list[PathListItem])
 async def get_search(q: str):
-    output: list[PathListItem] = []
+    sanitized_input = filenames_sanitize(f"{USERDATA_PATH}**/*{q}*").relative_to(Path.cwd())
 
-    for results in sorted(glob(f"{USERDATA_PATH}**/*{q}*", recursive=True)):
+    output: list[PathListItem] = []
+    for results in sorted(glob(str(sanitized_input), recursive=True)):
         results = Path(results)
         try:
             output.append(PathListItem(results.name, str(results), results.is_dir(), results.stat().st_size))
