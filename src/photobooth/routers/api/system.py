@@ -7,10 +7,7 @@ from fastapi import APIRouter, HTTPException
 from ...container import container
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/system",
-    tags=["system"],
-)
+router = APIRouter(prefix="/system", tags=["system"])
 
 
 @router.get("/host/{param}")

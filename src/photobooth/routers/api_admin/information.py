@@ -5,10 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 from ...container import container
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/information",
-    tags=["admin", "information"],
-)
+router = APIRouter(prefix="/information", tags=["admin", "information"])
 
 
 @router.get("/cntr/reset/{field}", status_code=status.HTTP_204_NO_CONTENT)  # it's cntr because statscounter is blocked by adblocker often

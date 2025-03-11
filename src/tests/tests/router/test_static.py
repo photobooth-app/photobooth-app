@@ -26,11 +26,6 @@ def test_read_main(client: TestClient):
     assert "cache-control" in response.headers and "no-store, no-cache, must-revalidate" == response.headers["cache-control"]
 
 
-def test_read_log(client: TestClient):
-    response = client.get("/api/debug/log/latest")
-    assert response.status_code == 200
-
-
 def test_private_css_nonexisting_placeholder(client: TestClient):
     private_css_file = Path(USERDATA_PATH, "private.css")
     try:

@@ -58,6 +58,15 @@ def test_chose_video(client: TestClient):
         mock.assert_called()
 
 
+def test_chose_multicamera(client: TestClient):
+    with patch.object(container.processing_service, "trigger_action") as mock:
+        # emulate action
+        response = client.get("/actions/multicamera/0")
+        assert response.status_code == 200
+
+        mock.assert_called()
+
+
 def test_chose_video_stoprecording(client: TestClient):
     with patch.object(container.processing_service, "stop_recording") as mock:
         # emulate action

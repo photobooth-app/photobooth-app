@@ -7,9 +7,7 @@ from fastapi.responses import FileResponse, Response
 from .. import USERDATA_PATH
 
 logger = logging.getLogger(__name__)
-static_router = APIRouter(
-    tags=["static"],
-)
+static_router = APIRouter(tags=["static"])
 
 
 @static_router.get("/")

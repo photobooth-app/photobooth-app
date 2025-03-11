@@ -18,10 +18,7 @@ from ... import RECYCLE_PATH, USERDATA_PATH
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/files",
-    tags=["admin", "files"],
-)
+router = APIRouter(prefix="/files", tags=["admin", "files"])
 
 
 @dataclass

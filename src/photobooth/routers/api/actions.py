@@ -6,10 +6,7 @@ from ...container import container
 from ...utils.exceptions import ProcessMachineOccupiedError
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/actions",
-    tags=["actions"],
-)
+router = APIRouter(prefix="/actions", tags=["actions"])
 
 
 def _capture(action_type, action_index: int):
@@ -19,18 +16,12 @@ def _capture(action_type, action_index: int):
         return "OK"
     except ProcessMachineOccupiedError as exc:
         # raised if processingservice not idle
-        raise HTTPException(
-            status_code=400,
-            detail=f"only one capture at a time allowed: {exc}",
-        ) from exc
+        raise HTTPException(status_code=400, detail=f"only one capture at a time allowed: {exc}") from exc
     except Exception as exc:
         # other errors
         logger.exception(exc)
         logger.critical(exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"something went wrong, Exception: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @router.get("/image/{index}")
@@ -66,10 +57,7 @@ def api_cmd_confirm_get():
     except Exception as exc:
         # other errors
         logger.critical(exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"something went wrong, Exception: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @router.get("/reject")
@@ -80,10 +68,7 @@ def api_cmd_reject_get():
     except Exception as exc:
         # other errors
         logger.critical(exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"something went wrong, Exception: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @router.get("/stop")
@@ -94,10 +79,7 @@ def api_cmd_stop_get():
     except Exception as exc:
         # other errors
         logger.critical(exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"something went wrong, Exception: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
 
 
 @router.get("/abort")
@@ -108,7 +90,4 @@ def api_cmd_abort_get():
     except Exception as exc:
         # other errors
         logger.critical(exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"something went wrong, Exception: {exc}",
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc

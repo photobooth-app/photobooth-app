@@ -7,10 +7,7 @@ from .. import USERDATA_PATH
 from ..utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
-userdata_router = APIRouter(
-    prefix="/userdata",
-    tags=["userdata"],
-)
+userdata_router = APIRouter(prefix="/userdata", tags=["userdata"])
 
 
 @userdata_router.get("/{filepath:path}")

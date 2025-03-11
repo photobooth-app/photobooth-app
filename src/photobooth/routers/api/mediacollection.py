@@ -8,10 +8,7 @@ from ...container import container
 from ...database.schemas import MediaitemPublic
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/mediacollection",
-    tags=["mediacollection"],
-)
+router = APIRouter(prefix="/mediacollection", tags=["mediacollection"])
 
 
 @router.get("/", response_model=list[MediaitemPublic])

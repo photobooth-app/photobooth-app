@@ -9,10 +9,7 @@ from ...container import container
 from ...services.config.baseconfig import SchemaTypes
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/config",
-    tags=["admin", "config"],
-)
+router = APIRouter(prefix="/config", tags=["admin", "config"])
 
 
 @router.get("/list")

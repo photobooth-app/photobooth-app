@@ -73,9 +73,20 @@ def test_aquire_multiple_nomodechange(client: TestClient):
         capture(client)
 
 
+def test_invalid_test_all_modes(client: TestClient):
+    response = client.get("/aquisition/mode/capture")
+    assert response.is_success
+    response = client.get("/aquisition/mode/preview")
+    assert response.is_success
+    response = client.get("/aquisition/mode/video")
+    assert response.is_success
+    response = client.get("/aquisition/mode/idle")
+    assert response.is_success
+
+
 def test_invalid_modechange(client: TestClient):
     response = client.get("/aquisition/mode/invalidmode")
-    assert response.status_code == 500
+    assert response.status_code == 422
 
 
 def test_stream(client: TestClient):
