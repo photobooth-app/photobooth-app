@@ -31,7 +31,7 @@ class ThreadCommand(threading.Thread):
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning(exc)
-            logger.warning(f"the command '{self.command}' timed out after {self.timeout}s")
+            logger.warning(f"the command '{self.command}' timed out after {exc.timeout}s")
         except subprocess.CalledProcessError as exc:
             logger.warning(exc)
             logger.warning(f"the command '{self.command}' was executed but returned an error code {exc.returncode}")
@@ -86,7 +86,7 @@ class ThreadUrl(threading.Thread):
             logger.error(f"unknown error in http request, error {exc}")
         else:
             logger.debug(
-                f"response code '{r.status_code}', text '{r.text:.100}' "
+                f"response code '{r.status_code}', text '{r.text[:100]}' "
                 f"{'[trunc to 100 chars for log msg]' if len(r.text) > 100 else ''}, within {round(r.elapsed.total_seconds(), 1)}s"
             )
             logger.info(f"request to {r.request.url} finished successfully")
@@ -152,5 +152,4 @@ class Commander(BasePlugin[CommanderConfig]):
                 self.invoke_command(task_to_run, event)
             elif isinstance(task_to_run, TaskHttpRequest):
                 self.invoke_httprequest(task_to_run, event)
-            else:
-                raise RuntimeError("illegal type of task")
+            # else cannot happen because of pydantic validation before...

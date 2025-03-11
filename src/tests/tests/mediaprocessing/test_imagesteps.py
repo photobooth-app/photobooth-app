@@ -22,6 +22,8 @@ from photobooth.services.mediaprocessing.steps.image import (
     PluginFilterStep,
     RemoveChromakeyStep,
     TextStep,
+    get_plugin_avail_filters,
+    get_plugin_userselectable_filters,
 )
 from photobooth.utils.exceptions import PipelineError
 
@@ -61,6 +63,11 @@ def test_validate_test_method_different():
     assert list(img2.getdata()) != list(img1.getdata())
     # method 2
     assert not is_same(img1, img2)
+
+
+def test_pilgram_stage_get_filters():
+    # in default all filter enabled
+    assert get_plugin_avail_filters() == get_plugin_userselectable_filters()
 
 
 def test_pilgram_stage(pil_image: Image.Image):
