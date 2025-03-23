@@ -150,12 +150,6 @@ class ProcessingService(BaseService):
 
                     self._workflow_jobmodel._status_sm.send(event)
                 else:
-                    # keep queue clear in every run to avoid any old items here
-                    try:
-                        self._external_cmd_queue.get(block=False)
-                    except Empty:
-                        pass
-
                     self._workflow_jobmodel._status_sm.send("next")
 
             logger.debug("job finished")

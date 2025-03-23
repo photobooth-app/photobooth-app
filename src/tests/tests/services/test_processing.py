@@ -3,12 +3,9 @@ import time
 from collections.abc import Generator
 
 import pytest
-from statemachine import Event, State
 
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.processing import ProcessingService
-from photobooth.services.processor.machine.processingmachine import ProcessingMachine
 
 from ..util import video_duration
 
@@ -27,32 +24,6 @@ def _container() -> Generator[Container, None, None]:
     # deliver
     yield container
     container.stop()
-
-
-class ConfirmRejectUserinputObserver:
-    def __init__(self, processing_service: ProcessingService, abortjob: bool = False):
-        self.processing_service: ProcessingService = processing_service
-        self.abortjob: bool = abortjob  # if true, the job is aborted instead confirmed/rejected by simulated user.
-        # internal flags
-        self.rejected_once: bool = False  # reject once to test reject, then confirm
-
-    def after_transition(self, event: Event, source: State, target: State):
-        logger.info(f"after transition: {source.id}--({event})-->{target.id}")
-
-    def before_transition(self, target: State, source: State, event: Event):
-        logger.info(f"before transition: {source.id}--({event})-->{target.id}")
-
-        if target == ProcessingMachine.approval:
-            if self.abortjob:
-                logger.info("simulate user aborting job")
-                self.processing_service.abort_process()
-            elif not self.rejected_once:
-                self.rejected_once = True
-                logger.info("simulate user rejecting capture")
-                self.processing_service.reject_capture()
-            else:
-                logger.info("simulate user confirming capture")
-                self.processing_service.continue_process()
 
 
 def test_capture(_container: Container):
@@ -103,7 +74,10 @@ def test_collage_manual_approval(_container: Container):
 
     # observer that is used to confirm the captures.
     assert _container.processing_service._workflow_jobmodel is not None  # statemachine was created after trigger_action
-    _container.processing_service._workflow_jobmodel._status_sm.add_listener(ConfirmRejectUserinputObserver(_container.processing_service))
+
+    _container.processing_service.continue_process()
+    _container.processing_service.reject_capture()
+    _container.processing_service.continue_process()
 
     _container.processing_service.wait_until_job_finished()
 
@@ -121,9 +95,10 @@ def test_collage_manual_abort(_container: Container):
     _container.processing_service.trigger_action("collage", 0)
 
     assert _container.processing_service._workflow_jobmodel is not None
-    _container.processing_service._workflow_jobmodel._status_sm.add_listener(
-        ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True)
-    )
+
+    _container.processing_service.continue_process()
+    _container.processing_service.reject_capture()
+    _container.processing_service.abort_process()
 
     _container.processing_service.wait_until_job_finished()
 
