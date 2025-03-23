@@ -1,9 +1,10 @@
 import logging
 import time
 
+from photobooth.container import container
 from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
-from photobooth.services.jobmodels.base import CountdownTimer
-from photobooth.services.jobmodels.image import JobModelImage
+from photobooth.services.processor.image import JobModelImage
+from photobooth.utils.countdowntimer import CountdownTimer
 
 logger = logging.getLogger(name=None)
 
@@ -54,7 +55,8 @@ def test_jobmodel_start_count():
             jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
             processing=SingleImageProcessing(),
             trigger=Trigger(),
-        )
+        ),
+        container.aquisition_service,
     )
 
     jm.start_countdown(offset)
@@ -78,7 +80,8 @@ def test_jobmodel_start_count_zero():
             jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
             processing=SingleImageProcessing(),
             trigger=Trigger(),
-        )
+        ),
+        container.aquisition_service,
     )
 
     jm.start_countdown(offset)
@@ -102,7 +105,8 @@ def test_jobmodel_start_count_equal():
             jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
             processing=SingleImageProcessing(),
             trigger=Trigger(),
-        )
+        ),
+        container.aquisition_service,
     )
 
     jm.start_countdown(offset)
@@ -126,7 +130,8 @@ def test_jobmodel_start_count_bigger_offset():
             jobcontrol=SingleImageJobControl(countdown_capture=countdown_time),
             processing=SingleImageProcessing(),
             trigger=Trigger(),
-        )
+        ),
+        container.aquisition_service,
     )
 
     jm.start_countdown(offset)

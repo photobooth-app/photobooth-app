@@ -58,7 +58,6 @@ class Picamera2Backend(AbstractBackend):
         self._hires_data: GeneralFileResult | None = None
 
         # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
-        self._video_recorded_videofilepath = None
         self._video_encoder = None
         self._video_output = None
 
@@ -262,19 +261,21 @@ class Picamera2Backend(AbstractBackend):
             assert self._lores_data.frame
             return self._lores_data.frame
 
-    def start_recording(self, video_framerate: int):
+    def start_recording(self, video_framerate: int) -> Path:
         """picamera2 has local start_recording, which overrides the abstract class implementation in favor of local handling by picamera2"""
-        self._video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
+        video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
         self._video_encoder = H264Encoder(
             bitrate=appconfig.mediaprocessing.video_bitrate * 1000,  # bitrate in k in appconfig, so *1000
             framerate=video_framerate,
             profile="baseline" if appconfig.mediaprocessing.video_compatibility_mode else None,  # compat mode, baseline produces yuv420
         )
-        self._video_output = FfmpegOutput(str(self._video_recorded_videofilepath))
+        self._video_output = FfmpegOutput(str(video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")
 
         logger.info("picamera2 video encoder started")
+
+        return video_recorded_videofilepath
 
     def stop_recording(self):
         if self._video_encoder and self._video_encoder.running:
@@ -282,15 +283,6 @@ class Picamera2Backend(AbstractBackend):
             logger.info("picamera2 video encoder stopped")
         else:
             logger.info("no picamera2 video encoder active that could be stopped")
-
-    def get_recorded_video(self) -> Path:
-        if self._video_recorded_videofilepath is not None:
-            out = self._video_recorded_videofilepath
-            self._video_recorded_videofilepath = None
-
-            return out
-        else:
-            raise FileNotFoundError("no recorded video avail! if start_recording was called, maybe capture video failed? pls check logs")
 
     def _on_configure_optimized_for_idle(self):
         logger.debug("change to preview mode requested")

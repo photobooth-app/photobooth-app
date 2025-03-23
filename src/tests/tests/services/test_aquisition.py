@@ -56,11 +56,10 @@ def test_get_multicam_files(_container: Container):
 
 def test_getvideo(_container: Container):
     """get video from service"""
-    _container.aquisition_service.start_recording()
+    videopath = _container.aquisition_service.start_recording()
     time.sleep(2)
     _container.aquisition_service.stop_recording()
 
-    videopath = _container.aquisition_service.get_recorded_video()
     logger.info(f"video stored to file {videopath}")
     assert videopath and videopath.is_file()
 

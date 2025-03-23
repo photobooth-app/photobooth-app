@@ -131,9 +131,9 @@ class WebcamCv2Backend(AbstractBackend):
                 continue
 
             last_time_frame = now_time
-            # print(time.monotonic())
+
             ret, array = _video.read()
-            # ret=True successful read, otherwise False?
+            # ret=True successful read, otherwise False
             if not ret:
                 raise OSError("error reading camera frame")
 

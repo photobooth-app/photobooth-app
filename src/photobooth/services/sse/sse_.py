@@ -15,9 +15,10 @@ from typing import Any
 
 from fastapi import Request
 from sse_starlette.event import ServerSentEvent
+from statemachine import State
 
 from ...database.schemas import MediaitemPublic
-from ..jobmodels.base import JobModelBase
+from ..processor.base import JobModelBase
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,8 @@ class SseEventFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
+    source: State
+    target: State
     jobmodel: JobModelBase | None
 
     event: str = "ProcessStateinfo"
@@ -67,7 +70,13 @@ class SseEventProcessStateinfo(SseEventBase):
     def data(self) -> str:
         # logger.debug(self.jobmodel.export()
         if self.jobmodel:
-            return json.dumps(self.jobmodel.export())
+            return json.dumps(
+                dict(
+                    source=self.source.id,
+                    target=self.target.id,
+                    jobmodel=self.jobmodel.export(),
+                )
+            )
         else:
             return json.dumps({})
 

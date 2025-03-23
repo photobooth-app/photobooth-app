@@ -215,17 +215,14 @@ class AquisitionService(BaseService):
             # ensure even if failed, the wled is set to standby again
             pluggy_pm.hook.acq_after_shot()
 
-    def start_recording(self, video_framerate: int = 25):
-        self._get_video_backend().start_recording(video_framerate)
+    def start_recording(self, video_framerate: int = 25) -> Path:
+        return self._get_video_backend().start_recording(video_framerate)
 
     def stop_recording(self):
         self._get_video_backend().stop_recording()
 
     def is_recording(self):
         return self._get_video_backend().is_recording()
-
-    def get_recorded_video(self):
-        return self._get_video_backend().get_recorded_video()
 
     def signalbackend_configure_optimized_for_idle(self):
         """
