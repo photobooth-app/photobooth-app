@@ -22,24 +22,6 @@ class TextsConfig(BaseModel):
     color: Color = Color("red")
 
 
-class SinglePictureDefinition(BaseModel):
-    image_filter: PluginFilters = PluginFilters("original")
-    fill_background_enable: bool = False
-    fill_background_color: Color = Color("blue")
-    img_background_enable: bool = False
-    img_background_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
-    )
-    img_frame_enable: bool = False
-    img_frame_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
-    )
-    texts_enable: bool = False
-    texts: list[TextsConfig] = []
-
-
 class CollageMergeDefinition(BaseModel):
     description: str = ""
     pos_x: NonNegativeInt = 50
