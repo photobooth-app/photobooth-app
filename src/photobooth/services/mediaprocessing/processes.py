@@ -108,8 +108,7 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
     pipeline(context)
 
     # get result
-    assert context.video_processed
-    video_processed = context.video_processed
+    video_processed = context.video_processed if context.video_processed else context.video_in  # if pipeline was empty, use input as output
 
     # create final video
     shutil.move(video_processed, mediaitem.unprocessed)
