@@ -84,7 +84,7 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
-        self._capturetarget(self._config.gcapture_target)
+        self._set_config("capturetarget", self._config.gcapture_target)
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -168,59 +168,41 @@ class Gphoto2Backend(AbstractBackend):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
             self._configure_optimized_for_hq_capture_flag = None
-            self._iso(self._config.iso_capture)
-            self._shutter_speed(self._config.shutter_speed_capture)
+
+            self._set_config("iso", self._config.iso_capture)
+            self._set_config("shutter_speed", self._config.shutter_speed_capture)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 0)
+
+            # disable viewfinder;
+            # allows camera to autofocus fast in native mode not contrast mode
+            if self._config.disable_viewfinder_before_capture:
+                logger.info("disable viewfinder before capture")
+                self._set_config("viewfinder", 0)
 
     def _configure_optimized_for_idle_video(self):
         if self._configure_optimized_for_idle_video_flag:
             logger.debug("configure camera optimized for idle/video")
             self._configure_optimized_for_idle_video_flag = None
-            self._iso(self._config.iso_liveview)
-            self._shutter_speed(self._config.shutter_speed_liveview)
 
-    def _capturetarget(self, val: str = ""):
+            self._set_config("iso", self._config.iso_liveview)
+            self._set_config("shutter_speed", self._config.shutter_speed_liveview)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 1)
+
+    def _set_config(self, field: str, val: str | int = ""):
         assert gp
 
         if not val:
-            logger.debug("capturetarget empty, ignore")
+            logger.debug(f"{field} value empty, ignore")
             return
         try:
-            logger.info(f"setting capturetarget value: {val}")
-            self._gp_set_config("capturetarget", val)
+            logger.info(f"setting custom {field} to {val}")
+            self._gp_set_config(field, val)
         except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set capturetarget, command ignored {exc}")
-
-    def _iso(self, val: str = ""):
-        assert gp
-
-        if not val:
-            logger.debug("iso empty, ignore")
-            return
-        try:
-            logger.info(f"setting custom iso value: {val}")
-            self._gp_set_config("iso", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set iso, command ignored {exc}")
-
-    def _shutter_speed(self, val: str = ""):
-        assert gp
-
-        if not val:
-            logger.debug("shutter speed empty, ignore")
-            return
-        try:
-            logger.info(f"setting custom shutter speed: {val}")
-            self._gp_set_config("shutterspeed", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set shutter speed, command ignored {exc}")
-
-    def _viewfinder(self, val=0):
-        assert gp
-
-        try:
-            self._gp_set_config("viewfinder", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set viewfinder, command ignored {exc}")
+            logger.warning(f"cannot set {field} to {val}, command ignored {exc}")
 
     def _gp_set_config(self, name, val):
         config = self._camera.get_config(self._camera_context)
@@ -290,12 +272,6 @@ class Gphoto2Backend(AbstractBackend):
                 # there is no guarantee that the first is the JPG and second the RAW image. Also depending on the capturetarget
                 # the sequence the images appear can be different. gp.GP_CAPTURE_IMAGE vs gp.GP_CAPTURE_RAW seems not reliable to rely on
                 captured_files: list[tuple[str, str]] = []
-
-                # disable viewfinder;
-                # allows camera to autofocus fast in native mode not contrast mode
-                if self._config.disable_viewfinder_before_capture:
-                    logger.info("disable viewfinder before capture")
-                    self._viewfinder(0)
 
                 # check if flag is true and configure if so once.
                 self._configure_optimized_for_hq_capture()
