@@ -1054,7 +1054,6 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sse-starlette" },
     { name = "uvicorn" },
-    { name = "webuiapi" },
     { name = "wigglecam" },
 ]
 
@@ -1107,7 +1106,6 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.37" },
     { name = "sse-starlette", specifier = ">=2.2.0" },
     { name = "uvicorn", specifier = ">=0.24" },
-    { name = "webuiapi" },
     { name = "wigglecam" },
 ]
 
@@ -1218,6 +1216,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/00/20f40a935514037b7d3f87adfc87d2c538430ea625b63b3af8c3f5578e72/pillow-11.1.0-pp310-pypy310_pp73-manylinux_2_28_aarch64.whl", hash = "sha256:d44ff19eea13ae4acdaaab0179fa68c0c6f2f45d66a4d8ec1eda7d6cecbcc15f", size = 3446208 },
     { url = "https://files.pythonhosted.org/packages/28/3c/7de681727963043e093c72e6c3348411b0185eab3263100d4490234ba2f6/pillow-11.1.0-pp310-pypy310_pp73-manylinux_2_28_x86_64.whl", hash = "sha256:d3d8da4a631471dfaf94c10c85f5277b1f8e42ac42bade1ac67da4b4a7359b73", size = 3509746 },
     { url = "https://files.pythonhosted.org/packages/41/67/936f9814bdd74b2dfd4822f1f7725ab5d8ff4103919a1664eb4874c58b2f/pillow-11.1.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:4637b88343166249fe8aa94e7c4a62a180c4b3898283bb5d3d2fd5fe10d8e4e0", size = 2626353 },
+]
+
+[[package]]
+name = "pkgconfig"
+version = "1.5.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/e0/e05fee8b5425db6f83237128742e7e5ef26219b687ab8f0d41ed0422125e/pkgconfig-1.5.5.tar.gz", hash = "sha256:deb4163ef11f75b520d822d9505c1f462761b4309b1bb713d08689759ea8b899", size = 6082 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/af/89487c7bbf433f4079044f3dc32f9a9f887597fe04614a37a292e373e16b/pkgconfig-1.5.5-py3-none-any.whl", hash = "sha256:d20023bbeb42ee6d428a0fac6e0904631f545985a10cdd71a20aa58bc47a4209", size = 6732 },
 ]
 
 [[package]]
@@ -1568,6 +1575,7 @@ version = "2.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cffi" },
+    { name = "pkgconfig" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7b/88/f73dae807ec68b228fba72507105e3ba80a561dc0bade0004ce24fd118fc/pyvips-2.2.3.tar.gz", hash = "sha256:43bceced0db492654c93008246a58a508e0373ae1621116b87b322f2ac72212f", size = 56626 }
 
@@ -1886,7 +1894,11 @@ wheels = [
 name = "websockets"
 version = "15.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2e/7a/8bc4d15af7ff30f7ba34f9a172063bfcee9f5001d7cef04bee800a658f33/websockets-15.0.tar.gz", hash = "sha256:ca36151289a15b39d8d683fd8b7abbe26fc50be311066c5f8dcf3cb8cee107ab", size = 175574 }
+dependencies = [
+    { name = "pillow" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/a7/5d6c6a10456a642568e3c02c3400963d305b2b3caccdaa305397396a41ea/webuiapi-0.9.17.tar.gz", hash = "sha256:b37effbbd27dea550152391285dc26a9b15e2a7395b0d1af320e637e20b425a7", size = 28865 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3d/f1/b20cc4c1ff84911c791f36fa511a78203836bb4d603f56290de08c067437/websockets-15.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:5e6ee18a53dd5743e6155b8ff7e8e477c25b29b440f87f65be8165275c87fef0", size = 174701 },
     { url = "https://files.pythonhosted.org/packages/f9/e8/4de59ee85ec86052ca574f4e5327ef948e4f77757d3c9c1503f5a0e9c039/websockets-15.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ee06405ea2e67366a661ed313e14cf2a86e84142a3462852eb96348f7219cee3", size = 172358 },
@@ -1939,19 +1951,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/1b/80460b3ac9795ef7bbaa074c603d64e009dbb2ceb11008416efab0dcc811/websockets-15.0-pp310-pypy310_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e413352a921f5ad5d66f9e2869b977e88d5103fc528b6deb8423028a2befd842", size = 173425 },
     { url = "https://files.pythonhosted.org/packages/56/d1/8da7e733ed266f342e8c544c3b8338449de9b860d85d9a0bfd4fe1857d6e/websockets-15.0-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:8561c48b0090993e3b2a54db480cab1d23eb2c5735067213bb90f402806339f5", size = 176160 },
     { url = "https://files.pythonhosted.org/packages/e8/b2/31eec524b53f01cd8343f10a8e429730c52c1849941d1f530f8253b6d934/websockets-15.0-py3-none-any.whl", hash = "sha256:51ffd53c53c4442415b613497a34ba0aa7b99ac07f1e4a62db5dcd640ae6c3c3", size = 169023 },
-]
-
-[[package]]
-name = "webuiapi"
-version = "0.9.17"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pillow" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/53/a7/5d6c6a10456a642568e3c02c3400963d305b2b3caccdaa305397396a41ea/webuiapi-0.9.17.tar.gz", hash = "sha256:b37effbbd27dea550152391285dc26a9b15e2a7395b0d1af320e637e20b425a7", size = 28865 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/79/bd7390a49e0bc7cfc348cbc3469d50424a2eba3fdac9378e325852399433/webuiapi-0.9.17-py3-none-any.whl", hash = "sha256:5ee61943405b6a9b889e36114a6c1e386d83597c1e369796ab871080489443e9", size = 22563 },
 ]
 
 [[package]]
