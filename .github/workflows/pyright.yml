@@ -21,11 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: current
-      - name: Install system apt dependencies
-        run: |
-          sudo apt update
-          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
-          sudo apt -y install ffmpeg
+
       - name: install the project
         run: |
           uv sync --all-extras --dev
