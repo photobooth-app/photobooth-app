@@ -12,13 +12,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Python and uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.13'
+          enable-cache: true
       - name: Install Node.js (needed for Pyright)
         uses: actions/setup-node@v4
         with:
           node-version: current
 
-      - name: Install Pyright
-        run: npm install -g pyright
-
+      - name: install the project
+        run: |
+          uv sync --all-extras --dev
+          
       - name: Run Pyright static type checker
-        run: pyright
+        run: |
+          uv run pyright
+      
