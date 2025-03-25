@@ -13,7 +13,6 @@ from pydantic_extra_types.color import Color
 
 from .... import plugins
 from ....utils.exceptions import PipelineError
-from ....utils.helper import get_user_file
 from ...config.models import models
 from ..context import ImageContext
 from ..pipeline import NextStep, PipelineStep
@@ -95,10 +94,8 @@ class ImageMountStep(PipelineStep):
             next_step(context)
             return  # needed, otherwise remaining code will be executed after returning from next_step
 
-        # check font is avail, otherwise send pipelineerror - so we can recover and continue
-        # default font Roboto comes with app, fallback to that one if avail
         try:
-            background_path = get_user_file(self.background_file)
+            background_path = self.background_file
             background_img = Image.open(background_path).convert("RGBA")
         except FileNotFoundError as exc:
             raise PipelineError(f"file {str(self.background_file)} not found!") from exc
@@ -142,7 +139,7 @@ class ImageFrameStep(PipelineStep):
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
         # check frame is avail, otherwise send pipelineerror
         try:
-            frame_path = get_user_file(self.frame_file)
+            frame_path = self.frame_file
             # convert to rgba because there could be paletted PNGs in mode P but still with alpha in info.transparency.
             # converting to RGBA moves info.transparency to actual channel and handling is easy
             image_frame = Image.open(frame_path).convert("RGBA")
@@ -201,15 +198,14 @@ class TextStep(PipelineStep):
                 # skip this one because empty.
                 continue
 
-            # check font is avail, otherwise send pipelineerror - so we can recover and continue
-            # default font Roboto comes with app, fallback to that one if avail
-            try:
-                font_path = get_user_file(textconfig.font)
-            except FileNotFoundError as exc:
-                logger.exception(exc)
-                raise PipelineError(f"font {str(textconfig.font)} not found!") from exc
+            # check font is avail, otherwise send pipelineerror
+            if not textconfig.font:
+                raise PipelineError("text to apply to image but no font defined!")
 
-            img_font = ImageFont.truetype(font=str(font_path), size=textconfig.font_size)
+            if not textconfig.font.is_file():
+                raise PipelineError(f"font {textconfig.font} not found!")
+
+            img_font = ImageFont.truetype(font=str(textconfig.font), size=textconfig.font_size)
 
             draw_rotated_text(
                 image=updated_image,

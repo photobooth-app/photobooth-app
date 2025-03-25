@@ -1,7 +1,6 @@
 from PIL import Image
 
 from ....utils.exceptions import PipelineError
-from ....utils.helper import get_user_file
 from ...config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..context import AnimationContext, CollageContext, ImageContext
 from ..pipeline import NextStep, Pipeline, PipelineStep
@@ -18,7 +17,7 @@ class AddPredefinedImagesStep(PipelineStep):
 
             if _definition.predefined_image:
                 try:
-                    predefined_image = Image.open(get_user_file(_definition.predefined_image))
+                    predefined_image = Image.open(_definition.predefined_image)
                     context.images.insert(idx, predefined_image)
                 except FileNotFoundError as exc:
                     raise PipelineError(f"error getting predefined file {exc}") from exc

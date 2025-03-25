@@ -7,10 +7,7 @@ from ...container import container
 from ...database.models import Mediaitem
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/share",
-    tags=["share"],
-)
+router = APIRouter(prefix="/share", tags=["share"])
 
 
 def _share(mediaitem: Mediaitem, index: int, parameters: dict[str, str] | None):

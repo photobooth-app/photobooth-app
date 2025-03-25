@@ -20,6 +20,9 @@ hookimpl = pluggy.HookimplMarker("photobooth-app")
 
 class PluginManagementSpec:
     @hookspec
+    def init(self) -> None: ...
+
+    @hookspec
     def start(self) -> None: ...
 
     @hookspec

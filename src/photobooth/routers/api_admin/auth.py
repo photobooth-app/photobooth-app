@@ -16,10 +16,7 @@ from ..auth_dependencies_bearer import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/auth",
-    tags=["admin", "auth"],
-)
+router = APIRouter(prefix="/auth", tags=["admin", "auth"])
 
 
 @router.post("/token")

@@ -5,6 +5,7 @@ import threading
 import requests
 from statemachine import Event, State
 
+from ...services.processor.machine.processingmachine import ProcessingMachine
 from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import CommanderConfig
@@ -31,7 +32,7 @@ class ThreadCommand(threading.Thread):
             )
         except subprocess.TimeoutExpired as exc:
             logger.warning(exc)
-            logger.warning(f"the command '{self.command}' timed out after {self.timeout}s")
+            logger.warning(f"the command '{self.command}' timed out after {exc.timeout}s")
         except subprocess.CalledProcessError as exc:
             logger.warning(exc)
             logger.warning(f"the command '{self.command}' was executed but returned an error code {exc.returncode}")
@@ -86,7 +87,7 @@ class ThreadUrl(threading.Thread):
             logger.error(f"unknown error in http request, error {exc}")
         else:
             logger.debug(
-                f"response code '{r.status_code}', text '{r.text:.100}' "
+                f"response code '{r.status_code}', text '{r.text[:100]}' "
                 f"{'[trunc to 100 chars for log msg]' if len(r.text) > 100 else ''}, within {round(r.elapsed.total_seconds(), 1)}s"
             )
             logger.info(f"request to {r.request.url} finished successfully")
@@ -99,6 +100,10 @@ class Commander(BasePlugin[CommanderConfig]):
         self._config: CommanderConfig = CommanderConfig()
 
     @hookimpl
+    def init(self):
+        self.run_task("init")
+
+    @hookimpl
     def start(self):
         self.run_task("start")
 
@@ -108,16 +113,16 @@ class Commander(BasePlugin[CommanderConfig]):
 
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
-        if target.id == "counting":
+        if target == ProcessingMachine.counting:
             self.run_task("counting")
-        elif target.id == "finished":
+        elif target == ProcessingMachine.finished:
             self.run_task("finished")
-        elif target.id == "record":
-            self.run_task("record")
+        elif target == ProcessingMachine.capture:
+            self.run_task("capture")
 
     @hookimpl
     def sm_on_exit_state(self, source: State, target: State, event: Event):
-        if source.id in ("capture", "record"):
+        if source == ProcessingMachine.capture:
             self.run_task("captured")
 
     def invoke_command(self, task_to_run: TaskCommand, event: eventHooks):
@@ -148,5 +153,4 @@ class Commander(BasePlugin[CommanderConfig]):
                 self.invoke_command(task_to_run, event)
             elif isinstance(task_to_run, TaskHttpRequest):
                 self.invoke_httprequest(task_to_run, event)
-            else:
-                raise RuntimeError("illegal type of task")
+            # else cannot happen because of pydantic validation before...

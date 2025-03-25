@@ -108,14 +108,16 @@ class BaseConfig(BaseSettings):
 
         return dictionary
 
-    # @classmethod
     def get_schema(self, schema_type: SchemaTypes = "default"):
         """Get schema to build UI. Schema is polished to the needs of UI"""
         schema = self.model_json_schema()
         self._fix_single_allof(schema)
+
         if schema_type == "dereferenced":
             # https://github.com/pydantic/pydantic/issues/889#issuecomment-1064688675
+
             return jsonref.loads(json.dumps(schema))
+
         else:
             return schema
 

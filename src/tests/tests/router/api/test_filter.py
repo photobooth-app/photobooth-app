@@ -10,6 +10,8 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 import photobooth.routers.api.filter
+import photobooth.services
+import photobooth.services.mediaprocessing.steps.image
 from photobooth.application import app
 from photobooth.container import container
 
@@ -27,6 +29,20 @@ def client() -> Generator[TestClient, None, None]:
         # container.processing_service.wait_until_job_finished()
         yield client
         container.stop()
+
+
+def test_get_avail_filter(client: TestClient):
+    response = client.get("/filter/")
+
+    assert response.is_success
+
+
+def test_get_avail_filter_err(client: TestClient):
+    # https://docs.python.org/3/library/unittest.mock.html#where-to-patch
+    with patch.object(photobooth.routers.api.filter, "get_plugin_userselectable_filters", side_effect=RuntimeError("mock")):
+        response = client.get("/filter/")
+
+        assert response.status_code == 500
 
 
 def test_preview_filter_original(client: TestClient):

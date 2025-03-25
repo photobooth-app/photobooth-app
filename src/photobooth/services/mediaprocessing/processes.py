@@ -9,8 +9,7 @@ from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
 from ...database.models import Mediaitem
-from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, VideoProcessing
-from ..config.models.models import SinglePictureDefinition
+from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline
 from .steps.animation import AlignSizesStep
@@ -22,7 +21,7 @@ from .steps.video import BoomerangStep
 logger = logging.getLogger(__name__)
 
 
-def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview: bool):
+def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: bool):
     """
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
@@ -43,12 +42,16 @@ def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview:
         steps.append(PluginFilterStep(config.image_filter))
 
     if config.img_background_enable:
+        if not config.img_background_file:
+            raise ValueError("image background enabled, but no file given")
         steps.append(ImageMountStep(config.img_background_file))
 
     if config.fill_background_enable:
         steps.append(FillBackgroundStep(config.fill_background_color))
 
     if config.img_frame_enable:
+        if not config.img_frame_file:
+            raise ValueError("image frame enabled, but no file given")
         steps.append(ImageFrameStep(config.img_frame_file))
 
     if config.texts_enable:
@@ -76,8 +79,8 @@ def process_image_inner(file_in: Path, config: SinglePictureDefinition, preview:
     return manipulated_image
 
 
-def process_image_collageimage_animationimage(file_in: Path, mediaitem: Mediaitem):
-    manipulated_image = process_image_inner(file_in, SinglePictureDefinition(**mediaitem.pipeline_config), preview=False)
+def process_phase1images(file_in: Path, mediaitem: Mediaitem):
+    manipulated_image = process_image_inner(file_in, SingleImageProcessing(**mediaitem.pipeline_config), preview=False)
 
     # finish up creating mediafiles representants.
     ## final: save full result and create scaled versions
@@ -104,8 +107,7 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
     pipeline(context)
 
     # get result
-    assert context.video_processed
-    video_processed = context.video_processed
+    video_processed = context.video_processed if context.video_processed else context.video_in  # if pipeline was empty, use input as output
 
     # create final video
     shutil.move(video_processed, mediaitem.unprocessed)
@@ -139,12 +141,16 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     # assemble pipeline
 
     if config.canvas_img_background_enable:
+        if not config.canvas_img_background_file:
+            raise ValueError("image background enabled, but no file given")
         steps.append(ImageMountStep(config.canvas_img_background_file))
 
     if config.canvas_fill_background_enable:
         steps.append(FillBackgroundStep(config.canvas_fill_background_color))
 
     if config.canvas_img_front_enable:
+        if not config.canvas_img_front_file:
+            raise ValueError("image frame enabled, but no file given")
         steps.append(ImageMountStep(config.canvas_img_front_file, reverse=True))
 
     if config.canvas_texts_enable:

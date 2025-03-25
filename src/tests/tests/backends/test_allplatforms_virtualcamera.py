@@ -57,10 +57,9 @@ def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
 
 def test_get_video_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
-    backend_virtual.start_recording(video_framerate=5)
+    videopath = backend_virtual.start_recording(video_framerate=5)
     time.sleep(2)
     backend_virtual.stop_recording()
 
-    videopath = backend_virtual.get_recorded_video()
     logger.info(f"video stored to file {videopath}")
     assert videopath and videopath.is_file()

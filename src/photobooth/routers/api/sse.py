@@ -11,9 +11,7 @@ from ...services.sse import sse_service
 from ...services.sse.sse_ import Client
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    tags=["home"],
-)
+router = APIRouter(tags=["home"])
 
 
 @router.get("/sse")

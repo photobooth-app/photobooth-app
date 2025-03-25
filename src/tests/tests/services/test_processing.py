@@ -6,7 +6,6 @@ import pytest
 
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.processing import ProcessingService
 
 from ..util import video_duration
 
@@ -27,42 +26,16 @@ def _container() -> Generator[Container, None, None]:
     container.stop()
 
 
-class ConfirmRejectUserinputObserver:
-    def __init__(self, processing_service: ProcessingService, abortjob: bool = False):
-        self.processing_service: ProcessingService = processing_service
-        self.abortjob: bool = abortjob  # if true, the job is aborted instead confirmed/rejected by simulated user.
-        # internal flags
-        self.rejected_once: bool = False  # reject once to test reject, then confirm
-
-    def after_transition(self, event, source, target):
-        logger.info(f"transition after: {source.id}--({event})-->{target.id}")
-
-    def before_transition(self, target, event):
-        logger.info(f"enter: {target.id} from {event}")
-
-        if target.id == "approve_capture":
-            if self.abortjob:
-                logger.info("simulate user aborting job")
-                self.processing_service.abort_process()
-            elif not self.rejected_once:
-                self.rejected_once = True
-                logger.info("simulate user rejecting capture")
-                self.processing_service.reject_capture()
-            else:
-                logger.info("simulate user confirming capture")
-                self.processing_service.confirm_capture()
-
-
 def test_capture(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
 
     container.processing_service.trigger_action("image", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
 
 def test_capture_zero_countdown(_container: Container):
@@ -71,11 +44,11 @@ def test_capture_zero_countdown(_container: Container):
 
     _container.processing_service.trigger_action("image", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
 
 def test_collage_auto_approval(_container: Container):
@@ -83,11 +56,11 @@ def test_collage_auto_approval(_container: Container):
 
     _container.processing_service.trigger_action("collage", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
 
 def test_collage_manual_approval(_container: Container):
@@ -100,12 +73,15 @@ def test_collage_manual_approval(_container: Container):
     _container.processing_service.trigger_action("collage", 0)
 
     # observer that is used to confirm the captures.
-    assert _container.processing_service._state_machine is not None  # statemachine was created after trigger_action
-    _container.processing_service._state_machine.add_listener(ConfirmRejectUserinputObserver(_container.processing_service))
+    assert _container.processing_service._workflow_jobmodel is not None  # statemachine was created after trigger_action
+
+    _container.processing_service.continue_process()
+    _container.processing_service.reject_capture()
+    _container.processing_service.continue_process()
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
     assert correct_after_count == _container.mediacollection_service.count()
 
@@ -118,12 +94,15 @@ def test_collage_manual_abort(_container: Container):
 
     _container.processing_service.trigger_action("collage", 0)
 
-    assert _container.processing_service._state_machine is not None
-    _container.processing_service._state_machine.add_listener(ConfirmRejectUserinputObserver(_container.processing_service, abortjob=True))
+    assert _container.processing_service._workflow_jobmodel is not None
+
+    _container.processing_service.continue_process()
+    _container.processing_service.reject_capture()
+    _container.processing_service.abort_process()
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
     assert correct_after_count == _container.mediacollection_service.count()
 
@@ -131,22 +110,22 @@ def test_collage_manual_abort(_container: Container):
 def test_animation(_container: Container):
     _container.processing_service.trigger_action("animation", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
 
 def test_video(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
     number_of_images_before = _container.mediacollection_service.count()
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
     assert _container.mediacollection_service.count() == number_of_images_before + 1
 
@@ -163,7 +142,7 @@ def test_video(_container: Container):
 def test_video_stop_early(_container: Container):
     _container.processing_service.trigger_action("video", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
     number_of_images_before = _container.mediacollection_service.count()
 
     # wait until actually recording
@@ -177,10 +156,10 @@ def test_video_stop_early(_container: Container):
     # recording active, wait 3 secs before stopping.
     desired_video_duration = 3
     time.sleep(desired_video_duration)
-    _container.processing_service.trigger_action("video", 0)
+    _container.processing_service.continue_process()
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
     assert _container.mediacollection_service.count() == number_of_images_before + 1
 
@@ -201,10 +180,10 @@ def test_multicamera(_container: Container):
 
     _container.processing_service.trigger_action("multicamera", 0)
 
-    assert _container.processing_service._state_machine is not None
+    assert _container.processing_service._workflow_jobmodel is not None
 
     _container.processing_service.wait_until_job_finished()
 
-    assert _container.processing_service._state_machine is None
+    assert _container.processing_service._workflow_jobmodel is None
 
     assert _container.mediacollection_service.count() == number_of_images_before + 5

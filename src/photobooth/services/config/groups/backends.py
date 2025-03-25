@@ -140,6 +140,7 @@ class GroupBackendGphoto2(BaseBackendModel):
         default=True,
         description="Disable viewfinder before capture might speed up following capture autofocus. Might not work with every camera.",
     )
+
     iso_liveview: str = Field(
         default="",
         description="Sets the ISO for when the photobooth is in live preview modus. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
@@ -155,6 +156,11 @@ class GroupBackendGphoto2(BaseBackendModel):
     shutter_speed_capture: str = Field(
         default="",
         description="Configures the shutter speed for the camera at the time of capturing a photo in the photobooth. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Operational only in manual mode. (Example Values: 1/60, 1/320, 1/1000, 1/2000, 1/4000, ...)",
+    )
+
+    canon_eosmoviemode: bool = Field(
+        default=False,
+        description="Canon specific. Switch on/off eosmoviemode when streaming videos. Might not work with every camera.",
     )
 
 

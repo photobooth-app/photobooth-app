@@ -9,7 +9,7 @@
  *    If you are not using HTTPS, the Share button will not appear.
  */
 
-// documentation see https://photobooth-app.org/setup/qrshareservice/
+// documentation see https://photobooth-app.org/setup/configuration/qrshareservice/
 
 // configuration options
 $APIKEY = "changedefault!";                 // set apikey to a random value, of at least 8 chars. The same apikey needs to be set in photobooth app to pair both systems

@@ -8,10 +8,7 @@ from ..container import container
 from ..database.models import DimensionTypes
 
 logger = logging.getLogger(__name__)
-media_router = APIRouter(
-    prefix="/media",
-    tags=["media"],
-)
+media_router = APIRouter(prefix="/media", tags=["media"])
 
 
 @media_router.get("/{dimension}/{mediaitem_id}")

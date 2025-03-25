@@ -16,7 +16,7 @@ from ..util import video_duration
 logger = logging.getLogger(name=None)
 
 
-def test_align_sizes_stage():
+def test_video_boomerang_stage():
     video_in = Path("src/tests/assets/video.mp4")
 
     context = VideoContext(video_in)

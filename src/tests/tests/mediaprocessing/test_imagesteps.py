@@ -4,6 +4,7 @@ Testing mediaprocessing singleimages pipeline
 
 import logging
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -21,6 +22,8 @@ from photobooth.services.mediaprocessing.steps.image import (
     PluginFilterStep,
     RemoveChromakeyStep,
     TextStep,
+    get_plugin_avail_filters,
+    get_plugin_userselectable_filters,
 )
 from photobooth.utils.exceptions import PipelineError
 
@@ -60,6 +63,11 @@ def test_validate_test_method_different():
     assert list(img2.getdata()) != list(img1.getdata())
     # method 2
     assert not is_same(img1, img2)
+
+
+def test_pilgram_stage_get_filters():
+    # in default all filter enabled
+    assert get_plugin_avail_filters() == get_plugin_userselectable_filters()
 
 
 def test_pilgram_stage(pil_image: Image.Image):
@@ -102,7 +110,7 @@ def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
 
 
 def test_text_stage(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="apply text")]
+    textconfig = [TextsConfig(text="apply text", font=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"))]
     context = ImageContext(pil_image)
     steps = [TextStep(textconfig)]
     pipeline = Pipeline[ImageContext](*steps)
@@ -113,7 +121,7 @@ def test_text_stage(pil_image: Image.Image):
 
 
 def test_text_stage_fontnotavail(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="asdf", font="fontNoFile")]
+    textconfig = [TextsConfig(text="asdf", font=None)]
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
@@ -224,7 +232,7 @@ def test_img_background_stage(pil_image: Image.Image):
     pil_image.putalpha(100)
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -239,7 +247,7 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
     assert pil_image.mode == "RGB"  # before process it's RGB
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -254,7 +262,7 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageMountStep("./userdata/backgrounds/nonexistentfile")]
+        steps = [ImageMountStep("./userdata/demoassets/backgrounds/nonexistentfile")]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 

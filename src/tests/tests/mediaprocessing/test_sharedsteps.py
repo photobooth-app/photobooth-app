@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -18,7 +19,7 @@ def test_collage_shared():
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        CollageMergeDefinition(predefined_image="src/tests/assets/input.jpg", image_filter=PluginFilters("FilterPilgram2._1977")),
+        CollageMergeDefinition(predefined_image=Path("src/tests/assets/input.jpg"), image_filter=PluginFilters("FilterPilgram2._1977")),
         CollageMergeDefinition(image_filter=PluginFilters("FilterPilgram2._1977")),
     ]
 
@@ -36,7 +37,7 @@ def test_animation_shared():
         Image.open("src/tests/assets/input.jpg"),
     ]
     merge_definition = [
-        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", image_filter=PluginFilters("FilterPilgram2._1977")),
+        AnimationMergeDefinition(predefined_image=Path("src/tests/assets/input.jpg"), image_filter=PluginFilters("FilterPilgram2._1977")),
         AnimationMergeDefinition(image_filter=PluginFilters("FilterPilgram2._1977")),
     ]
 
@@ -56,7 +57,7 @@ def test_animation_shared_wrongnumbers_runtime():
     ]
     merge_definition = [
         # we have two captured images and two definitions but one is already a predefined. thats bad because we should have only one captured
-        AnimationMergeDefinition(predefined_image="src/tests/assets/input.jpg", image_filter=PluginFilters("FilterPilgram2._1977")),
+        AnimationMergeDefinition(predefined_image=Path("src/tests/assets/input.jpg"), image_filter=PluginFilters("FilterPilgram2._1977")),
         AnimationMergeDefinition(image_filter=PluginFilters("FilterPilgram2._1977")),
     ]
 

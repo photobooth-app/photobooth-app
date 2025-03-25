@@ -8,10 +8,7 @@ from fastapi.responses import Response
 from ... import LOG_PATH
 
 logger = logging.getLogger(__name__)
-router = APIRouter(
-    prefix="/debug",
-    tags=["logs"],
-)
+router = APIRouter(prefix="/debug", tags=["logs"])
 
 
 @router.get("/log/latest")

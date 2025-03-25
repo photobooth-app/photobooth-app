@@ -8,7 +8,7 @@ from photobooth.container import Container, container
 from photobooth.database.types import DimensionTypes
 from photobooth.routers.media import api_getitems
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
-from photobooth.services.jobmodels.base import action_type_literal
+from photobooth.services.processing import ActionType
 
 logger = logging.getLogger(name=None)
 
@@ -23,7 +23,7 @@ def _container() -> Generator[Container, None, None]:
     container.stop()
 
 
-def do_end_to_end(_container: Container, action: action_type_literal):
+def do_end_to_end(_container: Container, action: ActionType):
     # 1: capture an image
     _container.processing_service.trigger_action(action, 0)
     _container.processing_service.wait_until_job_finished()
