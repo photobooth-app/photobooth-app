@@ -77,13 +77,13 @@ def image_lores() -> Generator[bytes, None, None]:
     yield image("src/tests/assets/input_lores.jpg")
 
 
-@pytest.mark.benchmark(group="scalejpeg_hires")
+@pytest.mark.benchmark(group="cropjpeg_hires")
 def test_libraries_encode_hires(library, image_hires, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_hires, tmp_path=tmp_path)
     assert True
 
 
-@pytest.mark.benchmark(group="scalejpeg_lores")
+@pytest.mark.benchmark(group="cropjpeg_lores")
 def test_libraries_encode_lores(library, image_lores, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_lores, tmp_path=tmp_path)
     assert True
