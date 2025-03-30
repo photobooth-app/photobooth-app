@@ -180,7 +180,7 @@ class AquisitionService(BaseService):
             return self._get_stream_from_backend(self._get_video_backend())
         else:
             logger.warning("livestream is disabled.")
-            return
+            raise ConnectionRefusedError
 
     def wait_for_still_file(self):
         """
