@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
-BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
+BackendsBase = Literal["VirtualCamera", "WebcamPyav", "WebcamCv2", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
 BackendsDarwin = Literal["Gphoto2"]
@@ -158,6 +158,43 @@ class GroupBackendGphoto2(BaseBackendModel):
     )
 
 
+class GroupBackendPyav(BaseBackendModel):
+    model_config = ConfigDict(title="PyAV")
+
+    device_name: str = Field(
+        default="FHD Camera",
+        description="Device name of the webcam.",
+    )
+
+    CAM_RESOLUTION_WIDTH: int = Field(
+        default=640,
+        description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+    )
+    CAM_RESOLUTION_HEIGHT: int = Field(
+        default=480,
+        description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+    )
+
+    switch_to_high_resolution_for_stills: bool = Field(
+        default=True,
+        description="Enable to close camera, switch to higher resolution and grab one frame with below configuration. Resolution used for stills.",
+    )
+    HIRES_CAM_RESOLUTION_WIDTH: int = Field(
+        default=1920,
+        description="camera resolution width to capture high resolution photo",
+    )
+    HIRES_CAM_RESOLUTION_HEIGHT: int = Field(
+        default=1080,
+        description="camera resolution height to capture high resolution photo",
+    )
+    flush_number_frames_after_switch: int = Field(
+        default=2,
+        ge=0,
+        le=20,
+        description="After switching the format, to high resolution, the camera might need some frames to accomodate to the light again. Use the lowest numer of frames that gives the same image as before in preview mode. If too low, images might apper darker or lighter than expected.",
+    )
+
+
 class GroupBackendOpenCv2(BaseBackendModel):
     model_config = ConfigDict(title="OpenCv2")
 
@@ -265,6 +302,7 @@ class GroupBackend(BaseModel):
     )
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
+    webcampyav: GroupBackendPyav = GroupBackendPyav()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
     wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
