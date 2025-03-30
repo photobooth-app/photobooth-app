@@ -30,8 +30,8 @@ class Gphoto2Backend(AbstractBackend):
         if gp is None:
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
-        self._camera = gp.Camera()
-        self._camera_context = gp.Context()
+        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
+        self._camera_context = gp.Context()  # pyright: ignore [reportAttributeAccessIssue]
 
         # if True signal to switch optimized, set none after switch again.
         self._configure_optimized_for_hq_capture_flag = None
@@ -55,18 +55,18 @@ class Gphoto2Backend(AbstractBackend):
         self._worker_thread: StoppableThread | None = None
 
         logger.info(f"python-gphoto2: {gp.__version__}")
-        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
+        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
+        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
         self._logger_callback = gp.check_result(
             gp.use_python_logging(
                 mapping={
-                    gp.GP_LOG_ERROR: logging.INFO,
-                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,
-                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,
-                    gp.GP_LOG_DATA: logging.DEBUG - 6,
+                    gp.GP_LOG_ERROR: logging.INFO,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_DATA: logging.DEBUG - 6,  # pyright: ignore [reportAttributeAccessIssue]
                 }
             )
         )
@@ -76,7 +76,8 @@ class Gphoto2Backend(AbstractBackend):
         assert gp
 
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
-        self._camera = gp.Camera()  # better use fresh object.
+        # better use fresh object.
+        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
         self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
 
         try:
@@ -279,7 +280,7 @@ class Gphoto2Backend(AbstractBackend):
                 # capture hq picture
                 logger.info("taking hq picture")
                 try:
-                    file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
+                    file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)  # pyright: ignore [reportAttributeAccessIssue]
                     captured_files.append((file_path.folder, file_path.name))
                 except gp.GPhoto2Error as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
@@ -294,10 +295,10 @@ class Gphoto2Backend(AbstractBackend):
                 # also if raw, we might have the JPG added later in these events, not received from .capture above
                 # https://github.com/jim-easterbrook/python-gphoto2/issues/65#issuecomment-433615025
                 evt_typ, evt_data = self._camera.wait_for_event(200)
-                while evt_typ != gp.GP_EVENT_TIMEOUT:
+                while evt_typ != gp.GP_EVENT_TIMEOUT:  # pyright: ignore [reportAttributeAccessIssue]
                     logger.debug(f"Event: {self.event_texts.get(evt_typ, f'unknown event index: {evt_typ}')}, data: {evt_data}")
 
-                    if evt_typ == gp.GP_EVENT_FILE_ADDED:
+                    if evt_typ == gp.GP_EVENT_FILE_ADDED:  # pyright: ignore [reportAttributeAccessIssue]
                         captured_files.append((evt_data.folder, evt_data.name))
 
                     # try to grab another event
@@ -325,7 +326,7 @@ class Gphoto2Backend(AbstractBackend):
 
                 # read from camera
                 try:
-                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)
+                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     filepath = Path("tmp", f"gphoto2_{file_to_download[1]}")
                     camera_file.save(str(filepath))
 
@@ -357,7 +358,7 @@ def available_camera_indexes():
     if gp is None:
         raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
-    camera_list = gp.Camera.autodetect()
+    camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
     if len(camera_list) == 0:
         logger.info("no camera detected")
         return []
