@@ -52,9 +52,12 @@ async def websocket_endpoint(websocket: WebSocket):
         except Exception as exc:
             logger.info(f"error sending data: {exc}")
             break
-
-    # when for ends (None is returned/stream break), close the connection server side so client can retry connecting)
-    await websocket.close(code=1001, reason="backend stopped delivering")
+    else:
+        # when for ends (None is returned/stream break), close the connection server side so client can retry connecting)
+        try:
+            await websocket.close(code=1001, reason="backend stopped delivering")
+        except Exception as exc:
+            logger.warning(f"websocket failed closing: {exc}")
 
 
 @router.get("/stream.mjpg")
