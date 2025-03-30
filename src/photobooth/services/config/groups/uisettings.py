@@ -80,6 +80,10 @@ class GroupUiSettings(BaseModel):
         description="When enabled, the frame is overlayed the livestream. This image is not used in the postprocessing. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
         json_schema_extra={"files_list_api": "/api/admin/files/search"},
     )
+    livestream_frameoverlay_mirror_effect: bool = Field(
+        default=False,
+        description="Flip the frame overlaid horizontally to create a mirror effect. Useful to flip also if video is flipped when people shall align to the frame. If there is text in the frame it's also mirrored.",
+    )
 
     FRONTPAGE_TEXT: str = Field(
         default='<div class="fixed-center text-h2 text-weight-bold text-center text-white" style="text-shadow: 4px 4px 4px #666;">Hey!<br>Let\'s take some pictures! <br>📷</div>',

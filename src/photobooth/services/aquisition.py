@@ -289,7 +289,7 @@ class AquisitionService(BaseService):
                     appconfig.uisettings.livestream_mirror_effect,
                 )
 
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + output_jpeg_bytes + b"\r\n\r\n")
+            yield output_jpeg_bytes
 
     @staticmethod
     @cache

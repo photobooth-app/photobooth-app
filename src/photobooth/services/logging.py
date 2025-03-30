@@ -148,12 +148,12 @@ class LoggingService(BaseService):
         """_summary_"""
 
         for name in [
-            "uvicorn.error",
+            "uvicorn.error",  # websockets.protocol appear as name uvicorn.error: https://github.com/encode/uvicorn/issues/562
             "uvicorn.access",
             "uvicorn",
         ]:
             lgr = logging.getLogger(name=name)
-            lgr.setLevel(self.logging_level)
+            lgr.setLevel(logging.INFO)
             lgr.propagate = False
             lgr.handlers = [
                 logging.root.handlers[0],  # this is the streamhandler if not in pytest.
