@@ -127,7 +127,7 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         # ensure we always receive a valid jpeg frame, nothing else.
         # in case the backend failed, we receive a substitute image
-        assert frame.startswith(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n\xff\xd8\xff")
+        assert frame.startswith(b"\xff\xd8\xff")
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver

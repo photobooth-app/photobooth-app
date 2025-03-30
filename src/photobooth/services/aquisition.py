@@ -178,8 +178,9 @@ class AquisitionService(BaseService):
 
         if appconfig.backends.enable_livestream:
             return self._get_stream_from_backend(self._get_video_backend())
-
-        raise ConnectionRefusedError("livepreview not enabled")
+        else:
+            logger.warning("livestream is disabled.")
+            return
 
     def wait_for_still_file(self):
         """
