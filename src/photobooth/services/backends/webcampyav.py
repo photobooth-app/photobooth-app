@@ -55,9 +55,12 @@ class WebcamPyavBackend(AbstractBackend):
 
         return super_alive and worker_alive
 
+    def _device_name_platform(self):
+        return f"video={self._config.device_name}" if sys.platform == "win32" else f"{self._config.device_name}"
+
     def _device_available(self):
         try:
-            with av_open(f"video={self._config.device_name}", format=input_ffmpeg_device):
+            with av_open(self._device_name_platform(), format=input_ffmpeg_device):
                 pass
             return True
         except Exception:
@@ -119,7 +122,7 @@ class WebcamPyavBackend(AbstractBackend):
         rH = self._config.CAM_RESOLUTION_HEIGHT // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
 
         try:
-            input_device = av_open(f"video={self._config.device_name}", format=input_ffmpeg_device, options=options)
+            input_device = av_open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
         except BaseException as exc:
             logger.exception(exc)
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
