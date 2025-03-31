@@ -20,7 +20,7 @@ from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileRes
 
 logger = logging.getLogger(__name__)
 
-input_ffmpeg_device = "dshow" if sys.platform == "win32" else None
+input_ffmpeg_device = "dshow" if sys.platform == "win32" else "v4l2"
 
 
 class WebcamPyavBackend(AbstractBackend):
