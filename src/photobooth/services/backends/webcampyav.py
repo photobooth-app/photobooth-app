@@ -9,7 +9,6 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition, Event
 
-from av import VideoFrame
 from av import open as av_open
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
@@ -131,9 +130,10 @@ class WebcamPyavBackend(AbstractBackend):
             return
 
         with input_device:
+            input_stream = input_device.streams.video[0]
             # shall speed up processing, ... lets keep an eye on this one...
-            input_device.streams.video[0].thread_type = "AUTO"
-            input_device.streams.video[0].thread_count = 0
+            input_stream.thread_type = "AUTO"
+            input_stream.thread_count = 0
 
             # 1 loop to spit out packet and frame information
             for packet in input_device.demux():
@@ -145,56 +145,43 @@ class WebcamPyavBackend(AbstractBackend):
 
             self._device_set_is_ready_to_deliver()
 
-            for packet in input_device.demux():  # forever
+            for frame in input_device.decode(input_stream):
                 # hires
                 if self._hires_data.request.is_set():
                     self._hires_data.request.clear()
+
+                    jpeg_bytes_packet = bytes(next(input_device.demux()))
+
                     # only capture one pic and return to lores streaming afterwards
                     with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcampyav_hires_", suffix=".jpg") as f:
-                        f.write(bytes(packet))
+                        f.write(jpeg_bytes_packet)
 
                     self._hires_data.filepath = Path(f.name)
                     with self._hires_data.condition:
                         self._hires_data.condition.notify_all()
 
                 # lores stream
-                for frame in packet.decode():
-                    if isinstance(frame, VideoFrame):
-                        print(frame)
-                        # print(time.monotonic_ns())
-                        print(((time.monotonic() * 1000 * 1000 * 10) - frame.pts) / 1000 / 1000)
-                        frame_count += 1
-                        if frame_count < self._config.frame_skip_count:
-                            print("skip")
-                            continue
-                        else:
-                            frame_count = 0
+                frame_count += 1
+                if frame_count < self._config.frame_skip_count:
+                    continue
+                else:
+                    frame_count = 0
 
-                        # print(frame)
-                        tms = time.time()
-                        resized_frame = reformatter.reformat(
-                            frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p"
-                        ).to_ndarray()
-                        print()
-                        print(time.time() - tms)
+                resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
 
-                        tms2 = time.time()
-                        jpeg_bytes = encode_jpeg_yuv_planes(
-                            Y=resized_frame[:rH],
-                            U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
-                            V=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
-                            quality=85,
-                            fastdct=True,
-                        )
+                jpeg_bytes = encode_jpeg_yuv_planes(
+                    Y=resized_frame[:rH],
+                    U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                    V=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                    quality=85,
+                    fastdct=True,
+                )
 
-                        print(time.time() - tms2)
-                        print(time.time() - tms)
+                with self._lores_data.condition:
+                    self._lores_data.data = jpeg_bytes
+                    self._lores_data.condition.notify_all()
 
-                        with self._lores_data.condition:
-                            self._lores_data.data = jpeg_bytes
-                            self._lores_data.condition.notify_all()
-
-                        self._frame_tick()
+                self._frame_tick()
 
                 # abort streaming on shutdown so process can join and close
                 if self._worker_thread.stopped():
