@@ -156,11 +156,14 @@ class WebcamPyavBackend(AbstractBackend):
                 for frame in packet.decode():
                     if isinstance(frame, VideoFrame):
                         # print(frame)
-
+                        tms = time.time()
                         resized_frame = reformatter.reformat(
-                            frame, width=rW, height=rH, interpolation=Interpolation.BICUBIC, format="yuv420p"
+                            frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p"
                         ).to_ndarray()
+                        print()
+                        print(time.time() - tms)
 
+                        tms2 = time.time()
                         jpeg_bytes = encode_jpeg_yuv_planes(
                             Y=resized_frame[:rH],
                             U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
@@ -168,6 +171,9 @@ class WebcamPyavBackend(AbstractBackend):
                             quality=85,
                             fastdct=True,
                         )
+
+                        print(time.time() - tms2)
+                        print(time.time() - tms)
 
                         with self._lores_data.condition:
                             self._lores_data.data = jpeg_bytes
