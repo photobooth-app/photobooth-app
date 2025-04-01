@@ -131,6 +131,8 @@ class WebcamPyavBackend(AbstractBackend):
             return
 
         with input_device:
+            input_device.streams.video[0].thread_type = "AUTO"
+
             # 1 loop to spit out packet and frame information
             for packet in input_device.demux():
                 logger.info(f"pyav packet received: {packet}")
