@@ -156,6 +156,9 @@ class WebcamPyavBackend(AbstractBackend):
                 # lores stream
                 for frame in packet.decode():
                     if isinstance(frame, VideoFrame):
+                        print(frame)
+                        # print(time.monotonic_ns())
+                        print(((time.monotonic() * 1000 * 1000 * 10) - frame.pts) / 1000 / 1000)
                         frame_count += 1
                         if frame_count < self._config.frame_skip_count:
                             print("skip")
