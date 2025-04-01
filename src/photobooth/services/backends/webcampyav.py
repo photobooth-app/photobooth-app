@@ -120,6 +120,7 @@ class WebcamPyavBackend(AbstractBackend):
         }
         rW = self._config.CAM_RESOLUTION_WIDTH // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
         rH = self._config.CAM_RESOLUTION_HEIGHT // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
+        frame_count = 0
 
         try:
             input_device = av_open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
@@ -155,6 +156,13 @@ class WebcamPyavBackend(AbstractBackend):
                 # lores stream
                 for frame in packet.decode():
                     if isinstance(frame, VideoFrame):
+                        frame_count += 1
+                        if frame_count < self._config.frame_skip_count:
+                            print("skip")
+                            continue
+                        else:
+                            frame_count = 0
+
                         # print(frame)
                         tms = time.time()
                         resized_frame = reformatter.reformat(
