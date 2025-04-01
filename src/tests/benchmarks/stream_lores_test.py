@@ -29,7 +29,7 @@ def pyav_lores_scale():
         for frame in input_device.decode(input_stream):
             resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
 
-            jpeg_bytes = encode_jpeg_yuv_planes(
+            _ = encode_jpeg_yuv_planes(
                 Y=resized_frame[:rH],
                 U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
                 V=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
@@ -69,10 +69,6 @@ def pyav_cv2_scale():
         # shall speed up processing, ... lets keep an eye on this one...
         input_stream.thread_type = "AUTO"
         input_stream.thread_count = 0
-
-        # lores stream width/height
-        rW = input_stream.width // 2
-        rH = input_stream.height // 2
 
         for packet in input_device.demux():  # forever
             if not packet.buffer_size:
