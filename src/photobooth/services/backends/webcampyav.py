@@ -131,7 +131,9 @@ class WebcamPyavBackend(AbstractBackend):
             return
 
         with input_device:
+            # shall speed up processing, ... lets keep an eye on this one...
             input_device.streams.video[0].thread_type = "AUTO"
+            input_device.streams.video[0].thread_count = 0
 
             # 1 loop to spit out packet and frame information
             for packet in input_device.demux():

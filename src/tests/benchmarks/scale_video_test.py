@@ -59,6 +59,8 @@ def pyav_h264_scale(tmp_path):
 
     input_container = av.open("src/tests/assets/video.mp4")
     input_stream = input_container.streams.video[0]
+    input_stream.thread_type = "AUTO"  # speed up decoding
+    input_stream.thread_count = 0
     output_container = av.open(tmp_path / "pyav.mp4", mode="w")
     output_stream = output_container.add_stream("h264", rate=250)
     output_stream.width = 600
