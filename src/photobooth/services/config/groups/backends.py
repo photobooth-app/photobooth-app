@@ -201,11 +201,11 @@ class GroupBackendOpenCv2(BaseBackendModel):
         description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
     )
     CAM_RESOLUTION_WIDTH: int = Field(
-        default=10000,
+        default=1920,
         description="Resolution width requested from camera.",
     )
     CAM_RESOLUTION_HEIGHT: int = Field(
-        default=10000,
+        default=1080,
         description="Resolution height requested from camera.",
     )
     framerate: int = Field(

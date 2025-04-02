@@ -61,7 +61,7 @@ def backend_gphoto2():
         if not os.path.isdir(vusb_dir):
             logger.warning(f"missing {vusb_dir=}")
             return False
-        gp_library_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]
+        gp_library_version = gp.gp_library_version(gp.GP_VERSION_SHORT)[0]  # pyright: ignore [reportAttributeAccessIssue]
         gp_library_version = tuple(int(x) for x in gp_library_version.split("."))
         if gp_library_version > (2, 5, 30):
             return True
@@ -174,5 +174,5 @@ def test_get_gphoto2_camera_info(backend_gphoto2):
 
 def test_get_gphoto2_info():
     logger.info(f"python-gphoto2: {gp.__version__}")
-    logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-    logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
+    logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
+    logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]

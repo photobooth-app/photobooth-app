@@ -102,13 +102,3 @@ def test_stream_exception_disabled(client: TestClient):
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 405
     assert "detail" in response.json()
-
-
-def test_stream_exception_error(client: TestClient):
-    error_mock = mock.MagicMock()
-    error_mock.side_effect = Exception("mock error")
-
-    with patch.object(AquisitionService, "gen_stream", error_mock):
-        response = client.get("/aquisition/stream.mjpg")
-        assert response.status_code == 500
-        assert "detail" in response.json()

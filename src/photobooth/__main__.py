@@ -38,7 +38,7 @@ def main(args=None, run_server: bool = True):
     logger.info(f"working directory: {Path.cwd().resolve()}")
     logger.info(f"app version started: {__version__}")
 
-    server = uvicorn.Server(uvicorn.Config(app=app, host=host, port=port, log_level="debug"))
+    server = uvicorn.Server(uvicorn.Config(app=app, host=host, port=port, log_level="info", workers=None))
 
     # adjust logging after uvicorn setup
     container.logging_service.uvicorn()
