@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
-BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
+BackendsBase = Literal["VirtualCamera", "WebcamPyav", "WebcamCv2", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
 BackendsDarwin = Literal["Gphoto2"]
@@ -164,6 +164,35 @@ class GroupBackendGphoto2(BaseBackendModel):
     )
 
 
+class GroupBackendPyav(BaseBackendModel):
+    model_config = ConfigDict(title="PyAV")
+
+    device_name: str = Field(
+        default="Insta360 Link 2C",
+        description="Device name of the webcam.",
+    )
+
+    CAM_RESOLUTION_WIDTH: int = Field(
+        default=3840,
+        description="camera resolution width to capture high resolution photo",
+    )
+    CAM_RESOLUTION_HEIGHT: int = Field(
+        default=2160,
+        description="camera resolution height to capture high resolution photo",
+    )
+
+    PREVIEW_RESOLUTION_REDUCE_FACTOR: int = Field(
+        default=3,
+        description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
+    )
+    frame_skip_count: int = Field(
+        default=2,
+        ge=1,
+        le=4,
+        description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
+    )
+
+
 class GroupBackendOpenCv2(BaseBackendModel):
     model_config = ConfigDict(title="OpenCv2")
 
@@ -271,6 +300,7 @@ class GroupBackend(BaseModel):
     )
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
+    webcampyav: GroupBackendPyav = GroupBackendPyav()
     webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
     wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 

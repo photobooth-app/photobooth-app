@@ -1,0 +1,195 @@
+"""
+pyav webcam implementation backend
+"""
+
+import logging
+import sys
+import time
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from threading import Condition, Event
+
+from av import open as av_open
+from av.video.reformatter import Interpolation, VideoReformatter
+from simplejpeg import encode_jpeg_yuv_planes
+
+from ...utils.stoppablethread import StoppableThread
+from ..config.groups.backends import GroupBackendPyav
+from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+
+logger = logging.getLogger(__name__)
+
+input_ffmpeg_device = "dshow" if sys.platform == "win32" else "v4l2"
+
+
+class WebcamPyavBackend(AbstractBackend):
+    def __init__(self, config: GroupBackendPyav):
+        self._config: GroupBackendPyav = config
+        super().__init__(orientation=config.orientation)
+
+        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
+        self._worker_thread: StoppableThread | None = None
+
+    def start(self):
+        super().start()
+
+        self._worker_thread = StoppableThread(name="webcampyav_worker_thread", target=self._worker_fun, daemon=True)
+        self._worker_thread.start()
+
+        logger.debug(f"{self.__module__} started")
+
+    def stop(self):
+        super().stop()
+
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.stop()
+            self._worker_thread.join()
+
+        logger.debug(f"{self.__module__} stopped")
+
+    def _device_alive(self) -> bool:
+        super_alive = super()._device_alive()
+        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
+
+        return super_alive and worker_alive
+
+    def _device_name_platform(self):
+        return f"video={self._config.device_name}" if sys.platform == "win32" else f"{self._config.device_name}"
+
+    def _device_available(self):
+        try:
+            with av_open(self._device_name_platform(), format=input_ffmpeg_device):
+                pass
+            return True
+        except Exception:
+            return False
+
+    def _wait_for_multicam_files(self) -> list[Path]:
+        raise NotImplementedError("backend does not support multicam files")
+
+    def _wait_for_still_file(self) -> Path:
+        """
+        for other threads to receive a hq JPEG image
+        mode switches are handled internally automatically, no separate trigger necessary
+        this function blocks until frame is received
+        raise TimeoutError if no frame was received
+        """
+        with self._hires_data.condition:
+            self._hires_data.request.set()
+
+            if not self._hires_data.condition.wait(timeout=4):
+                # wait returns true if timeout expired
+                raise TimeoutError("timeout receiving frames")
+
+            self._hires_data.request.clear()
+            assert self._hires_data.filepath
+
+            return self._hires_data.filepath
+
+    def _wait_for_lores_image(self) -> bytes:
+        """for other threads to receive a lores JPEG image"""
+
+        with self._lores_data.condition:
+            if not self._lores_data.condition.wait(timeout=0.5):
+                raise TimeoutError("timeout receiving frames")
+
+            return self._lores_data.data
+
+    def _on_configure_optimized_for_idle(self):
+        pass
+
+    def _on_configure_optimized_for_hq_preview(self):
+        pass
+
+    def _on_configure_optimized_for_hq_capture(self):
+        pass
+
+    def _worker_fun(self):
+        logger.info("_worker_fun starts")
+        logger.info(f"trying to open camera index={self._config.device_name=}")
+
+        assert self._worker_thread
+
+        reformatter = VideoReformatter()
+        options = {
+            "video_size": f"{self._config.CAM_RESOLUTION_WIDTH}x{self._config.CAM_RESOLUTION_HEIGHT}",
+            # "framerate": "10",
+            "input_format": "mjpeg",
+        }
+        rW = self._config.CAM_RESOLUTION_WIDTH // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
+        rH = self._config.CAM_RESOLUTION_HEIGHT // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
+        frame_count = 0
+
+        try:
+            input_device = av_open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
+        except BaseException as exc:
+            logger.exception(exc)
+            logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
+            time.sleep(2)  # some delay to avoid fast reiterations on a possibly non recoverable error
+            return
+
+        with input_device:
+            input_stream = input_device.streams.video[0]
+            # shall speed up processing, ... lets keep an eye on this one...
+            input_stream.thread_type = "AUTO"
+            input_stream.thread_count = 0
+
+            # 1 loop to spit out packet and frame information
+            for packet in input_device.demux():
+                logger.info(f"pyav packet received: {packet}")
+                for frame in packet.decode():
+                    logger.info(f"pyav frame received: {frame}")
+
+                break
+
+            self._device_set_is_ready_to_deliver()
+
+            for frame in input_device.decode(input_stream):
+                # hires
+                if self._hires_data.request.is_set():
+                    self._hires_data.request.clear()
+
+                    jpeg_bytes_packet = bytes(next(input_device.demux()))
+
+                    # only capture one pic and return to lores streaming afterwards
+                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcampyav_hires_", suffix=".jpg") as f:
+                        f.write(jpeg_bytes_packet)
+
+                    self._hires_data.filepath = Path(f.name)
+                    with self._hires_data.condition:
+                        self._hires_data.condition.notify_all()
+
+                # lores stream
+                frame_count += 1
+                if frame_count < self._config.frame_skip_count:
+                    continue
+                else:
+                    frame_count = 0
+
+                resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
+
+                jpeg_bytes = encode_jpeg_yuv_planes(
+                    Y=resized_frame[:rH],
+                    U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                    V=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                    quality=85,
+                    fastdct=True,
+                )
+
+                with self._lores_data.condition:
+                    self._lores_data.data = jpeg_bytes
+                    self._lores_data.condition.notify_all()
+
+                self._frame_tick()
+
+                # abort streaming on shutdown so process can join and close
+                if self._worker_thread.stopped():
+                    break
+
+        self._device_set_is_ready_to_deliver(False)
+        logger.info("pyav_img_aquisition finished, exit")
+
+
+def available_camera_names() -> list[str]:
+    raise NotImplementedError("currently no listing of devices supported.")
