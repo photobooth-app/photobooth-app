@@ -204,14 +204,9 @@ class WebcamPyavBackend(AbstractBackend):
 def enumerate_cameras_linux() -> list[str]:
     devices: list[str] = []
     try:
-        result = subprocess.run(["v4l2-ctl", "--list-devices"], capture_output=True, text=True, check=True)
-        lines = result.stdout.split("\n")
-        current_device = None
-        for line in lines:
-            if line.strip() and not line.startswith("/"):
-                current_device = line.strip()
-            elif "/dev/video" in line and current_device:
-                devices.append(current_device)
+        device_paths = Path("/dev/v4l/by-id/").glob("*")
+        return [str(path.absolute()) for path in device_paths]
+
     except Exception as exc:
         logger.warning(f"error enumerating webcams: {exc}")
 
