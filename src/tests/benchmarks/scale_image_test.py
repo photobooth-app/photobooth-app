@@ -8,6 +8,7 @@ import numpy
 import pytest
 import pyvips
 from PIL import Image
+from simplejpeg import decode_jpeg, encode_jpeg
 from turbojpeg import TurboJPEG
 
 turbojpeg = TurboJPEG()
@@ -68,6 +69,19 @@ def pyvips_resize_scale(jpeg_bytes, tmp_path):
     return bytes
 
 
+def simplejpeg_scale(jpeg_bytes, tmp_path):
+    # Decode with downscaling by a factor of 2 (image size reduced by half)
+    min_width = 1280 / 6
+    min_height = 500
+    decoded_img = decode_jpeg(jpeg_bytes, min_height=min_height, min_factor=1.5)
+    img = encode_jpeg(
+        decoded_img,
+        quality=85,
+        fastdct=True,
+    )
+    return bytes
+
+
 def turbojpeg_scale(jpeg_bytes, tmp_path):
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
@@ -120,6 +134,7 @@ def cv2_scale(jpeg_bytes, tmp_path):
 @pytest.fixture(
     params=[
         "turbojpeg_scale",
+        "simplejpeg_scale",
         "pillow_scale",
         "cv2_scale",
         "pyvips_scale",

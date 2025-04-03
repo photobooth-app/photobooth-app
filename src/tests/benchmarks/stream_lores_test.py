@@ -8,7 +8,9 @@ from av import open as av_open
 from av.video.reformatter import Interpolation, VideoReformatter
 from PIL import Image
 from simplejpeg import decode_jpeg, encode_jpeg, encode_jpeg_yuv_planes
+from turbojpeg import TurboJPEG
 
+turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 
@@ -38,6 +40,24 @@ def pyav_lores_scale():
             )
 
 
+def pyav_turbojpeg_scale():
+    input_device = av_open("src/tests/assets/video4k.mjpg")
+
+    with input_device:
+        input_stream = input_device.streams.video[0]
+        # shall speed up processing, ... lets keep an eye on this one...
+        input_stream.thread_type = "AUTO"
+        input_stream.thread_count = 0
+        # lores stream width/height
+
+        for packet in input_device.demux():  # forever
+            if not packet.buffer_size:
+                continue
+
+            # Decode with downscaling by a factor of 2 (image size reduced by half)
+            _ = turbojpeg.scale_with_quality(bytes(packet), quality=85, scaling_factor=(1, 2))
+
+
 def pyav_simplejpeg_scale():
     input_device = av_open("src/tests/assets/video4k.mjpg")
 
@@ -53,7 +73,7 @@ def pyav_simplejpeg_scale():
                 continue
 
             # Decode with downscaling by a factor of 2 (image size reduced by half)
-            decoded_img = decode_jpeg(bytes(packet), min_factor=3)
+            decoded_img = decode_jpeg(bytes(packet), min_factor=2)
             _ = encode_jpeg(
                 decoded_img,
                 quality=85,
@@ -118,6 +138,11 @@ def pyav_cv2_scale():
 @pytest.mark.benchmark(group="scale_stream_lores")
 def test_pyav_lores_scale(benchmark):
     benchmark(pyav_lores_scale)
+
+
+@pytest.mark.benchmark(group="scale_stream_lores")
+def test_pyav_turbojpeg_scale(benchmark):
+    benchmark(pyav_turbojpeg_scale)
 
 
 @pytest.mark.benchmark(group="scale_stream_lores")

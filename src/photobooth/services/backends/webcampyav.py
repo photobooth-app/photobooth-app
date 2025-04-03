@@ -12,11 +12,13 @@ from threading import Condition, Event
 from av import open as av_open
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
+from turbojpeg import TurboJPEG
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
 
+turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 input_ffmpeg_device = "dshow" if sys.platform == "win32" else "v4l2"
@@ -180,22 +182,28 @@ class WebcamPyavBackend(AbstractBackend):
                     continue
                 else:
                     frame_count = 0
-
-                if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
-                    out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
+                if True:
+                    jpeg_bytes = turbojpeg.scale_with_quality(
+                        bytes(next(input_device.demux())), quality=85, scaling_factor=(1, self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR)
+                    )
                 else:
-                    if frame.format.name != "yuvj420p":
-                        out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
+                    if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
+                        out_frame = reformatter.reformat(
+                            frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p"
+                        ).to_ndarray()
                     else:
-                        out_frame = frame.to_ndarray()
+                        if frame.format.name != "yuvj420p":
+                            out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
+                        else:
+                            out_frame = frame.to_ndarray()
 
-                jpeg_bytes = encode_jpeg_yuv_planes(
-                    Y=out_frame[:rH],
-                    U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
-                    V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
-                    quality=85,
-                    fastdct=True,
-                )
+                    jpeg_bytes = encode_jpeg_yuv_planes(
+                        Y=out_frame[:rH],
+                        U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                        V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                        quality=85,
+                        fastdct=True,
+                    )
 
                 with self._lores_data.condition:
                     self._lores_data.data = jpeg_bytes
