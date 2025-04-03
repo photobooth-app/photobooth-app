@@ -181,8 +181,8 @@ class GroupBackendPyav(BaseBackendModel):
         description="camera resolution height to capture high resolution photo",
     )
 
-    PREVIEW_RESOLUTION_REDUCE_FACTOR: int = Field(
-        default=3,
+    PREVIEW_RESOLUTION_REDUCE_FACTOR: Literal[1, 2, 4, 8] = Field(
+        default=2,
         description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
     )
     frame_skip_count: int = Field(

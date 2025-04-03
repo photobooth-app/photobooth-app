@@ -8,7 +8,7 @@ from collections.abc import Generator
 import pytest
 
 from photobooth.services.backends.webcampyav import WebcamPyavBackend
-from photobooth.services.backends.webcampyav import available_camera_names as pyav_avail
+from photobooth.services.backends.webcampyav import available_cameras as pyav_avail
 from photobooth.services.config.groups.backends import GroupBackendPyav
 
 from ..util import get_images
@@ -32,6 +32,9 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     logger.info(f"using first camera index to test: {cameraIndex}")
 
     backend._config.device_name = cameraIndex
+    # select a low resolution that all cameras are capable of
+    backend._config.CAM_RESOLUTION_WIDTH = 640
+    backend._config.CAM_RESOLUTION_HEIGHT = 480
 
     # deliver
     backend.start()
