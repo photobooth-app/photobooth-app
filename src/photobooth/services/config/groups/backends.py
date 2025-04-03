@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
-BackendsBase = Literal["VirtualCamera", "WebcamPyav", "WebcamCv2", "Wigglecam"]
+BackendsBase = Literal["VirtualCamera", "WebcamPyav", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
 BackendsDarwin = Literal["Gphoto2"]
@@ -193,29 +193,6 @@ class GroupBackendPyav(BaseBackendModel):
     )
 
 
-class GroupBackendOpenCv2(BaseBackendModel):
-    model_config = ConfigDict(title="OpenCv2")
-
-    device_index: int = Field(
-        default=0,
-        description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
-    )
-    CAM_RESOLUTION_WIDTH: int = Field(
-        default=1920,
-        description="Resolution width requested from camera.",
-    )
-    CAM_RESOLUTION_HEIGHT: int = Field(
-        default=1080,
-        description="Resolution height requested from camera.",
-    )
-    framerate: int = Field(
-        default=15,
-        ge=5,
-        le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
-    )
-
-
 class GroupBackendV4l2(BaseBackendModel):
     model_config = ConfigDict(title="V4l2")
 
@@ -301,7 +278,6 @@ class GroupBackend(BaseModel):
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
     webcampyav: GroupBackendPyav = GroupBackendPyav()
-    webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
     wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
     if sys.platform == "linux":
