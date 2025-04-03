@@ -19,7 +19,19 @@ from ..config.groups.backends import GroupBackendPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
 
 logger = logging.getLogger(__name__)
-input_ffmpeg_device = "dshow" if sys.platform == "win32" else "v4l2"
+
+# determine the input device based on platform
+if sys.platform == "win32":
+    # https://ffmpeg.org/ffmpeg-devices.html#dshow  https://trac.ffmpeg.org/wiki/DirectShow
+    input_ffmpeg_device = "dshow"
+elif sys.platform == "darwin":
+    # https://ffmpeg.org/ffmpeg-devices.html#avfoundation
+    input_ffmpeg_device = "avfoundation"
+elif sys.platform == "linux":
+    # https://ffmpeg.org/ffmpeg-devices.html#video4linux2_002c-v4l2
+    input_ffmpeg_device = "v4l2"
+else:
+    raise RuntimeError("backend not supported by platform")
 
 
 class WebcamPyavBackend(AbstractBackend):
