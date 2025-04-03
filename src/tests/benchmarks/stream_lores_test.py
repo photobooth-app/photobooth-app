@@ -7,13 +7,13 @@ import pytest
 from av import open as av_open
 from av.video.reformatter import Interpolation, VideoReformatter
 from PIL import Image
-from simplejpeg import encode_jpeg_yuv_planes
+from simplejpeg import decode_jpeg, encode_jpeg, encode_jpeg_yuv_planes
 
 logger = logging.getLogger(__name__)
 
 
 def pyav_lores_scale():
-    input_device = av_open("src/tests/assets/demovideo4k.mjpg")
+    input_device = av_open("src/tests/assets/video4k.mjpg")
 
     reformatter = VideoReformatter()
 
@@ -38,8 +38,31 @@ def pyav_lores_scale():
             )
 
 
+def pyav_simplejpeg_scale():
+    input_device = av_open("src/tests/assets/video4k.mjpg")
+
+    with input_device:
+        input_stream = input_device.streams.video[0]
+        # shall speed up processing, ... lets keep an eye on this one...
+        input_stream.thread_type = "AUTO"
+        input_stream.thread_count = 0
+        # lores stream width/height
+
+        for packet in input_device.demux():  # forever
+            if not packet.buffer_size:
+                continue
+
+            # Decode with downscaling by a factor of 2 (image size reduced by half)
+            decoded_img = decode_jpeg(bytes(packet), min_factor=3)
+            _ = encode_jpeg(
+                decoded_img,
+                quality=85,
+                fastdct=True,
+            )
+
+
 def pyav_pillow_scale():
-    input_device = av_open("src/tests/assets/demovideo4k.mjpg")
+    input_device = av_open("src/tests/assets/video4k.mjpg")
 
     with input_device:
         input_stream = input_device.streams.video[0]
@@ -62,7 +85,7 @@ def pyav_pillow_scale():
 
 
 def pyav_cv2_scale():
-    input_device = av_open("src/tests/assets/demovideo4k.mjpg")
+    input_device = av_open("src/tests/assets/video4k.mjpg")
 
     with input_device:
         input_stream = input_device.streams.video[0]
@@ -95,6 +118,11 @@ def pyav_cv2_scale():
 @pytest.mark.benchmark(group="scale_stream_lores")
 def test_pyav_lores_scale(benchmark):
     benchmark(pyav_lores_scale)
+
+
+@pytest.mark.benchmark(group="scale_stream_lores")
+def test_pyav_simplejpeg_scale(benchmark):
+    benchmark(pyav_simplejpeg_scale)
 
 
 @pytest.mark.benchmark(group="scale_stream_lores")
