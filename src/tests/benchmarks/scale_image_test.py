@@ -71,10 +71,9 @@ def pyvips_resize_scale(jpeg_bytes, tmp_path):
 
 def simplejpeg_scale(jpeg_bytes, tmp_path):
     # Decode with downscaling by a factor of 2 (image size reduced by half)
-    min_width = 1280 / 6
     min_height = 500
     decoded_img = decode_jpeg(jpeg_bytes, min_height=min_height, min_factor=1.5)
-    img = encode_jpeg(
+    _ = encode_jpeg(
         decoded_img,
         quality=85,
         fastdct=True,
