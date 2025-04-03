@@ -180,12 +180,15 @@ class WebcamPyavBackend(AbstractBackend):
                 else:
                     frame_count = 0
 
-                resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
+                if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
+                    out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
+                else:
+                    out_frame = frame.to_ndarray()
 
                 jpeg_bytes = encode_jpeg_yuv_planes(
-                    Y=resized_frame[:rH],
-                    U=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
-                    V=resized_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                    Y=out_frame[:rH],
+                    U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                    V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
                     quality=85,
                     fastdct=True,
                 )
