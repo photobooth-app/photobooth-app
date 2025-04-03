@@ -123,7 +123,7 @@ class WebcamPyavBackend(AbstractBackend):
 
         try:
             input_device = av_open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
-        except BaseException as exc:
+        except Exception as exc:
             logger.exception(exc)
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
             time.sleep(2)  # some delay to avoid fast reiterations on a possibly non recoverable error
@@ -182,10 +182,10 @@ class WebcamPyavBackend(AbstractBackend):
                     frame_count = 0
 
                 if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
-                    out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
+                    out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
                 else:
-                    if frame.format.name != "yuv420p":
-                        out_frame = reformatter.reformat(frame, format="yuv420p").to_ndarray()
+                    if frame.format.name != "yuvj420p":
+                        out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
                     else:
                         out_frame = frame.to_ndarray()
 
