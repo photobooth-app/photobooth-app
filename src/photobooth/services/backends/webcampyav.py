@@ -203,9 +203,10 @@ class WebcamPyavBackend(AbstractBackend):
 
 def enumerate_cameras_linux() -> list[str]:
     devices: list[str] = []
+
     try:
         device_paths = Path("/dev/v4l/by-id/").glob("*")
-        return [str(path.absolute()) for path in device_paths]
+        return [str(path) for path in sorted(device_paths)]
 
     except Exception as exc:
         logger.warning(f"error enumerating webcams: {exc}")
