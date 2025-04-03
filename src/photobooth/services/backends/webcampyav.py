@@ -115,7 +115,7 @@ class WebcamPyavBackend(AbstractBackend):
         options = {
             "video_size": f"{self._config.CAM_RESOLUTION_WIDTH}x{self._config.CAM_RESOLUTION_HEIGHT}",
             # "framerate": "10",
-            "input_format": "mjpeg",
+            "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
         }
         rW = self._config.CAM_RESOLUTION_WIDTH // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
         rH = self._config.CAM_RESOLUTION_HEIGHT // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
@@ -135,7 +135,20 @@ class WebcamPyavBackend(AbstractBackend):
             input_stream.thread_type = "AUTO"
             input_stream.thread_count = 0
 
+            print(input_stream.average_rate)
+            print(input_stream.codec)
+            print(input_stream.codec_context)
+            print(input_stream.duration)
+            # print(input_stream.framerate)
+            print(input_stream.pix_fmt)
+            print(input_stream.profile)
+            print(input_stream.thread_count)
+            print(input_stream.thread_type)
+            print(input_stream.type)
+
             # 1 loop to spit out packet and frame information
+            logger.info(f"input_device: {input_device}")
+            logger.info(f"input_stream: {input_stream}")
             for packet in input_device.demux():
                 logger.info(f"pyav packet received: {packet}")
                 for frame in packet.decode():
