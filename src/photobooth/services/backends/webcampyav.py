@@ -149,10 +149,11 @@ class WebcamPyavBackend(AbstractBackend):
             # 1 loop to spit out packet and frame information
             logger.info(f"input_device: {input_device}")
             logger.info(f"input_stream: {input_stream}")
-            for packet in input_device.demux():
-                logger.info(f"pyav packet received: {packet}")
-                for frame in packet.decode():
-                    logger.info(f"pyav frame received: {frame}")
+
+            logger.info(f"pyav packet received: {next(input_device.demux())}")
+            for frame in input_device.decode(input_stream):
+                logger.info(f"pyav frame received: {frame}")
+                logger.info(f"frame format: {frame.format}")
 
                 break
 
@@ -183,6 +184,10 @@ class WebcamPyavBackend(AbstractBackend):
                 if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
                     out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
                 else:
+                    if frame.format.name != "yuv420p":
+                        out_frame = reformatter.reformat(frame, format="yuv420p").to_ndarray()
+                    else:
+                        out_frame = frame
                     out_frame = frame.to_ndarray()
 
                 jpeg_bytes = encode_jpeg_yuv_planes(
