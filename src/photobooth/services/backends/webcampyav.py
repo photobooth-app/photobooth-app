@@ -187,8 +187,7 @@ class WebcamPyavBackend(AbstractBackend):
                     if frame.format.name != "yuv420p":
                         out_frame = reformatter.reformat(frame, format="yuv420p").to_ndarray()
                     else:
-                        out_frame = frame
-                    out_frame = frame.to_ndarray()
+                        out_frame = frame.to_ndarray()
 
                 jpeg_bytes = encode_jpeg_yuv_planes(
                     Y=out_frame[:rH],
