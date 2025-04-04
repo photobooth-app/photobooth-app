@@ -67,7 +67,7 @@ class WebcamPyavBackend(AbstractBackend):
         return super_alive and worker_alive
 
     def _device_name_platform(self):
-        return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_name}"
+        return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
 
     def _device_available(self):
         try:
