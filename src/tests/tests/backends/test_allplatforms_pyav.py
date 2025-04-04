@@ -31,10 +31,10 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
-    backend._config.device_name = cameraIndex
+    backend._config.device_identifier = cameraIndex
     # select a low resolution that all cameras are capable of
-    backend._config.CAM_RESOLUTION_WIDTH = 640
-    backend._config.CAM_RESOLUTION_HEIGHT = 480
+    backend._config.cam_resolution_width = 640
+    backend._config.cam_resolution_height = 480
 
     # deliver
     backend.start()

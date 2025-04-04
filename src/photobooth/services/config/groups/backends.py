@@ -4,10 +4,12 @@ AppConfig class providing central config
 """
 
 import sys
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
+
+from ..validators import ensure_no_webcamcv2
 
 BackendsBase = Literal["VirtualCamera", "WebcamPyav", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
@@ -167,28 +169,28 @@ class GroupBackendGphoto2(BaseBackendModel):
 class GroupBackendPyav(BaseBackendModel):
     model_config = ConfigDict(title="PyAV")
 
-    device_name: str = Field(
+    device_identifier: str = Field(
         default="Insta360 Link 2C",
-        description="Device name of the webcam.",
+        description="Device name (Windows) or index (Linux, Mac) of the webcam.",
     )
 
-    CAM_RESOLUTION_WIDTH: int = Field(
+    cam_resolution_width: int = Field(
         default=3840,
         description="camera resolution width to capture high resolution photo",
     )
-    CAM_RESOLUTION_HEIGHT: int = Field(
+    cam_resolution_height: int = Field(
         default=2160,
         description="camera resolution height to capture high resolution photo",
     )
 
-    PREVIEW_RESOLUTION_REDUCE_FACTOR: Literal[1, 2, 4, 8] = Field(
+    preview_resolution_reduce_factor: Literal[1, 2, 4, 8] = Field(
         default=2,
         description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
     )
     frame_skip_count: int = Field(
         default=2,
         ge=1,
-        le=4,
+        le=8,
         description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
     )
 
@@ -270,7 +272,8 @@ class GroupBackend(BaseModel):
         default=True,
         description="Selected device will be loaded and started.",
     )
-    selected_device: BackendsPlatform = Field(
+
+    selected_device: Annotated[BackendsPlatform, BeforeValidator(ensure_no_webcamcv2)] = Field(
         title="Configure device",
         default="VirtualCamera",
         description="Select backend and configure the device below",

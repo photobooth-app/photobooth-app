@@ -67,7 +67,7 @@ class WebcamPyavBackend(AbstractBackend):
         return super_alive and worker_alive
 
     def _device_name_platform(self):
-        return f"video={self._config.device_name}" if sys.platform == "win32" else f"{self._config.device_name}"
+        return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_name}"
 
     def _device_available(self):
         try:
@@ -119,18 +119,18 @@ class WebcamPyavBackend(AbstractBackend):
 
     def _worker_fun(self):
         logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_name=}")
+        logger.info(f"trying to open camera index={self._config.device_identifier=}")
 
         assert self._worker_thread
 
         reformatter = VideoReformatter()
         options = {
-            "video_size": f"{self._config.CAM_RESOLUTION_WIDTH}x{self._config.CAM_RESOLUTION_HEIGHT}",
+            "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",
             # "framerate": "10",
             "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
         }
-        rW = self._config.CAM_RESOLUTION_WIDTH // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
-        rH = self._config.CAM_RESOLUTION_HEIGHT // self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR
+        rW = self._config.cam_resolution_width // self._config.preview_resolution_reduce_factor
+        rH = self._config.cam_resolution_height // self._config.preview_resolution_reduce_factor
         frame_count = 0
 
         try:
@@ -183,7 +183,7 @@ class WebcamPyavBackend(AbstractBackend):
                 else:
                     frame_count = 0
 
-                if self._config.PREVIEW_RESOLUTION_REDUCE_FACTOR > 1:
+                if self._config.preview_resolution_reduce_factor > 1:
                     out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
                 else:
                     if frame.format.name != "yuvj420p":
