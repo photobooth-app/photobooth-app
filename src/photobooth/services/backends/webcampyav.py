@@ -3,7 +3,6 @@ pyav webcam implementation backend
 """
 
 import logging
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -211,42 +210,3 @@ class WebcamPyavBackend(AbstractBackend):
 
         self._device_set_is_ready_to_deliver(False)
         logger.info("pyav_img_aquisition finished, exit")
-
-
-def enumerate_cameras_linux() -> list[str]:
-    devices: list[str] = []
-
-    try:
-        device_paths = Path("/dev/v4l/by-id/").glob("*")
-        return [str(path) for path in sorted(device_paths)]
-
-    except Exception as exc:
-        logger.warning(f"error enumerating webcams: {exc}")
-
-    return devices
-
-
-def enumerate_cameras_windows() -> list[str]:
-    devices = []
-    try:
-        result = subprocess.run(
-            ["powershell", "Get-PnpDevice -Class Camera | Select-Object -ExpandProperty FriendlyName"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-
-        devices += [line.strip() for line in result.stdout.split("\n") if line.strip()]
-    except Exception as exc:
-        logger.warning(f"error enumerating webcams: {exc}")
-
-    return devices
-
-
-def available_cameras() -> list[str]:
-    if sys.platform == "win32":
-        return enumerate_cameras_windows()
-    elif sys.platform == "linux":
-        return enumerate_cameras_linux()
-    else:
-        raise OSError("platform not supported to enumerate")
