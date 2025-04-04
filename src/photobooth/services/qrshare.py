@@ -62,9 +62,9 @@ class QrShareService(BaseService):
                 "apikey": appconfig.qrshare.shareservice_apikey,
             }
             try:
-                r = requests.get(
+                r = requests.post(
                     appconfig.qrshare.shareservice_url,
-                    params=payload,
+                    data=payload,
                     stream=True,
                     timeout=8,
                     allow_redirects=False,

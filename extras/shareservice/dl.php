@@ -212,7 +212,7 @@ try {
             echo "file successfully saved and ready to download";
         } else
             throw new RuntimeException("error processing job");
-    } elseif (($_GET["action"] ?? null) == "upload_queue") {
+    } elseif (($_POST["action"] ?? null) == "upload_queue") {
         // longrunning task to wait for dl request
         api_key_set();
 
