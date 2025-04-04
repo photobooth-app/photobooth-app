@@ -188,7 +188,7 @@ class GroupBackendPyav(BaseBackendModel):
         description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
     )
     frame_skip_count: int = Field(
-        default=2,
+        default=3,
         ge=1,
         le=8,
         description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
