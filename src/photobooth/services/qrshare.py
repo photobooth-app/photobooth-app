@@ -57,7 +57,10 @@ class QrShareService(BaseService):
         logger.info("starting shareservice worker_thread")
 
         while not self._worker_thread.stopped():
-            payload = {"action": "upload_queue"}
+            payload = {
+                "action": "upload_queue",
+                "apikey": appconfig.qrshare.shareservice_apikey,
+            }
             try:
                 r = requests.get(
                     appconfig.qrshare.shareservice_url,

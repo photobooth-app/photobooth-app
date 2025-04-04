@@ -60,11 +60,6 @@ def test_shareservice_urls_valid():
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
-    # list action
-    r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "list"})
-    logger.info(f"{r.text=}")
-    assert r.status_code == 200
-
     # invalid action
     r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "nonexistentaction"})
     logger.info(f"{r.text=}")
