@@ -54,3 +54,23 @@ def webcameras() -> list[str]:
         return _webcameras_linux()
     else:
         raise OSError("platform not supported to enumerate")
+
+
+def dslr_gphoto2() -> list[int]:
+    available_indexes: list[int] = []
+
+    try:
+        import gphoto2 as gp  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError("cannot enumerate gphoto2 cameras because not supported by platform or not installed.") from exc
+
+    camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
+    if len(camera_list) == 0:
+        logger.info("no camera detected")
+        return []
+
+    for index, (name, addr) in enumerate(camera_list):
+        available_indexes.append(index)
+        logger.info(f"found camera - {index}:  {addr}  {name}")
+
+    return available_indexes

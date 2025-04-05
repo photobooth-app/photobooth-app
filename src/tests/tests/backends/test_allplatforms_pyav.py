@@ -8,8 +8,8 @@ from collections.abc import Generator
 import pytest
 
 from photobooth.services.backends.webcampyav import WebcamPyavBackend
-from photobooth.services.backends.webcampyav import available_cameras as pyav_avail
 from photobooth.services.config.groups.backends import GroupBackendPyav
+from photobooth.utils.enumerate import webcameras
 
 from ..util import get_images
 
@@ -22,13 +22,13 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     backend = WebcamPyavBackend(GroupBackendPyav())
 
     logger.info("probing for available cameras")
-    _availableCameraIndexes = pyav_avail()
-    if not _availableCameraIndexes:
+    avail_cams = webcameras()
+    if not avail_cams:
         pytest.skip("no camera found, skipping test")
 
-    cameraIndex = _availableCameraIndexes[0]
+    cameraIndex = avail_cams[0]
 
-    logger.info(f"available camera indexes: {_availableCameraIndexes}")
+    logger.info(f"available camera indexes: {avail_cams}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
     backend._config.device_identifier = cameraIndex
@@ -53,11 +53,6 @@ def test_service_reload(backend_pyav):
 
 def test_assert_is_alive(backend_pyav):
     assert backend_pyav._device_alive()
-
-
-def test_check_avail(backend_pyav):
-    backend_pyav.stop()  # for avail check backend not allowed to access it
-    assert backend_pyav._device_available()
 
 
 def test_optimize_mode(backend_pyav):

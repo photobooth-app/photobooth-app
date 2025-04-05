@@ -169,15 +169,6 @@ class Picamera2Backend(AbstractBackend):
 
         return super_alive and worker_alive
 
-    def _device_available(self) -> bool:
-        """picameras are assumed to be available always for now"""
-
-        if len(Picamera2.global_camera_info()) > 0:
-            return True
-        else:
-            logger.warning("no camera found, device not available!")
-            return False
-
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
             cp = cam.camera_properties

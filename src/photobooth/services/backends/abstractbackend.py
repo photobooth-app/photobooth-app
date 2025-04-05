@@ -465,12 +465,6 @@ class AbstractBackend(ABC):
     #
 
     @abstractmethod
-    def _device_available(self) -> bool:
-        """
-        available device ()
-        """
-
-    @abstractmethod
     def _wait_for_multicam_files(self) -> list[Path]:
         """
         function blocks until image still is available

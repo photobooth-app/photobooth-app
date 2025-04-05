@@ -65,10 +65,6 @@ class WigglecamBackend(AbstractBackend):
 
         return super_alive and worker_alive
 
-    def _device_available(self) -> bool:
-        return True
-        # TODO: need something to check? Like:  return self._camera_pool.is_healthy()
-
     def _wait_for_multicam_files(self) -> list[Path]:
         assert self._camera_pool
         camerapooljobrequest = ConnectorJobRequest(number_captures=1)

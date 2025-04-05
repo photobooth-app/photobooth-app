@@ -40,10 +40,6 @@ def test_assert_is_alive(backend_virtual: VirtualCameraBackend):
     assert backend_virtual._device_alive()
 
 
-def test_check_avail(backend_virtual: VirtualCameraBackend):
-    assert backend_virtual._device_available()
-
-
 def test_optimize_mode(backend_virtual: VirtualCameraBackend):
     backend_virtual._on_configure_optimized_for_hq_capture()
     backend_virtual._on_configure_optimized_for_hq_preview()

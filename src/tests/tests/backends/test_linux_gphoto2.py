@@ -8,8 +8,8 @@ from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
-from photobooth.services.backends.gphoto2 import available_camera_indexes as gp2_avail
 from photobooth.services.config.groups.backends import GroupBackendGphoto2
+from photobooth.utils.enumerate import dslr_gphoto2 as enumerate_dslr_gphoto2
 
 logger = logging.getLogger(name=None)
 
@@ -77,8 +77,8 @@ def backend_gphoto2():
     # use vcam
     use_vcam()
 
-    _availableCameraIndexes = gp2_avail()
-    if not _availableCameraIndexes:
+    avail_cams = enumerate_dslr_gphoto2()
+    if not avail_cams:
         pytest.skip("no camera found, skipping test")
 
     backend = Gphoto2Backend(GroupBackendGphoto2())
@@ -102,10 +102,6 @@ def test_service_reload(backend_gphoto2):
 
 def test_assert_is_alive(backend_gphoto2):
     assert backend_gphoto2._device_alive()
-
-
-def test_check_avail(backend_gphoto2):
-    assert backend_gphoto2._device_available()
 
 
 def test_get_images_gphoto2(backend_gphoto2):

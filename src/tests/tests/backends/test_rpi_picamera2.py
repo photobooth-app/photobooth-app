@@ -76,10 +76,6 @@ def test_assert_is_alive(backend_picamera2):
     assert backend_picamera2._device_alive()
 
 
-def test_check_avail(backend_picamera2):
-    assert backend_picamera2._device_available()
-
-
 def test_getImages(backend_picamera2):
     get_images(backend_picamera2)
 

@@ -68,14 +68,6 @@ class WebcamPyavBackend(AbstractBackend):
     def _device_name_platform(self):
         return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
 
-    def _device_available(self):
-        try:
-            with av_open(self._device_name_platform(), format=input_ffmpeg_device):
-                pass
-            return True
-        except Exception:
-            return False
-
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
 

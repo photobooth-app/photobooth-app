@@ -199,9 +199,9 @@ class GroupBackendPyav(BaseBackendModel):
 class GroupBackendV4l2(BaseBackendModel):
     model_config = ConfigDict(title="V4l2")
 
-    device_index: int = Field(
-        default=0,
-        description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
+    device_identifier: str = Field(
+        default="0",
+        description="Device identifier (index 0 or 1 or /dev/xxx) of webcam.",
         json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
 

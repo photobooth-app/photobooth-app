@@ -56,12 +56,6 @@ class WebcamV4lBackend(AbstractBackend):
 
         return super_alive and worker_alive
 
-    def _device_available(self):
-        if self._config.device_index in available_camera_indexes():
-            return True
-        else:
-            return False
-
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
 
@@ -131,15 +125,25 @@ class WebcamV4lBackend(AbstractBackend):
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
+    def _get_device(self, device_text: str | int):
+        # translate id or /dev/v4l/xxx to Device
+        # https://github.com/tiagocoutinho/linuxpy/blob/d223fa2b9078fd5b0ba1415ddea5c38f938398c5/examples/video/video_capture.py#L47
+
+        assert linuxpy_video_device
+        try:
+            return linuxpy_video_device.Device.from_id(int(device_text))
+        except ValueError:
+            return linuxpy_video_device.Device(device_text)
+
     def _worker_fun(self):
         logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_index=}")
+        logger.info(f"trying to open camera index={self._config.device_identifier=}")
 
         assert linuxpy_video_device
         assert self._worker_thread
 
-        with linuxpy_video_device.Device.from_id(self._config.device_index) as device:
-            logger.info(f"webcam device index: {self._config.device_index}")
+        with self._get_device(self._config.device_identifier) as device:
+            logger.info(f"webcam device index: {self._config.device_identifier}")
             logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
 
             capture = linuxpy_video_device.VideoCapture(device)

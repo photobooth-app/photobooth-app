@@ -67,11 +67,10 @@ def test_admin_file_endpoints(client_authenticated: TestClient):
     assert response.status_code == 200
 
 
-
-def test_admin_search(client_authenticated: TestClient):
-    response = client_authenticated.get("/admin/files/search?q=.")
+def test_admin_enumerate_files(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/enumerate/userfiles?q=.")
     assert response.status_code == 200
-    assert len(response.json())>1
+    assert len(response.json()) > 1
 
 
 def test_admin_list_notexists(client_authenticated: TestClient):

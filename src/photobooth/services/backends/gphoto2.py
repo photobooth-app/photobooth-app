@@ -110,13 +110,6 @@ class Gphoto2Backend(AbstractBackend):
 
         return super_alive and worker_alive
 
-    def _device_available(self):
-        """
-        For gphoto2 right now we just check if anything is there; if so we use that.
-        Could add connect to specific device in future.
-        """
-        return len(available_camera_indexes()) > 0
-
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
 
@@ -348,24 +341,3 @@ class Gphoto2Backend(AbstractBackend):
 
         self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")
-
-
-def available_camera_indexes():
-    """
-    find available cameras, return valid indexes.
-    """
-
-    if gp is None:
-        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
-
-    camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
-    if len(camera_list) == 0:
-        logger.info("no camera detected")
-        return []
-
-    available_indexes = []
-    for index, (name, addr) in enumerate(camera_list):
-        available_indexes.append(index)
-        logger.info(f"found camera - {index}:  {addr}  {name}")
-
-    return available_indexes

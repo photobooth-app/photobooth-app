@@ -64,9 +64,6 @@ class DigicamcontrolBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        if not self._device_available():
-            raise RuntimeError("empty camera list")
-
         self._enabled_liveview: bool = False
 
         self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
@@ -94,13 +91,6 @@ class DigicamcontrolBackend(AbstractBackend):
         worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
-
-    def _device_available(self) -> bool:
-        """
-        For digicamcontrol right now we just check if anything is there; if so we use that.
-        Could add connect to specific device in future.
-        """
-        return len(self.available_camera_indexes()) > 0
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -290,30 +280,3 @@ class DigicamcontrolBackend(AbstractBackend):
 
         self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")
-
-    def available_camera_indexes(self):
-        """
-        find available cameras, return valid indexes.
-        """
-
-        available_identifiers = []
-        session = requests.Session()
-
-        try:
-            r = session.get(f"{self._config.base_url}?slc=list&param1=cameras&param2=")
-            r.raise_for_status()
-
-            for line in r.iter_lines():
-                if line:
-                    available_identifiers.append(line)
-
-        except requests.exceptions.HTTPError as exc:
-            logger.error(f"error checking for cameras. Cant connect to digicamcontrol webserver! {exc}")
-        except Exception as exc:
-            logger.error(f"error checking avail cameras {exc}")
-
-        logger.info(f"camera list: {available_identifiers}")
-        if not available_identifiers:
-            logger.warning("no camera detected")
-
-        return available_identifiers
