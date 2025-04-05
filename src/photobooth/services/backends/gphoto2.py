@@ -189,7 +189,7 @@ class Gphoto2Backend(AbstractBackend):
     def _set_config(self, field: str, val: str | int = ""):
         assert gp
 
-        if not val:
+        if val == "":  # 0 is not considered empty, so its not "not val"
             logger.debug(f"{field} value empty, ignore")
             return
         try:
