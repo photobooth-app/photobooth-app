@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 def serial_ports() -> list[str]:
     ports = serial.tools.list_ports.comports()
-    logger.info(f"found serial ports: {ports}")
+    logger.info(f"found serial ports: {[f'{port.device}: {port.description}' for port in ports]}")
 
-    return [port.name for port in sorted(ports)]
+    return [port.device for port in sorted(ports)]
 
 
 def webcameras() -> list[str]:
@@ -25,6 +25,8 @@ def webcameras() -> list[str]:
 
         except Exception as exc:
             logger.warning(f"error enumerating webcams: {exc}")
+
+        logger.info(f"found webcameras: {[f'{device}' for device in devices]}")
 
         return devices
 
@@ -41,6 +43,8 @@ def webcameras() -> list[str]:
             devices += [line.strip() for line in result.stdout.split("\n") if line.strip()]
         except Exception as exc:
             logger.warning(f"error enumerating webcams: {exc}")
+
+        logger.info(f"found webcameras: {[f'{device}' for device in devices]}")
 
         return devices
 

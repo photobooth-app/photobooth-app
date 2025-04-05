@@ -17,7 +17,7 @@ class TextsConfig(BaseModel):
     font_size: PositiveInt = 40
     font: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     color: Color = Color("red")
 
@@ -31,7 +31,7 @@ class CollageMergeDefinition(BaseModel):
     rotate: int = 0
     predefined_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     image_filter: PluginFilters = PluginFilters("original")
 
@@ -40,6 +40,6 @@ class AnimationMergeDefinition(BaseModel):
     duration: NonNegativeInt = 2000
     predefined_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     image_filter: PluginFilters = PluginFilters("original")

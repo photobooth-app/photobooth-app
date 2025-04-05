@@ -19,5 +19,5 @@ class WledConfig(BaseConfig):
     wled_serial_port: str = Field(
         default="",
         description="Serial port the WLED device is connected to.",
-        # json_schema_extra={"list_api": "/api/admin/enumerate/serialports"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/serialports"},
     )

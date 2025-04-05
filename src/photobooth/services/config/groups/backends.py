@@ -172,6 +172,7 @@ class GroupBackendPyav(BaseBackendModel):
     device_identifier: str = Field(
         default="Insta360 Link 2C",
         description="Device name (Windows) or index (Linux, Mac) of the webcam.",
+        json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
 
     cam_resolution_width: int = Field(
@@ -201,6 +202,7 @@ class GroupBackendV4l2(BaseBackendModel):
     device_index: int = Field(
         default=0,
         description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
+        json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
 
     CAM_RESOLUTION_WIDTH: int = Field(
