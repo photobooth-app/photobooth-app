@@ -33,7 +33,9 @@ class CollageMergeDefinition(BaseModel):
         default=None,
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    image_filter: PluginFilters = PluginFilters("original")
+    image_filter: PluginFilters = Field(
+        default=PluginFilters("original"),
+    )
 
 
 class AnimationMergeDefinition(BaseModel):
@@ -42,4 +44,6 @@ class AnimationMergeDefinition(BaseModel):
         default=None,
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    image_filter: PluginFilters = PluginFilters("original")
+    image_filter: PluginFilters = Field(
+        default=PluginFilters("original"),
+    )
