@@ -11,8 +11,16 @@ logger = logging.getLogger(__name__)
 def serial_ports() -> list[str]:
     ports = serial.tools.list_ports.comports()
     logger.info(f"found serial ports: {[f'{port.device}: {port.description}' for port in ports]}")
+    pyserial_ports = [port.device for port in sorted(ports)]
 
-    return [port.device for port in sorted(ports)]
+    # if avail on linux, add also by-id paths to the list for convenience.
+    serial_byid_paths = []
+    try:
+        serial_byid_paths = [str(path) for path in sorted(Path("/dev/serial/by-id/").glob("*"))]
+    except Exception:
+        pass
+
+    return serial_byid_paths + pyserial_ports
 
 
 def webcameras() -> list[str]:
