@@ -44,7 +44,8 @@ async def lifespan(_: FastAPI):
         logger.info("lifecycle hook not installing signal, because current_thread not main_thread")
     else:
         logger.info("lifecycle hook installing signal to handle app shutdown")
-        signal.signal(signal.SIGINT, terminate_now)
+        signal.signal(signal.SIGINT, terminate_now)  # invoked when CTRL-C
+        signal.signal(signal.SIGTERM, terminate_now)  # sent by systemd on stop
 
     # deliver app
     yield
