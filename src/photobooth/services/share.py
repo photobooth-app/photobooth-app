@@ -78,7 +78,7 @@ class ShareService(BaseService):
                 SseEventTranslateableFrontendNotification(
                     color="info",
                     message_key="share.blocked_request_ignored",
-                    context_data={"remaining_s": str(round(remaining_s, 0))},
+                    context_data={"remaining_s": f"{remaining_s:0.0f}"},
                 )
             )
 
