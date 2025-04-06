@@ -52,7 +52,7 @@ def pyvips_scale(jpeg_bytes, tmp_path):
     bytes = out.jpegsave_buffer(Q=85)  # type: ignore
 
     with open(tmp_path / "scaled.jpg", "wb") as file:
-        file.write(bytes)
+        file.write(bytes)  # type: ignore
 
 
 def pyvips_resize_scale(jpeg_bytes, tmp_path):
@@ -68,7 +68,7 @@ def pyvips_resize_scale(jpeg_bytes, tmp_path):
     # im.show()
 
     with open(tmp_path / "scaled.jpg", "wb") as file:
-        file.write(bytes)
+        file.write(bytes)  # type: ignore
 
 
 def simplejpeg_scale(jpeg_bytes, tmp_path):
