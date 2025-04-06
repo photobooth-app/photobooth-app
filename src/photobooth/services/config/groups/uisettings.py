@@ -68,7 +68,7 @@ class GroupUiSettings(BaseModel):
         description="Flip livestream horizontally to create a mirror effect feeling more natural to users.",
     )
     livestream_blurredbackground: bool = Field(
-        default=False,
+        default=True,
         description="Display the livestream blurred in the background of the actual livestream covering the full screen. This might look nice if the livestream resolution does not match the screen's aspect ratio. Check cpu usage on low power devices.",
     )
     enable_livestream_frameoverlay: bool = Field(
