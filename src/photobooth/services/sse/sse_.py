@@ -9,7 +9,7 @@ import os
 import time
 import uuid
 from asyncio import Queue, QueueFull
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -32,23 +32,23 @@ class SseEventBase:
 
 
 @dataclass
-class SseEventFrontendNotification(SseEventBase):
+class SseEventTranslateableFrontendNotification(SseEventBase):
     """some visible message in frontend"""
 
-    caption: str = ""
-    message: str = ""
+    message_key: str = ""
+    context_data: dict[str, str] = field(default_factory=dict)
     color: str | None = None  # could a color or "positive", "negative", "warning", "info" or None, the UI default
     icon: str | None = None  # could a quasar icon or None, the UI default
     spinner: bool | None = None  # could be True or False, None same as False
 
-    event: str = "FrontendNotification"
+    event: str = "TranslateableFrontendNotification"
 
     @property
     def data(self) -> str:
         return json.dumps(
             dict(
-                caption=self.caption,
-                message=self.message,
+                message_key=self.message_key,
+                context_data=self.context_data,
                 color=self.color,
                 icon=self.icon,
                 spinner=self.spinner,

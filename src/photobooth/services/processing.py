@@ -22,7 +22,7 @@ from .processor.machine.processingmachine import ProcessingMachine
 from .processor.multicamera import JobModelMulticamera
 from .processor.video import JobModelVideo
 from .sse import sse_service
-from .sse.sse_ import SseEventFrontendNotification, SseEventProcessStateinfo
+from .sse.sse_ import SseEventProcessStateinfo, SseEventTranslateableFrontendNotification
 
 logger = logging.getLogger(__name__)
 
@@ -105,13 +105,8 @@ class ProcessingService(BaseService):
 
     def _check_occupied(self):
         if self._workflow_jobmodel is not None:
-            sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="info",
-                    message="There is already a job running. Please wait until it finished.",
-                    caption="Job in process ⌛",
-                )
-            )
+            # Job ongoing ⌛There is already a job running. Please wait until it finished.
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="processing.machine_occupied"))
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
     def _process_fun(self):
@@ -157,13 +152,8 @@ class ProcessingService(BaseService):
             logger.exception(exc)
             logger.error(f"the job failed, error: {exc}")
 
-            sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="negative",
-                    message="Please try again. Check the logs if the error is permanent!",
-                    caption="Error processing the job 😔",
-                )
-            )
+            # Error processing the job 😔 Please try again. Check the logs if the error is permanent!
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="processing.job_failed"))
             sse_service.dispatch_event(SseEventProcessStateinfo(None, None, None))
 
         finally:

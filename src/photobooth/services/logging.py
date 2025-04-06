@@ -22,9 +22,6 @@ class EventstreamLogHandler(logging.Handler):
     """
     Logging handler to emit events to eventstream;
     to be displayed in console.log on browser frontend
-
-    TODO, could replace the FrontendNotification, also logs with extras used to control the UI:
-      - record.display_notification (bool): Show the log in the UI or not.
     """
 
     def __init__(self):

@@ -121,7 +121,8 @@ class GroupShare(BaseModel):
     actions: list[ShareConfigurationSet] = Field(
         default=[
             ShareConfigurationSet(
-                handles_images_only=False,
+                name="Printing",
+                handles_images_only=True,
                 processing=ShareProcessing(
                     share_command="echo {filename} {copies}",
                     ask_user_for_parameter_input=False,
@@ -135,7 +136,8 @@ class GroupShare(BaseModel):
                 ),
             ),
             ShareConfigurationSet(
-                handles_images_only=False,
+                name="Printing copies",
+                handles_images_only=True,
                 processing=ShareProcessing(
                     share_command="echo {filename} {copies}",
                     ask_user_for_parameter_input=True,
@@ -150,7 +152,8 @@ class GroupShare(BaseModel):
                 ),
             ),
             ShareConfigurationSet(
-                handles_images_only=True,
+                name="Mailing action",
+                handles_images_only=False,
                 processing=ShareProcessing(
                     share_command="echo {filename} to mail {mail}",
                     ask_user_for_parameter_input=True,
