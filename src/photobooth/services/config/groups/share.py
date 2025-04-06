@@ -111,13 +111,6 @@ class GroupShare(BaseModel):
         description="Enable sharing service in general.",
     )
 
-    number_direct_access_buttons: int = Field(
-        default=1,
-        ge=0,
-        le=5,
-        description="Number of buttons directly accessible in the gallery. Remaining items are available in the more-menu.",
-    )
-
     actions: list[ShareConfigurationSet] = Field(
         default=[
             ShareConfigurationSet(
