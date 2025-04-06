@@ -183,6 +183,10 @@ class GroupBackendPyav(BaseBackendModel):
         default=2160,
         description="camera resolution height to capture high resolution photo",
     )
+    cam_framerate: int = Field(
+        default=0,
+        description="Camera capture framerate. If 0, the cameras default is used. 25 or 30 are framerates likely to work.",
+    )
 
     preview_resolution_reduce_factor: Literal[1, 2, 4, 8] = Field(
         default=2,
