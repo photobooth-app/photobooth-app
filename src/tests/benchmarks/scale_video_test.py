@@ -1,6 +1,7 @@
 import logging
 from subprocess import Popen
 
+import av
 import pytest
 from turbojpeg import TurboJPEG
 
@@ -55,23 +56,28 @@ def ffmpeg_h265_scale(tmp_path):
 
 
 def pyav_h264_scale(tmp_path, threading_type, threading_number):
-    import av
-
     input_container = av.open("src/tests/assets/video.mp4")
     input_stream = input_container.streams.video[0]
     input_stream.thread_type = threading_type  # speed up decoding
     input_stream.thread_count = threading_number
     output_container = av.open(tmp_path / "pyav.mp4", mode="w")
-    output_stream = output_container.add_stream("h264", rate=250)
-    output_stream.width = 600
-    output_stream.height = 500
-    output_stream.codec_context.options["movflags"] = "faststart"
-    output_stream.codec_context.profile = "veryfast"
+    output_stream = output_container.add_stream("h264", rate=500000)
+    output_stream.width = 500
+    out_height = int(output_stream.width * (input_stream.height / input_stream.width))
+    out_height += out_height % 2  # round up to nearest even number
+    output_stream.height = out_height
+    output_stream.codec_context.options["movflags"] = "+faststart"
+    output_stream.codec_context.options["preset"] = "veryfast"
+    # output_stream.codec_context.profile = "Main"  # print(output_stream.codec_context.profiles) baseline, ...
     output_stream.pix_fmt = "yuv420p"
 
     for frame in input_container.decode(input_stream):
         # Das Frame in der Zielgröße skalieren
-        scaled_frame = frame.reformat(width=output_stream.width, height=output_stream.height)
+        scaled_frame = frame.reformat(
+            width=output_stream.width,
+            height=output_stream.height,
+            # interpolation=Interpolation.BILINEAR,
+        )
 
         # Das skalierte Frame in den Ausgabestream codieren
         for packet in output_stream.encode(scaled_frame):
