@@ -5,6 +5,7 @@ import threading
 import requests
 from statemachine import Event, State
 
+from ...services.processor.machine.processingmachine import ProcessingMachine
 from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import CommanderConfig
@@ -112,16 +113,16 @@ class Commander(BasePlugin[CommanderConfig]):
 
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
-        if target.id == "counting":
+        if target == ProcessingMachine.counting:
             self.run_task("counting")
-        elif target.id == "finished":
+        elif target == ProcessingMachine.finished:
             self.run_task("finished")
-        elif target.id == "record":
-            self.run_task("record")
+        elif target == ProcessingMachine.capture:
+            self.run_task("capture")
 
     @hookimpl
     def sm_on_exit_state(self, source: State, target: State, event: Event):
-        if source.id in ("capture", "record"):
+        if source == ProcessingMachine.capture:
             self.run_task("captured")
 
     def invoke_command(self, task_to_run: TaskCommand, event: eventHooks):

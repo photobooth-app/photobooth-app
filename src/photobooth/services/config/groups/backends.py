@@ -4,12 +4,14 @@ AppConfig class providing central config
 """
 
 import sys
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
-BackendsBase = Literal["VirtualCamera", "WebcamCv2", "Wigglecam"]
+from ..validators import ensure_no_webcamcv2
+
+BackendsBase = Literal["VirtualCamera", "WebcamPyav", "Wigglecam"]
 BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
 BackendsWindows = Literal["Digicamcontrol"]
 BackendsDarwin = Literal["Gphoto2"]
@@ -140,6 +142,7 @@ class GroupBackendGphoto2(BaseBackendModel):
         default=True,
         description="Disable viewfinder before capture might speed up following capture autofocus. Might not work with every camera.",
     )
+
     iso_liveview: str = Field(
         default="",
         description="Sets the ISO for when the photobooth is in live preview modus. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Only works when the camera is in manual. (Example Values: Auto, 100, 200, ...)",
@@ -157,36 +160,49 @@ class GroupBackendGphoto2(BaseBackendModel):
         description="Configures the shutter speed for the camera at the time of capturing a photo in the photobooth. Very useful, when Camera does not support Exposure Simulation, and an external Flash is used. Operational only in manual mode. (Example Values: 1/60, 1/320, 1/1000, 1/2000, 1/4000, ...)",
     )
 
+    canon_eosmoviemode: bool = Field(
+        default=False,
+        description="Canon specific. Switch on/off eosmoviemode when streaming videos. Might not work with every camera.",
+    )
 
-class GroupBackendOpenCv2(BaseBackendModel):
-    model_config = ConfigDict(title="OpenCv2")
 
-    device_index: int = Field(
-        default=0,
-        description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
+class GroupBackendPyav(BaseBackendModel):
+    model_config = ConfigDict(title="PyAV")
+
+    device_identifier: str = Field(
+        default="Insta360 Link 2C",
+        description="Device name (Windows) or index (Linux, Mac) of the webcam.",
+        json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
-    CAM_RESOLUTION_WIDTH: int = Field(
-        default=10000,
-        description="Resolution width requested from camera.",
+
+    cam_resolution_width: int = Field(
+        default=3840,
+        description="camera resolution width to capture high resolution photo",
     )
-    CAM_RESOLUTION_HEIGHT: int = Field(
-        default=10000,
-        description="Resolution height requested from camera.",
+    cam_resolution_height: int = Field(
+        default=2160,
+        description="camera resolution height to capture high resolution photo",
     )
-    framerate: int = Field(
-        default=15,
-        ge=5,
-        le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+
+    preview_resolution_reduce_factor: Literal[1, 2, 4, 8] = Field(
+        default=2,
+        description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
+    )
+    frame_skip_count: int = Field(
+        default=3,
+        ge=1,
+        le=8,
+        description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
     )
 
 
 class GroupBackendV4l2(BaseBackendModel):
     model_config = ConfigDict(title="V4l2")
 
-    device_index: int = Field(
-        default=0,
-        description="Device index of webcam. Usually 0 or 1, check docs how to determine.",
+    device_identifier: str = Field(
+        default="0",
+        description="Device identifier (index 0 or 1 or /dev/xxx) of webcam.",
+        json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
 
     CAM_RESOLUTION_WIDTH: int = Field(
@@ -258,14 +274,15 @@ class GroupBackend(BaseModel):
         default=True,
         description="Selected device will be loaded and started.",
     )
-    selected_device: BackendsPlatform = Field(
+
+    selected_device: Annotated[BackendsPlatform, BeforeValidator(ensure_no_webcamcv2)] = Field(
         title="Configure device",
         default="VirtualCamera",
         description="Select backend and configure the device below",
     )
 
     virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
-    webcamcv2: GroupBackendOpenCv2 = GroupBackendOpenCv2()
+    webcampyav: GroupBackendPyav = GroupBackendPyav()
     wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
 
     if sys.platform == "linux":

@@ -10,7 +10,7 @@ from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
 from .base import BaseService
 from .sse import sse_service
-from .sse.sse_ import SseEventFrontendNotification
+from .sse.sse_ import SseEventTranslateableFrontendNotification
 
 logger = logging.getLogger(__name__)
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
@@ -40,14 +40,8 @@ class ShareService(BaseService):
         """print mediaitem"""
 
         if not appconfig.share.sharing_enabled:
-            sse_service.dispatch_event(
-                SseEventFrontendNotification(
-                    color="negative",
-                    message="Share service is disabled! Enable in config first.",
-                    caption="Share Service Error",
-                )
-            )
-            raise ConnectionRefusedError("Share service is disabled! Enable in config first.")
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="share.service_disabled"))
+            raise ConnectionRefusedError("The shareservice is disabled! Please enable it in the admin configuration before use.")
 
         # get config
         try:
@@ -68,24 +62,26 @@ class ShareService(BaseService):
 
         if self.is_quota_exceeded(current_shares, action_config.processing.max_shares):
             sse_service.dispatch_event(
-                SseEventFrontendNotification(
+                SseEventTranslateableFrontendNotification(
                     color="negative",
-                    message=f"{action_config.trigger.ui_trigger.title} quota exceeded ({action_config.processing.max_shares} maximum)",
-                    caption="Share/Print quota",
+                    message_key="share.quota_exceeded",
+                    context_data={"action_name": action_config.name, "quota": str(action_config.processing.max_shares)},
                 )
             )
+
             raise BlockingIOError("Maximum number of Share/Print reached!")
 
         # block queue new prints until configured time is over
         remaining_s = self.remaining_time_blocked(action_config.processing.share_blocked_time, last_used_at)
         if remaining_s > 0:
             sse_service.dispatch_event(
-                SseEventFrontendNotification(
+                SseEventTranslateableFrontendNotification(
                     color="info",
-                    message=f"Request ignored! Wait {remaining_s:.0f}s before trying again.",
-                    caption="Share Service Error",
+                    message_key="share.blocked_request_ignored",
+                    context_data={"remaining_s": str(round(remaining_s, 0))},
                 )
             )
+
             raise BlockingIOError(f"Request ignored! Wait {remaining_s:.0f}s before trying again.")
 
         # filename absolute to print, use in printing command
@@ -112,13 +108,14 @@ class ShareService(BaseService):
             raise RuntimeError(f"Error in configuration! Probably illegal parameter name defined, error: {exc}") from exc
 
         sse_service.dispatch_event(
-            SseEventFrontendNotification(
+            SseEventTranslateableFrontendNotification(
                 color="positive",
-                message=f"Process '{action_config.name}' started.",
-                caption="Share Service",
+                message_key="share.process_started",
+                context_data={"action_name": action_config.name},
                 spinner=True,
             )
         )
+
         try:
             completed_process = subprocess.run(
                 formatted_command,
@@ -129,8 +126,9 @@ class ShareService(BaseService):
             )
 
         except Exception as exc:
-            sse_service.dispatch_event(SseEventFrontendNotification(color="negative", message=f"{exc}", caption="Share/Print Error"))
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="share.process_failed"))
             raise RuntimeError(f"Process failed, error {exc}") from exc
+
         else:
             logger.info(f"cmd={completed_process.args}")
             logger.info(f"stdout={completed_process.stdout}")
@@ -142,12 +140,15 @@ class ShareService(BaseService):
 
         if action_config.processing.max_shares > 0:
             # quota is enabled.
-
             sse_service.dispatch_event(
-                SseEventFrontendNotification(
+                SseEventTranslateableFrontendNotification(
                     color="info",
-                    message=f"{action_config.trigger.ui_trigger.title} quota is {updated_current_shares} of {action_config.processing.max_shares}",
-                    caption="Share/Print quota",
+                    message_key="share.quota_notification",
+                    context_data={
+                        "action_name": action_config.name,
+                        "current_shares": str(updated_current_shares),
+                        "quota": str(action_config.processing.max_shares),
+                    },
                 )
             )
 

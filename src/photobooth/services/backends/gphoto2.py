@@ -30,8 +30,8 @@ class Gphoto2Backend(AbstractBackend):
         if gp is None:
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
-        self._camera = gp.Camera()
-        self._camera_context = gp.Context()
+        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
+        self._camera_context = gp.Context()  # pyright: ignore [reportAttributeAccessIssue]
 
         # if True signal to switch optimized, set none after switch again.
         self._configure_optimized_for_hq_capture_flag = None
@@ -55,18 +55,18 @@ class Gphoto2Backend(AbstractBackend):
         self._worker_thread: StoppableThread | None = None
 
         logger.info(f"python-gphoto2: {gp.__version__}")
-        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")
-        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")
+        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
+        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
         self._logger_callback = gp.check_result(
             gp.use_python_logging(
                 mapping={
-                    gp.GP_LOG_ERROR: logging.INFO,
-                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,
-                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,
-                    gp.GP_LOG_DATA: logging.DEBUG - 6,
+                    gp.GP_LOG_ERROR: logging.INFO,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_DATA: logging.DEBUG - 6,  # pyright: ignore [reportAttributeAccessIssue]
                 }
             )
         )
@@ -76,7 +76,8 @@ class Gphoto2Backend(AbstractBackend):
         assert gp
 
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
-        self._camera = gp.Camera()  # better use fresh object.
+        # better use fresh object.
+        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
         self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
 
         try:
@@ -84,7 +85,7 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
-        self._capturetarget(self._config.gcapture_target)
+        self._set_config("capturetarget", self._config.gcapture_target)
 
         self._worker_thread = StoppableThread(name="gphoto2_worker_thread", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
@@ -108,13 +109,6 @@ class Gphoto2Backend(AbstractBackend):
         worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
 
         return super_alive and worker_alive
-
-    def _device_available(self):
-        """
-        For gphoto2 right now we just check if anything is there; if so we use that.
-        Could add connect to specific device in future.
-        """
-        return len(available_camera_indexes()) > 0
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -168,59 +162,41 @@ class Gphoto2Backend(AbstractBackend):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
             self._configure_optimized_for_hq_capture_flag = None
-            self._iso(self._config.iso_capture)
-            self._shutter_speed(self._config.shutter_speed_capture)
+
+            self._set_config("iso", self._config.iso_capture)
+            self._set_config("shutter_speed", self._config.shutter_speed_capture)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 0)
+
+            # disable viewfinder;
+            # allows camera to autofocus fast in native mode not contrast mode
+            if self._config.disable_viewfinder_before_capture:
+                logger.info("disable viewfinder before capture")
+                self._set_config("viewfinder", 0)
 
     def _configure_optimized_for_idle_video(self):
         if self._configure_optimized_for_idle_video_flag:
             logger.debug("configure camera optimized for idle/video")
             self._configure_optimized_for_idle_video_flag = None
-            self._iso(self._config.iso_liveview)
-            self._shutter_speed(self._config.shutter_speed_liveview)
 
-    def _capturetarget(self, val: str = ""):
+            self._set_config("iso", self._config.iso_liveview)
+            self._set_config("shutter_speed", self._config.shutter_speed_liveview)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 1)
+
+    def _set_config(self, field: str, val: str | int = ""):
         assert gp
 
-        if not val:
-            logger.debug("capturetarget empty, ignore")
+        if val == "":  # 0 is not considered empty, so its not "not val"
+            logger.debug(f"{field} value empty, ignore")
             return
         try:
-            logger.info(f"setting capturetarget value: {val}")
-            self._gp_set_config("capturetarget", val)
+            logger.info(f"setting custom {field} to {val}")
+            self._gp_set_config(field, val)
         except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set capturetarget, command ignored {exc}")
-
-    def _iso(self, val: str = ""):
-        assert gp
-
-        if not val:
-            logger.debug("iso empty, ignore")
-            return
-        try:
-            logger.info(f"setting custom iso value: {val}")
-            self._gp_set_config("iso", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set iso, command ignored {exc}")
-
-    def _shutter_speed(self, val: str = ""):
-        assert gp
-
-        if not val:
-            logger.debug("shutter speed empty, ignore")
-            return
-        try:
-            logger.info(f"setting custom shutter speed: {val}")
-            self._gp_set_config("shutterspeed", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set shutter speed, command ignored {exc}")
-
-    def _viewfinder(self, val=0):
-        assert gp
-
-        try:
-            self._gp_set_config("viewfinder", val)
-        except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set viewfinder, command ignored {exc}")
+            logger.warning(f"cannot set {field} to {val}, command ignored {exc}")
 
     def _gp_set_config(self, name, val):
         config = self._camera.get_config(self._camera_context)
@@ -291,19 +267,13 @@ class Gphoto2Backend(AbstractBackend):
                 # the sequence the images appear can be different. gp.GP_CAPTURE_IMAGE vs gp.GP_CAPTURE_RAW seems not reliable to rely on
                 captured_files: list[tuple[str, str]] = []
 
-                # disable viewfinder;
-                # allows camera to autofocus fast in native mode not contrast mode
-                if self._config.disable_viewfinder_before_capture:
-                    logger.info("disable viewfinder before capture")
-                    self._viewfinder(0)
-
                 # check if flag is true and configure if so once.
                 self._configure_optimized_for_hq_capture()
 
                 # capture hq picture
                 logger.info("taking hq picture")
                 try:
-                    file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)
+                    file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)  # pyright: ignore [reportAttributeAccessIssue]
                     captured_files.append((file_path.folder, file_path.name))
                 except gp.GPhoto2Error as exc:
                     logger.critical(f"error capture! check logs for errors. {exc}")
@@ -318,10 +288,10 @@ class Gphoto2Backend(AbstractBackend):
                 # also if raw, we might have the JPG added later in these events, not received from .capture above
                 # https://github.com/jim-easterbrook/python-gphoto2/issues/65#issuecomment-433615025
                 evt_typ, evt_data = self._camera.wait_for_event(200)
-                while evt_typ != gp.GP_EVENT_TIMEOUT:
+                while evt_typ != gp.GP_EVENT_TIMEOUT:  # pyright: ignore [reportAttributeAccessIssue]
                     logger.debug(f"Event: {self.event_texts.get(evt_typ, f'unknown event index: {evt_typ}')}, data: {evt_data}")
 
-                    if evt_typ == gp.GP_EVENT_FILE_ADDED:
+                    if evt_typ == gp.GP_EVENT_FILE_ADDED:  # pyright: ignore [reportAttributeAccessIssue]
                         captured_files.append((evt_data.folder, evt_data.name))
 
                     # try to grab another event
@@ -349,7 +319,7 @@ class Gphoto2Backend(AbstractBackend):
 
                 # read from camera
                 try:
-                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)
+                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     filepath = Path("tmp", f"gphoto2_{file_to_download[1]}")
                     camera_file.save(str(filepath))
 
@@ -371,24 +341,3 @@ class Gphoto2Backend(AbstractBackend):
 
         self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")
-
-
-def available_camera_indexes():
-    """
-    find available cameras, return valid indexes.
-    """
-
-    if gp is None:
-        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
-
-    camera_list = gp.Camera.autodetect()
-    if len(camera_list) == 0:
-        logger.info("no camera detected")
-        return []
-
-    available_indexes = []
-    for index, (name, addr) in enumerate(camera_list):
-        available_indexes.append(index)
-        logger.info(f"found camera - {index}:  {addr}  {name}")
-
-    return available_indexes

@@ -36,7 +36,7 @@ dependencies = [
     "fastapi>=0.106.0",
     "opencv-python-headless>=4.10.0.84",
     "numpy>=2.0.0",
-    "simplejpeg==1.7.6", # pin until https://github.com/raspberrypi/picamera2/issues/1211 solved
+    "simplejpeg>=1.8.2",
     "pillow>=10.0.0",
     "psutil>=7.0.0",
     "pydantic>=2.7.0",
@@ -44,7 +44,7 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "requests>=2.31.0",
     "sse-starlette>=2.2.0",
-    "uvicorn>=0.24",
+    "uvicorn[standard]>=0.24", # adds websockets and uvloop
     "python-dotenv>=1.0.0",
     "pyserial~=3.5",
     "jsonref>=1.1.0",
@@ -60,6 +60,7 @@ dependencies = [
     "SQLAlchemy>=2.0.37",
     "pyturbojpeg>=1.7.0",
     "pluggy>=1.5.0",
+    "av>=14.0.1",
 ]
 
 [project.scripts]
@@ -139,8 +140,6 @@ dev = [
 ]
 benchmarks = [
   "pyvips",
-  "simplejpeg",
-  "av>=14.0.1",
 ]
 
 [tool.uv]

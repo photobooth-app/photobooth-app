@@ -6,8 +6,9 @@ from fastapi import APIRouter, HTTPException, Response, status
 
 from ...container import container
 from ...database.models import DimensionTypes
-from ...services.config.models.models import PluginFilters, SinglePictureDefinition
-from ...services.mediaprocessing.processes import process_image_collageimage_animationimage, process_image_inner
+from ...services.config.groups.actions import SingleImageProcessing
+from ...services.config.models.models import PluginFilters
+from ...services.mediaprocessing.processes import process_image_inner, process_phase1images
 from ...services.mediaprocessing.steps.image import get_plugin_userselectable_filters
 from ...utils.exceptions import PipelineError
 
@@ -39,7 +40,7 @@ def api_get_preview_image_filtered(mediaitem_id: UUID, filter: str):
 
         # along with mediaitem the config was stored. cast it back to original pydantic type, update filter and forward to processing
         # all other pipeline-steps need to be disabled here for fast preview. false is default so no need to set here.
-        config = SinglePictureDefinition(image_filter=plugin_filter)
+        config = SingleImageProcessing(image_filter=plugin_filter)
 
         manipulated_image = process_image_inner(file_in=thumbnail.filepath, config=config, preview=True)
 
@@ -70,7 +71,7 @@ def api_applyfilter(mediaitem_id: UUID, filter: str):
         # along with mediaitem the config was stored. cast it back to original pydantic type.
         # update filter before validating so if there is a filter applied that is not avail any more,
         # ther eis no validation error and just proceeded with the new filter.
-        _config = SinglePictureDefinition.model_validate(mediaitem.pipeline_config | {"image_filter": filter})
+        _config = SingleImageProcessing.model_validate(mediaitem.pipeline_config | {"image_filter": filter})
         mediaitem.pipeline_config = _config.model_dump(mode="json")  # if config is updated, it is automatically persisted to disk
 
         mediaitem_cached_repr_full = container.mediacollection_service.cache.get_cached_repr(
@@ -79,7 +80,7 @@ def api_applyfilter(mediaitem_id: UUID, filter: str):
             processed=False,
         )
 
-        process_image_collageimage_animationimage(mediaitem_cached_repr_full.filepath, mediaitem)
+        process_phase1images(mediaitem_cached_repr_full.filepath, mediaitem)
 
         # update at last in db after processing is finished because in that moment the clients get their sseUpdate notification and cache is busted
         container.mediacollection_service.update_item(mediaitem)

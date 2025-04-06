@@ -113,16 +113,16 @@ class SingleImageProcessing(BaseModel):
     img_background_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     img_frame_enable: bool = Field(
         default=False,
         description="Mount captured image to frame.",
     )
-    img_frame_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)]  = Field(
+    img_frame_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
         description="Image file to which the captured image is mounted to. Frame determines the output image size! Photos are visible through transparant parts. Image needs to be transparent (PNG). File needs to be located in userdata/*",
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     texts_enable: bool = Field(
         default=False,
@@ -156,7 +156,7 @@ class CollageProcessing(BaseModel):
     capture_img_background_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
 
     ## phase 2 per collage settings.
@@ -187,7 +187,7 @@ class CollageProcessing(BaseModel):
     canvas_img_background_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in userdata/*",
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     canvas_img_front_enable: bool = Field(
         default=False,
@@ -196,7 +196,7 @@ class CollageProcessing(BaseModel):
     canvas_img_front_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in working directory/userdata/*",
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     canvas_texts_enable: bool = Field(
         default=False,
@@ -476,7 +476,7 @@ class GroupActions(BaseModel):
                 jobcontrol=MulticameraJobControl(),
                 processing=MulticameraProcessing(),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Wigglegram", icon="burst_mode"),
+                    ui_trigger=UiTrigger(show_button=False, title="Wigglegram", icon="burst_mode"),
                     gpio_trigger=GpioTrigger(pin="12"),
                     keyboard_trigger=KeyboardTrigger(keycode="w"),
                 ),

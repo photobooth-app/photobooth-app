@@ -17,27 +17,9 @@ class TextsConfig(BaseModel):
     font_size: PositiveInt = 40
     font: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     color: Color = Color("red")
-
-
-class SinglePictureDefinition(BaseModel):
-    image_filter: PluginFilters = PluginFilters("original")
-    fill_background_enable: bool = False
-    fill_background_color: Color = Color("blue")
-    img_background_enable: bool = False
-    img_background_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
-    )
-    img_frame_enable: bool = False
-    img_frame_file: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
-    )
-    texts_enable: bool = False
-    texts: list[TextsConfig] = []
 
 
 class CollageMergeDefinition(BaseModel):
@@ -49,15 +31,19 @@ class CollageMergeDefinition(BaseModel):
     rotate: int = 0
     predefined_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    image_filter: PluginFilters = PluginFilters("original")
+    image_filter: PluginFilters = Field(
+        default=PluginFilters("original"),
+    )
 
 
 class AnimationMergeDefinition(BaseModel):
     duration: NonNegativeInt = 2000
     predefined_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
         default=None,
-        json_schema_extra={"files_list_api": "/api/admin/files/search"},
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    image_filter: PluginFilters = PluginFilters("original")
+    image_filter: PluginFilters = Field(
+        default=PluginFilters("original"),
+    )

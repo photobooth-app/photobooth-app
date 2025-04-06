@@ -14,7 +14,7 @@
     {
       "label": "statemachine diagram (needs pydot and graphviz)",
       "type": "shell",
-      "command": "uv run python -m statemachine.contrib.diagram photobooth.services.processingservice.ProcessingMachine diagram_ProcessingPicture.png"
+      "command": "uv run python -m statemachine.contrib.diagram photobooth.services.processor.machine.processingmachine.ProcessingMachine diagram_ProcessingPicture.png"
     },
     {
       "label": "create openapi.json schema http api description",

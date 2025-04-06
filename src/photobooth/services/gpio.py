@@ -16,8 +16,7 @@ from ..utils.exceptions import ProcessMachineOccupiedError
 from .base import BaseService
 from .collection import MediacollectionService
 from .config.groups.actions import GpioTrigger
-from .jobmodels.base import action_type_literal
-from .processing import ProcessingService
+from .processing import ActionType, ProcessingService
 from .share import ShareService
 
 logger = logging.getLogger(__name__)
@@ -42,10 +41,10 @@ class Button(ZeroButton):
 
 
 class ActionButton(Button):
-    def __init__(self, action_type: action_type_literal, action_index: int, **kwargs):
+    def __init__(self, action_type: ActionType, action_index: int, **kwargs):
         super().__init__(**kwargs)
 
-        self.action_type: action_type_literal = action_type
+        self.action_type: ActionType = action_type
         self.action_index: int = action_index
 
     def __repr__(self):
@@ -106,7 +105,7 @@ class GpioService(BaseService):
             # other errors
             logger.critical(exc)
 
-    def _setup_action_button(self, action_type: action_type_literal, gpio_trigger: GpioTrigger, index: int):
+    def _setup_action_button(self, action_type: ActionType, gpio_trigger: GpioTrigger, index: int):
         try:
             pin = gpio_trigger.pin
             trigger_on = gpio_trigger.trigger_on

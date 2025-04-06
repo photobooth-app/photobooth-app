@@ -43,21 +43,6 @@ class BackendStats:
     sharpness: int | None = None
 
 
-# @dataclass
-# class Capabilities:
-# https://stackoverflow.com/questions/69090253/how-to-iterate-over-attributes-of-dataclass-in-python
-#     image: bool = False
-#     multiimage: bool = False
-#     livepreview: bool = False
-#     video: bool = False
-
-#     def has(self,other:"Capabilities") -> bool:
-#         cls_fields: Tuple[Field, ...] = fields(self.__class__)
-#         for field in fields(self.__class__):
-#             print(field.name, getattr(YourDataclass, field.name))
-#         return other.
-
-
 @dataclass
 class GeneralBytesResult:
     # jpeg data as bytes
@@ -329,10 +314,14 @@ class AbstractBackend(ABC):
 
             raise RuntimeError("device raised exception") from exc
 
-    def start_recording(self, video_framerate: int):
+    def start_recording(self, video_framerate: int) -> Path:
         self._video_worker_capture_started.clear()
         self._video_framerate = video_framerate
-        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, daemon=True)
+
+        # generate temp filename to record to
+        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
+
+        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, args=(mp4_output_filepath,), daemon=True)
         self._video_worker_thread.start()
 
         tms = time.time()
@@ -340,6 +329,8 @@ class AbstractBackend(ABC):
         if not self._video_worker_capture_started.wait(timeout=3):
             logger.warning("ffmpeg could not start within timeout; cpu too slow?")
         logger.debug(f"-- ffmpeg startuptime: {round((time.time() - tms), 2)}s ")
+
+        return mp4_output_filepath
 
     def is_recording(self):
         return self._video_worker_thread is not None and self._video_worker_capture_started.is_set()
@@ -357,20 +348,10 @@ class AbstractBackend(ABC):
         else:
             logger.info("no _video_worker_thread active that could be stopped")
 
-    def get_recorded_video(self) -> Path:
-        # basic idea from https://stackoverflow.com/a/42602576
-        if self._video_recorded_videofilepath is not None:
-            return self._video_recorded_videofilepath
-        else:
-            raise FileNotFoundError(f"'{self._video_recorded_videofilepath}' video not found! pls check logs")
-
-    def _videoworker_fun(self):
+    def _videoworker_fun(self, mp4_output_filepath: Path):
         logger.info("_videoworker_fun start")
         # init worker, set output to None which indicates there is no current video available to get
         self._video_recorded_videofilepath = None
-
-        # generate temp filename to record to
-        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
 
         command_general_options = [
             "-hide_banner",
@@ -475,20 +456,13 @@ class AbstractBackend(ABC):
             logger.info("ffmpeg finished")
             logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
-            self._video_recorded_videofilepath = mp4_output_filepath
-            logger.info(f"record written to {self._video_recorded_videofilepath}")
+            logger.info(f"record written to {mp4_output_filepath}")
 
         logger.info("leaving _videoworker_fun")
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)
     #
-
-    @abstractmethod
-    def _device_available(self) -> bool:
-        """
-        available device ()
-        """
 
     @abstractmethod
     def _wait_for_multicam_files(self) -> list[Path]:

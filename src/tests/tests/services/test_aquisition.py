@@ -56,11 +56,10 @@ def test_get_multicam_files(_container: Container):
 
 def test_getvideo(_container: Container):
     """get video from service"""
-    _container.aquisition_service.start_recording()
+    videopath = _container.aquisition_service.start_recording()
     time.sleep(2)
     _container.aquisition_service.stop_recording()
 
-    videopath = _container.aquisition_service.get_recorded_video()
     logger.info(f"video stored to file {videopath}")
     assert videopath and videopath.is_file()
 
@@ -128,7 +127,7 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         # ensure we always receive a valid jpeg frame, nothing else.
         # in case the backend failed, we receive a substitute image
-        assert frame.startswith(b"--frame\r\nContent-Type: image/jpeg\r\n\r\n\xff\xd8\xff")
+        assert frame.startswith(b"\xff\xd8\xff")
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver

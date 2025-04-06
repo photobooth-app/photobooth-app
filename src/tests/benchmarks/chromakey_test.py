@@ -4,9 +4,7 @@ import cv2
 import numpy as np
 import pytest
 from PIL import Image
-from turbojpeg import TurboJPEG
 
-turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 

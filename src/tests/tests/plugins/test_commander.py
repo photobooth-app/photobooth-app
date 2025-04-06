@@ -79,17 +79,13 @@ def test_sm_on_enter_state(commander_plugin: Commander):
         mock_run_task.assert_called_once_with("finished")
 
     with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.record, Event())
-        mock_run_task.assert_called_once_with("record")
+        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.capture, Event())
+        mock_run_task.assert_called_once_with("capture")
 
 
 def test_sm_on_exit_state(commander_plugin: Commander):
     with patch.object(commander_plugin, "run_task") as mock_run_task:
         commander_plugin.sm_on_exit_state(ProcessingMachine.capture, State(), Event())
-        mock_run_task.assert_called_once_with("captured")
-
-    with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_exit_state(ProcessingMachine.record, State(), Event())
         mock_run_task.assert_called_once_with("captured")
 
 

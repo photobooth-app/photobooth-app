@@ -212,9 +212,14 @@ try {
             echo "file successfully saved and ready to download";
         } else
             throw new RuntimeException("error processing job");
-    } elseif (($_GET["action"] ?? null) == "upload_queue") {
+    } elseif (($_POST["action"] ?? null) == "upload_queue") {
         // longrunning task to wait for dl request
         api_key_set();
+
+        // sanity check for apikey
+        if ($_POST["apikey"] !== $APIKEY) {
+            throw new RuntimeException($translations['error_api_key']);
+        }
 
         $LOOP_TIME = 0.5; # loop every x seconds
         $LOOP_TIME_MAX = 240; # after x seconds, the script terminates and the client is expected to create a new connection latest
@@ -331,14 +336,6 @@ try {
         } while ($time_waited <= $TIMEOUT_DOWNLOAD);
 
         throw new RuntimeException("photobooth did not upload the requested image within time :( no internet? service disabled?");
-    } elseif (($_GET["action"] ?? null) == "list") {
-        api_key_set();
-        echo "<pre>";
-        $results = $db->query("SELECT * FROM upload_requests ORDER BY last_modified DESC");
-        while ($row = $results->fetchArray(SQLITE3_ASSOC)) {
-            print_r($row);
-        }
-        echo "</pre>";
     } elseif (($_GET["action"] ?? null) == "info") {
         // endpoint can be used by photobooth-app to check it's communicating with the correct URL
         echo json_encode([

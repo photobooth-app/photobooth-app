@@ -83,10 +83,6 @@ class VirtualCameraBackend(AbstractBackend):
 
         return super_alive and worker_alive
 
-    def _device_available(self) -> bool:
-        """virtual camera to be available always"""
-        return True
-
     def _wait_for_multicam_files(self) -> list[Path]:
         files: list[Path] = []
 

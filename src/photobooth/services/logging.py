@@ -22,9 +22,6 @@ class EventstreamLogHandler(logging.Handler):
     """
     Logging handler to emit events to eventstream;
     to be displayed in console.log on browser frontend
-
-    TODO, could replace the FrontendNotification, also logs with extras used to control the UI:
-      - record.display_notification (bool): Show the log in the UI or not.
     """
 
     def __init__(self):
@@ -148,12 +145,12 @@ class LoggingService(BaseService):
         """_summary_"""
 
         for name in [
-            "uvicorn.error",
+            "uvicorn.error",  # websockets.protocol appear as name uvicorn.error: https://github.com/encode/uvicorn/issues/562
             "uvicorn.access",
             "uvicorn",
         ]:
             lgr = logging.getLogger(name=name)
-            lgr.setLevel(self.logging_level)
+            lgr.setLevel(logging.INFO)
             lgr.propagate = False
             lgr.handlers = [
                 logging.root.handlers[0],  # this is the streamhandler if not in pytest.

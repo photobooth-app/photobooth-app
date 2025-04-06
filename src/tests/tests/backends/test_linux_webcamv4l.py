@@ -39,7 +39,7 @@ def backend_v4l():
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
-    backend._config.device_index = cameraIndex
+    backend._config.device_identifier = str(cameraIndex)
 
     # deliver
     backend.start()
@@ -61,11 +61,6 @@ def test_service_reload(backend_v4l):
 
 def test_assert_is_alive(backend_v4l):
     assert backend_v4l._device_alive()
-
-
-def test_check_avail(backend_v4l):
-    backend_v4l.stop()
-    assert backend_v4l._device_available()
 
 
 def test_optimize_mode(backend_v4l):

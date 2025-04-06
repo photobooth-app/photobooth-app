@@ -111,41 +111,50 @@ class GroupShare(BaseModel):
         description="Enable sharing service in general.",
     )
 
-    number_direct_access_buttons: int = Field(
-        default=1,
-        ge=0,
-        le=5,
-        description="Number of buttons directly accessible in the gallery. Remaining items are available in the more-menu.",
-    )
-
     actions: list[ShareConfigurationSet] = Field(
         default=[
             ShareConfigurationSet(
-                handles_images_only=False,
+                name="Printing",
+                handles_images_only=True,
                 processing=ShareProcessing(
                     share_command="echo {filename} {copies}",
                     ask_user_for_parameter_input=False,
-                    parameters_dialog_caption="How many copies?",
                     share_blocked_time=3,
                     parameters=[ShareProcessingParameters()],
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
+                    ui_trigger=UiTrigger(show_button=True, title="Direct Print", icon="print"),
                     gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
                     keyboard_trigger=KeyboardTrigger(keycode="p"),
                 ),
             ),
             ShareConfigurationSet(
+                name="Printing copies",
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="echo {filename} {copies} {mail}",
+                    share_command="echo {filename} {copies}",
                     ask_user_for_parameter_input=True,
-                    parameters_dialog_caption="Print and mail...",
+                    parameters_dialog_caption="How many copies?",
+                    share_blocked_time=3,
+                    parameters=[ShareProcessingParameters()],
+                ),
+                trigger=Trigger(
+                    ui_trigger=UiTrigger(show_button=True, title="Print Copies", icon="print"),
+                    gpio_trigger=GpioTrigger(pin="", trigger_on="pressed"),
+                    keyboard_trigger=KeyboardTrigger(keycode=""),
+                ),
+            ),
+            ShareConfigurationSet(
+                name="Mailing action",
+                handles_images_only=False,
+                processing=ShareProcessing(
+                    share_command="echo {filename} to mail {mail}",
+                    ask_user_for_parameter_input=True,
+                    parameters_dialog_caption="E-Mail your image...",
                     parameters_dialog_action_icon="mail",
-                    parameters_dialog_action_label="send",
+                    parameters_dialog_action_label="Send",
                     share_blocked_time=3,
                     parameters=[
-                        ShareProcessingParameters(),
                         ShareProcessingParameters(
                             key="mail",
                             label="E-Mail address",
@@ -157,9 +166,9 @@ class GroupShare(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(show_button=True, title="Print", icon="print"),
-                    gpio_trigger=GpioTrigger(pin="23", trigger_on="pressed"),
-                    keyboard_trigger=KeyboardTrigger(keycode="p"),
+                    ui_trigger=UiTrigger(show_button=True, title="Send Mail", icon="mail"),
+                    gpio_trigger=GpioTrigger(pin="", trigger_on="pressed"),
+                    keyboard_trigger=KeyboardTrigger(keycode=""),
                 ),
             ),
         ],
