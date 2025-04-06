@@ -51,7 +51,8 @@ def pyvips_scale(jpeg_bytes, tmp_path):
     )
     bytes = out.jpegsave_buffer(Q=85)  # type: ignore
 
-    return bytes
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 def pyvips_resize_scale(jpeg_bytes, tmp_path):
@@ -66,19 +67,19 @@ def pyvips_resize_scale(jpeg_bytes, tmp_path):
     # im = Image.open(io.BytesIO(bytes))
     # im.show()
 
-    return bytes
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 def simplejpeg_scale(jpeg_bytes, tmp_path):
-    # Decode with downscaling by a factor of 2 (image size reduced by half)
-    min_height = 500
-    decoded_img = decode_jpeg(jpeg_bytes, min_height=min_height, min_factor=1.5)
-    _ = encode_jpeg(
+    decoded_img = decode_jpeg(jpeg_bytes, min_height=1300)  # half the height of original
+    bytes = encode_jpeg(
         decoded_img,
         quality=85,
         fastdct=True,
     )
-    return bytes
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 def turbojpeg_scale(jpeg_bytes, tmp_path):
@@ -86,7 +87,8 @@ def turbojpeg_scale(jpeg_bytes, tmp_path):
     # 85=default quality
     bytes = turbojpeg.scale_with_quality(jpeg_bytes, quality=85, scaling_factor=(1, 2))
 
-    return bytes
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 def pillow_scale(jpeg_bytes, tmp_path):
@@ -105,9 +107,10 @@ def pillow_scale(jpeg_bytes, tmp_path):
     # encode to jpeg again
     byte_io = io.BytesIO()
     image.save(byte_io, format="JPEG", quality=85)
-    bytes_full = byte_io.getbuffer()
+    bytes = byte_io.getbuffer()
 
-    return bytes_full
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 def cv2_scale(jpeg_bytes, tmp_path):
@@ -127,7 +130,9 @@ def cv2_scale(jpeg_bytes, tmp_path):
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, encimg = cv2.imencode(".jpg", img_np_resized, encode_param)
 
-    return encimg.tobytes()
+    bytes = encimg.tobytes()
+    with open(tmp_path / "scaled.jpg", "wb") as file:
+        file.write(bytes)
 
 
 @pytest.fixture(
@@ -164,12 +169,12 @@ def image_lores() -> Generator[bytes, None, None]:
 
 
 @pytest.mark.benchmark(group="scalejpeg_hires")
-def test_libraries_encode_hires(library, image_hires, benchmark, tmp_path):
+def test_scale_hires(library, image_hires, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_hires, tmp_path=tmp_path)
     assert True
 
 
 @pytest.mark.benchmark(group="scalejpeg_lores")
-def test_libraries_encode_lores(library, image_lores, benchmark, tmp_path):
+def test_scale_lores(library, image_lores, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_lores, tmp_path=tmp_path)
     assert True
