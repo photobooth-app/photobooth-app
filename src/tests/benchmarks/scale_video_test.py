@@ -92,42 +92,6 @@ def pyav_h264_scale(tmp_path, threading_type, threading_number):
     output_container.close()
 
 
-# TODO: # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
-def ffmpeg_convertgif_lq_scale(tmp_path):
-    ffmpeg_subprocess = Popen(
-        [
-            "ffmpeg",
-            "-y",  # overwrite with no questions
-            "-i",
-            "src/tests/assets/video.mp4",
-            "-vf",
-            "fps=12,scale=500:-2:flags=bicubic",
-            str(tmp_path / "ffmpeg_convertgif_lq_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
-        ]
-    )
-    code = ffmpeg_subprocess.wait()
-    if code != 0:
-        raise AssertionError("process fail")
-
-
-# TODO: # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
-def ffmpeg_convertgif_hq_scale(tmp_path):
-    ffmpeg_subprocess = Popen(
-        [
-            "ffmpeg",
-            "-y",  # overwrite with no questions
-            "-i",
-            "src/tests/assets/video.mp4",
-            "-vf",
-            "fps=12,scale=500:-2:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            str(tmp_path / "ffmpeg_convertgif_hq_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
-        ]
-    )
-    code = ffmpeg_subprocess.wait()
-    if code != 0:
-        raise AssertionError("process fail")
-
-
 def ffmpeg_convertwebm_vp9_scale(tmp_path):
     ffmpeg_subprocess = Popen(
         [
@@ -214,16 +178,6 @@ def threading_number(request):
 @pytest.mark.benchmark(group="scalevideo")
 def test_pyav_scale(benchmark, tmp_path, threading_type, threading_number):
     benchmark(pyav_h264_scale, tmp_path, threading_type, threading_number)
-
-
-@pytest.mark.benchmark(group="scalevideo")
-def test_ffmpeg_convertgif_lq_scale(benchmark, tmp_path):
-    benchmark(ffmpeg_convertgif_lq_scale, tmp_path=tmp_path)
-
-
-@pytest.mark.benchmark(group="scalevideo")
-def test_ffmpeg_convertgif_hq_scale(benchmark, tmp_path):
-    benchmark(ffmpeg_convertgif_hq_scale, tmp_path=tmp_path)
 
 
 @pytest.mark.benchmark(group="scalevideo")

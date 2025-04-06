@@ -25,14 +25,15 @@ def process_pyav(tmp_path):
 
     container = av.open(tmp_path / "pyav.mp4", mode="w")
 
-    stream = container.add_stream("h264", rate=250)
+    stream = container.add_stream("h264")
     stream.width = frame_input.width
     stream.height = frame_input.height
     # stream.pix_fmt = "yuv420p"
-    stream.codec_context.options["tune"] = "zerolatency"
     stream.codec_context.options["movflags"] = "faststart"
-    stream.codec_context.profile = "veryfast"
-    stream.codec_context.bit_rate = 5000000
+    stream.codec_context.options["preset"] = "veryfast"
+    # stream.codec_context.options["tune"] = "zerolatency"
+    # stream.codec_context.profile = "Main"
+    stream.codec_context.bit_rate = 50000000
 
     for _ in range(200):
         for packet in stream.encode(frame_input):
