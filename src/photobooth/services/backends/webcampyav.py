@@ -9,7 +9,9 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition, Event
 
-from av import open as av_open
+import av
+from av.codec import Capabilities, Codec
+from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
@@ -41,6 +43,9 @@ class WebcamPyavBackend(AbstractBackend):
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
         self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._worker_thread: StoppableThread | None = None
+
+        # for debugging purposes output some information about underlying libs
+        self._version_codec_info()
 
     def start(self):
         super().start()
@@ -125,7 +130,7 @@ class WebcamPyavBackend(AbstractBackend):
         frame_count = 0
 
         try:
-            input_device = av_open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
+            input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
         except Exception as exc:
             logger.exception(exc)
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
@@ -202,3 +207,22 @@ class WebcamPyavBackend(AbstractBackend):
 
         self._device_set_is_ready_to_deliver(False)
         logger.info("pyav_img_aquisition finished, exit")
+
+    def _version_codec_info(self):
+        logger.info(f"PyAv location {av.__file__}, package version {av.__version__}")
+        logger.info(f"PyAv uses ffmpeg version {av.ffmpeg_version_info}")
+        logger.info(f"PyAv library versions: {av.library_versions}")
+
+        for codec in av.codecs_available:
+            try:
+                o_codec = Codec(codec, "w")  # choose codec for writing otherwise it's decoders
+            except UnknownCodecError:
+                pass
+            else:
+                if "264" in o_codec.name:
+                    capabs = []
+                    for cap in Capabilities:
+                        if o_codec.capabilities & cap.value:
+                            capabs.append(cap.name)
+
+                    logger.debug(f"- {o_codec.name} | {o_codec.long_name} | Hardware: {'hardware' in capabs} | Capabilities: {capabs}")
