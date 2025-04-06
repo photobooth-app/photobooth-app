@@ -476,7 +476,7 @@ class GroupActions(BaseModel):
                 jobcontrol=MulticameraJobControl(),
                 processing=MulticameraProcessing(),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Wigglegram", icon="burst_mode"),
+                    ui_trigger=UiTrigger(show_button=False, title="Wigglegram", icon="burst_mode"),
                     gpio_trigger=GpioTrigger(pin="12"),
                     keyboard_trigger=KeyboardTrigger(keycode="w"),
                 ),
