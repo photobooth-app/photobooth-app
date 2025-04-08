@@ -94,8 +94,11 @@ class AquisitionService(BaseService):
         if not self._backends:
             return
 
-        for backend in self._backends:
+        while self._backends:
+            backend = self._backends.pop()
             backend.stop()
+
+            del backend
 
     def _device_alive(self):
         backends_are_alive = all([backend._device_alive() for backend in self._backends])
