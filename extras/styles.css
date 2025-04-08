@@ -1,0 +1,378 @@
+:root {
+    --primary-color: #4a90e2;
+    --secondary-color: #3672b9;
+    --accent-color: #ff6b6b;
+    --background-color: #f0f2f5;
+    --text-color: #333;
+    --card-background: #fff;
+    --shadow-color: rgba(0,0,0,0.12);
+    --transition-speed: 0.3s;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInFromRight {
+    from { opacity: 0; transform: translateX(15px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInFromLeft {
+    from { opacity: 0; transform: translateX(-15px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+    100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes shine {
+    from {
+        background-position: -100% 0;
+    }
+    to {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif; 
+    margin: 0; 
+    padding: 0; 
+    background-color: var(--background-color); 
+    color: var(--text-color); 
+    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    transition: all var(--transition-speed) ease;
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+h1 { 
+    font-weight: 600; 
+    color: var(--primary-color);
+    margin: 0 0 35px;
+    font-size: 32px;
+    letter-spacing: 0.5px;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 12px;
+    animation: fadeIn 0.6s ease-out 0.1s both;
+}
+
+h1::after {
+    content: '';
+    position: absolute;
+    width: 70%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color), var(--primary-color));
+    background-size: 200% 100%;
+    bottom: 0;
+    left: 15%;
+    border-radius: 4px;
+    animation: gradientFlow 6s ease infinite;
+}
+
+.media-container {
+    margin: 25px auto;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px var(--shadow-color);
+    position: relative;
+    background-color: #000;
+    transition: all var(--transition-speed) ease;
+    max-width: 100%;
+    line-height: 0; /* Removes unwanted spaces below images */
+    animation: fadeIn 0.6s ease-out 0.2s both;
+}
+
+.media-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.1);
+    z-index: 5;
+    transition: opacity 0.5s ease;
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--primary-color);
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    animation: rotation 1.2s linear infinite;
+}
+
+img, video { 
+    max-width: 100%; 
+    height: auto; 
+    display: block;
+    margin: 0 auto;
+    transition: all var(--transition-speed) ease;
+    object-fit: contain;
+    opacity: 0; /* Start hidden */
+    transition: opacity 0.8s ease;
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 30px;
+    animation: fadeIn 0.6s ease-out 0.3s both;
+}
+
+button, .button { 
+    padding: 14px 28px; 
+    font-size: 17px; 
+    font-weight: 500;
+    cursor: pointer; 
+    background-color: var(--primary-color); 
+    color: white; 
+    border: none; 
+    border-radius: 50px; 
+    transition: all var(--transition-speed) ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    min-width: 170px;
+    box-shadow: 0 4px 10px rgba(74, 144, 226, 0.25);
+    -webkit-tap-highlight-color: transparent; /* Removes highlight on mobile devices */
+    white-space: nowrap; /* Prevents line breaks in button text */
+    user-select: none; /* Prevents text selection */
+    position: relative;
+    overflow: hidden;
+}
+
+.download-btn {
+    background-color: var(--primary-color);
+    animation: slideInFromLeft 0.5s ease-out 0.4s both, pulse 3s ease-in-out 3s infinite;
+}
+
+.share-btn {
+    background-color: var(--accent-color);
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.25);
+    animation: slideInFromRight 0.5s ease-out 0.5s both, pulse 3s ease-in-out 3.5s infinite;
+}
+
+button:hover, .button:hover { 
+    background-color: var(--secondary-color); 
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 15px rgba(74, 144, 226, 0.35);
+    animation-play-state: paused;
+}
+
+.share-btn:hover {
+    background-color: #ff5252;
+    box-shadow: 0 6px 15px rgba(255, 107, 107, 0.35);
+}
+
+button:active, .button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(74, 144, 226, 0.2);
+}
+
+button:focus, .button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.5);
+}
+
+.button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transition: all 0.5s;
+}
+
+.button:hover::before {
+    animation: shine 1.5s ease;
+}
+
+.share-btn:focus {
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.5);
+}
+
+.icon {
+    margin-right: 10px;
+    font-size: 20px;
+    display: inline-block;
+    vertical-align: middle;
+    animation: float 3s ease-in-out infinite;
+}
+
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background-color: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-size: 16px;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1002;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    max-width: 90%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Error page styles */
+.error-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+.error-icon {
+    font-size: 70px;
+    margin-bottom: 20px;
+    color: var(--accent-color);
+    animation: float 4s ease-in-out infinite;
+    display: inline-block;
+}
+
+.error-message {
+    background-color: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 25px;
+    box-shadow: 0 6px 18px var(--shadow-color);
+    text-align: center;
+    line-height: 1.6;
+    animation: fadeIn 0.6s
+    ease-out 0.2s both;
+	margin-bottom: 25px;
+}
+
+.error-message p {
+    margin: 0 0 15px;
+    font-size: 18px;
+    opacity: 0.9;
+}
+
+.error-message p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+    }
+    
+    h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+    }
+    
+    .button-container {
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+    }
+    
+    button, .button {
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 16px;
+        min-width: 0;
+    }
+    
+    .icon {
+        font-size: 18px;
+        margin-right: 8px;
+    }
+    
+    .toast {
+        padding: 10px 20px;
+        font-size: 14px;
+        bottom: 20px;
+    }
+    
+    .error-icon {
+        font-size: 60px;
+    }
+    
+    .error-message {
+        padding: 20px;
+    }
+    
+    .error-message p {
+        font-size: 16px;
+    }
+}
+
+/* Fix for Safari and iOS */
+@supports (-webkit-touch-callout: none) {
+    body {
+        min-height: -webkit-fill-available;
+    }
+}
