@@ -158,6 +158,7 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.stop_encoder()
             self._picamera2.stop()
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+            self._picamera2 = None  # to avoid close on start again
 
         logger.debug("stopping encoder")
 
