@@ -7,15 +7,16 @@ Pin Numbering: https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-number
 
 import logging
 import subprocess
+from collections.abc import Callable
+from typing import Any, get_args
 
 from gpiozero import Button as ZeroButton
 from gpiozero.exc import BadPinFactory
 
 from ..appconfig import appconfig
-from ..utils.exceptions import ProcessMachineOccupiedError
 from .base import BaseService
 from .collection import MediacollectionService
-from .config.groups.actions import GpioTrigger
+from .config.models.trigger import triggerType
 from .processing import ActionType, ProcessingService
 from .share import ShareService
 
@@ -40,25 +41,59 @@ class Button(ZeroButton):
             self._fire_events(self.pin_factory.ticks(), False)
 
 
-class ActionButton(Button):
-    def __init__(self, action_type: ActionType, action_index: int, **kwargs):
-        super().__init__(**kwargs)
+class PinHandler:
+    _instances = {}  # Class-level cache for pin instances
 
-        self.action_type: ActionType = action_type
-        self.action_index: int = action_index
+    def __new__(cls, pin_number, hold_time=1.0):
+        try:
+            return cls._instances[pin_number]
+        except KeyError:
+            _new_instance = super().__new__(cls)
+            _new_instance.__init_new__(pin_number, hold_time)
+            cls._instances[pin_number] = _new_instance
+            return _new_instance
 
-    def __repr__(self):
-        return f"gpio.{self.__class__.__name__} triggers action_type={self.action_type}, action_index={self.action_index} {super().__repr__()}"
+    def __init_new__(self, pin_number, hold_time):
+        self.button = Button(pin_number, hold_time=hold_time, bounce_time=DEBOUNCE_TIME)  # type: ignore
 
+        self.callbacks: dict[triggerType, list[tuple[Callable[[int | str], None], tuple, dict[str, Any]]]] = {
+            "pressed": [],
+            "released": [],
+            "longpress": [],
+        }
 
-class ShareButton(Button):
-    def __init__(self, action_index: int, **kwargs):
-        super().__init__(**kwargs)
+        self.button.when_activated = self._handle_press
+        self.button.when_deactivated = self._handle_release
+        self.button.when_held = self._handle_hold
 
-        self.action_index: int = action_index
+    def _handle_event(self, event_type: triggerType):
+        for cb, args, kwargs in self.callbacks[event_type]:
+            try:
+                cb(*args, **kwargs)
+            except Exception as exc:
+                logger.error(f"error during gpio callback execution: {exc}")
+                # no reraise!
 
-    def __repr__(self):
-        return f"gpio.{self.__class__.__name__} triggers share action, action_index={self.action_index} {super().__repr__()}"
+    def _handle_press(self):
+        self._handle_event("pressed")
+
+    def _handle_release(self):
+        self._handle_event("released")
+
+    def _handle_hold(self):
+        self._handle_event("longpress")
+
+    def register_callback(self, event_type: triggerType, callback, *args, **kwargs):
+        """Register a callback: 'pressed', 'released', or 'longpress'."""
+
+        entry = (callback, args, kwargs)
+        if entry not in self.callbacks[event_type]:
+            self.callbacks[event_type].append(entry)
+
+    def remove_callback(self, event_type: triggerType, callback):
+        """Remove a callback for an event."""
+        if callback in self.callbacks[event_type]:
+            self.callbacks[event_type] = [(cb, args, kwargs) for cb, args, kwargs in self.callbacks[event_type] if cb != callback]
 
 
 class GpioService(BaseService):
@@ -69,132 +104,59 @@ class GpioService(BaseService):
         self._share_service = share_service
         self._mediacollection_service = mediacollection_service
 
-        # input buttons
-        self.shutdown_btn: Button | None = None
-        self.reboot_btn: Button | None = None
-        self.action_btns: list[ActionButton] = []
-        self.share_btns: list[ShareButton] = []
+    def _handle_action_button(self, action_type: ActionType, action_index: int):
+        logger.debug(f"trigger callback for {action_type}:{action_index}")
+        self._processing_service.trigger_action(action_type, action_index)
 
-        # output signals
-        # none yet
+    def _handle_share_button(self, action_index: int):
+        logger.debug(f"trigger callback for share:{action_index}")
 
-    def _handle_action_button(self, btn: ActionButton):
-        logger.debug(f"trigger callback for {btn}")
+        mediaitem = self._mediacollection_service.get_item_latest()
+        self._share_service.share(mediaitem, action_index)
 
-        # start job
-
+    def _handle_processing_next_confirm_button(self):
         try:
-            self._processing_service.trigger_action(btn.action_type, btn.action_index)
-        except ProcessMachineOccupiedError as exc:
-            # raised if processingservice not idle
-            logger.warning(f"only one capture at a time allowed, request ignored: {exc}")
-        except Exception as exc:
-            # other errors
-            logger.exception(exc)
-            logger.critical(exc)
-
-    def _handle_share_button(self, btn: ShareButton):
-        logger.debug(f"trigger callback for {btn}")
-
-        try:
-            mediaitem = self._mediacollection_service.get_item_latest()
-            self._share_service.share(mediaitem, btn.action_index)
-        except BlockingIOError as exc:
-            logger.warning(exc)
+            self._processing_service.continue_process()
         except Exception as exc:
             # other errors
             logger.critical(exc)
 
-    def _setup_action_button(self, action_type: ActionType, gpio_trigger: GpioTrigger, index: int):
+    def _handle_processing_reject_button(self):
         try:
-            pin = gpio_trigger.pin
-            trigger_on = gpio_trigger.trigger_on
-
-            btn = ActionButton(
-                action_type=action_type,
-                action_index=index,
-                pin=pin,
-                hold_time=0.6,
-                bounce_time=DEBOUNCE_TIME,
-            )
-
+            self._processing_service.reject_capture()
         except Exception as exc:
-            logger.warning(f"could not setup action button, error: {exc}")
+            # other errors
+            logger.critical(exc)
 
-        else:
-            if trigger_on == "pressed":
-                btn.when_activated = self._handle_action_button
-            elif trigger_on == "longpress":
-                btn.when_held = self._handle_action_button
-            elif trigger_on == "released":
-                btn.when_deactivated = self._handle_action_button
-
-            self.action_btns.append(btn)
-
-            logger.debug(f"finished setup: {btn}")
-
-    def _setup_share_button(self, gpio_trigger: GpioTrigger, index: int):
+    def _handle_processing_abort_button(self):
         try:
-            pin = gpio_trigger.pin
-            trigger_on = gpio_trigger.trigger_on
-
-            if not pin:
-                logger.info(f"skip register print config {index=} because pin empty")
-                return
-
-            btn = ShareButton(
-                action_index=index,
-                pin=pin,
-                hold_time=0.6,
-                bounce_time=DEBOUNCE_TIME,
-            )
-
+            self._processing_service.abort_process()
         except Exception as exc:
-            logger.warning(f"could not setup action button, error: {exc}")
-
-        else:
-            if trigger_on == "pressed":
-                btn.when_activated = self._handle_share_button
-            elif trigger_on == "longpress":
-                btn.when_held = self._handle_share_button
-            elif trigger_on == "released":
-                btn.when_deactivated = self._handle_share_button
-
-            self.share_btns.append(btn)
-
-            logger.debug(f"finished setup: {btn}")
+            # other errors
+            logger.critical(exc)
 
     def init_io(self):
         # shutdown
-        self.shutdown_btn = Button(
-            appconfig.hardwareinputoutput.gpio_pin_shutdown,
-            hold_time=HOLD_TIME_SHUTDOWN,
-            bounce_time=DEBOUNCE_TIME,
-        )
-        self.shutdown_btn.when_held = self._shutdown
+        shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN)
+        shutdown_btn.register_callback("longpress", self._shutdown)
 
         # reboot
-        self.reboot_btn = Button(
-            appconfig.hardwareinputoutput.gpio_pin_reboot,
-            hold_time=HOLD_TIME_REBOOT,
-            bounce_time=DEBOUNCE_TIME,
-        )
-        self.reboot_btn.when_held = self._reboot
+        shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot, hold_time=HOLD_TIME_SHUTDOWN)
+        shutdown_btn.register_callback("longpress", self._reboot)
 
         # action buttons dynamic registering
-        for index, config in enumerate(appconfig.actions.image):
-            self._setup_action_button("image", config.trigger.gpio_trigger, index)
-        for index, config in enumerate(appconfig.actions.collage):
-            self._setup_action_button("collage", config.trigger.gpio_trigger, index)
-        for index, config in enumerate(appconfig.actions.animation):
-            self._setup_action_button("animation", config.trigger.gpio_trigger, index)
-        for index, config in enumerate(appconfig.actions.video):
-            self._setup_action_button("video", config.trigger.gpio_trigger, index)
+        for action_type in get_args(ActionType):
+            for index, config in enumerate(getattr(appconfig.actions, action_type)):
+                action_btn = PinHandler(config.trigger.gpio_trigger.pin, hold_time=HOLD_TIME_SHUTDOWN)
+                # change press to config.trigger.gpio_trigger.trigger_on
+                action_btn.register_callback("pressed", self._handle_action_button, action_type, index)
+                print(action_btn)
 
-        for index, config in enumerate(appconfig.share.actions):
-            self._setup_share_button(config.trigger.gpio_trigger, index)
+        # for index, config in enumerate(appconfig.share.actions):
+        #     self._setup_share_button(config.trigger.gpio_trigger, index)
 
     def uninit_io(self):
+        return
         if self.shutdown_btn:
             self.shutdown_btn.close()
         if self.reboot_btn:

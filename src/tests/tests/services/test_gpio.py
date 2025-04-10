@@ -1,7 +1,7 @@
 import logging
 import time
 from collections.abc import Generator
-from typing import cast
+from typing import cast, get_args
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +9,8 @@ from gpiozero.pins.mock import MockPin
 
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
-from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN
+from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN, PinHandler
+from photobooth.services.processing import ActionType
 
 logger = logging.getLogger(name=None)
 
@@ -29,11 +30,21 @@ def _container() -> Generator[Container, None, None]:
     container.stop()
 
 
+def test_pinhandler_singleton():
+    pinhandler1_1 = PinHandler(1, 1)
+    pinhandler1_2 = PinHandler(1, 1)
+    pinhandler2_1 = PinHandler(2, 1)
+
+    assert pinhandler1_1 is pinhandler1_2
+    assert pinhandler1_1 is not pinhandler2_1
+
+
 @patch("subprocess.check_call")
 def test_button_shutdown(mock_check_call, _container: Container):
-    assert _container.gpio_service.shutdown_btn
+    # assert _container.gpio_service.shutdown_btn
     # emulate gpio active low driven (simulates button press)
-    cast(MockPin, _container.gpio_service.shutdown_btn.pin).drive_low()
+    # cast(MockPin, _container.gpio_service.shutdown_btn.pin).drive_low()
+    cast(MockPin, PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown).button.pin).drive_low()
 
     # wait hold time
     time.sleep(DEBOUNCE_TIME + HOLD_TIME_SHUTDOWN + 0.5)
@@ -44,9 +55,9 @@ def test_button_shutdown(mock_check_call, _container: Container):
 
 @patch("subprocess.check_call")
 def test_button_reboot(mock_check_call, _container: Container):
-    assert _container.gpio_service.reboot_btn
+    # assert _container.gpio_service.reboot_btn
     # emulate gpio active low driven (simulates button press)
-    cast(MockPin, _container.gpio_service.reboot_btn.pin).drive_low()
+    cast(MockPin, PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot).button.pin).drive_low()
 
     # wait hold time
     time.sleep(DEBOUNCE_TIME + HOLD_TIME_REBOOT + 0.5)
@@ -57,19 +68,20 @@ def test_button_reboot(mock_check_call, _container: Container):
 
 def test_button_action_buttons(_container: Container):
     # modify config
-    # services.config().hardwareinputoutput.gpio_enabled = True
 
     with patch.object(_container.processing_service, "_start_job") as mock:
         # emulate gpio active low driven (simulates button press)
-        for action_button in _container.gpio_service.action_btns:
-            cast(MockPin, action_button.pin).drive_low()
+        for action_type in get_args(ActionType):
+            for config in getattr(appconfig.actions, action_type):
+                cast(MockPin, PinHandler(config.trigger.gpio_trigger.pin).button.pin).drive_low()
 
-            # wait debounce time
-            time.sleep(DEBOUNCE_TIME + 0.5)
+                # wait debounce time
+                time.sleep(DEBOUNCE_TIME + 0.5)
 
-        mock.assert_called()
+                mock.assert_called_once()
+                mock.reset_mock()
 
-        assert len(_container.gpio_service.action_btns) == mock.call_count
+        # assert calls == mock.call_count
 
 
 @patch("subprocess.run")

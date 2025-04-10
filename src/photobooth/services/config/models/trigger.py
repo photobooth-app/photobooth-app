@@ -3,6 +3,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_extra_types.color import Color
 
+triggerType = Literal["pressed", "released", "longpress"]
+
 
 class UiTrigger(BaseModel):
     """
@@ -58,7 +60,7 @@ class GpioTrigger(BaseModel):
         description="GPIO the button is connected to.",
     )
 
-    trigger_on: Literal["pressed", "released", "longpress"] = Field(
+    trigger_on: triggerType = Field(
         default="pressed",
         description="Trigger action when button pressed (contact closed), released (contact open after closed) or longpress (hold for 0.6 seconds).",
     )

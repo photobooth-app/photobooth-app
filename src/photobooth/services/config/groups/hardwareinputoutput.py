@@ -32,3 +32,16 @@ class GroupHardwareInputOutput(BaseModel):
         default=18,
         description="GPIO pin to reboot after holding it for 2 seconds.",
     )
+
+    gpio_pin_job_next: int = Field(
+        default=18,
+        description="",
+    )
+    gpio_pin_job_reject: int = Field(
+        default=19,
+        description="",
+    )
+    gpio_pin_job_abort: int = Field(
+        default=20,
+        description="",
+    )
