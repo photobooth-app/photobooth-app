@@ -55,10 +55,10 @@ def ffmpeg_h265_scale(tmp_path):
         raise AssertionError("process fail")
 
 
-def pyav_h264_scale(tmp_path, threading_type, threading_number):
+def pyav_h264_scale(tmp_path, thread_type, threading_number):
     input_container = av.open("src/tests/assets/video.mp4")
     input_stream = input_container.streams.video[0]
-    input_stream.thread_type = threading_type  # speed up decoding
+    input_stream.thread_type = thread_type  # speed up decoding
     input_stream.thread_count = threading_number
     output_container = av.open(tmp_path / "pyav.mp4", mode="w")
     output_stream = output_container.add_stream("h264", rate=500000)
@@ -165,19 +165,19 @@ def test_ffmpeg_h265_scale(benchmark, tmp_path):
     benchmark(ffmpeg_h265_scale, tmp_path=tmp_path)
 
 
-@pytest.fixture(params=["AUTO", "FRAME", "SLICE"])
-def threading_type(request):
+@pytest.fixture(params=["NONE", "AUTO", "FRAME", "SLICE"])
+def thread_type(request):
     yield request.param
 
 
-@pytest.fixture(params=[0, 8, 32])
+@pytest.fixture(params=[0, 16])
 def threading_number(request):
     yield request.param
 
 
 @pytest.mark.benchmark(group="scalevideo")
-def test_pyav_scale(benchmark, tmp_path, threading_type, threading_number):
-    benchmark(pyav_h264_scale, tmp_path, threading_type, threading_number)
+def test_pyav_scale(benchmark, tmp_path, thread_type, threading_number):
+    benchmark(pyav_h264_scale, tmp_path, thread_type, threading_number)
 
 
 @pytest.mark.benchmark(group="scalevideo")

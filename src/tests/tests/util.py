@@ -28,9 +28,6 @@ def block_until_device_is_running(backend: AbstractBackend):
 
 
 def get_images(backend: AbstractBackend):
-    # logger.info(f"testing backend {backend.__module__}")
-    # backend.start()
-
     try:
         with Image.open(backend.wait_for_still_file()) as img:
             img.verify()
@@ -42,10 +39,6 @@ def get_images(backend: AbstractBackend):
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
-
-    # stop backend, ensure process is joined properly to collect coverage:
-    # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-process
-    # backend.stop()
 
 
 def is_same(img1: Image.Image, img2: Image.Image):

@@ -81,6 +81,8 @@ class WigglecamBackend(AbstractBackend):
 
         #     return StreamingResponse(iterfile(), media_type="multipart/x-mixed-replace; boundary=frame")
 
+        self.pause_wait_for_lores_while_hires_capture()
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")

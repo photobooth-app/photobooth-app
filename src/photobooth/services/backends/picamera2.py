@@ -8,7 +8,7 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from threading import Condition, Event
+from threading import Condition
 
 from libcamera import controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
@@ -18,7 +18,7 @@ from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...appconfig import appconfig
 from ..config.groups.backends import GroupBackendPicamera2
-from .abstractbackend import AbstractBackend, GeneralFileResult
+from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,7 @@ class Picamera2Backend(AbstractBackend):
         self._mjpeg_encoder: MJPEGEncoder = None  # livestream encoder
 
         # lores and hires data output
-        self._lores_data: PicamLoresData | None = None
-        self._hires_data: GeneralFileResult | None = None
+        self._lores_data: PicamLoresData = PicamLoresData()
 
         # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
         self._video_encoder = None
@@ -111,8 +110,6 @@ class Picamera2Backend(AbstractBackend):
         raise NotImplementedError("backend does not support multicam files")
 
     def _wait_for_still_file(self) -> Path:
-        assert self._hires_data
-
         """
         for other threads to receive a hq JPEG image
         mode switches are handled internally automatically, no separate trigger necessary
@@ -150,9 +147,12 @@ class Picamera2Backend(AbstractBackend):
         return round(value, digits)
 
     def _wait_for_lores_image(self) -> bytes:
+        """for other threads to receive a lores JPEG image"""
+
         assert self._lores_data
 
-        """for other threads to receive a lores JPEG image"""
+        self.pause_wait_for_lores_while_hires_capture()
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
@@ -240,9 +240,6 @@ class Picamera2Backend(AbstractBackend):
             logger.info("closing camera before starting to ensure it's available")
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
-        self._lores_data = PicamLoresData()
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-
         tuning = None
         if self._config.optimized_lowlight_short_exposure:
             try:
@@ -314,8 +311,6 @@ class Picamera2Backend(AbstractBackend):
 
     def run_service(self):
         logger.info("Running service logic...")
-
-        assert self._hires_data
 
         _metadata = None
 

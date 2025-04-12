@@ -7,7 +7,7 @@ import sys
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition, Event
+from threading import Condition
 
 import av
 from av.codec import Capabilities, Codec
@@ -17,7 +17,7 @@ from simplejpeg import encode_jpeg_yuv_planes
 
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendPyav
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,6 @@ class WebcamPyavBackend(AbstractBackend):
         super().__init__(orientation=config.orientation)
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._worker_thread: StoppableThread | None = None
 
         # for debugging purposes output some information about underlying libs
@@ -84,6 +83,8 @@ class WebcamPyavBackend(AbstractBackend):
 
     def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
+
+        self.pause_wait_for_lores_while_hires_capture()
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):

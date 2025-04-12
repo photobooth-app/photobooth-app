@@ -12,7 +12,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Event
+from threading import Condition, Event
 
 import piexif
 
@@ -123,6 +123,9 @@ class AbstractBackend(ResilientService, ABC):
         self._video_recorded_videofilepath: Path | None = None
         self._video_framerate: int | None = None
 
+        # data out (lores_data is locally handled per backend)
+        self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
+
         super().__init__()
 
     def __repr__(self):
@@ -232,6 +235,15 @@ class AbstractBackend(ResilientService, ABC):
             logger.critical(f"finally failed after {retries} attempts to capture image!")
 
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
+
+    def pause_wait_for_lores_while_hires_capture(self):
+        flag_logmsg_emitted_once = False
+        while self._hires_data.request.is_set():
+            if not flag_logmsg_emitted_once:
+                logger.debug("pause_wait_for_lores_while_hires_capture until hires request is finished")
+                flag_logmsg_emitted_once = True  # avoid flooding logs
+
+            time.sleep(0.2)
 
     def wait_for_lores_image(self, retries: int = 10) -> bytes:
         """Function called externally to receivea low resolution image.

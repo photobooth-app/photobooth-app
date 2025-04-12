@@ -5,11 +5,11 @@ v4l webcam implementation backend
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition, Event
+from threading import Condition
 from typing import Literal
 
 from ..config.groups.backends import GroupBackendV4l2
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 try:
     import linuxpy.video.device as linuxpy_video_device  # type: ignore
@@ -29,7 +29,6 @@ class WebcamV4lBackend(AbstractBackend):
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
 
     def start(self):
         super().start()
@@ -79,6 +78,8 @@ class WebcamV4lBackend(AbstractBackend):
 
     def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
+
+        self.pause_wait_for_lores_while_hires_capture()
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):

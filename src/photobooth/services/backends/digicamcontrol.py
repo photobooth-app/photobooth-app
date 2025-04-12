@@ -3,12 +3,12 @@ import tempfile
 import time
 import urllib.parse
 from pathlib import Path
-from threading import Condition, Event
+from threading import Condition
 
 import requests
 
 from ..config.groups.backends import GroupBackendDigicamcontrol
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,6 @@ class DigicamcontrolBackend(AbstractBackend):
         super().__init__(orientation=config.orientation)
 
         self._enabled_liveview: bool = False
-        self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
 
     def start(self):
@@ -95,13 +94,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        flag_logmsg_emitted_once = False
-        while self._hires_data.request.is_set():
-            if not flag_logmsg_emitted_once:
-                logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
-                flag_logmsg_emitted_once = True  # avoid flooding logs
-
-            time.sleep(0.2)
+        self.pause_wait_for_lores_while_hires_capture()
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):

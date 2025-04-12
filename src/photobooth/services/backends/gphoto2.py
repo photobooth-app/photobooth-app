@@ -7,7 +7,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from threading import Condition, Event
+from threading import Condition
 
 try:
     import gphoto2 as gp  # type: ignore
@@ -16,7 +16,7 @@ except ImportError:
 
 
 from ..config.groups.backends import GroupBackendGphoto2
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,6 @@ class Gphoto2Backend(AbstractBackend):
         ):
             self.event_texts[getattr(gp, name)] = name
 
-        self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
 
         logger.info(f"python-gphoto2: {gp.__version__}")
@@ -102,13 +101,7 @@ class Gphoto2Backend(AbstractBackend):
 
     def _wait_for_lores_image(self):
         """for other threads to receive a lores JPEG image"""
-        flag_logmsg_emitted_once = False
-        while self._hires_data.request.is_set():
-            if not flag_logmsg_emitted_once:
-                logger.debug("request to _wait_for_lores_image waiting until ongoing request_hires_still is finished")
-                flag_logmsg_emitted_once = True  # avoid flooding logs
-
-            time.sleep(0.2)
+        self.pause_wait_for_lores_while_hires_capture()
 
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
