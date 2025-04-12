@@ -1,4 +1,5 @@
 import logging
+from threading import Lock
 
 from .services.aquisition import AquisitionService
 from .services.base import BaseService
@@ -33,31 +34,37 @@ class Container:
     filetransfer_service = FileTransferService()
     config_service = ConfigurationService(pluginmanager_service)
 
+    lock = Lock()
+
     def _service_list(self) -> list[BaseService]:
         # list used to start/stop services. List sorted in the order of definition.
         return [getattr(self, attr) for attr in __class__.__dict__ if isinstance(getattr(self, attr), BaseService)]
 
     def start(self):
-        for service in self._service_list():
-            try:
-                service.start()
+        with self.lock:
+            for service in self._service_list():
+                try:
+                    service.start()
 
-                logger.info(f"started {service.__class__.__name__}")
-            except Exception as exc:
-                logger.exception(exc)
-                logger.critical("could not start service")
+                    logger.info(f"started {service.__class__.__name__}")
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.critical("could not start service")
 
-        logger.info("started container")
+            logger.info("started container")
 
     def stop(self):
-        for service in reversed(self._service_list()):
-            try:
-                service.stop()
+        with self.lock:
+            for service in reversed(self._service_list()):
+                try:
+                    service.stop()
 
-                logger.info(f"stopped {service.__class__.__name__}")
-            except Exception as exc:
-                logger.exception(exc)
-                logger.critical("could not stop service")
+                    logger.info(f"stopped {service.__class__.__name__}")
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.critical("could not stop service")
+
+            logger.info("stopped container")
 
     def reload(self):
         """stop all services first (reverse order), then start them again."""
