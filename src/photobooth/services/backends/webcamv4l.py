@@ -154,24 +154,27 @@ class WebcamV4lBackend(AbstractBackend):
                     self._switch_mode(capture, "hires")
 
                     # capture hq picture
+                    skip_counter = 0
                     for frame in device:
                         # throw away the first x frames to allow the camera to settle again.
                         if frame.frame_nb <= self._config.flush_number_frames_after_switch:
+                            skip_counter += 1
                             continue
 
-                        if self._config.flush_number_frames_after_switch:
-                            logger.info("skipped {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+                        logger.info(f"skipped {skip_counter} frames before capture high resolution image")
 
                         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
                             f.write(bytes(frame))
 
                         self._hires_data.filepath = Path(f.name)
 
+                        logger.info(f"written image to {Path(f.name)}")
+
+                        with self._hires_data.condition:
+                            self._hires_data.condition.notify_all()
+
                         # grab just one frame...
                         break
-
-                    with self._hires_data.condition:
-                        self._hires_data.condition.notify_all()
                 else:
                     self._switch_mode(capture, "lores")
 
