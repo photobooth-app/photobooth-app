@@ -10,13 +10,15 @@ from photobooth.routers.media import api_getitems
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.processing import ActionType
 
+from ..tests.util import block_until_device_is_running
+
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
     container.start()
-    container.aquisition_service._get_stills_backend().block_until_device_is_running()
+    block_until_device_is_running(container.aquisition_service._get_stills_backend())
     cast(VirtualCameraBackend, container.aquisition_service._get_stills_backend())._config.emulate_hires_static_still = True
 
     yield container

@@ -50,25 +50,12 @@ class WebcamPyavBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        self._worker_thread = StoppableThread(name="webcampyav_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
         logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _device_name_platform(self):
         return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
@@ -113,11 +100,14 @@ class WebcamPyavBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _worker_fun(self):
-        logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_identifier=}")
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-        assert self._worker_thread
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
 
         reformatter = VideoReformatter()
         options = {
@@ -134,6 +124,7 @@ class WebcamPyavBackend(AbstractBackend):
         frame_count = 0
 
         try:
+            logger.info(f"trying to open camera index={self._config.device_identifier=}")
             input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
         except Exception as exc:
             logger.exception(exc)
@@ -158,8 +149,6 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"frame format: {frame.format}")
 
                 break
-
-            self._device_set_is_ready_to_deliver()
 
             for frame in input_device.decode(input_stream):
                 # hires
@@ -206,10 +195,9 @@ class WebcamPyavBackend(AbstractBackend):
                 self._frame_tick()
 
                 # abort streaming on shutdown so process can join and close
-                if self._worker_thread.stopped():
+                if self._stop_event.is_set():
                     break
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("pyav_img_aquisition finished, exit")
 
     def _version_codec_info(self):

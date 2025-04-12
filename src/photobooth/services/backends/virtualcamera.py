@@ -53,6 +53,7 @@ class CyclicImageSource:
 
 class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: GroupBackendVirtualcamera):
+        # print(VirtualCameraBackend.__mro__)
         self._config: GroupBackendVirtualcamera = config
         super().__init__(orientation=config.orientation)
 
@@ -63,25 +64,41 @@ class VirtualCameraBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        self._worker_thread = StoppableThread(name="virtualcamera_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
         logger.debug(f"{self.__module__} stopped")
 
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-        return super_alive and worker_alive
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
+
+        # raise RuntimeError("Simulated crash")
+
+        last_time_frame = time.time()
+        while not self._stop_event.is_set():
+            now_time = time.time()
+            if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
+                # limit max framerate to every ~5ms
+                time.sleep(0.005)
+                continue
+            last_time_frame = now_time
+
+            # success
+            with self._lores_data.condition:
+                self._lores_data.data = next(self._images_iterator)
+                self._lores_data.condition.notify_all()
+
+            self._frame_tick()
+
+        logger.info("virtualcamera thread finished")
 
     def _wait_for_multicam_files(self) -> list[Path]:
         files: list[Path] = []
@@ -120,32 +137,3 @@ class VirtualCameraBackend(AbstractBackend):
 
     def _on_configure_optimized_for_hq_capture(self):
         pass
-
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
-
-    def _worker_fun(self):
-        assert self._worker_thread
-        logger.info("virtualcamera thread function starts")
-
-        self._device_set_is_ready_to_deliver()
-
-        last_time_frame = time.time()
-        while not self._worker_thread.stopped():
-            now_time = time.time()
-            if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
-                # limit max framerate to every ~5ms
-                time.sleep(0.005)
-                continue
-            last_time_frame = now_time
-
-            # success
-            with self._lores_data.condition:
-                self._lores_data.data = next(self._images_iterator)
-                self._lores_data.condition.notify_all()
-
-            self._frame_tick()
-
-        self._device_set_is_ready_to_deliver(False)
-        logger.info("virtualcamera thread finished")

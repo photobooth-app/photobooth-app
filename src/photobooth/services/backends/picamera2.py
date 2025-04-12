@@ -17,7 +17,6 @@ from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignor
 from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...appconfig import appconfig
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendPicamera2
 from .abstractbackend import AbstractBackend, GeneralFileResult
 
@@ -61,9 +60,6 @@ class Picamera2Backend(AbstractBackend):
         self._video_encoder = None
         self._video_output = None
 
-        # worker threads
-        self._worker_thread: StoppableThread | None = None
-
         self._capture_config = None
         self._preview_config = None
         self._current_config = None
@@ -74,100 +70,12 @@ class Picamera2Backend(AbstractBackend):
     def start(self):
         super().start()
 
-        if self._picamera2:
-            logger.info("closing camera before starting to ensure it's available")
-            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
-
-        self._lores_data = PicamLoresData()
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-
-        tuning = None
-        if self._config.optimized_lowlight_short_exposure:
-            try:
-                tuning = self._get_optimized_short_lowlight_tuning()
-                logger.info("optimized tuningfile for low light loaded")
-            except Exception as exc:
-                logger.warning(f"error getting optimized lowlight tuning: {exc}")
-
-        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
-
-        # config HQ mode (used for picture capture and live preview on countdown)
-        self._capture_config = self._picamera2.create_still_configuration(
-            main={"size": (self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT)},
-            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
-            encode="lores",
-            buffer_count=3,
-            display="lores",
-            controls={"FrameRate": self._config.framerate_still_mode},
-        )
-
-        # config preview mode (used for permanent live view)
-        self._preview_config = self._picamera2.create_video_configuration(
-            main={"size": (self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT)},
-            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
-            encode="lores",
-            buffer_count=3,
-            display="lores",
-            controls={"FrameRate": self._config.framerate_video_mode},
-        )
-
-        # set preview mode on init
-        self._current_config = self._preview_config
-
-        # configure; camera needs to be stopped before
-        self._picamera2.configure(self._current_config)
-
-        # capture_file image quality
-        self._picamera2.options["quality"] = self._config.original_still_quality
-
-        logger.info(f"camera_config: {self._picamera2.camera_config}")
-        logger.info(f"camera_controls: {self._picamera2.camera_controls}")
-        logger.info(f"controls: {self._picamera2.controls}")
-        logger.info(f"camera_properties: {self._picamera2.camera_properties}")
-
-        if self._config.optimized_lowlight_short_exposure:
-            self._picamera2.set_controls({"AeExposureMode": controls.AeExposureModeEnum.Short})
-            logger.info(f"selected short exposure mode ({controls.AeExposureModeEnum.Short})")
-
-        logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
-
-        # start encoder
-        self._mjpeg_encoder = MJPEGEncoder()
-        self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
-        self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
-
-        # start camera
-        self._picamera2.start()
-
-        self._worker_thread = StoppableThread(name="_picamera2_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
-        self._init_autofocus()
-
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
-        # https://github.com/raspberrypi/picamera2/issues/576
-        if self._picamera2:
-            self._picamera2.stop_encoder()
-            self._picamera2.stop()
-            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
-
-        logger.debug("stopping encoder")
-
         logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
@@ -302,7 +210,7 @@ class Picamera2Backend(AbstractBackend):
         except Exception as exc:
             logger.exception(exc)
             logger.critical(f"error switching mode in picamera due to {exc}")
-            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
+            raise exc
         else:
             self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
             logger.info("switchmode finished successfully")
@@ -325,18 +233,93 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug("autofocus set")
 
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-    def _worker_fun(self):
-        assert self._worker_thread
+        if self._picamera2:
+            logger.info("closing camera before starting to ensure it's available")
+            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+
+        self._lores_data = PicamLoresData()
+        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
+
+        tuning = None
+        if self._config.optimized_lowlight_short_exposure:
+            try:
+                tuning = self._get_optimized_short_lowlight_tuning()
+                logger.info("optimized tuningfile for low light loaded")
+            except Exception as exc:
+                logger.warning(f"error getting optimized lowlight tuning: {exc}")
+
+        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
+
+        # config HQ mode (used for picture capture and live preview on countdown)
+        self._capture_config = self._picamera2.create_still_configuration(
+            main={"size": (self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT)},
+            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
+            encode="lores",
+            buffer_count=3,
+            display="lores",
+            controls={"FrameRate": self._config.framerate_still_mode},
+        )
+
+        # config preview mode (used for permanent live view)
+        self._preview_config = self._picamera2.create_video_configuration(
+            main={"size": (self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT)},
+            lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
+            encode="lores",
+            buffer_count=3,
+            display="lores",
+            controls={"FrameRate": self._config.framerate_video_mode},
+        )
+
+        # set preview mode on init
+        self._current_config = self._preview_config
+
+        # configure; camera needs to be stopped before
+        self._picamera2.configure(self._current_config)
+
+        # capture_file image quality
+        self._picamera2.options["quality"] = self._config.original_still_quality
+
+        logger.info(f"camera_config: {self._picamera2.camera_config}")
+        logger.info(f"camera_controls: {self._picamera2.camera_controls}")
+        logger.info(f"controls: {self._picamera2.controls}")
+        logger.info(f"camera_properties: {self._picamera2.camera_properties}")
+
+        if self._config.optimized_lowlight_short_exposure:
+            self._picamera2.set_controls({"AeExposureMode": controls.AeExposureModeEnum.Short})
+            logger.info(f"selected short exposure mode ({controls.AeExposureModeEnum.Short})")
+
+        logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
+
+        # start encoder
+        self._mjpeg_encoder = MJPEGEncoder()
+        self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
+        self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+
+        # start camera
+        self._picamera2.start()
+
+        self._init_autofocus()
+
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+        # https://github.com/raspberrypi/picamera2/issues/576
+        if self._picamera2:
+            self._picamera2.stop_encoder()
+            self._picamera2.stop()
+            self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
+
+    def run_service(self):
+        logger.info("Running service logic...")
+
         assert self._hires_data
 
         _metadata = None
-        self._device_set_is_ready_to_deliver()
 
-        while not self._worker_thread.stopped():  # repeat until stopped
+        while not self._stop_event.is_set():  # repeat until stopped
             if self._hires_data.request.is_set() is True and self._current_config != self._capture_config:
                 # ensure cam is in capture quality mode even if there was no countdown
                 # triggered beforehand usually there is a countdown, but this is to be safe
@@ -344,7 +327,7 @@ class Picamera2Backend(AbstractBackend):
                 self._on_configure_optimized_for_hq_capture()
 
             if (not self._current_config == self._last_config) and self._last_config is not None:
-                if not self._worker_thread.stopped():
+                if not self._stop_event.is_set():
                     self._switch_mode()
                 else:
                     logger.info("switch_mode ignored, because shutdown already requested")
@@ -379,12 +362,8 @@ class Picamera2Backend(AbstractBackend):
                     # wait=1.5 was added to avoid stalling the _worker_fun thread raising a timeout after 1.5 seconds without images/metadata latest.
                     # inform about the error, no need to reraise the issue actually again.
 
-                    logger.error(f"camera stopped delivering frames, error {exc}")
-                    # mark as faulty to restart in case it was not detected by supervisor already.
-
-                    # stop device requested by leaving worker loop, so supvervisor can restart
-                    # leave worker function
-                    break
+                    # stop device requested by leaving worker loop, so backend can restart
+                    raise RuntimeError(f"camera stopped delivering frames, error {exc}") from exc
 
             # update backendstats (optional for backends, but this one has so many information that are easy to display)
             # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
@@ -403,5 +382,4 @@ class Picamera2Backend(AbstractBackend):
 
             self._frame_tick()
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("_generate_images_fun left")

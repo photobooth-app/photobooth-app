@@ -4,10 +4,10 @@ import pytest
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.webcamv4l import WebcamV4lBackend, linuxpy_video_device
-from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
 from photobooth.services.config.groups.backends import GroupBackendV4l2
+from photobooth.utils.enumerate import webcameras
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -30,7 +30,7 @@ def backend_v4l():
     backend = WebcamV4lBackend(GroupBackendV4l2())
 
     logger.info("probing for available cameras")
-    _availableCameraIndexes = v4l_avail()
+    _availableCameraIndexes = webcameras()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
 
@@ -43,7 +43,7 @@ def backend_v4l():
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -57,10 +57,6 @@ def test_service_reload(backend_v4l):
     for _ in range(1, 5):
         backend_v4l.stop()
         backend_v4l.start()
-
-
-def test_assert_is_alive(backend_v4l):
-    assert backend_v4l._device_alive()
 
 
 def test_optimize_mode(backend_v4l):

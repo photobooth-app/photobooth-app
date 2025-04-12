@@ -11,6 +11,22 @@ from photobooth.services.backends.abstractbackend import AbstractBackend
 logger = logging.getLogger(name=None)
 
 
+def block_until_device_is_running(backend: AbstractBackend):
+    """Mostly used for testing to ensure the device is up.
+
+    Returns:
+        _type_: _description_
+    """
+    attempts = 50
+    logger.info(f"waiting for device to be ready to deliver lores images until {attempts=}")
+    try:
+        backend.wait_for_lores_image(retries=50)
+    except Exception as exc:
+        raise AssertionError(f"test fails because device did not come up for testing, error: {exc}") from exc
+    else:
+        logger.debug("continue, device signaled is ready to deliver")
+
+
 def get_images(backend: AbstractBackend):
     # logger.info(f"testing backend {backend.__module__}")
     # backend.start()

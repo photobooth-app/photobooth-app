@@ -11,7 +11,7 @@ import pytest
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.config.groups.backends import GroupBackendVirtualcamera
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -23,7 +23,7 @@ def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -34,10 +34,6 @@ def test_service_reload(backend_virtual: VirtualCameraBackend):
     for _ in range(1, 5):
         backend_virtual.stop()
         backend_virtual.start()
-
-
-def test_assert_is_alive(backend_virtual: VirtualCameraBackend):
-    assert backend_virtual._device_alive()
 
 
 def test_optimize_mode(backend_virtual: VirtualCameraBackend):

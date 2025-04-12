@@ -20,6 +20,7 @@ from ... import LOG_PATH
 from ...appconfig import appconfig
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import Orientation
+from .resilientservice import ResilientService
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ class Framerate:
             return 0
 
 
-class AbstractBackend(ABC):
+class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def __init__(self, orientation: Orientation = "1: 0°"):
         # init
@@ -110,11 +111,6 @@ class AbstractBackend(ABC):
         # statisitics attributes
         self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
         self._framerate: Framerate = Framerate()
-
-        # flat that the actual backend implementation sets via set_is_ready_to_deliver, when the backend can deliver safely
-        # images within a usual timeout period.
-        self.is_ready_to_deliver: Event = Event()
-        self.is_marked_faulty: Event = Event()
 
         # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
         # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
@@ -147,46 +143,17 @@ class AbstractBackend(ABC):
 
         # reset the request for this backend to deliver lores frames
         self._device_enable_lores_flag = False
-        self._device_set_is_ready_to_deliver(False)
-        self.is_marked_faulty.clear()
+
+        super().start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
         logger.debug(f"{self.__module__} stop called")
 
-        self._device_set_is_ready_to_deliver(False)
-        self.is_marked_faulty.clear()
         self.stop_recording()
 
-    @abstractmethod
-    def _device_alive(self) -> bool:
-        # no threads to supervise here.
-        return True
-
-    def _device_set_is_ready_to_deliver(self, flag: bool = True):
-        """
-        called by backend, when ready to deliver frames or not any more
-        """
-        if flag:
-            self.is_ready_to_deliver.set()
-        else:
-            self.is_ready_to_deliver.clear()
-
-        logger.info(f"device signals is ready to deliver now={flag}")
-
-    def block_until_device_is_running(self):
-        """Mostly used for testing to ensure the device is up.
-
-        Returns:
-            _type_: _description_
-        """
-        timeout = 10
-        logger.info(f"waiting for device to be ready to deliver until timeout={timeout}s")
-        if not self.is_ready_to_deliver.wait(timeout=timeout):
-            raise RuntimeError("Error, device not signaling ready until timeout occured!")
-
-        logger.debug("continue, device signaled is ready to deliver")
+        super().stop()
 
     def rotate_jpeg_file_by_exif_flag(self, filepath: Path, orientation_choice: Orientation):
         """inserts updated orientation flag in given filepath.
@@ -241,8 +208,8 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
+
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
     def wait_for_still_file(self, retries: int = 3) -> Path:
@@ -262,11 +229,11 @@ class AbstractBackend(ABC):
 
         else:
             # we failed finally all the attempts - deal with the consequences.
-            self.is_marked_faulty.set()  # mark the backend as faulty, so it will be restarted from outer service
             logger.critical(f"finally failed after {retries} attempts to capture image!")
+
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
-    def wait_for_lores_image(self, retries: int = 10):
+    def wait_for_lores_image(self, retries: int = 10) -> bytes:
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
 
@@ -282,13 +249,13 @@ class AbstractBackend(ABC):
         """
         self._device_enable_lores_flag = True
 
-        for _ in range(1, retries):
+        for _ in range(retries):
             try:
                 img_bytes = self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
                 img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
                 return img
             except TimeoutError as exc:
-                if self._device_alive():
+                if self.is_running():
                     continue
                 else:
                     logger.debug("device not alive any more, stopping early lores image delivery.")
@@ -296,23 +263,10 @@ class AbstractBackend(ABC):
             except Exception as exc:
                 # other exceptions fail immediately
                 logger.warning("device raised exception (maybe lost connection to device?)")
-                raise RuntimeError("device raised exception (maybe lost connection to device?)") from exc
+                raise exc
 
-        logger.debug(f"device timed out deliver lores image in {retries - 1} attempts. One last try now or raise exception.")
-
-        # final call
-        try:
-            return self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
-        except Exception as exc:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.exception(exc)
-            logger.critical(f"finally failed after {retries} attempts to capture lores image!")
-
-            # mark the backend as faulty, so it will be restarted from outer service
-            self.is_marked_faulty.set()
-            logger.error("failing to get lores images from device is considered as error, stopping backend to recover")
-
-            raise RuntimeError("device raised exception") from exc
+        # max attempts reached.
+        raise RuntimeError(f"failed getting images after {retries} attempts.")
 
     def start_recording(self, video_framerate: int) -> Path:
         self._video_worker_capture_started.clear()

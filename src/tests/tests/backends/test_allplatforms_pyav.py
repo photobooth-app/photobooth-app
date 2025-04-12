@@ -11,7 +11,7 @@ from photobooth.services.backends.webcampyav import WebcamPyavBackend
 from photobooth.services.config.groups.backends import GroupBackendPyav
 from photobooth.utils.enumerate import webcameras
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -38,7 +38,7 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -49,10 +49,6 @@ def test_service_reload(backend_pyav):
     for _ in range(1, 5):
         backend_pyav.stop()
         backend_pyav.start()
-
-
-def test_assert_is_alive(backend_pyav):
-    assert backend_pyav._device_alive()
 
 
 def test_optimize_mode(backend_pyav):

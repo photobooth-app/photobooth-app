@@ -8,7 +8,6 @@ from tempfile import NamedTemporaryFile
 from threading import Condition, Event
 from typing import Literal
 
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
 
@@ -31,30 +30,16 @@ class WebcamV4lBackend(AbstractBackend):
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
         self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
-
-        self._worker_thread = StoppableThread(name="webcamv4l_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
         logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -135,13 +120,18 @@ class WebcamV4lBackend(AbstractBackend):
         except ValueError:
             return linuxpy_video_device.Device(device_text)
 
-    def _worker_fun(self):
-        logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_identifier=}")
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
+
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
 
         assert linuxpy_video_device
-        assert self._worker_thread
 
+        logger.info(f"trying to open camera index={self._config.device_identifier=}")
         with self._get_device(self._config.device_identifier) as device:
             logger.info(f"webcam device index: {self._config.device_identifier}")
             logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
@@ -156,7 +146,7 @@ class WebcamV4lBackend(AbstractBackend):
 
             self._switch_mode(capture, "lores")
 
-            while not self._worker_thread.stopped():
+            while not self._stop_event.is_set():
                 if self._hires_data.request.is_set():
                     # only capture one pic and return to lores streaming afterwards
                     self._hires_data.request.clear()
@@ -186,11 +176,6 @@ class WebcamV4lBackend(AbstractBackend):
                     self._switch_mode(capture, "lores")
 
                     for frame in device:  # forever
-                        # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib
-                        if not self.is_ready_to_deliver.is_set():
-                            # set only once.
-                            self._device_set_is_ready_to_deliver()
-
                         with self._lores_data.condition:
                             self._lores_data.data = bytes(frame)
                             self._lores_data.condition.notify_all()
@@ -202,26 +187,7 @@ class WebcamV4lBackend(AbstractBackend):
                             break
 
                         # abort streaming on shutdown so process can join and close
-                        if self._worker_thread.stopped():
+                        if self._stop_event.is_set():
                             break
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("v4l_img_aquisition finished, exit")
-
-
-def available_camera_indexes() -> list[int]:
-    if linuxpy_video_device is None:
-        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
-
-    mjpeg_stream_devices: list[int] = []
-
-    devices_list = list(linuxpy_video_device.iter_video_capture_devices())
-
-    for device_list in devices_list:
-        with linuxpy_video_device.Device(device_list.filename) as device:
-            assert device.info
-            if any(device_format.pixel_format == linuxpy_video_device.PixelFormat.MJPEG for device_format in device.info.formats):
-                if device.index is not None:
-                    mjpeg_stream_devices.append(device.index)
-
-    return mjpeg_stream_devices

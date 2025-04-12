@@ -7,7 +7,6 @@ from threading import Condition, Event
 
 import requests
 
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendDigicamcontrol
 from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
 
@@ -59,38 +58,16 @@ class DigicamcontrolBackend(AbstractBackend):
         self._enabled_liveview: bool = False
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
-
-        self._enabled_liveview: bool = False
-
-        self._worker_thread = StoppableThread(name="digicamcontrol_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        # when stopping the backend also stop the livestream by following command.
-        # if livestream is stopped, the camera is available to other processes again.
-        session = requests.Session()
-        session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Hide")
-        # not raise_for_status, because we ignore and want to continue stopping the backend
-
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
         logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -157,12 +134,22 @@ class DigicamcontrolBackend(AbstractBackend):
 
         self._enabled_liveview = True
 
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
-    def _worker_fun(self):
-        assert self._worker_thread
-        logger.debug("starting digicamcontrol worker function")
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
+
+        self._enabled_liveview: bool = False
+
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+        # when stopping the backend also stop the livestream by following command.
+        # if livestream is stopped, the camera is available to other processes again.
+        session = requests.Session()
+        session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Hide")
+        # not raise_for_status, because we ignore and want to continue stopping the backend
+
+    def run_service(self):
+        logger.info("Running service logic...")
 
         # start in preview mode
         self._on_configure_optimized_for_idle()
@@ -170,9 +157,7 @@ class DigicamcontrolBackend(AbstractBackend):
         session = requests.Session()
         preview_failcounter = 0
 
-        self._device_set_is_ready_to_deliver()
-
-        while not self._worker_thread.stopped():  # repeat until stopped
+        while not self._stop_event.is_set():  # repeat until stopped
             if self._hires_data.request.is_set():
                 logger.debug("triggered capture")
 
@@ -278,5 +263,4 @@ class DigicamcontrolBackend(AbstractBackend):
             # wait for trigger...
             time.sleep(0.05)
 
-        self._device_set_is_ready_to_deliver(False)
         logger.warning("_worker_fun exits")

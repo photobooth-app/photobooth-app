@@ -12,7 +12,6 @@ class EnumStatus(Enum):
     uninitialized = 10
     initialized = 11
     disabled = 12
-    faulty = 13
 
     stopped = 21
     stopping = 22
@@ -46,9 +45,6 @@ class BaseService:
 
     def stopped(self):
         self._set_status(EnumStatus.stopped)
-
-    def faulty(self):
-        self._set_status(EnumStatus.faulty)
 
     def is_running(self):
         return True if self._status.value >= EnumStatus.started.value else False

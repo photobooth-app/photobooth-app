@@ -8,7 +8,7 @@ from photobooth.appconfig import appconfig
 from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +38,7 @@ def backend_picamera2():
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
