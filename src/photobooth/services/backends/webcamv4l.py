@@ -157,7 +157,7 @@ class WebcamV4lBackend(AbstractBackend):
                     skip_counter = 0
                     for frame in device:
                         # throw away the first x frames to allow the camera to settle again.
-                        if frame.frame_nb <= self._config.flush_number_frames_after_switch:
+                        if skip_counter <= self._config.flush_number_frames_after_switch:
                             skip_counter += 1
                             continue
 
