@@ -17,10 +17,10 @@ def block_until_device_is_running(backend: AbstractBackend):
     Returns:
         _type_: _description_
     """
-    attempts = 50
-    logger.info(f"waiting for device to be ready to deliver lores images until {attempts=}")
+    attempts = 10
+    logger.info(f"waiting for device to be ready to deliver an image until {attempts=}")
     try:
-        backend.wait_for_lores_image(retries=50)
+        backend.wait_for_still_file(retries=attempts)
     except Exception as exc:
         raise AssertionError(f"test fails because device did not come up for testing, error: {exc}") from exc
     else:

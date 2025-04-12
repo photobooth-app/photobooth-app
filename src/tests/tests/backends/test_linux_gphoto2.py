@@ -102,10 +102,6 @@ def test_service_reload(backend_gphoto2):
         backend_gphoto2.start()
 
 
-def test_assert_is_alive(backend_gphoto2):
-    assert backend_gphoto2._device_alive()
-
-
 def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 

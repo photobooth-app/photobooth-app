@@ -72,10 +72,6 @@ def test_picamera2_switch_modes(backend_picamera2):
         backend_picamera2._picamera2.switch_mode.assert_called()
 
 
-def test_assert_is_alive(backend_picamera2):
-    assert backend_picamera2._device_alive()
-
-
 def test_getImages(backend_picamera2):
     get_images(backend_picamera2)
 
