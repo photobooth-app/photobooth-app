@@ -107,6 +107,11 @@ class WebcamV4lBackend(AbstractBackend):
             capture.set_format(width, height, "MJPG")
             fmt = capture.get_format()
             logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for {mode}-mode using format {fmt.pixel_format.name}")
+            if fmt.width != width or fmt.height != height:
+                logger.warning(
+                    f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
+                    "The camera might not work properly!"
+                )
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
