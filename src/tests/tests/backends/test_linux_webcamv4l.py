@@ -35,6 +35,10 @@ def backend_v4l():
         pytest.skip("no camera found, skipping test")
 
     cameraIndex = _availableCameraIndexes[0]
+    backend._config.HIRES_CAM_RESOLUTION_WIDTH = 640
+    backend._config.HIRES_CAM_RESOLUTION_HEIGHT = 480
+    backend._config.CAM_RESOLUTION_WIDTH = 640
+    backend._config.CAM_RESOLUTION_HEIGHT = 480
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
