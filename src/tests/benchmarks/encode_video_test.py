@@ -1,7 +1,7 @@
 import logging
-import time
 from subprocess import PIPE, Popen
 
+import av
 import pytest
 
 from photobooth.appconfig import appconfig
@@ -18,7 +18,6 @@ def run_around_tests():
 
 def process_pyav(tmp_path):
     # https://pyav.basswood-io.com/docs/stable/cookbook/numpy.html#generating-video
-    import av
 
     input = av.open("src/tests/assets/input_lores.jpg")
     frame_input = next(input.decode())
@@ -33,7 +32,7 @@ def process_pyav(tmp_path):
     stream.codec_context.options["preset"] = "veryfast"
     # stream.codec_context.options["tune"] = "zerolatency"
     # stream.codec_context.profile = "Main"
-    stream.codec_context.bit_rate = 50000000
+    stream.codec_context.bit_rate = 2500000
 
     for _ in range(200):
         for packet in stream.encode(frame_input):
@@ -49,8 +48,6 @@ def process_pyav(tmp_path):
 
 # basic idea from https://stackoverflow.com/a/42602576
 def process_ffmpeg(tmp_path):
-    logger.info("popen")
-    tms = time.time()
     ffmpeg_subprocess = Popen(
         [
             "ffmpeg",
@@ -78,30 +75,19 @@ def process_ffmpeg(tmp_path):
         stdin=PIPE,
     )
     assert ffmpeg_subprocess.stdin
-    logger.info("popen'ed")
-    logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
-    tms = time.time()
     with open("src/tests/assets/input_lores.jpg", "rb") as file:
         in_file_read = file.read()
 
         for _ in range(200):
             ffmpeg_subprocess.stdin.write(in_file_read)
             ffmpeg_subprocess.stdin.flush()
-    logger.info("all written")
-    logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
     # release finish video processing
-    tms = time.time()
     ffmpeg_subprocess.stdin.close()
-    logger.info("stdin closed")
-    logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
 
     # now postproccess, but app can continue.
-    tms = time.time()
     code = ffmpeg_subprocess.wait()
-    logger.info("finished waiting.")
-    logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
     if code != 0:
         raise RuntimeError(f"error creating videofile, ffmpeg exit code ({code}).")
 
