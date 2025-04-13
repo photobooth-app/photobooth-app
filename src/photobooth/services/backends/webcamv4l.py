@@ -8,6 +8,8 @@ from tempfile import NamedTemporaryFile
 from threading import Condition
 from typing import TYPE_CHECKING, Literal
 
+from turbojpeg import TJSAMP_422, TurboJPEG
+
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     import linuxpy.video.device as linuxpy_video_device_type  # type: ignore
 
 logger = logging.getLogger(__name__)
+turbojpeg = TurboJPEG()
 
 
 class WebcamV4lBackend(AbstractBackend):
@@ -31,7 +34,9 @@ class WebcamV4lBackend(AbstractBackend):
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._pixel_format: linuxpy_video_device_type.PixelFormat | None = None
+        self._fmt_pixel_format: linuxpy_video_device_type.PixelFormat | None = None
+        self._fmt_width: int | None = None
+        self._fmt_height: int | None = None
 
     def start(self):
         super().start()
@@ -114,16 +119,17 @@ class WebcamV4lBackend(AbstractBackend):
             logger.error(f"error switching mode due to {exc}")
 
         fmt = capture.get_format()
-        self._pixel_format = fmt.pixel_format
 
-        logger.info(f"cam resolution is {fmt.width}x{fmt.height} for requested {mode}-mode using format {fmt.pixel_format.name}")
+        logger.info(f"requested {mode}-resolution is {width}x{height}, format {self._config.pixel_format}")
+        logger.info(f"   actual {mode}-resolution is {fmt.width}x{fmt.height}, format {fmt.pixel_format.name}")
 
-        if fmt.width != width or fmt.height != height:
-            logger.warning(
-                f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
-                "The camera might not work properly!"
-            )
-        if self._pixel_format not in (
+        # save for later use
+        self._fmt_pixel_format = fmt.pixel_format
+        self._fmt_width = fmt.width
+        self._fmt_height = fmt.height
+
+        assert self._fmt_pixel_format
+        if self._fmt_pixel_format not in (
             linuxpy_video_device.PixelFormat.MJPEG,
             linuxpy_video_device.PixelFormat.JPEG,
             linuxpy_video_device.PixelFormat.YUYV,
@@ -132,6 +138,30 @@ class WebcamV4lBackend(AbstractBackend):
                 f"Camera selected pixel_format '{fmt.pixel_format.name}', but it is not supported."
                 "Your camera is probably not supported and the error permanent."
             )
+
+        if self._fmt_width != width or self._fmt_height != height:
+            logger.warning(
+                f"Actual camera resolution {self._fmt_width}x{self._fmt_height} is different from requested resolution {width}x{height}! "
+                "The camera might not work properly!"
+            )
+        if self._config.pixel_format.lower() != self._fmt_pixel_format.name.lower():
+            logger.warning(
+                f"Actual camera pixel_format {self._fmt_pixel_format.name} is different from requested format {self._config.pixel_format}! "
+                "The camera might not work properly!"
+            )
+
+    def _frame_to_jpeg(self, frame: "linuxpy_video_device_type.Frame") -> bytes:
+        """Convert JPG/MJPG and YUVY pixelformat to output JPG"""
+        # https://github.com/tiagocoutinho/linuxpy/blob/d223fa2b9078fd5b0ba1415ddea5c38f938398c5/examples/video/web/common.py#L29
+        assert linuxpy_video_device
+        assert self._fmt_pixel_format is not None
+
+        if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
+            return bytes(frame)
+        elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUYV:
+            return turbojpeg.encode_from_yuv(frame, self._fmt_width, self._fmt_height, jpeg_subsample=TJSAMP_422, quality=90)
+        else:
+            raise RuntimeError(f"pixel_format {self._fmt_pixel_format} not supported")
 
     def _get_device(self, device_text: str | int):
         # translate id or /dev/v4l/xxx to Device
@@ -185,7 +215,7 @@ class WebcamV4lBackend(AbstractBackend):
                         logger.info(f"skipped {skip_counter} frames before capture high resolution image")
 
                         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
-                            f.write(bytes(frame))
+                            f.write(self._frame_to_jpeg(frame))
 
                         self._hires_data.filepath = Path(f.name)
 
@@ -201,7 +231,7 @@ class WebcamV4lBackend(AbstractBackend):
 
                     for frame in device:  # forever
                         with self._lores_data.condition:
-                            self._lores_data.data = bytes(frame)
+                            self._lores_data.data = self._frame_to_jpeg(frame)
                             self._lores_data.condition.notify_all()
 
                         self._frame_tick()
