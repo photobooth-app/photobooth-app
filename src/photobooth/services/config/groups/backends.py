@@ -208,9 +208,9 @@ class GroupBackendV4l2(BaseBackendModel):
         description="Device identifier (index 0 or 1 or /dev/xxx) of webcam.",
         json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
-    pixel_format: Literal["MJPG", "YUYV"] = Field(
-        default="MJPG",
-        description="MJPG is preferred usually. Some cameras (especially virtual cameras) do not support MJPG, so you can fall back to uncompressed YUYV here.",
+    pixel_format: Literal["MJPEG", "YUYV"] = Field(
+        default="MJPEG",
+        description="MJPEG is preferred usually. Some cameras (especially virtual cameras) do not support MJPG, so you can fall back to uncompressed YUYV here.",
     )
 
     CAM_RESOLUTION_WIDTH: int = Field(
