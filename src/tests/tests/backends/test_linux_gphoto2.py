@@ -11,6 +11,8 @@ from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
 from photobooth.services.config.groups.backends import GroupBackendGphoto2
 from photobooth.utils.enumerate import dslr_gphoto2 as enumerate_dslr_gphoto2
 
+from ..util import block_until_device_is_running
+
 logger = logging.getLogger(name=None)
 
 
@@ -84,7 +86,7 @@ def backend_gphoto2():
     backend = Gphoto2Backend(GroupBackendGphoto2())
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -98,10 +100,6 @@ def test_service_reload(backend_gphoto2):
     for _ in range(1, 5):
         backend_gphoto2.stop()
         backend_gphoto2.start()
-
-
-def test_assert_is_alive(backend_gphoto2):
-    assert backend_gphoto2._device_alive()
 
 
 def test_get_images_gphoto2(backend_gphoto2):

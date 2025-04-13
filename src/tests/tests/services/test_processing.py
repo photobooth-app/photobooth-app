@@ -7,7 +7,7 @@ import pytest
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
 
-from ..util import video_duration
+from ..util import block_until_device_is_running, video_duration
 
 logger = logging.getLogger(name=None)
 
@@ -19,7 +19,7 @@ def _container() -> Generator[Container, None, None]:
     container.start()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
-    container.aquisition_service._get_video_backend().block_until_device_is_running()
+    block_until_device_is_running(container.aquisition_service._get_video_backend())
 
     # deliver
     yield container

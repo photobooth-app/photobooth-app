@@ -5,18 +5,19 @@ v4l webcam implementation backend
 import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition, Event
-from typing import Literal
+from threading import Condition
+from typing import TYPE_CHECKING, Literal
 
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendV4l2
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 try:
     import linuxpy.video.device as linuxpy_video_device  # type: ignore
 except ImportError:
     linuxpy_video_device = None
 
+if TYPE_CHECKING:
+    import linuxpy.video.device as linuxpy_video_device_type  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -30,31 +31,16 @@ class WebcamV4lBackend(AbstractBackend):
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
-        self._worker_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
-
-        self._worker_thread = StoppableThread(name="webcamv4l_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
 
         logger.debug(f"{self.__module__} started")
 
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
         logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -95,6 +81,8 @@ class WebcamV4lBackend(AbstractBackend):
     def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
 
+        self.pause_wait_for_lores_while_hires_capture()
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
@@ -110,7 +98,8 @@ class WebcamV4lBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _switch_mode(self, capture, mode: Literal["hires", "lores"]):
+    def _set_mode(self, capture: "linuxpy_video_device_type.VideoCapture", mode: Literal["hires", "lores"]):
+        assert linuxpy_video_device
         logger.info(f"switch_mode to {mode} requested")
 
         if mode == "hires":
@@ -120,10 +109,23 @@ class WebcamV4lBackend(AbstractBackend):
 
         try:
             capture.set_format(width, height, "MJPG")
-            fmt = capture.get_format()
-            logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for {mode}-mode using format {fmt.pixel_format.name}")
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
+
+        fmt = capture.get_format()
+        logger.info(f"cam resolution is {fmt.width}x{fmt.height} for requested {mode}-mode using format {fmt.pixel_format.name}")
+
+        if fmt.width != width or fmt.height != height:
+            logger.warning(
+                f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
+                "The camera might not work properly!"
+            )
+
+        if fmt.pixel_format not in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
+            raise RuntimeError(
+                f"Despite requesting pixel_format=MJPG from camera '{fmt.pixel_format.name}' was set, which is not supported. "
+                "Your camera is probably not supported and the error permanent."
+            )
 
     def _get_device(self, device_text: str | int):
         # translate id or /dev/v4l/xxx to Device
@@ -135,16 +137,21 @@ class WebcamV4lBackend(AbstractBackend):
         except ValueError:
             return linuxpy_video_device.Device(device_text)
 
-    def _worker_fun(self):
-        logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_identifier=}")
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
+
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
 
         assert linuxpy_video_device
-        assert self._worker_thread
 
+        logger.info(f"trying to open camera index={self._config.device_identifier=}")
         with self._get_device(self._config.device_identifier) as device:
             logger.info(f"webcam device index: {self._config.device_identifier}")
-            logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
+            logger.info(f"webcam name: {device.info.card if device.info else 'unknown'}")
 
             capture = linuxpy_video_device.VideoCapture(device)
 
@@ -154,43 +161,39 @@ class WebcamV4lBackend(AbstractBackend):
                 logger.warning(f"cannot set_fps due to error: {exc}")
                 # continue even if error occured, camera might not support fps setting...
 
-            self._switch_mode(capture, "lores")
-
-            while not self._worker_thread.stopped():
+            while not self._stop_event.is_set():
                 if self._hires_data.request.is_set():
                     # only capture one pic and return to lores streaming afterwards
                     self._hires_data.request.clear()
 
-                    self._switch_mode(capture, "hires")
+                    self._set_mode(capture, "hires")
 
                     # capture hq picture
+                    skip_counter = 0
                     for frame in device:
                         # throw away the first x frames to allow the camera to settle again.
-                        if frame.frame_nb <= self._config.flush_number_frames_after_switch:
+                        if skip_counter <= self._config.flush_number_frames_after_switch:
+                            skip_counter += 1
                             continue
 
-                        if self._config.flush_number_frames_after_switch:
-                            logger.info("skipped {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+                        logger.info(f"skipped {skip_counter} frames before capture high resolution image")
 
                         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
                             f.write(bytes(frame))
 
                         self._hires_data.filepath = Path(f.name)
 
+                        logger.info(f"written image to {Path(f.name)}")
+
+                        with self._hires_data.condition:
+                            self._hires_data.condition.notify_all()
+
                         # grab just one frame...
                         break
-
-                    with self._hires_data.condition:
-                        self._hires_data.condition.notify_all()
                 else:
-                    self._switch_mode(capture, "lores")
+                    self._set_mode(capture, "lores")
 
                     for frame in device:  # forever
-                        # do it here, because opening device for for loop iteration takes also some time that is abstracted by the lib
-                        if not self.is_ready_to_deliver.is_set():
-                            # set only once.
-                            self._device_set_is_ready_to_deliver()
-
                         with self._lores_data.condition:
                             self._lores_data.data = bytes(frame)
                             self._lores_data.condition.notify_all()
@@ -202,26 +205,7 @@ class WebcamV4lBackend(AbstractBackend):
                             break
 
                         # abort streaming on shutdown so process can join and close
-                        if self._worker_thread.stopped():
+                        if self._stop_event.is_set():
                             break
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("v4l_img_aquisition finished, exit")
-
-
-def available_camera_indexes() -> list[int]:
-    if linuxpy_video_device is None:
-        raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
-
-    mjpeg_stream_devices: list[int] = []
-
-    devices_list = list(linuxpy_video_device.iter_video_capture_devices())
-
-    for device_list in devices_list:
-        with linuxpy_video_device.Device(device_list.filename) as device:
-            assert device.info
-            if any(device_format.pixel_format == linuxpy_video_device.PixelFormat.MJPEG for device_format in device.info.formats):
-                if device.index is not None:
-                    mjpeg_stream_devices.append(device.index)
-
-    return mjpeg_stream_devices

@@ -11,10 +11,23 @@ from photobooth.services.backends.abstractbackend import AbstractBackend
 logger = logging.getLogger(name=None)
 
 
-def get_images(backend: AbstractBackend):
-    # logger.info(f"testing backend {backend.__module__}")
-    # backend.start()
+def block_until_device_is_running(backend: AbstractBackend):
+    """Mostly used for testing to ensure the device is up.
 
+    Returns:
+        _type_: _description_
+    """
+    attempts = 10
+    logger.info(f"waiting for device to be ready to deliver an image until {attempts=}")
+    try:
+        backend.wait_for_still_file(retries=attempts)
+    except Exception as exc:
+        raise AssertionError(f"test fails because device did not come up for testing, error: {exc}") from exc
+    else:
+        logger.debug("continue, device signaled is ready to deliver")
+
+
+def get_images(backend: AbstractBackend):
     try:
         with Image.open(backend.wait_for_still_file()) as img:
             img.verify()
@@ -26,10 +39,6 @@ def get_images(backend: AbstractBackend):
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
-
-    # stop backend, ensure process is joined properly to collect coverage:
-    # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html#if-you-use-multiprocessing-process
-    # backend.stop()
 
 
 def is_same(img1: Image.Image, img2: Image.Image):

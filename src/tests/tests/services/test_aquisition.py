@@ -78,20 +78,23 @@ def test_simulated_init_exceptions(_container: Container):
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
 
 
-def test_simulated_start_exceptions(_container: Container):
+def test_simulated_setup_device_exceptions(_container: Container):
     # test to ensure a failing backend doesnt break the whole system due to uncatched exceptions
     from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(VirtualCameraBackend, "start", error_mock):
+    with patch.object(VirtualCameraBackend, "setup_resource", error_mock):
         try:
             aq: AquisitionService = AquisitionService()
             aq.start()
 
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
+
+        # stop to ensure the threads are stopped if there are any.
+        aq.stop()
 
 
 def test_simulated_stop_exceptions(_container: Container):
@@ -131,7 +134,7 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            _container.aquisition_service._get_video_backend().is_marked_faulty.set()
+            _container.aquisition_service._get_video_backend().restart()
 
         if i >= 30:
             g_stream.close()

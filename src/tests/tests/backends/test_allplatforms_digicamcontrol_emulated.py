@@ -13,7 +13,7 @@ from werkzeug.wrappers import Request, Response
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
 from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -69,15 +69,11 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     # deliver
     backend.start()
     backend._device_enable_lores_flag = True
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
     httpserver.check_assertions()  # this will raise AssertionError and make the test failing
-
-
-def test_assert_is_alive(backend_digicamcontrol_emulated: DigicamcontrolBackend):
-    assert backend_digicamcontrol_emulated._device_alive()
 
 
 def test_optimize_mode(backend_digicamcontrol_emulated: DigicamcontrolBackend):
