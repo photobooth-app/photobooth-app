@@ -64,8 +64,6 @@ class Picamera2Backend(AbstractBackend):
         self._current_config = None
         self._last_config = None
 
-        logger.info(f"global_camera_info {Picamera2.global_camera_info()}")
-
     def start(self):
         super().start()
 
