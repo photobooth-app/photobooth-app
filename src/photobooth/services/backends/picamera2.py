@@ -252,6 +252,7 @@ class Picamera2Backend(AbstractBackend):
                 logger.warning(f"error getting optimized lowlight tuning: {exc}")
 
         self._picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
+        assert self._picamera2
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
@@ -295,6 +296,7 @@ class Picamera2Backend(AbstractBackend):
 
         # start encoder
         self._mjpeg_encoder = MJPEGEncoder()
+        assert self._mjpeg_encoder
         self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
         self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
 
