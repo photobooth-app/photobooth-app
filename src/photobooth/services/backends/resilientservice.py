@@ -65,8 +65,8 @@ class ResilientService(ABC):
                 logger.info(f"service {str(action)} failed (attempt {attempt}). Retrying in {delay}s...")
                 # wait up to delay seconds but in smaller increments so if service is stopped,
                 # break out of the sleep loop. since .stopped is true, the outer while is also left.
-                for _ in range(delay * 100):
-                    time.sleep(delay / 100)
+                for _ in range(int(delay / 0.2)):
+                    time.sleep(0.2)
                     if self._stop_event.is_set():
                         break
         return False
@@ -97,8 +97,8 @@ class ResilientService(ABC):
 
             # wait up to delay seconds but in smaller increments so if service is stopped,
             # break out of the sleep loop. since .stopped is true, the outer while is also left.
-            for _ in range(delay * 100):
-                time.sleep(delay / 100)
+            for _ in range(int(delay / 0.2)):
+                time.sleep(0.2)
                 if self._stop_event.is_set():
                     break
 
