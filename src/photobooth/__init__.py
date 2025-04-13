@@ -58,7 +58,7 @@ def _copy_demo_assets_to_userdata():
 
     if not dst_path.exists():
         create_link(src_path, dst_path)
-    elif dst_path.is_symlink() or dst_path.is_junction():
+    elif dst_path.is_symlink() or (os.name == "nt" and dst_path.is_junction()):
         return
     else:
         raise RuntimeError(f"error setup demoassets, {dst_path} exists but is no symlink!")
