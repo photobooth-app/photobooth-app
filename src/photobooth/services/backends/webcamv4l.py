@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -15,10 +15,9 @@ try:
     import linuxpy.video.device as linuxpy_video_device  # type: ignore
 except ImportError:
     linuxpy_video_device = None
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import linuxpy.video.device as linuxpy_video_device_type
+    import linuxpy.video.device as linuxpy_video_device_type  # type: ignore
 
 logger = logging.getLogger(__name__)
 
