@@ -24,7 +24,7 @@ def process_pyav(tmp_path):
 
     container = av.open(tmp_path / "pyav.mp4", mode="w")
 
-    stream = container.add_stream("h264")
+    stream = container.add_stream("h264", rate=25)
     stream.width = frame_input.width
     stream.height = frame_input.height
     # stream.pix_fmt = "yuv420p"

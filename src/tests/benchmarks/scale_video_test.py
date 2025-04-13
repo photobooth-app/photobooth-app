@@ -61,7 +61,7 @@ def pyav_h264_scale(tmp_path, thread_type, threading_number):
     input_stream.thread_type = thread_type  # speed up decoding
     input_stream.thread_count = threading_number
     output_container = av.open(tmp_path / "pyav.mp4", mode="w")
-    output_stream = output_container.add_stream("h264", rate=25)  # rate is fps
+    output_stream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
     output_stream.width = 500
     out_height = int(output_stream.width * (input_stream.height / input_stream.width))
     out_height += out_height % 2  # round up to nearest even number
