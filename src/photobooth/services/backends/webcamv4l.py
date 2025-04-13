@@ -31,6 +31,7 @@ class WebcamV4lBackend(AbstractBackend):
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._pixel_format: linuxpy_video_device_type.PixelFormat | None = None
 
     def start(self):
         super().start()
@@ -108,11 +109,13 @@ class WebcamV4lBackend(AbstractBackend):
             width, height = self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT
 
         try:
-            capture.set_format(width, height, "MJPG")
+            capture.set_format(width, height, self._config.pixel_format)
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
         fmt = capture.get_format()
+        self._pixel_format = fmt.pixel_format
+
         logger.info(f"cam resolution is {fmt.width}x{fmt.height} for requested {mode}-mode using format {fmt.pixel_format.name}")
 
         if fmt.width != width or fmt.height != height:
@@ -120,10 +123,13 @@ class WebcamV4lBackend(AbstractBackend):
                 f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
                 "The camera might not work properly!"
             )
-
-        if fmt.pixel_format not in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
+        if self._pixel_format not in (
+            linuxpy_video_device.PixelFormat.MJPEG,
+            linuxpy_video_device.PixelFormat.JPEG,
+            linuxpy_video_device.PixelFormat.YUYV,
+        ):
             raise RuntimeError(
-                f"Despite requesting pixel_format=MJPG from camera '{fmt.pixel_format.name}' was set, which is not supported. "
+                f"Camera selected pixel_format '{fmt.pixel_format.name}', but it is not supported."
                 "Your camera is probably not supported and the error permanent."
             )
 
