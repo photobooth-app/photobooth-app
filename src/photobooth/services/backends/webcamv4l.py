@@ -8,7 +8,8 @@ from tempfile import NamedTemporaryFile
 from threading import Condition
 from typing import TYPE_CHECKING, Literal
 
-from turbojpeg import TJSAMP_420, TJSAMP_422, TurboJPEG
+import cv2
+from turbojpeg import TurboJPEG
 
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -129,7 +130,6 @@ class WebcamV4lBackend(AbstractBackend):
             linuxpy_video_device.PixelFormat.MJPEG,
             linuxpy_video_device.PixelFormat.JPEG,
             linuxpy_video_device.PixelFormat.YUYV,
-            linuxpy_video_device.PixelFormat.YUV420,
         ):
             raise RuntimeError(
                 f"Camera selected pixel_format '{fmt.pixel_format.name}', but it is not supported."
@@ -156,9 +156,12 @@ class WebcamV4lBackend(AbstractBackend):
         if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
             return bytes(frame)
         elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUYV:  # v4l raw int enum 16  YUV 4:2:2
-            return turbojpeg.encode_from_yuv(frame.data, frame.width, frame.height, jpeg_subsample=TJSAMP_422, quality=90)
-        elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUV420:  # v4l raw int enum 12  YUV 4:2:0
-            return turbojpeg.encode_from_yuv(frame.data, frame.width, frame.height, jpeg_subsample=TJSAMP_420, quality=90)
+            data = frame.array
+            data.shape = frame.height, frame.width, -1
+            # turbojpeg.encode_from_yuv would be most efficient but needs planar data YUV, but webcam YUVY is non-planar.
+            # cv2 to convert to planar YUV would be most efficient but is not avail :(
+            bgr = cv2.cvtColor(data, cv2.COLOR_YUV2BGR_YUYV)
+            return turbojpeg.encode(bgr, quality=90)
         else:
             raise RuntimeError(f"pixel_format {self._fmt_pixel_format} not supported")
 
