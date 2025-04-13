@@ -15,7 +15,10 @@ try:
     import linuxpy.video.device as linuxpy_video_device  # type: ignore
 except ImportError:
     linuxpy_video_device = None
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    import linuxpy.video.device as linuxpy_video_device_type
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +99,8 @@ class WebcamV4lBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _switch_mode(self, capture, mode: Literal["hires", "lores"]):
+    def _set_mode(self, capture: "linuxpy_video_device_type.VideoCapture", mode: Literal["hires", "lores"]):
+        assert linuxpy_video_device
         logger.info(f"switch_mode to {mode} requested")
 
         if mode == "hires":
@@ -106,15 +110,23 @@ class WebcamV4lBackend(AbstractBackend):
 
         try:
             capture.set_format(width, height, "MJPG")
-            fmt = capture.get_format()
-            logger.info(f"cam resolution set to {fmt.width}x{fmt.height} for {mode}-mode using format {fmt.pixel_format.name}")
-            if fmt.width != width or fmt.height != height:
-                logger.warning(
-                    f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
-                    "The camera might not work properly!"
-                )
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
+
+        fmt = capture.get_format()
+        logger.info(f"cam resolution is {fmt.width}x{fmt.height} for requested {mode}-mode using format {fmt.pixel_format.name}")
+
+        if fmt.width != width or fmt.height != height:
+            logger.warning(
+                f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
+                "The camera might not work properly!"
+            )
+
+        if fmt.pixel_format not in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
+            raise RuntimeError(
+                f"Despite requesting pixel_format=MJPG from camera '{fmt.pixel_format.name}' was set, which is not supported. "
+                "Your camera is probably not supported and the error permanent."
+            )
 
     def _get_device(self, device_text: str | int):
         # translate id or /dev/v4l/xxx to Device
@@ -140,7 +152,7 @@ class WebcamV4lBackend(AbstractBackend):
         logger.info(f"trying to open camera index={self._config.device_identifier=}")
         with self._get_device(self._config.device_identifier) as device:
             logger.info(f"webcam device index: {self._config.device_identifier}")
-            logger.info(f"webcam: {device.info.card if device.info else 'unknown'}")
+            logger.info(f"webcam name: {device.info.card if device.info else 'unknown'}")
 
             capture = linuxpy_video_device.VideoCapture(device)
 
@@ -150,14 +162,12 @@ class WebcamV4lBackend(AbstractBackend):
                 logger.warning(f"cannot set_fps due to error: {exc}")
                 # continue even if error occured, camera might not support fps setting...
 
-            self._switch_mode(capture, "lores")
-
             while not self._stop_event.is_set():
                 if self._hires_data.request.is_set():
                     # only capture one pic and return to lores streaming afterwards
                     self._hires_data.request.clear()
 
-                    self._switch_mode(capture, "hires")
+                    self._set_mode(capture, "hires")
 
                     # capture hq picture
                     skip_counter = 0
@@ -182,7 +192,7 @@ class WebcamV4lBackend(AbstractBackend):
                         # grab just one frame...
                         break
                 else:
-                    self._switch_mode(capture, "lores")
+                    self._set_mode(capture, "lores")
 
                     for frame in device:  # forever
                         with self._lores_data.condition:

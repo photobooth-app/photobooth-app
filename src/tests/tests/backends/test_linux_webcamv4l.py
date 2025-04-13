@@ -72,10 +72,12 @@ def test_optimize_mode(backend_v4l):
 def test_get_images_webcamv4l(backend_v4l):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = True
+    block_until_device_is_running(backend_v4l)
     get_images(backend_v4l)
 
 
 def test_get_images_webcamv4l_noswitch_lores(backend_v4l):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = False
+    block_until_device_is_running(backend_v4l)
     get_images(backend_v4l)

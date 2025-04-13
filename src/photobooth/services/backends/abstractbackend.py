@@ -219,22 +219,21 @@ class AbstractBackend(ResilientService, ABC):
         """
         function blocks until high quality image is available
         """
-
-        for attempt in range(1, retries + 1):
+        attempt = 0
+        while True:
             try:
                 filepath = self._wait_for_still_file()
                 self.rotate_jpeg_file_by_exif_flag(filepath, self._orientation)
                 return filepath
             except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"error capture image. {attempt=}/{retries}, retrying")
-                continue
-
-        else:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {retries} attempts to capture image!")
-
-            raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
+                attempt += 1
+                if attempt <= retries:
+                    logger.warning(f"capture image in {attempt=}/{retries}. retrying.")
+                    continue
+                else:
+                    # we failed finally all the attempts - deal with the consequences.
+                    logger.exception(exc)
+                    raise RuntimeError(f"finally failed after {retries} attempts to capture image!") from exc
 
     def pause_wait_for_lores_while_hires_capture(self):
         flag_logmsg_emitted_once = False
