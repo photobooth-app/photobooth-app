@@ -49,8 +49,8 @@ class Picamera2Backend(AbstractBackend):
         super().__init__(orientation=config.orientation)
 
         # private props
-        self._picamera2: Picamera2 = None
-        self._mjpeg_encoder: MJPEGEncoder = None  # livestream encoder
+        self._picamera2: Picamera2 | None = None
+        self._mjpeg_encoder: MJPEGEncoder | None = None  # livestream encoder
 
         # lores and hires data output
         self._lores_data: PicamLoresData = PicamLoresData()
@@ -160,6 +160,8 @@ class Picamera2Backend(AbstractBackend):
 
     def start_recording(self, video_framerate: int) -> Path:
         """picamera2 has local start_recording, which overrides the abstract class implementation in favor of local handling by picamera2"""
+        assert self._picamera2
+
         video_recorded_videofilepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
         self._video_encoder = H264Encoder(
             bitrate=appconfig.mediaprocessing.video_bitrate * 1000,  # bitrate in k in appconfig, so *1000
@@ -176,6 +178,7 @@ class Picamera2Backend(AbstractBackend):
 
     def stop_recording(self):
         if self._video_encoder and self._video_encoder.running:
+            assert self._picamera2
             self._picamera2.stop_encoder(self._video_encoder)
             logger.info("picamera2 video encoder stopped")
         else:
@@ -196,6 +199,7 @@ class Picamera2Backend(AbstractBackend):
         pass
 
     def _switch_mode(self):
+        assert self._picamera2
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
 
         self._picamera2.stop_encoder()
@@ -218,6 +222,7 @@ class Picamera2Backend(AbstractBackend):
         on start set autofocus to continuous if requested by config or
         auto and trigger regularly
         """
+        assert self._picamera2
 
         try:
             self._picamera2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
@@ -246,7 +251,7 @@ class Picamera2Backend(AbstractBackend):
             except Exception as exc:
                 logger.warning(f"error getting optimized lowlight tuning: {exc}")
 
-        self._picamera2: Picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
+        self._picamera2 = Picamera2(camera_num=self._config.camera_num, tuning=tuning, allocator=PersistentAllocator())
 
         # config HQ mode (used for picture capture and live preview on countdown)
         self._capture_config = self._picamera2.create_still_configuration(
@@ -309,6 +314,7 @@ class Picamera2Backend(AbstractBackend):
 
     def run_service(self):
         logger.info("Running service logic...")
+        assert self._picamera2
 
         _metadata = None
 
@@ -335,9 +341,9 @@ class Picamera2Backend(AbstractBackend):
                     # the get_metadata leaks CmaMemory otherwise. Reference:
                     # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
                     filepath = Path("tmp", f"picamera2_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.jpg")
-                    request.save("main", filepath)
+                    request.save("main", filepath)  # type: ignore
 
-                    _metadata = request.get_metadata()
+                    _metadata = request.get_metadata()  # type: ignore
 
                     self._hires_data.filepath = filepath
 
