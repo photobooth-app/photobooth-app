@@ -321,6 +321,18 @@ class Gphoto2Backend(AbstractBackend):
                 try:
                     camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     filepath = Path("tmp", f"gphoto2_{file_to_download[1]}")
+
+                       # If file already exists, append " (2)", " (3)", etc., before the file extension
+                    if filepath.exists():
+                        counter = 2
+                        stem = filepath.stem
+                        suffix = filepath.suffix 
+                        new_filepath = filepath.parent / f"{stem} ({counter}){suffix}"
+                        while new_filepath.exists():
+                            counter += 1
+                            new_filepath = filepath.parent / f"{stem} ({counter}){suffix}"
+                        filepath = new_filepath
+
                     camera_file.save(str(filepath))
 
                 except gp.GPhoto2Error as exc:
