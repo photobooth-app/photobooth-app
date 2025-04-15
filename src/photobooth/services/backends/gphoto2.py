@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Condition
 
 try:
@@ -298,8 +299,9 @@ class Gphoto2Backend(AbstractBackend):
 
                 # read from camera
                 try:
+                    # only capture one pic and return to lores streaming afterwards
+                    filepath = Path(NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="gphoto2_", suffix=".jpg").name)
                     camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
-                    filepath = Path("tmp", f"gphoto2_{file_to_download[1]}")
                     camera_file.save(str(filepath))
 
                 except gp.GPhoto2Error as exc:
