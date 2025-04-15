@@ -17,6 +17,7 @@ from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignor
 from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...appconfig import appconfig
+from ...utils.helper import filename_str_time
 from ..config.groups.backends import GroupBackendPicamera2
 from .abstractbackend import AbstractBackend
 
@@ -347,7 +348,7 @@ class Picamera2Backend(AbstractBackend):
                             mode="wb",
                             delete=False,
                             dir="tmp",
-                            prefix=f"{self._filename_timestr()}_picamera2_",
+                            prefix=f"{filename_str_time()}_picamera2_",
                             suffix=".jpg",
                         ).name
                     )

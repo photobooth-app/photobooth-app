@@ -10,14 +10,14 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
+from ...utils.helper import filename_str_time
+from ..config.groups.backends import GroupBackendGphoto2
+from .abstractbackend import AbstractBackend, GeneralBytesResult
+
 try:
     import gphoto2 as gp  # type: ignore
 except ImportError:
     gp = None
-
-
-from ..config.groups.backends import GroupBackendGphoto2
-from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -305,7 +305,7 @@ class Gphoto2Backend(AbstractBackend):
                             mode="wb",
                             delete=False,
                             dir="tmp",
-                            prefix=f"{self._filename_timestr()}_gphoto2_",
+                            prefix=f"{filename_str_time()}_gphoto2_",
                             suffix=".jpg",
                         ).name
                     )

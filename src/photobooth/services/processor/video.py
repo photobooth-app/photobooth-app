@@ -4,9 +4,9 @@ from uuid import uuid4
 
 from statemachine import Event
 
-from photobooth import PATH_PROCESSED, PATH_UNPROCESSED
-
+from ... import PATH_PROCESSED, PATH_UNPROCESSED
 from ...database.models import Mediaitem, MediaitemTypes
+from ...utils.helper import filename_str_time
 from ..aquisition import AquisitionService
 from ..config.groups.actions import VideoConfigurationSet
 from ..mediaprocessing.processes import process_video
@@ -24,9 +24,6 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
     @property
     def total_captures_to_take(self) -> int:
         return 1
-
-    def new_filename(self) -> str:
-        return super().new_filename() + ".mp4"
 
     def on_enter_counting(self):
         self._aquisition_service.signalbackend_configure_optimized_for_video()
@@ -60,7 +57,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         capture_to_process = self._capture_sets[0].captures[0].filepath
         logger.debug(f"recorded to {capture_to_process=}")
 
-        original_filenamepath = self.new_filename()
+        original_filenamepath = Path(filename_str_time()).with_suffix(".mp4")
         mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,

@@ -20,9 +20,6 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
     def total_captures_to_take(self) -> int:
         return 1
 
-    def new_filename(self) -> str:
-        return super().new_filename() + ".jpg"
-
     def on_enter_counting(self):
         self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
 

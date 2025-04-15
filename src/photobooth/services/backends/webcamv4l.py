@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Literal
 import cv2
 from turbojpeg import TurboJPEG
 
+from ...utils.helper import filename_str_time
 from ..config.groups.backends import GroupBackendV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
@@ -79,7 +80,7 @@ class WebcamV4lBackend(AbstractBackend):
             return self._hires_data.filepath
 
     def _wait_for_still_file_noswitch_lores(self) -> Path:
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_v4l2lores_", suffix=".jpg") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2lores_", suffix=".jpg") as f:
             f.write(self._wait_for_lores_image())
             return Path(f.name)
 
@@ -220,7 +221,7 @@ class WebcamV4lBackend(AbstractBackend):
                             mode="wb",
                             delete=False,
                             dir="tmp",
-                            prefix=f"{self._filename_timestr()}_v4l2hires_",
+                            prefix=f"{filename_str_time()}_v4l2hires_",
                             suffix=".jpg",
                         ) as f:
                             f.write(self._frame_to_jpeg(frame))

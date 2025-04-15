@@ -5,9 +5,20 @@ Utilities
 import logging
 import os
 import platform
+from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+def filename_str_time() -> str:
+    """whenever somewhere a filename needs to be generated, rely on this function. it gives "almost" unique filenames
+    that reflect time history so later users can review captures easily and it's sorted by time.
+
+    Returns:
+        str: _description_
+    """
+    return datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f")
 
 
 def filenames_sanitize(path: Path | str, basepath: Path = Path.cwd()) -> Path:

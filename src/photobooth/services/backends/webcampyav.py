@@ -15,6 +15,7 @@ from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
+from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -159,7 +160,7 @@ class WebcamPyavBackend(AbstractBackend):
                     jpeg_bytes_packet = bytes(next(input_device.demux()))
 
                     # only capture one pic and return to lores streaming afterwards
-                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_pyav_", suffix=".jpg") as f:
+                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
                         f.write(jpeg_bytes_packet)
 
                     self._hires_data.filepath = Path(f.name)
