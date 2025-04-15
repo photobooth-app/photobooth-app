@@ -52,6 +52,8 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         super().on_exit_approval(event)
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         ## PHASE 1:
         # postprocess each capture individually
         capture_to_process = self._capture_sets[0].captures[0].filepath

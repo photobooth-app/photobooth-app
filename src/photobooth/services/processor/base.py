@@ -146,7 +146,8 @@ class JobModelBase(ABC, Generic[T]):
             self._capture_sets.clear()
 
     @abstractmethod
-    def on_enter_completed(self): ...
+    def on_enter_completed(self):
+        self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...

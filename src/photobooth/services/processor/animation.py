@@ -60,6 +60,8 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
         self._approval_id = None  # unset again to avoid showing old imgs accidentally
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         ## PHASE 1:
         # postprocess each capture individually
         captures_to_process = [capture_set.captures[0] for capture_set in self._capture_sets]
