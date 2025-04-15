@@ -54,6 +54,8 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
     def on_exit_approval(self, event: Event): ...
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         # postprocess each video
         capture_to_process = self._capture_sets[0].captures[0].filepath
         logger.debug(f"recorded to {capture_to_process=}")

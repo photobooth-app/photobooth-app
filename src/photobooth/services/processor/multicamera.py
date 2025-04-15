@@ -56,6 +56,8 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         super().on_exit_approval(event)
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         ## PHASE 1:
         # postprocess each capture individually
         # list only captured_images from merge_definition (excludes predefined)
