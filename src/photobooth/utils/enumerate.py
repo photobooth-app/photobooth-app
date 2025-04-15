@@ -1,4 +1,5 @@
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -57,10 +58,44 @@ def webcameras() -> list[str]:
 
         return devices
 
+    def _webcameras_darwin() -> list[str]:
+        # Returns list of video capture devices using AVFoundation."""
+        cmd = ["ffmpeg", "-f", "avfoundation", "-list_devices", "true", "-i", ""]
+
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Raise error if ffmpeg fails
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logger.error(f"Failed to list AVFoundation devices: {str(e)}")
+            return []
+
+        devices = []
+        in_video_section = False
+
+        for line in result.stderr.splitlines():
+            # Detect section headers
+            if "AVFoundation video devices:" in line:
+                in_video_section = True
+                continue
+            if "AVFoundation audio devices:" in line:
+                in_video_section = False
+                continue
+
+            # Process video devices
+            if in_video_section:
+                # Extract device name after index bracket
+                if match := re.search(r"\]\s*\[\d+\]\s*(.+)", line):
+                    devices.append(match.group(1).strip())
+
+        logger.info(f"Found {len(devices)} AVFoundation video devices: {devices}")
+        return devices
+
     if sys.platform == "win32":
         return _webcameras_windows()
     elif sys.platform == "linux":
         return _webcameras_linux()
+    elif sys.platform == "darwin":
+        return _webcameras_darwin()
     else:
         raise OSError("platform not supported to enumerate")
 
