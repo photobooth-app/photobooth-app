@@ -59,7 +59,9 @@ class WigglecamBackend(AbstractBackend):
             return out
 
     def _wait_for_still_file(self) -> Path:
-        assert self._camera_pool
+        if not self._camera_pool:
+            time.sleep(0.2)  # add short delay because otherwise it's requested another still immediately.
+            raise RuntimeError("backend is not started yet, so it cannot deliver stills.")
 
         with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_wigglecam_", suffix=".jpg") as f:
             f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
