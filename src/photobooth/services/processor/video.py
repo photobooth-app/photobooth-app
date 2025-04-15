@@ -25,7 +25,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
     def total_captures_to_take(self) -> int:
         return 1
 
-    def new_filename(self):
+    def new_filename(self) -> str:
         return super().new_filename() + ".mp4"
 
     def on_enter_counting(self):
@@ -83,4 +83,5 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
     def on_exit_completed(self): ...
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        super().on_enter_finished()

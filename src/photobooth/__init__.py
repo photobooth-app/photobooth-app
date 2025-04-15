@@ -12,6 +12,7 @@ DATABASE_PATH = "./database/"
 CACHE_PATH = "./cache/"
 # media collection files
 MEDIA_PATH = "./media/"
+PATH_CAMERA_ORIGINAL = "".join([MEDIA_PATH, "camera_original/"])
 PATH_UNPROCESSED = "".join([MEDIA_PATH, "unprocessed_original/"])
 PATH_PROCESSED = "".join([MEDIA_PATH, "processed_full/"])
 # folder not touched, used by user
@@ -30,6 +31,7 @@ def _create_basic_folders():
     os.makedirs(DATABASE_PATH, exist_ok=True)
     os.makedirs(CACHE_PATH, exist_ok=True)
     os.makedirs(MEDIA_PATH, exist_ok=True)
+    os.makedirs(PATH_CAMERA_ORIGINAL, exist_ok=True)
     os.makedirs(PATH_UNPROCESSED, exist_ok=True)
     os.makedirs(PATH_PROCESSED, exist_ok=True)
     os.makedirs(USERDATA_PATH, exist_ok=True)

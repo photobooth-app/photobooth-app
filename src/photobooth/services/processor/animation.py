@@ -25,7 +25,7 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
     def total_captures_to_take(self) -> int:
         return self._get_number_of_captures_from_merge_definition(self._configuration_set.processing.merge_definition)
 
-    def new_filename(self):
+    def new_filename(self) -> str:
         return super().new_filename() + ".gif"
 
     def on_enter_counting(self):
@@ -113,4 +113,5 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
 
     def on_exit_completed(self): ...
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        super().on_enter_finished()

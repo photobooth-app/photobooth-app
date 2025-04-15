@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED
+from ... import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
@@ -145,15 +145,27 @@ class JobModelBase(ABC, Generic[T]):
 
             self._capture_sets.clear()
 
+    def move_originals(self, capture_sets: list[CaptureSet]):
+        for capture_set in capture_sets:
+            for capture in capture_set.captures:
+                try:
+                    capture.filepath.rename(Path(PATH_CAMERA_ORIGINAL, capture.filepath.name))
+                except Exception as exc:
+                    logger.warning(f"error moving file: {exc}")
+
     @abstractmethod
     def on_enter_completed(self):
+        # when completed, signal backends to idle again
         self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...
 
     @abstractmethod
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        # when selected, move all originals to the media folder, otherwise they are kept in the tmp folder and we do not care about them.
+        if self._capture_sets:
+            self.move_originals(self._capture_sets)
 
     @abstractmethod
     def new_filename(self) -> str:
