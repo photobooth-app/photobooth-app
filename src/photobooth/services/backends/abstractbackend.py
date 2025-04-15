@@ -8,9 +8,9 @@ import os
 import subprocess
 import threading
 import time
-import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from threading import Condition, Event
 
@@ -134,6 +134,9 @@ class AbstractBackend(ResilientService, ABC):
     def get_stats(self) -> BackendStats:
         self._backendstats.fps = self._framerate.fps
         return self._backendstats
+
+    def _filename_timestr(self):
+        return datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f")
 
     def _frame_tick(self):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
@@ -284,7 +287,7 @@ class AbstractBackend(ResilientService, ABC):
         self._video_framerate = video_framerate
 
         # generate temp filename to record to
-        mp4_output_filepath = Path("tmp", f"{self.__class__.__name__}_{uuid.uuid4().hex}").with_suffix(".mp4")
+        mp4_output_filepath = Path("tmp", f"{self._filename_timestr()}_{self.__class__.__name__}_video").with_suffix(".mp4")
 
         self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, args=(mp4_output_filepath,), daemon=True)
         self._video_worker_thread.start()

@@ -300,7 +300,15 @@ class Gphoto2Backend(AbstractBackend):
                 # read from camera
                 try:
                     # only capture one pic and return to lores streaming afterwards
-                    filepath = Path(NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="gphoto2_", suffix=".jpg").name)
+                    filepath = Path(
+                        NamedTemporaryFile(
+                            mode="wb",
+                            delete=False,
+                            dir="tmp",
+                            prefix=f"{self._filename_timestr()}_gphoto2_",
+                            suffix=".jpg",
+                        ).name
+                    )
                     camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     camera_file.save(str(filepath))
 

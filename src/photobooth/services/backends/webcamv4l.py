@@ -79,7 +79,7 @@ class WebcamV4lBackend(AbstractBackend):
             return self._hires_data.filepath
 
     def _wait_for_still_file_noswitch_lores(self) -> Path:
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_lores_", suffix=".jpg") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_v4l2lores_", suffix=".jpg") as f:
             f.write(self._wait_for_lores_image())
             return Path(f.name)
 
@@ -216,7 +216,13 @@ class WebcamV4lBackend(AbstractBackend):
 
                         logger.info(f"skipped {skip_counter} frames before capture high resolution image")
 
-                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcamv4l2_hires_", suffix=".jpg") as f:
+                        with NamedTemporaryFile(
+                            mode="wb",
+                            delete=False,
+                            dir="tmp",
+                            prefix=f"{self._filename_timestr()}_v4l2hires_",
+                            suffix=".jpg",
+                        ) as f:
                             f.write(self._frame_to_jpeg(frame))
 
                         self._hires_data.filepath = Path(f.name)

@@ -6,8 +6,8 @@ Picamera2 backend implementation
 import io
 import logging
 import uuid
-from datetime import datetime
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Condition
 
 from libcamera import controls  # type: ignore
@@ -342,7 +342,15 @@ class Picamera2Backend(AbstractBackend):
                     # call captured_request instead direct call to capture_file because it seems
                     # the get_metadata leaks CmaMemory otherwise. Reference:
                     # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
-                    filepath = Path("tmp", f"picamera2_{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S-%f')}.jpg")
+                    filepath = Path(
+                        NamedTemporaryFile(
+                            mode="wb",
+                            delete=False,
+                            dir="tmp",
+                            prefix=f"{self._filename_timestr()}_picamera2_",
+                            suffix=".jpg",
+                        ).name
+                    )
                     request.save("main", filepath)  # type: ignore
 
                     _metadata = request.get_metadata()  # type: ignore

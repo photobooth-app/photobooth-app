@@ -111,7 +111,7 @@ class VirtualCameraBackend(AbstractBackend):
     def _wait_for_still_file(self) -> Path:
         """for other threads to receive a hq JPEG image"""
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="virtualcamera_", suffix=".jpg") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_virtualcamera_", suffix=".jpg") as f:
             if self._config.emulate_hires_static_still:
                 with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "hires.jpg").resolve(), "rb") as f_hires:
                     f.write(f_hires.read())

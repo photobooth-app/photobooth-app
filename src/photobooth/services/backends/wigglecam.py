@@ -61,7 +61,7 @@ class WigglecamBackend(AbstractBackend):
     def _wait_for_still_file(self) -> Path:
         assert self._camera_pool
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="wigglecam_", suffix=".jpg") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_wigglecam_", suffix=".jpg") as f:
             f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
 
             return Path(f.name)

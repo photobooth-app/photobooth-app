@@ -159,7 +159,7 @@ class WebcamPyavBackend(AbstractBackend):
                     jpeg_bytes_packet = bytes(next(input_device.demux()))
 
                     # only capture one pic and return to lores streaming afterwards
-                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcampyav_hires_", suffix=".jpg") as f:
+                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{self._filename_timestr()}_pyav_", suffix=".jpg") as f:
                         f.write(jpeg_bytes_packet)
 
                     self._hires_data.filepath = Path(f.name)
