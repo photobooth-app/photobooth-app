@@ -6,6 +6,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
+import cv2
+
 from .... import LOG_PATH
 from ..context import VideoContext
 from ..pipeline import NextStep, PipelineStep
@@ -50,9 +52,14 @@ class BoomerangStep(PipelineStep):
             "-i",
             str(context.video_in),
         ]
+
+        # get the number of frames. This is later used to avoid duplicate frames when concatinating videos
+        frame_count = int(cv2.VideoCapture(str(context.video_in)).get(cv2.CAP_PROP_FRAME_COUNT))
+        logger.info("Number of frames: " + str(frame_count))
+
         command_video_output = [
             "-filter_complex",
-            "[0:v]reverse[r];[0:v][r]concat=n=2:v=1[outv]",
+            "[0:v]trim=start_frame=1:end_frame=" + str(frame_count - 1) + ",reverse[rt];[0:v][rt]concat=n=2:v=1,setpts=0.5*PTS[outv]",
             "-map",
             "[outv]",
             "-movflags",
