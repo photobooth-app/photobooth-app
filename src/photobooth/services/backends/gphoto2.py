@@ -195,6 +195,7 @@ class Gphoto2Backend(AbstractBackend):
         assert gp
 
         preview_failcounter = 0
+        self._on_configure_optimized_for_idle()
 
         while not self._stop_event.is_set():  # repeat until stopped
             if not self._hires_data.request.is_set():
