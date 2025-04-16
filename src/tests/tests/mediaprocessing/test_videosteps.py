@@ -20,7 +20,7 @@ def test_video_boomerang_stage():
     video_in = Path("src/tests/assets/video.mp4")
 
     context = VideoContext(video_in)
-    steps = [BoomerangStep()]
+    steps = [BoomerangStep(1)]
     pipeline = Pipeline[VideoContext](*steps)
     pipeline(context)
     assert context.video_processed
