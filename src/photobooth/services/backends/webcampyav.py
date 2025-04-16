@@ -4,7 +4,6 @@ pyav webcam implementation backend
 
 import logging
 import sys
-import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
@@ -33,7 +32,8 @@ elif sys.platform == "linux":
     # https://ffmpeg.org/ffmpeg-devices.html#video4linux2_002c-v4l2
     input_ffmpeg_device = "v4l2"
 else:
-    raise RuntimeError("backend not supported by platform")
+    # not supported platform, will raise exception during startup. no exception here to not break the overall app
+    input_ffmpeg_device = None
 
 
 class WebcamPyavBackend(AbstractBackend):
@@ -49,6 +49,9 @@ class WebcamPyavBackend(AbstractBackend):
 
     def start(self):
         super().start()
+
+        if not input_ffmpeg_device:
+            raise RuntimeError("platform does not support the pyav backend")
 
         logger.debug(f"{self.__module__} started")
 
@@ -129,10 +132,8 @@ class WebcamPyavBackend(AbstractBackend):
             logger.info(f"trying to open camera index={self._config.device_identifier=}")
             input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
         except Exception as exc:
-            logger.exception(exc)
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
-            time.sleep(2)  # some delay to avoid fast reiterations on a possibly non recoverable error
-            return
+            raise exc
 
         with input_device:
             input_stream = input_device.streams.video[0]
