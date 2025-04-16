@@ -126,17 +126,17 @@ class Gphoto2Backend(AbstractBackend):
             logger.debug("configure camera optimized for still capture")
             self._configure_optimized_for_hq_capture_flag = None
 
-            self._set_config("iso", self._config.iso_capture)
-            self._set_config("shutter_speed", self._config.shutter_speed_capture)
-
-            if self._config.canon_eosmoviemode:
-                self._set_config("eosmoviemode", 0)
-
             # disable viewfinder;
             # allows camera to autofocus fast in native mode not contrast mode
             if self._config.disable_viewfinder_before_capture:
                 logger.info("disable viewfinder before capture")
                 self._set_config("viewfinder", 0)
+
+            self._set_config("iso", self._config.iso_capture)
+            self._set_config("shutter_speed", self._config.shutter_speed_capture)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 0)
 
     def _configure_optimized_for_idle_video(self):
         if self._configure_optimized_for_idle_video_flag:
