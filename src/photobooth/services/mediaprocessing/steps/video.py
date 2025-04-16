@@ -6,6 +6,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
+import cv2
+
 from .... import LOG_PATH
 from ..context import VideoContext
 from ..pipeline import NextStep, PipelineStep
@@ -14,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 class BoomerangStep(PipelineStep):
-    def __init__(self) -> None:
-        pass  # no init config yet
+    def __init__(self, boomerang_speed: float) -> None:
+        self.boomerang_speed: float = boomerang_speed
 
     def __call__(self, context: VideoContext, next_step: NextStep) -> None:
         r"""
@@ -37,6 +39,10 @@ class BoomerangStep(PipelineStep):
 
         """
 
+        # get the number of frames. This is later used to avoid duplicate frames when concatinating videos
+        frame_count = int(cv2.VideoCapture(str(context.video_in)).get(cv2.CAP_PROP_FRAME_COUNT))
+        speed = round(1 / self.boomerang_speed, 1)
+
         # generate temp filename to record to
         mp4_output_filepath = Path("tmp", f"boomerang_{uuid.uuid4().hex}").with_suffix(".mp4")
 
@@ -52,7 +58,7 @@ class BoomerangStep(PipelineStep):
         ]
         command_video_output = [
             "-filter_complex",
-            "[0:v]reverse[r];[0:v][r]concat=n=2:v=1[outv]",
+            f"[0:v]trim=start_frame=1:end_frame={str(frame_count - 1)},reverse[rt];[0:v][rt]concat=n=2:v=1,setpts={speed}*PTS[outv]",
             "-map",
             "[outv]",
             "-movflags",

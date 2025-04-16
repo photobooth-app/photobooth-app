@@ -99,7 +99,7 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
     steps = []
 
     if config.boomerang:
-        steps.append(BoomerangStep())
+        steps.append(BoomerangStep(config.boomerang_speed))
 
     # setup pipeline.
     pipeline = Pipeline[VideoContext](*steps)
