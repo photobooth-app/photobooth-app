@@ -133,10 +133,11 @@ def test_video(_container: Container):
 
     # boomerang reverses video so double length
     in_dur = appconfig.actions.video[0].processing.video_duration
+    boomerang_speed = appconfig.actions.video[0].processing.boomerang_speed
     out_dur = video_duration(video_item.unprocessed)
 
     # ensure written video is about in tolerance duration
-    assert out_dur == pytest.approx(in_dur * 2.0, 0.3)
+    assert out_dur == pytest.approx(in_dur * 2.0 / boomerang_speed, 0.3)
 
 
 def test_video_stop_early(_container: Container):
