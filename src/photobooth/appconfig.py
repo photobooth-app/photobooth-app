@@ -18,4 +18,4 @@ except ValidationError as exc:
     print("")
     print("Sorry! 😔")
     print("")
-    quit()
+    raise SystemExit from exc
