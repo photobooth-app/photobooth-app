@@ -1,4 +1,5 @@
 import logging
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -57,10 +58,19 @@ def webcameras() -> list[str]:
 
         return devices
 
+    def _webcameras_darwin() -> list[str]:
+        result = subprocess.run(["system_profiler", "SPCameraDataType"], capture_output=True, text=True)
+
+        # Match lines with exactly 4 spaces, ending with a colon, with no additional colons inside
+        camera_names: list[str] = re.findall(r"^\s{4}([^\n:]+):\s*$", result.stdout, re.MULTILINE)
+        return [name.strip() for name in camera_names]
+
     if sys.platform == "win32":
         return _webcameras_windows()
     elif sys.platform == "linux":
         return _webcameras_linux()
+    elif sys.platform == "darwin":
+        return _webcameras_darwin()
     else:
         raise OSError("platform not supported to enumerate")
 
