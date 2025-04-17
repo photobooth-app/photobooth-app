@@ -3,14 +3,14 @@ from pathlib import Path
 
 import av
 import piexif
-from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageSequence
 from turbojpeg import TurboJPEG
 
 logger = logging.getLogger(__name__)
 try:
     turbojpeg = TurboJPEG()
     print("using turbojpeg to scale images")  # print because log at this point not yet active...
-except RuntimeError:
+except Exception:
     turbojpeg = None
     print("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
 
@@ -77,7 +77,7 @@ def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     """scale a gif image sequence to another buffer using PIL"""
 
-        gif_image = Image.open(filepath_in, formats=["gif"])
+    gif_image = Image.open(filepath_in, formats=["gif"])
 
     # Wrap on-the-fly thumbnail generator
     def thumbnails(frames: ImageSequence.Iterator, target_size: tuple[int, int]):
