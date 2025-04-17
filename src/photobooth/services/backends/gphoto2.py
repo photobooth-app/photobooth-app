@@ -133,7 +133,7 @@ class Gphoto2Backend(AbstractBackend):
                 self._set_config("viewfinder", 0)
 
             self._set_config("iso", self._config.iso_capture)
-            self._set_config("shutter_speed", self._config.shutter_speed_capture)
+            self._set_config("shutterspeed", self._config.shutter_speed_capture)
 
             if self._config.canon_eosmoviemode:
                 self._set_config("eosmoviemode", 0)
@@ -144,7 +144,7 @@ class Gphoto2Backend(AbstractBackend):
             self._configure_optimized_for_idle_video_flag = None
 
             self._set_config("iso", self._config.iso_liveview)
-            self._set_config("shutter_speed", self._config.shutter_speed_liveview)
+            self._set_config("shutterspeed", self._config.shutter_speed_liveview)
 
             if self._config.canon_eosmoviemode:
                 self._set_config("eosmoviemode", 1)
