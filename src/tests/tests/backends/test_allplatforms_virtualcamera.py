@@ -44,7 +44,12 @@ def test_optimize_mode(backend_virtual: VirtualCameraBackend):
 
 def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
     """get lores and hires images from backend and assert"""
-    get_images(backend_virtual)
+    get_images(backend_virtual, multicam_is_error=True)
+
+
+def test_get_images_virtualcamera_hires(backend_virtual: VirtualCameraBackend):
+    backend_virtual._config.emulate_hires_static_still = True
+    get_images(backend_virtual, multicam_is_error=True)
 
 
 def test_get_video_virtualcamera(backend_virtual: VirtualCameraBackend):

@@ -27,7 +27,7 @@ def block_until_device_is_running(backend: AbstractBackend):
         logger.debug("continue, device signaled is ready to deliver")
 
 
-def get_images(backend: AbstractBackend):
+def get_images(backend: AbstractBackend, multicam_is_error: bool = False):
     try:
         with Image.open(backend.wait_for_still_file()) as img:
             img.verify()
@@ -39,6 +39,13 @@ def get_images(backend: AbstractBackend):
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
+    try:
+        for path in backend.wait_for_multicam_files():
+            with Image.open(path) as img:
+                img.verify()
+    except Exception as exc:
+        if multicam_is_error:
+            raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc
 
 
 def is_same(img1: Image.Image, img2: Image.Image):
