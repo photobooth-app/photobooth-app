@@ -76,11 +76,8 @@ def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
 def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     """scale a gif image sequence to another buffer using PIL"""
-    try:
+
         gif_image = Image.open(filepath_in, formats=["gif"])
-    except (UnidentifiedImageError, Exception) as exc:
-        logger.error(f"loading gif failed: {exc}")
-        raise RuntimeError(f"filetype not supported, error: {exc}") from exc
 
     # Wrap on-the-fly thumbnail generator
     def thumbnails(frames: ImageSequence.Iterator, target_size: tuple[int, int]):
