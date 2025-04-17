@@ -132,12 +132,14 @@ def test_video(_container: Container):
     video_item = _container.mediacollection_service.get_item_latest()
 
     # boomerang reverses video so double length
-    in_dur = appconfig.actions.video[0].processing.video_duration
-    boomerang_speed = appconfig.actions.video[0].processing.boomerang_speed
+    desired_video_duration = appconfig.actions.video[0].processing.video_duration
     out_dur = video_duration(video_item.unprocessed)
+    if appconfig.actions.video[0].processing.boomerang:
+        desired_video_duration *= 2
+        desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
 
     # ensure written video is about in tolerance duration
-    assert out_dur == pytest.approx(in_dur * 2.0 / boomerang_speed, 0.3)
+    assert out_dur == pytest.approx(desired_video_duration, 0.3)
 
 
 def test_video_stop_early(_container: Container):
@@ -173,6 +175,7 @@ def test_video_stop_early(_container: Container):
     # boomerang reverses video so double length
     if appconfig.actions.video[0].processing.boomerang:
         desired_video_duration *= 2
+        desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
     assert video_duration_seconds == pytest.approx(desired_video_duration, 0.5)
 
 
