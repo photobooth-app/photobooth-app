@@ -36,8 +36,8 @@ class CountdownTimer:
             return
 
         with self._finished_condition:
-            if not self._finished_condition.wait(timeout=(self._duration + 1)):
-                raise TimeoutError("error timing out")
+            ret = self._finished_condition.wait(timeout=(self._duration + 1))
+            assert ret is True
 
     def _countdown_finished(self):
         return self._countdown <= self.TIMER_TOLERANCE
