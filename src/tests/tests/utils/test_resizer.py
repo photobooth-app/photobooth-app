@@ -1,3 +1,4 @@
+import importlib
 import logging
 from pathlib import Path
 from unittest.mock import patch
@@ -30,6 +31,28 @@ def test_resize_jpg(tmp_path):
 
     with Image.open(output) as img:
         img.verify()
+
+
+def test_resize_jpg_autofallback(tmp_path):
+    import turbojpeg
+
+    with patch.object(turbojpeg, "TurboJPEG", side_effect=ModuleNotFoundError("fake turbojpeg not avail")):
+        # need to reload the lib because for the turbojpeg module is checked for availability on import
+        import photobooth.utils.resizer
+
+        importlib.reload(photobooth.utils.resizer)
+
+        # ensure turbojpeg has not been loaded
+        assert photobooth.utils.resizer.turbojpeg is None
+
+        input = Path("src/tests/assets/input.jpg")
+        output = tmp_path / "output.jpg"
+
+        resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+
+        # ensure the resized image was generated despite turbojpeg not avail.
+        with Image.open(output) as img:
+            img.verify()
 
 
 def test_resize_jpg_force_turbojpeg(tmp_path):
