@@ -1,20 +1,23 @@
 import logging
 import threading
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from time import time
 
 logger = logging.getLogger(__name__)
 
 
+class ServiceCrashed(Exception): ...
+
+
 class ResilientService(ABC):
-    def __init__(self, retry_delay: int | float = 2, max_backoff: int | float = 20, max_start_attempts: int | None = None):
+    def __init__(self, retry_delay: int | float = 2, max_backoff: int | float = 20):
         self._lock = threading.Lock()
         self._started = False
         self._thread = None
         self._stop_event = threading.Event()
         self._retry_delay = retry_delay
         self._max_backoff = max_backoff
-        self._max_start_attempts = max_start_attempts
+        self._last_crash: float | None = None
 
     # ---- Subclass Overrides ----
     @abstractmethod
@@ -32,64 +35,57 @@ class ResilientService(ABC):
         logger.exception(exc)
         logger.critical(f"backend crashed, error: {exc}")
 
-    def _backoff_delay(self, attempt: int):
-        return min(self._retry_delay * (2 ** (attempt - 1)), self._max_backoff)
-
-    def _try_with_retries(self, action: Callable):
+    def _run(self):
         attempt = 0
         while not self._stop_event.is_set():
             try:
-                action()
-                return True
-            except Exception as e:
+                try:
+                    self.setup_resource()
+                except Exception as e:
+                    self._report_crash(e)
+
+                try:
+                    self.run_service()
+                except Exception as e:
+                    self._report_crash(e)
+
+                    # if the run failed, some last resort teardown here...
+                    try:
+                        self.teardown_resource()
+                    except Exception as e2:
+                        logger.critical(f"teardown resource after run failed errored also: {e2}")
+
+                    raise ServiceCrashed(e) from e
+
+                try:
+                    self.teardown_resource()
+                except Exception as e:
+                    self._report_crash(e)
+
+            except ServiceCrashed:
+                if self._stop_event.is_set():
+                    break
+
+                logger.info("trying to recover from crash")
+
+                if self._last_crash and ((time() - self._last_crash) > (self._max_backoff + 2)):
+                    logger.info("reset attempt to 0 because last_crash is longer ago than max_backoff")
+                    attempt = 0
+
+                self._last_crash = time()
                 attempt += 1
-                self._report_crash(e)
-
-                if self._max_start_attempts and attempt >= self._max_start_attempts:
-                    logger.error(f"service {str(action)} failed after {attempt} attempts.")
-                    return False
-
-                delay = self._backoff_delay(attempt)
-                logger.info(f"service {str(action)} failed (attempt {attempt}). Retrying in {delay}s...")
+                delay = min(self._retry_delay * (2 ** (attempt - 1)), self._max_backoff)
+                logger.warning(f"service failed (attempt {attempt}). Retrying in {delay}s...")
 
                 # wait up to delay seconds but if service is stopped,
                 # the wait returns and the loop will exit because it also checks for the stop_event
                 self._stop_event.wait(timeout=delay)
-        return False
-
-    def _run(self):
-        loop_attempt: int = 0
-        while not self._stop_event.is_set():
-            if not self._try_with_retries(self.setup_resource):
-                break
-
-            try:
-                self.run_service()
-            except Exception as e:
-                self._report_crash(e)
-
-            try:
-                self.teardown_resource()
-            except Exception as e:
-                self._report_crash(e)
-
-            if self._stop_event.is_set():
-                break
-
-            loop_attempt += 1
-            delay = self._backoff_delay(loop_attempt)
-            logger.info(f"Restarting service loop attempt {loop_attempt} in {delay}s...")
-            # self._stop_event.clear()
-
-            # wait up to delay seconds but if service is stopped,
-            # the wait returns and the loop will exit because it also checks for the stop_event
-            self._stop_event.wait(timeout=delay)
 
     def start(self):
         logger.debug(f"{self.__class__.__name__} start as resilient service")
         with self._lock:
             if self._started:
-                logger.info("service already started.")
+                logger.warning("service already started.")
                 return
             logger.info("launching service.")
 
@@ -102,7 +98,7 @@ class ResilientService(ABC):
         logger.debug(f"{self.__class__.__name__} stop resilient service")
         with self._lock:
             if not self._started:
-                logger.info("service not running.")
+                logger.warning("service not running.")
                 return
 
             assert self._thread
