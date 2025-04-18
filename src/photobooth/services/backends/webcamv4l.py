@@ -41,12 +41,8 @@ class WebcamV4lBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
-
-        logger.debug(f"{self.__module__} stopped")
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")

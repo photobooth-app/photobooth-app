@@ -52,7 +52,7 @@ class AquisitionService(BaseService):
         if max_index > len(self._backends) - 1:
             raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends) - 1}")
 
-        logger.info(f"loaded backends: {self._backends}")
+        logger.info(f"loaded backends: {[f'{index}:{name}' for index, name in enumerate(self._backends)]}")
 
         self._load_ffmpeg()
 

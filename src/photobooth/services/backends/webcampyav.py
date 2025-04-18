@@ -53,12 +53,8 @@ class WebcamPyavBackend(AbstractBackend):
         if not input_ffmpeg_device:
             raise RuntimeError("platform does not support the pyav backend")
 
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
-
-        logger.debug(f"{self.__module__} stopped")
 
     def _device_name_platform(self):
         return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"

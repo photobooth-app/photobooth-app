@@ -128,8 +128,11 @@ class AbstractBackend(ResilientService, ABC):
 
         super().__init__()
 
+    def __str__(self):
+        return f"{self.__class__.__name__}"
+
     def __repr__(self):
-        return f"{self.__class__}"
+        return f"{self.__class__.__name__}"
 
     def get_stats(self) -> BackendStats:
         self._backendstats.fps = self._framerate.fps
@@ -142,7 +145,7 @@ class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
-        logger.debug(f"{self.__module__} start called")
+        logger.debug(f"{self.__class__.__name__} start called")
 
         # reset the request for this backend to deliver lores frames
         self._device_enable_lores_flag = False
@@ -152,7 +155,7 @@ class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-        logger.debug(f"{self.__module__} stop called")
+        logger.debug(f"{self.__class__.__name__} stop called")
 
         self.stop_recording()
 

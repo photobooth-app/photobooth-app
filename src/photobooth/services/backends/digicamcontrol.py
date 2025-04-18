@@ -61,12 +61,8 @@ class DigicamcontrolBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
-
-        logger.debug(f"{self.__module__} stopped")
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -123,7 +119,7 @@ class DigicamcontrolBackend(AbstractBackend):
             logger.exception(exc)
             logger.error("fail set preview mode! no power? no connection?")
         else:
-            logger.debug(f"{self.__module__} set preview mode successful")
+            logger.debug("set preview mode successful")
 
         self._enabled_liveview = True
 

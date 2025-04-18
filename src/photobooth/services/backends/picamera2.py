@@ -68,12 +68,8 @@ class Picamera2Backend(AbstractBackend):
     def start(self):
         super().start()
 
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
-
-        logger.debug(f"{self.__module__} stopped")
 
     def _load_default_tuning(self):
         with Picamera2(camera_num=self._config.camera_num) as cam:
