@@ -1,53 +1,41 @@
 import logging
 import threading
-import time
-import traceback
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
 class ResilientService(ABC):
-    def __init__(self, retry_delay=2, max_backoff=20, on_crash=None, max_start_attempts=None):
+    def __init__(self, retry_delay: int | float = 2, max_backoff: int | float = 20, max_start_attempts: int | None = None):
         self._lock = threading.Lock()
         self._started = False
         self._thread = None
         self._stop_event = threading.Event()
         self._retry_delay = retry_delay
         self._max_backoff = max_backoff
-        self._on_crash = on_crash
         self._max_start_attempts = max_start_attempts
 
     # ---- Subclass Overrides ----
     @abstractmethod
-    def setup_resource(self):
-        pass
+    def setup_resource(self): ...
 
     @abstractmethod
-    def teardown_resource(self):
-        pass
+    def teardown_resource(self): ...
 
     @abstractmethod
-    def run_service(self):
-        pass
+    def run_service(self): ...
 
     # ----------------------------
 
-    def _report_crash(self, exc):
-        tb = traceback.format_exc()
+    def _report_crash(self, exc: Exception):
         logger.exception(exc)
         logger.critical(f"backend crashed, error: {exc}")
 
-        if self._on_crash:
-            try:
-                self._on_crash(exc, tb)
-            except Exception as hook_exc:
-                logger.error(f"crash hook failed, error: {hook_exc}")
-
-    def _backoff_delay(self, attempt):
+    def _backoff_delay(self, attempt: int):
         return min(self._retry_delay * (2 ** (attempt - 1)), self._max_backoff)
 
-    def _try_with_retries(self, action):
+    def _try_with_retries(self, action: Callable):
         attempt = 0
         while not self._stop_event.is_set():
             try:
@@ -63,16 +51,14 @@ class ResilientService(ABC):
 
                 delay = self._backoff_delay(attempt)
                 logger.info(f"service {str(action)} failed (attempt {attempt}). Retrying in {delay}s...")
-                # wait up to delay seconds but in smaller increments so if service is stopped,
-                # break out of the sleep loop. since .stopped is true, the outer while is also left.
-                for _ in range(int(delay / 0.2)):
-                    time.sleep(0.2)
-                    if self._stop_event.is_set():
-                        break
+
+                # wait up to delay seconds but if service is stopped,
+                # the wait returns and the loop will exit because it also checks for the stop_event
+                self._stop_event.wait(timeout=delay)
         return False
 
     def _run(self):
-        loop_attempt = 0
+        loop_attempt: int = 0
         while not self._stop_event.is_set():
             if not self._try_with_retries(self.setup_resource):
                 break
@@ -93,17 +79,14 @@ class ResilientService(ABC):
             loop_attempt += 1
             delay = self._backoff_delay(loop_attempt)
             logger.info(f"Restarting service loop attempt {loop_attempt} in {delay}s...")
-            self._stop_event.clear()
+            # self._stop_event.clear()
 
-            # wait up to delay seconds but in smaller increments so if service is stopped,
-            # break out of the sleep loop. since .stopped is true, the outer while is also left.
-            for _ in range(int(delay / 0.2)):
-                time.sleep(0.2)
-                if self._stop_event.is_set():
-                    break
+            # wait up to delay seconds but if service is stopped,
+            # the wait returns and the loop will exit because it also checks for the stop_event
+            self._stop_event.wait(timeout=delay)
 
     def start(self):
-        logger.debug(f"{self.__module__} start called")
+        logger.debug(f"{self.__class__.__name__} start as resilient service")
         with self._lock:
             if self._started:
                 logger.info("service already started.")
@@ -116,7 +99,7 @@ class ResilientService(ABC):
             self._started = True
 
     def stop(self):
-        logger.debug(f"{self.__module__} stop called")
+        logger.debug(f"{self.__class__.__name__} stop resilient service")
         with self._lock:
             if not self._started:
                 logger.info("service not running.")
