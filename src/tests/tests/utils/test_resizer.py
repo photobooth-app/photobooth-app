@@ -36,9 +36,10 @@ def test_resize_jpg(tmp_path):
 def test_resize_jpg_autofallback(tmp_path):
     import turbojpeg
 
+    import photobooth.utils.resizer
+
     with patch.object(turbojpeg, "TurboJPEG", side_effect=ModuleNotFoundError("fake turbojpeg not avail")):
         # need to reload the lib because for the turbojpeg module is checked for availability on import
-        import photobooth.utils.resizer
 
         importlib.reload(photobooth.utils.resizer)
 
@@ -53,6 +54,9 @@ def test_resize_jpg_autofallback(tmp_path):
         # ensure the resized image was generated despite turbojpeg not avail.
         with Image.open(output) as img:
             img.verify()
+
+    # reload again outside of patch to ensure following tests have the turbojpeg available again if needed.
+    importlib.reload(photobooth.utils.resizer)
 
 
 def test_resize_jpg_force_turbojpeg(tmp_path):
