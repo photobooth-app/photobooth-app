@@ -134,7 +134,10 @@ class GpioService(BaseService):
     def _handle_action_button(self, action_type: ActionType, action_index: int):
         logger.debug(f"trigger callback for {action_type}:{action_index}")
 
-        self._processing_service.trigger_action(action_type, action_index)
+        if not self._processing_service._is_occupied():
+            self._processing_service.trigger_action(action_type, action_index)
+        else:
+            logger.info("ignored gpio action button because there is still a job going on")
 
     def _handle_share_button(self, action_index: int):
         logger.debug(f"trigger callback for share:{action_index}")
@@ -143,25 +146,16 @@ class GpioService(BaseService):
         self._share_service.share(mediaitem, action_index)
 
     def _handle_processing_next_confirm_button(self):
-        try:
+        if self._processing_service._is_occupied():
             self._processing_service.continue_process()
-        except Exception as exc:
-            # other errors
-            logger.critical(exc)
 
     def _handle_processing_reject_button(self):
-        try:
+        if self._processing_service._is_occupied():
             self._processing_service.reject_capture()
-        except Exception as exc:
-            # other errors
-            logger.critical(exc)
 
     def _handle_processing_abort_button(self):
-        try:
+        if self._processing_service._is_occupied():
             self._processing_service.abort_process()
-        except Exception as exc:
-            # other errors
-            logger.critical(exc)
 
     def init_io(self):
         shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN)
@@ -186,6 +180,18 @@ class GpioService(BaseService):
             share_btn = PinHandler(gpio_trigger.pin, hold_time=0.6)
             if share_btn:
                 share_btn.register_callback(gpio_trigger.trigger_on, self._handle_share_button, index)
+
+        job_next_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_next, hold_time=0.6)
+        if job_next_btn:
+            job_next_btn.register_callback("pressed", self._handle_processing_next_confirm_button)
+
+        job_reject_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_reject, hold_time=0.6)
+        if job_reject_btn:
+            job_reject_btn.register_callback("pressed", self._handle_processing_reject_button)
+
+        job_abort_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_abort, hold_time=0.6)
+        if job_abort_btn:
+            job_abort_btn.register_callback("pressed", self._handle_processing_abort_button)
 
     def start(self):
         super().start()
