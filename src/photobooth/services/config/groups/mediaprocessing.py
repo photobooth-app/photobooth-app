@@ -46,8 +46,8 @@ class GroupMediaprocessing(BaseModel):
     )
 
     video_compatibility_mode: bool = Field(
-        default=False,
-        description="Enable for improved video compatibility on iOS devices. Might reduce resulting quality slightly.",
+        default=True,
+        description="Enable for improved video compatibility on iOS devices and Firefox. Might reduce resulting quality slightly.",
     )
 
     removechromakey_enable: bool = Field(

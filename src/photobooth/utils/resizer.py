@@ -1,19 +1,16 @@
 import logging
-import os
-import subprocess
 from pathlib import Path
 
+import av
 import piexif
-from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageSequence
 from turbojpeg import TurboJPEG
-
-from .. import LOG_PATH
 
 logger = logging.getLogger(__name__)
 try:
     turbojpeg = TurboJPEG()
     print("using turbojpeg to scale images")  # print because log at this point not yet active...
-except RuntimeError:
+except Exception:
     turbojpeg = None
     print("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
 
@@ -79,11 +76,8 @@ def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
 def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     """scale a gif image sequence to another buffer using PIL"""
-    try:
-        gif_image = Image.open(filepath_in, formats=["gif"])
-    except (UnidentifiedImageError, Exception) as exc:
-        logger.error(f"loading gif failed: {exc}")
-        raise RuntimeError(f"filetype not supported, error: {exc}") from exc
+
+    gif_image = Image.open(filepath_in, formats=["gif"])
 
     # Wrap on-the-fly thumbnail generator
     def thumbnails(frames: ImageSequence.Iterator, target_size: tuple[int, int]):
@@ -116,39 +110,56 @@ def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
 
 def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    """ """
+    def scale_image_to_min_longest_side(width, height, max_longest_side):
+        longest_side = max(width, height)
 
-    command_general_options = [
-        "-hide_banner",
-        "-loglevel",
-        "info",
-        "-y",
-    ]
-    command_video_input = [
-        "-i",
-        str(filepath_in),
-    ]
-    command_video_output = [
-        # no upscaling, divisible by 2 for further codec processing
-        "-filter:v",
-        f"scale=w={scaled_min_length}:h={scaled_min_length}:force_original_aspect_ratio=decrease:force_divisible_by=2",
-        "-sws_flags",
-        "fast_bilinear",
-        "-movflags",
-        "+faststart",
-    ]
+        # Only scale down if it's larger than the max allowed
+        if longest_side <= max_longest_side:
+            return width, height  # no scaling needed
 
-    ffmpeg_command = ["ffmpeg"] + command_general_options + command_video_input + command_video_output + [str(filepath_out)]
-    try:
-        subprocess.run(
-            args=ffmpeg_command,
-            check=True,
-            env=dict(os.environ, FFREPORT=f"file={LOG_PATH}/ffmpeg-resize-last.log:level=32"),
+        scale_factor = max_longest_side / longest_side
+        new_width = int(width * scale_factor)
+        new_height = int(height * scale_factor)
+
+        new_width += new_width % 2  # round up to nearest even number
+        new_height += new_height % 2  # round up to nearest even number
+
+        return new_width, new_height
+
+    input_container = av.open(filepath_in)
+    input_stream = input_container.streams.video[0]
+    input_stream.thread_type = "AUTO"  # speed up decoding, see benchmark results.
+    input_stream.thread_count = 0
+
+    ow, oh = scale_image_to_min_longest_side(input_stream.width, input_stream.height, scaled_min_length)
+
+    output_container = av.open(filepath_out, mode="w")
+    output_stream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
+    output_stream.width = ow
+    output_stream.height = oh
+    output_stream.codec_context.options["movflags"] = "faststart"
+    output_stream.codec_context.options["preset"] = "fast"
+    output_stream.codec_context.bit_rate = 5000000  # 5000k==5Mbps seems reasonable for simple streams in the 1080range
+
+    for frame in input_container.decode(input_stream):
+        # Das Frame in der Zielgröße skalieren
+        scaled_frame = frame.reformat(
+            width=output_stream.width,
+            height=output_stream.height,
+            # interpolation=Interpolation.BILINEAR, # default is BILINEAR
         )
-    except Exception as exc:
-        logger.exception(exc)
-        logger.warning("please check logfile /log/ffmpeg-resize-last.log for additional errors")
-        raise RuntimeError(f"error resizing video, error: {exc}") from exc
+
+        # Das skalierte Frame in den Ausgabestream codieren
+        for packet in output_stream.encode(scaled_frame):
+            output_container.mux(packet)
+
+    # Restliche Frames flushen
+    for packet in output_stream.encode():
+        output_container.mux(packet)
+
+    # Container schließen
+    input_container.close()
+    output_container.close()
 
 
 def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: int) -> None:
@@ -156,6 +167,8 @@ def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: i
     assert isinstance(filepath_out, Path)
 
     suffix = filepath_in.suffix
+
+    logger.debug(f"resize {filepath_in} to length {scaled_min_length}, save in {filepath_out}")
 
     if suffix.lower() in (".jpg", ".jpeg"):
         resize_jpeg(filepath_in, filepath_out, scaled_min_length)

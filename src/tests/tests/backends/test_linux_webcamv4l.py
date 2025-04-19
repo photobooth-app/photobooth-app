@@ -4,10 +4,10 @@ import pytest
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.webcamv4l import WebcamV4lBackend, linuxpy_video_device
-from photobooth.services.backends.webcamv4l import available_camera_indexes as v4l_avail
 from photobooth.services.config.groups.backends import GroupBackendV4l2
+from photobooth.utils.enumerate import webcameras
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -30,11 +30,15 @@ def backend_v4l():
     backend = WebcamV4lBackend(GroupBackendV4l2())
 
     logger.info("probing for available cameras")
-    _availableCameraIndexes = v4l_avail()
+    _availableCameraIndexes = webcameras()
     if not _availableCameraIndexes:
         pytest.skip("no camera found, skipping test")
 
     cameraIndex = _availableCameraIndexes[0]
+    backend._config.HIRES_CAM_RESOLUTION_WIDTH = 640
+    backend._config.HIRES_CAM_RESOLUTION_HEIGHT = 480
+    backend._config.CAM_RESOLUTION_WIDTH = 640
+    backend._config.CAM_RESOLUTION_HEIGHT = 480
 
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
@@ -43,7 +47,7 @@ def backend_v4l():
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -59,10 +63,6 @@ def test_service_reload(backend_v4l):
         backend_v4l.start()
 
 
-def test_assert_is_alive(backend_v4l):
-    assert backend_v4l._device_alive()
-
-
 def test_optimize_mode(backend_v4l):
     backend_v4l._on_configure_optimized_for_hq_capture()
     backend_v4l._on_configure_optimized_for_hq_preview()
@@ -72,10 +72,23 @@ def test_optimize_mode(backend_v4l):
 def test_get_images_webcamv4l(backend_v4l):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = True
+    # changing switch_to_high_resolution_for_stills may lead to immediate camera mode change that needs to be waited for
+    block_until_device_is_running(backend_v4l)
     get_images(backend_v4l)
 
 
 def test_get_images_webcamv4l_noswitch_lores(backend_v4l):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = False
+    # changing switch_to_high_resolution_for_stills may lead to immediate camera mode change that needs to be waited for
+    block_until_device_is_running(backend_v4l)
+    get_images(backend_v4l)
+
+
+def test_get_images_webcamv4l_yuvy(backend_v4l):
+    # get lores and hires images from backend and assert
+    backend_v4l._config.pixel_format = "YUYV"
+    backend_v4l.stop()
+    backend_v4l.start()
+    block_until_device_is_running(backend_v4l)
     get_images(backend_v4l)

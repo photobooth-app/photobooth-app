@@ -242,6 +242,12 @@ class VideoProcessing(BaseModel):
         default=False,
         description="Create boomerang videos, the video is replayed reverse automatically.",
     )
+    boomerang_speed: float = Field(
+        default=1,
+        ge=0.5,
+        le=2,
+        description="Speed up the resulting boomerang. 1 is normal speed, 2 is double.",
+    )
     video_framerate: int = Field(
         default=25,
         ge=1,
@@ -458,10 +464,11 @@ class GroupActions(BaseModel):
                 processing=VideoProcessing(
                     video_duration=5,
                     boomerang=True,
+                    boomerang_speed=2,
                     video_framerate=15,
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Video", icon="movie"),
+                    ui_trigger=UiTrigger(title="Boomerang", icon="movie"),
                     gpio_trigger=GpioTrigger(pin="25"),
                     keyboard_trigger=KeyboardTrigger(keycode="v"),
                 ),

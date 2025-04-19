@@ -9,6 +9,7 @@ from wigglecam.connector import CameraNode, CameraPool
 from wigglecam.connector.dto import ConnectorJobRequest
 from wigglecam.connector.models import ConfigCameraPool
 
+from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -29,41 +30,8 @@ class WigglecamBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        # quick sanity check.
-        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
-        if max_index > len(self._config.nodes) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
-
-        nodes = []
-        for config_node in self._config.nodes:
-            node = CameraNode(config=config_node)
-            nodes.append(node)
-
-        self._config_camera_pool = ConfigCameraPool(**self._config.model_dump())  # extract the campoolconfig from wiggle element
-        self._camera_pool = CameraPool(ConfigCameraPool, nodes=nodes)
-
-        logger.info(self._camera_pool.get_nodes_status())
-        logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
-
-        self._worker_thread = StoppableThread(name="wigglecam_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
-
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
-        logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _wait_for_multicam_files(self) -> list[Path]:
         assert self._camera_pool
@@ -88,9 +56,11 @@ class WigglecamBackend(AbstractBackend):
             return out
 
     def _wait_for_still_file(self) -> Path:
-        assert self._camera_pool
+        if not self._camera_pool:
+            time.sleep(0.2)  # add short delay because otherwise it's requested another still immediately.
+            raise RuntimeError("backend is not started yet, so it cannot deliver stills.")
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="wigglecam_", suffix=".jpg") as f:
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_wigglecam_", suffix=".jpg") as f:
             f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
 
             return Path(f.name)
@@ -110,6 +80,8 @@ class WigglecamBackend(AbstractBackend):
 
         #     return StreamingResponse(iterfile(), media_type="multipart/x-mixed-replace; boundary=frame")
 
+        self.pause_wait_for_lores_while_hires_capture()
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
@@ -125,17 +97,32 @@ class WigglecamBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-    def _worker_fun(self):
-        assert self._worker_thread
-        logger.info("_worker_fun starts")
+        # quick sanity check.
+        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
+        if max_index > len(self._config.nodes) - 1:
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
 
-        self._device_set_is_ready_to_deliver()
+        nodes = []
+        for config_node in self._config.nodes:
+            node = CameraNode(config=config_node)
+            nodes.append(node)
 
-        while not self._worker_thread.stopped():
+        self._config_camera_pool = ConfigCameraPool(**self._config.model_dump())  # extract the campoolconfig from wiggle element
+        self._camera_pool = CameraPool(ConfigCameraPool, nodes=nodes)
+
+        logger.info(self._camera_pool.get_nodes_status())
+        logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
+
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
+
+        while not self._stop_event.is_set():
             if self._device_enable_lores_flag:
                 try:
                     r = requests.get(
@@ -163,10 +150,9 @@ class WigglecamBackend(AbstractBackend):
 
                         self._frame_tick()
 
-                    if self._worker_thread.stopped():
+                    if self._stop_event.is_set():
                         break
             else:
                 time.sleep(0.1)
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("_worker_fun left")

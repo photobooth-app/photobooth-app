@@ -6,6 +6,7 @@ from statemachine import Event
 
 from ... import PATH_PROCESSED, PATH_UNPROCESSED
 from ...database.models import Mediaitem, MediaitemTypes
+from ...utils.helper import filename_str_time
 from ..aquisition import AquisitionService
 from ..config.groups.actions import AnimationConfigurationSet, SingleImageProcessing
 from ..config.models.models import PluginFilters
@@ -24,9 +25,6 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
     @property
     def total_captures_to_take(self) -> int:
         return self._get_number_of_captures_from_merge_definition(self._configuration_set.processing.merge_definition)
-
-    def new_filename(self):
-        return super().new_filename() + ".gif"
 
     def on_enter_counting(self):
         self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
@@ -60,6 +58,8 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
         self._approval_id = None  # unset again to avoid showing old imgs accidentally
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         ## PHASE 1:
         # postprocess each capture individually
         captures_to_process = [capture_set.captures[0] for capture_set in self._capture_sets]
@@ -91,7 +91,7 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        original_filenamepath = self.new_filename()
+        original_filenamepath = Path(filename_str_time()).with_suffix(".gif")
         phase2_mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,
@@ -111,4 +111,5 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
 
     def on_exit_completed(self): ...
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        super().on_enter_finished()

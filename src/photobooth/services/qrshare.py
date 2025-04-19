@@ -38,7 +38,7 @@ class QrShareService(BaseService):
         self._worker_thread = StoppableThread(name="_shareservice_worker", target=self._worker_fun, daemon=True)
         self._worker_thread.start()
 
-        logger.debug(f"{self.__module__} started - it tries to connect to dl.php on regular basis now.")
+        logger.debug(f"{self.__class__.__name__} started - it tries to connect to dl.php on regular basis now.")
 
         super().started()
 

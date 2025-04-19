@@ -20,9 +20,6 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
     def total_captures_to_take(self) -> int:
         return 1
 
-    def new_filename(self):
-        return super().new_filename() + ".jpg"
-
     def on_enter_counting(self):
         self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
@@ -52,6 +49,8 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         super().on_exit_approval(event)
 
     def on_enter_completed(self):
+        super().on_enter_completed()
+
         ## PHASE 1:
         # postprocess each capture individually
         capture_to_process = self._capture_sets[0].captures[0].filepath
@@ -64,4 +63,5 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
     def on_exit_completed(self): ...
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        super().on_enter_finished()

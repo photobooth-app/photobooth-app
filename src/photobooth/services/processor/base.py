@@ -1,17 +1,17 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Generic, TypeVar
 from uuid import UUID, uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED
+from ... import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
+from ...utils.helper import filename_str_time
 from ...utils.resizer import generate_resized
 from ..aquisition import AquisitionService
 from ..config.groups.actions import (
@@ -145,18 +145,27 @@ class JobModelBase(ABC, Generic[T]):
 
             self._capture_sets.clear()
 
+    def move_originals(self, capture_sets: list[CaptureSet]):
+        for capture_set in capture_sets:
+            for capture in capture_set.captures:
+                try:
+                    capture.filepath.rename(Path(PATH_CAMERA_ORIGINAL, capture.filepath.name))
+                except Exception as exc:
+                    logger.warning(f"error moving file: {exc}")
+
     @abstractmethod
-    def on_enter_completed(self): ...
+    def on_enter_completed(self):
+        # when completed, signal backends to idle again
+        self._aquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...
 
     @abstractmethod
-    def on_enter_finished(self): ...
-
-    @abstractmethod
-    def new_filename(self) -> str:
-        return datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f")
+    def on_enter_finished(self):
+        # when selected, move all originals to the media folder, otherwise they are kept in the tmp folder and we do not care about them.
+        if self._capture_sets:
+            self.move_originals(self._capture_sets)
 
     @property
     @abstractmethod
@@ -201,7 +210,7 @@ class JobModelBase(ABC, Generic[T]):
         self._countdown_timer.wait_countdown_finished()
 
     def complete_phase1image(self, capture_to_process: Path, show_in_gallery: bool, pipeline_config: SingleImageProcessing) -> Mediaitem:
-        original_filenamepath = self.new_filename()
+        original_filenamepath = Path(filename_str_time()).with_suffix(capture_to_process.suffix)
         mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,

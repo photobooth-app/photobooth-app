@@ -10,6 +10,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
+from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendVirtualcamera
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -53,6 +54,7 @@ class CyclicImageSource:
 
 class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: GroupBackendVirtualcamera):
+        # print(VirtualCameraBackend.__mro__)
         self._config: GroupBackendVirtualcamera = config
         super().__init__(orientation=config.orientation)
 
@@ -63,76 +65,22 @@ class VirtualCameraBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        self._worker_thread = StoppableThread(name="virtualcamera_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
-        logger.debug(f"{self.__module__} started")
-
     def stop(self):
         super().stop()
 
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-        logger.debug(f"{self.__module__} stopped")
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
 
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
+    def run_service(self):
+        logger.info("Running service logic...")
 
-        return super_alive and worker_alive
-
-    def _wait_for_multicam_files(self) -> list[Path]:
-        files: list[Path] = []
-
-        for _ in range(self._config.emulate_multicam_capture_devices):
-            files.append(self._wait_for_still_file())
-
-        return files
-
-    def _wait_for_still_file(self) -> Path:
-        """for other threads to receive a hq JPEG image"""
-
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="virtualcamera_", suffix=".jpg") as f:
-            if self._config.emulate_hires_static_still:
-                with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "hires.jpg").resolve(), "rb") as f_hires:
-                    f.write(f_hires.read())
-            else:
-                f.write(next(self._images_iterator))
-
-            return Path(f.name)
-
-    def _wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
-                raise TimeoutError("timeout receiving frames")
-
-            return self._lores_data.data
-
-    def _on_configure_optimized_for_idle(self):
-        pass
-
-    def _on_configure_optimized_for_hq_preview(self):
-        pass
-
-    def _on_configure_optimized_for_hq_capture(self):
-        pass
-
-    #
-    # INTERNAL IMAGE GENERATOR
-    #
-
-    def _worker_fun(self):
-        assert self._worker_thread
-        logger.info("virtualcamera thread function starts")
-
-        self._device_set_is_ready_to_deliver()
+        # raise RuntimeError("Simulated crash")
 
         last_time_frame = time.time()
-        while not self._worker_thread.stopped():
+        while not self._stop_event.is_set():
             now_time = time.time()
             if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
                 # limit max framerate to every ~5ms
@@ -147,5 +95,42 @@ class VirtualCameraBackend(AbstractBackend):
 
             self._frame_tick()
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("virtualcamera thread finished")
+
+    def _wait_for_multicam_files(self) -> list[Path]:
+        files: list[Path] = []
+
+        for _ in range(self._config.emulate_multicam_capture_devices):
+            files.append(self._wait_for_still_file())
+
+        return files
+
+    def _wait_for_still_file(self) -> Path:
+        """for other threads to receive a hq JPEG image"""
+
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_virtualcamera_", suffix=".jpg") as f:
+            if self._config.emulate_hires_static_still:
+                with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "hires.jpg").resolve(), "rb") as f_hires:
+                    f.write(f_hires.read())
+            else:
+                f.write(next(self._images_iterator))
+
+            return Path(f.name)
+
+    def _wait_for_lores_image(self):
+        """for other threads to receive a lores JPEG image"""
+
+        with self._lores_data.condition:
+            ret = self._lores_data.condition.wait(timeout=0.5)
+            assert ret is True  # TimeoutError("timeout receiving frames")
+
+            return self._lores_data.data
+
+    def _on_configure_optimized_for_idle(self):
+        pass
+
+    def _on_configure_optimized_for_hq_preview(self):
+        pass
+
+    def _on_configure_optimized_for_hq_capture(self):
+        pass

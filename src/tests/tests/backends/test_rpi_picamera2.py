@@ -8,7 +8,7 @@ from photobooth.appconfig import appconfig
 from photobooth.services.config.groups.backends import GroupBackendPicamera2
 from photobooth.utils.helper import is_rpi
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +38,7 @@ def backend_picamera2():
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
@@ -70,10 +70,6 @@ def test_picamera2_switch_modes(backend_picamera2):
         backend_picamera2._on_configure_optimized_for_idle()
         backend_picamera2.wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
         backend_picamera2._picamera2.switch_mode.assert_called()
-
-
-def test_assert_is_alive(backend_picamera2):
-    assert backend_picamera2._device_alive()
 
 
 def test_getImages(backend_picamera2):

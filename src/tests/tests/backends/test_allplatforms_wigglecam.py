@@ -12,7 +12,7 @@ from wigglecam.container import Container
 from photobooth.services.backends.wigglecam import WigglecamBackend
 from photobooth.services.config.groups.backends import ConfigCameraNode, GroupBackendWigglecam
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -39,12 +39,12 @@ def backend_wigglecam() -> Generator[WigglecamBackend, None, None]:
     )
 
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
 
-def test_service_reload(backend_wigglecam):
+def test_service_reload(emulated_node, backend_wigglecam):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
@@ -52,11 +52,7 @@ def test_service_reload(backend_wigglecam):
         backend_wigglecam.start()
 
 
-def test_assert_is_alive(emulated_node, backend_wigglecam):
-    assert backend_wigglecam._device_alive()
-
-
-def test_optimize_mode(backend_wigglecam):
+def test_optimize_mode(emulated_node, backend_wigglecam):
     backend_wigglecam._on_configure_optimized_for_hq_capture()
     backend_wigglecam._on_configure_optimized_for_hq_preview()
     backend_wigglecam._on_configure_optimized_for_idle()

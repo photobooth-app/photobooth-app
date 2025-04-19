@@ -2,7 +2,9 @@
 Testing virtual camera Backend
 """
 
+import importlib
 import logging
+import os
 
 import pytest
 
@@ -120,3 +122,20 @@ def test_config_references_deep_change_propagate():
 
     assert cfg1.common.logging_level is not cfg2
     # this is not what we want! we want it to be same!
+
+
+@pytest.fixture()
+def illegalconfig():
+    with open(".env.test", "w") as tmpf:
+        tmpf.write("common__logging_level=illegalentry")
+
+    yield
+
+    os.remove(".env.test")
+
+
+def test_config_validation_error(illegalconfig):
+    with pytest.raises(SystemExit):
+        import photobooth.appconfig
+
+        importlib.reload(photobooth.appconfig)

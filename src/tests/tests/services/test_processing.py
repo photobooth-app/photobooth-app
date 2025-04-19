@@ -7,7 +7,7 @@ import pytest
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
 
-from ..util import video_duration
+from ..util import block_until_device_is_running, video_duration
 
 logger = logging.getLogger(name=None)
 
@@ -19,7 +19,7 @@ def _container() -> Generator[Container, None, None]:
     container.start()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
-    container.aquisition_service._get_video_backend().block_until_device_is_running()
+    block_until_device_is_running(container.aquisition_service._get_video_backend())
 
     # deliver
     yield container
@@ -132,11 +132,14 @@ def test_video(_container: Container):
     video_item = _container.mediacollection_service.get_item_latest()
 
     # boomerang reverses video so double length
-    in_dur = appconfig.actions.video[0].processing.video_duration
+    desired_video_duration = appconfig.actions.video[0].processing.video_duration
     out_dur = video_duration(video_item.unprocessed)
+    if appconfig.actions.video[0].processing.boomerang:
+        desired_video_duration *= 2
+        desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
 
     # ensure written video is about in tolerance duration
-    assert out_dur == pytest.approx(in_dur * 2.0, 0.3)
+    assert out_dur == pytest.approx(desired_video_duration, 0.3)
 
 
 def test_video_stop_early(_container: Container):
@@ -172,6 +175,7 @@ def test_video_stop_early(_container: Container):
     # boomerang reverses video so double length
     if appconfig.actions.video[0].processing.boomerang:
         desired_video_duration *= 2
+        desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
     assert video_duration_seconds == pytest.approx(desired_video_duration, 0.5)
 
 

@@ -5,13 +5,10 @@ manage up to two photobooth-app backends in this module
 import dataclasses
 import logging
 import subprocess
-import time
 from functools import cache
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from threading import current_thread
-from typing import cast
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -55,12 +52,12 @@ class AquisitionService(BaseService):
         if max_index > len(self._backends) - 1:
             raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends) - 1}")
 
-        logger.info(f"loaded backends: {self._backends}")
+        logger.info(f"loaded backends: {[f'{index}:{name}' for index, name in enumerate(self._backends)]}")
 
         self._load_ffmpeg()
 
-        self._supervisor_thread = StoppableThread(name="_supervisor_thread", target=self._supervisor_fun, args=(), daemon=True)
-        self._supervisor_thread.start()
+        for backend in self._backends:
+            backend.start()
 
         super().started()
 
@@ -68,72 +65,13 @@ class AquisitionService(BaseService):
         """stop backends"""
         super().stop()
 
-        if self._supervisor_thread and self._supervisor_thread.is_alive():
-            self._supervisor_thread.stop()
-            self._supervisor_thread.join()
-
-        super().stopped()
-
-    def _device_start(self):
-        logger.info("starting device")
-
-        try:
-            for backend in self._backends:
-                backend.start()
-        except Exception as exc:
-            logger.exception(exc)
-            logger.critical("could not init/start backend")
-
-            self.faulty()
-
-            return
-
-        logger.info("device started")
-
-    def _device_stop(self):
         if not self._backends:
             return
 
         for backend in self._backends:
             backend.stop()
 
-    def _device_alive(self):
-        backends_are_alive = all([backend._device_alive() for backend in self._backends])
-        return backends_are_alive and True
-
-    def _supervisor_fun(self):
-        logger.info("device supervisor started, checking for clock, then starting device")
-        flag_stopped_orphaned_already = False
-
-        while not cast(StoppableThread, current_thread()).stopped():
-            if not self._device_alive() or any([backend.is_marked_faulty.is_set() for backend in self._backends]):
-                logger.info("starting devices...")
-                if not flag_stopped_orphaned_already:
-                    # to ensure after device was not alive (means just 1 thread stopped), we stop all threads
-                    self._device_stop()
-                    flag_stopped_orphaned_already = True
-
-                flag_stopped_orphaned_already = False
-
-                try:
-                    self._device_start()
-                except Exception as exc:
-                    logger.exception(exc)
-                    logger.error(f"error starting device: {exc}")
-
-                    self._device_stop()
-
-            # wait up to 3 seconds but in smaller increments so if service is stopped,
-            # break out of the sleep loop. since .stopped is true, the outer while is also left.
-            for _ in range(30):
-                time.sleep(0.1)
-                if cast(StoppableThread, current_thread()).stopped():
-                    break
-
-        logger.info("device supervisor exit, stopping devices")
-        self._device_stop()  # safety first, maybe it's double stopped, but prevent any stalling of device-threads
-
-        logger.info("left _supervisor_fun")
+        super().stopped()
 
     def stats(self):
         """
@@ -282,11 +220,10 @@ class AquisitionService(BaseService):
                 return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
             except Exception as exc:
                 # this error probably cannot recover.
-                logger.exception(exc)
                 logger.error(f"streaming exception: {exc}")
                 output_jpeg_bytes = __class__._substitute_image(
-                    "Oh no - stream error :(",
-                    f"{type(exc).__name__}, no preview from cam. retrying.",
+                    f":| Livestream {type(exc).__name__}",
+                    f"{exc}",
                     appconfig.uisettings.livestream_mirror_effect,
                 )
 
@@ -312,9 +249,9 @@ class AquisitionService(BaseService):
         img_draw = ImageDraw.Draw(img)
         font_large = ImageFont.truetype(font=str(path_font), size=22)
         font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 100), caption, fill=text_fill, font=font_large)
-        img_draw.text((25, 120), message, fill=text_fill, font=font_small)
-        img_draw.text((25, 140), "please check camera and logs", fill=text_fill, font=font_small)
+        img_draw.text((25, 50), caption, fill=text_fill, font=font_large)
+        img_draw.text((25, 80), message, fill=text_fill, font=font_small)
+        img_draw.text((25, 100), "please check camera and logs", fill=text_fill, font=font_small)
 
         # flip if mirror effect is on because messages shall be readable on screen
         if mirror:

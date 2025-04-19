@@ -24,6 +24,7 @@ __pycache__
 coverage.xml
 junit/*
 /tests_tmp
+.benchmarks/
 
 # build backends
 dist/*
@@ -38,3 +39,4 @@ diagram_ProcessingPicture.png
 
 # testing
 /experimental
+

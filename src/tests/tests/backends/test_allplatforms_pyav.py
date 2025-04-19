@@ -11,7 +11,7 @@ from photobooth.services.backends.webcampyav import WebcamPyavBackend
 from photobooth.services.config.groups.backends import GroupBackendPyav
 from photobooth.utils.enumerate import webcameras
 
-from ..util import get_images
+from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
 
@@ -35,24 +35,21 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     # select a low resolution that all cameras are capable of
     backend._config.cam_resolution_width = 640
     backend._config.cam_resolution_height = 480
+    # backend._config.cam_framerate = 30
 
     # deliver
     backend.start()
-    backend.block_until_device_is_running()
+    block_until_device_is_running(backend)
     yield backend
     backend.stop()
 
 
-def test_service_reload(backend_pyav):
+def test_service_reload(backend_pyav: WebcamPyavBackend):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
         backend_pyav.stop()
         backend_pyav.start()
-
-
-def test_assert_is_alive(backend_pyav):
-    assert backend_pyav._device_alive()
 
 
 def test_optimize_mode(backend_pyav):
@@ -64,3 +61,12 @@ def test_optimize_mode(backend_pyav):
 def test_get_images_webcampyav(backend_pyav: WebcamPyavBackend):
     """get lores and hires images from backend and assert"""
     get_images(backend_pyav)
+
+
+def test_device_wrong_id_fails(backend_pyav: WebcamPyavBackend):
+    backend_pyav.stop()
+    backend_pyav._config.device_identifier = "999"
+    backend_pyav.start()
+
+    with pytest.raises(RuntimeError):
+        backend_pyav.wait_for_still_file(retries=1)

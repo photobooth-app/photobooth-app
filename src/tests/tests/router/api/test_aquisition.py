@@ -89,9 +89,29 @@ def test_invalid_modechange(client: TestClient):
     assert response.status_code == 422
 
 
-def test_stream(client: TestClient):
-    """test not avail yet"""
-    pass
+# def test_mjpeg_stream(client: TestClient):
+# This test still does not work. the httpx client hands in following line on streams indefinitely.
+# Seems to be related to authentication which is not needed...
+#     with client.stream("GET", "/aquisition/stream.mjpg", auth=None) as response:
+#         assert response.status_code == 200
+#         buffer = b""
+#         jpeg_data = b""
+#         jpeg_start = b"\xff\xd8"
+#         jpeg_end = b"\xff\xd9"
+
+#         # Read bytes until one JPEG image is captured
+#         for chunk in response.iter_bytes():
+#             buffer += chunk
+#             if jpeg_start in buffer and jpeg_end in buffer:
+#                 start = buffer.find(jpeg_start)
+#                 end = buffer.find(jpeg_end, start) + 2
+#                 jpeg_data = buffer[start:end]
+#                 break
+
+#         # Now we verify the JPEG
+#         assert jpeg_data.startswith(jpeg_start)
+#         assert jpeg_data.endswith(jpeg_end)
+#         assert len(jpeg_data) > 100  # Arbitrary minimum size check
 
 
 def test_stream_exception_disabled(client: TestClient):

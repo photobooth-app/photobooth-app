@@ -4,10 +4,9 @@ pyav webcam implementation backend
 
 import logging
 import sys
-import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition, Event
+from threading import Condition
 
 import av
 from av.codec import Capabilities, Codec
@@ -15,9 +14,10 @@ from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
+from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import GroupBackendPyav
-from .abstractbackend import AbstractBackend, GeneralBytesResult, GeneralFileResult
+from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,8 @@ elif sys.platform == "linux":
     # https://ffmpeg.org/ffmpeg-devices.html#video4linux2_002c-v4l2
     input_ffmpeg_device = "v4l2"
 else:
-    raise RuntimeError("backend not supported by platform")
+    # not supported platform, will raise exception during startup. no exception here to not break the overall app
+    input_ffmpeg_device = None
 
 
 class WebcamPyavBackend(AbstractBackend):
@@ -41,7 +42,6 @@ class WebcamPyavBackend(AbstractBackend):
         super().__init__(orientation=config.orientation)
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._hires_data = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
         self._worker_thread: StoppableThread | None = None
 
         # for debugging purposes output some information about underlying libs
@@ -50,25 +50,11 @@ class WebcamPyavBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        self._worker_thread = StoppableThread(name="webcampyav_worker_thread", target=self._worker_fun, daemon=True)
-        self._worker_thread.start()
-
-        logger.debug(f"{self.__module__} started")
+        if not input_ffmpeg_device:
+            raise RuntimeError("platform does not support the pyav backend")
 
     def stop(self):
         super().stop()
-
-        if self._worker_thread and self._worker_thread.is_alive():
-            self._worker_thread.stop()
-            self._worker_thread.join()
-
-        logger.debug(f"{self.__module__} stopped")
-
-    def _device_alive(self) -> bool:
-        super_alive = super()._device_alive()
-        worker_alive = bool(self._worker_thread and self._worker_thread.is_alive())
-
-        return super_alive and worker_alive
 
     def _device_name_platform(self):
         return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
@@ -98,6 +84,8 @@ class WebcamPyavBackend(AbstractBackend):
     def _wait_for_lores_image(self) -> bytes:
         """for other threads to receive a lores JPEG image"""
 
+        self.pause_wait_for_lores_while_hires_capture()
+
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
@@ -113,11 +101,14 @@ class WebcamPyavBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
-    def _worker_fun(self):
-        logger.info("_worker_fun starts")
-        logger.info(f"trying to open camera index={self._config.device_identifier=}")
+    def setup_resource(self):
+        logger.info("Connecting to resource...")
 
-        assert self._worker_thread
+    def teardown_resource(self):
+        logger.info("Disconnecting from resource...")
+
+    def run_service(self):
+        logger.info("Running service logic...")
 
         reformatter = VideoReformatter()
         options = {
@@ -134,12 +125,11 @@ class WebcamPyavBackend(AbstractBackend):
         frame_count = 0
 
         try:
+            logger.info(f"trying to open camera index={self._config.device_identifier=}")
             input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
         except Exception as exc:
-            logger.exception(exc)
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
-            time.sleep(2)  # some delay to avoid fast reiterations on a possibly non recoverable error
-            return
+            raise exc
 
         with input_device:
             input_stream = input_device.streams.video[0]
@@ -159,8 +149,6 @@ class WebcamPyavBackend(AbstractBackend):
 
                 break
 
-            self._device_set_is_ready_to_deliver()
-
             for frame in input_device.decode(input_stream):
                 # hires
                 if self._hires_data.request.is_set():
@@ -169,7 +157,7 @@ class WebcamPyavBackend(AbstractBackend):
                     jpeg_bytes_packet = bytes(next(input_device.demux()))
 
                     # only capture one pic and return to lores streaming afterwards
-                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="webcampyav_hires_", suffix=".jpg") as f:
+                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
                         f.write(jpeg_bytes_packet)
 
                     self._hires_data.filepath = Path(f.name)
@@ -206,10 +194,9 @@ class WebcamPyavBackend(AbstractBackend):
                 self._frame_tick()
 
                 # abort streaming on shutdown so process can join and close
-                if self._worker_thread.stopped():
+                if self._stop_event.is_set():
                     break
 
-        self._device_set_is_ready_to_deliver(False)
         logger.info("pyav_img_aquisition finished, exit")
 
     def _version_codec_info(self):

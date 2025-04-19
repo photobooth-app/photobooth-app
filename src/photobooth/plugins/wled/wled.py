@@ -33,12 +33,10 @@ class Wled(BasePlugin[WledConfig]):
     def start(self):
         if not self._config.wled_enabled:
             logger.info("WledService disabled")
-            # super().disabled()
             return
 
         if not self._config.wled_serial_port:
             logger.info("given serial port empty. define valid port!")
-            # super().faulty()
             return
 
         self.connect()
