@@ -16,7 +16,7 @@ from gpiozero.exc import BadPinFactory
 from ..appconfig import appconfig
 from .base import BaseService
 from .collection import MediacollectionService
-from .config.models.trigger import triggerType
+from .config.models.trigger import GpioTrigger, triggerType
 from .processing import ActionType, ProcessingService
 from .share import ShareService
 
@@ -42,9 +42,13 @@ class Button(ZeroButton):
 
 
 class PinHandler:
-    _instances = {}  # Class-level cache for pin instances
+    _instances: dict[int | str, "PinHandler"] = {}  # Class-level cache for pin instances
 
-    def __new__(cls, pin_number, hold_time=1.0):
+    def __new__(cls, pin_number: str | int, hold_time=1.0):
+        if pin_number == "" or None:
+            logger.info("Ignored setup gpio-pinhandler because the pin_number given is empty.")
+            return
+
         try:
             return cls._instances[pin_number]
         except KeyError:
@@ -56,15 +60,35 @@ class PinHandler:
     def __init_new__(self, pin_number, hold_time):
         self.button = Button(pin_number, hold_time=hold_time, bounce_time=DEBOUNCE_TIME)  # type: ignore
 
-        self.callbacks: dict[triggerType, list[tuple[Callable[[int | str], None], tuple, dict[str, Any]]]] = {
+        self.callbacks: dict[triggerType, list[tuple[Callable[..., None], tuple, dict[str, Any]]]] = {
             "pressed": [],
             "released": [],
             "longpress": [],
         }
 
-        self.button.when_activated = self._handle_press
-        self.button.when_deactivated = self._handle_release
-        self.button.when_held = self._handle_hold
+        self.button.when_activated = self._handle_pressed
+        self.button.when_deactivated = self._handle_released
+        self.button.when_held = self._handle_longpress
+
+    @classmethod
+    def _teardown(cls):
+        if not cls._instances:
+            return  # nothing to tear down
+
+        logger.info("closing all gpio pin handler instances")
+        closed_pins = []
+        while cls._instances:
+            pin, instance = cls._instances.popitem()
+            try:
+                instance.button.close()
+                del instance
+                closed_pins.append(pin)
+            except Exception as exc:
+                logger.error(f"error closing pin {pin} properly: {exc}")
+
+        cls._instances.clear()
+
+        logger.debug(f"closed gpio pin instances {closed_pins}")
 
     def _handle_event(self, event_type: triggerType):
         for cb, args, kwargs in self.callbacks[event_type]:
@@ -74,26 +98,21 @@ class PinHandler:
                 logger.error(f"error during gpio callback execution: {exc}")
                 # no reraise!
 
-    def _handle_press(self):
+    def _handle_pressed(self):
         self._handle_event("pressed")
 
-    def _handle_release(self):
+    def _handle_released(self):
         self._handle_event("released")
 
-    def _handle_hold(self):
+    def _handle_longpress(self):
         self._handle_event("longpress")
 
-    def register_callback(self, event_type: triggerType, callback, *args, **kwargs):
-        """Register a callback: 'pressed', 'released', or 'longpress'."""
-
+    def register_callback(self, event_type: triggerType, callback: Callable[..., None], *args, **kwargs):
         entry = (callback, args, kwargs)
         if entry not in self.callbacks[event_type]:
+            # getattr __name__ and fallback if not avail because magic mocks for testing do not have __name__
+            logger.info(f"for {self.button.pin} register callback {str(getattr(callback, '__name__', callback))}({args},{kwargs}) ")
             self.callbacks[event_type].append(entry)
-
-    def remove_callback(self, event_type: triggerType, callback):
-        """Remove a callback for an event."""
-        if callback in self.callbacks[event_type]:
-            self.callbacks[event_type] = [(cb, args, kwargs) for cb, args, kwargs in self.callbacks[event_type] if cb != callback]
 
 
 class GpioService(BaseService):
@@ -104,8 +123,17 @@ class GpioService(BaseService):
         self._share_service = share_service
         self._mediacollection_service = mediacollection_service
 
+    def _handle_shutdown(self):
+        logger.info("Shutting down host")
+        subprocess.check_call(["poweroff"])
+
+    def _handle_reboot(self):
+        logger.info("Rebooting host")
+        subprocess.check_call(["reboot"])
+
     def _handle_action_button(self, action_type: ActionType, action_index: int):
         logger.debug(f"trigger callback for {action_type}:{action_index}")
+
         self._processing_service.trigger_action(action_type, action_index)
 
     def _handle_share_button(self, action_index: int):
@@ -136,47 +164,31 @@ class GpioService(BaseService):
             logger.critical(exc)
 
     def init_io(self):
-        # shutdown
         shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN)
-        shutdown_btn.register_callback("longpress", self._shutdown)
+        if shutdown_btn:
+            shutdown_btn.register_callback("longpress", self._handle_shutdown)
 
-        # reboot
-        shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot, hold_time=HOLD_TIME_SHUTDOWN)
-        shutdown_btn.register_callback("longpress", self._reboot)
+        reboot_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot, hold_time=HOLD_TIME_SHUTDOWN)
+        if reboot_btn:
+            reboot_btn.register_callback("longpress", self._handle_reboot)
 
-        # action buttons dynamic registering
         for action_type in get_args(ActionType):
-            for index, config in enumerate(getattr(appconfig.actions, action_type)):
-                action_btn = PinHandler(config.trigger.gpio_trigger.pin, hold_time=HOLD_TIME_SHUTDOWN)
-                # change press to config.trigger.gpio_trigger.trigger_on
-                action_btn.register_callback("pressed", self._handle_action_button, action_type, index)
-                print(action_btn)
+            for index, config in enumerate(getattr(appconfig.actions, action_type)):  # here is a typing dissociation, might be addressed later...
+                gpio_trigger: GpioTrigger = config.trigger.gpio_trigger
 
-        # for index, config in enumerate(appconfig.share.actions):
-        #     self._setup_share_button(config.trigger.gpio_trigger, index)
+                action_btn = PinHandler(gpio_trigger.pin, hold_time=0.6)
+                if action_btn:
+                    action_btn.register_callback(gpio_trigger.trigger_on, self._handle_action_button, action_type, index)
 
-    def uninit_io(self):
-        return
-        if self.shutdown_btn:
-            self.shutdown_btn.close()
-        if self.reboot_btn:
-            self.reboot_btn.close()
-        if self.action_btns:
-            for btn in self.action_btns:
-                btn.close()
-        if self.share_btns:
-            for btn in self.share_btns:
-                btn.close()
+        for index, config in enumerate(appconfig.share.actions):
+            gpio_trigger: GpioTrigger = config.trigger.gpio_trigger
+
+            share_btn = PinHandler(gpio_trigger.pin, hold_time=0.6)
+            if share_btn:
+                share_btn.register_callback(gpio_trigger.trigger_on, self._handle_share_button, index)
 
     def start(self):
         super().start()
-
-        self.uninit_io()
-
-        self.shutdown_btn = None
-        self.reboot_btn = None
-        self.action_btns = []
-        self.share_btns = []
 
         if not appconfig.hardwareinputoutput.gpio_enabled:
             super().disabled()
@@ -198,14 +210,6 @@ class GpioService(BaseService):
     def stop(self):
         super().stop()
 
-        self.uninit_io()
+        PinHandler._teardown()
 
         super().stopped()
-
-    def _shutdown(self):
-        logger.info("trigger _shutdown")
-        subprocess.check_call(["poweroff"])
-
-    def _reboot(self):
-        logger.info("trigger _reboot")
-        subprocess.check_call(["reboot"])
