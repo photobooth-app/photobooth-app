@@ -3,6 +3,7 @@ import time
 from collections.abc import Generator
 
 import pytest
+from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
@@ -37,6 +38,12 @@ def test_capture(_container: Container):
 
     assert _container.processing_service._workflow_jobmodel is None
 
+    phase2_item = _container.mediacollection_service.get_item_latest()
+    assert phase2_item.unprocessed.suffix.lower() == ".jpg"
+
+    with Image.open(phase2_item.unprocessed, formats=["JPEG"]) as img:
+        img.verify()
+
 
 def test_capture_zero_countdown(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
@@ -61,6 +68,12 @@ def test_collage_auto_approval(_container: Container):
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._workflow_jobmodel is None
+
+    phase2_item = _container.mediacollection_service.get_item_latest()
+    assert phase2_item.unprocessed.suffix.lower() == ".jpg"
+
+    with Image.open(phase2_item.unprocessed, formats=["JPEG"]) as img:
+        img.verify()
 
 
 def test_collage_manual_approval(_container: Container):
@@ -116,6 +129,12 @@ def test_animation(_container: Container):
 
     assert _container.processing_service._workflow_jobmodel is None
 
+    phase2_item = _container.mediacollection_service.get_item_latest()
+    assert phase2_item.unprocessed.suffix.lower() == ".gif"
+
+    with Image.open(phase2_item.unprocessed, formats=["GIF"]) as img:
+        img.verify()
+
 
 def test_video(_container: Container):
     _container.processing_service.trigger_action("video", 0)
@@ -130,6 +149,7 @@ def test_video(_container: Container):
     assert _container.mediacollection_service.count() == number_of_images_before + 1
 
     video_item = _container.mediacollection_service.get_item_latest()
+    assert video_item.unprocessed.suffix.lower() == ".mp4"
 
     # boomerang reverses video so double length
     desired_video_duration = appconfig.actions.video[0].processing.video_duration
@@ -167,6 +187,7 @@ def test_video_stop_early(_container: Container):
     assert _container.mediacollection_service.count() == number_of_images_before + 1
 
     video_item = _container.mediacollection_service.get_item_latest()
+    assert video_item.unprocessed.suffix.lower() == ".mp4"
 
     # ensure written video is about in tolerance duration
     video_duration_seconds = abs(round(video_duration(video_item.unprocessed), 1))
@@ -191,3 +212,9 @@ def test_multicamera(_container: Container):
     assert _container.processing_service._workflow_jobmodel is None
 
     assert _container.mediacollection_service.count() == number_of_images_before + 5
+
+    phase2_item = _container.mediacollection_service.get_item_latest()
+    assert phase2_item.unprocessed.suffix.lower() == ".gif"
+
+    with Image.open(phase2_item.unprocessed, formats=["GIF"]) as img:
+        img.verify()
