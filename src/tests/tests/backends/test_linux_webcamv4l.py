@@ -55,7 +55,7 @@ def backend_v4l():
 ## tests
 
 
-def test_service_reload(backend_v4l):
+def test_service_reload(backend_v4l: WebcamV4lBackend):
     """container reloading works reliable"""
 
     for _ in range(1, 5):
@@ -63,13 +63,13 @@ def test_service_reload(backend_v4l):
         backend_v4l.start()
 
 
-def test_optimize_mode(backend_v4l):
+def test_optimize_mode(backend_v4l: WebcamV4lBackend):
     backend_v4l._on_configure_optimized_for_hq_capture()
     backend_v4l._on_configure_optimized_for_hq_preview()
     backend_v4l._on_configure_optimized_for_idle()
 
 
-def test_get_images_webcamv4l(backend_v4l):
+def test_get_images_webcamv4l(backend_v4l: WebcamV4lBackend):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = True
     # changing switch_to_high_resolution_for_stills may lead to immediate camera mode change that needs to be waited for
@@ -77,7 +77,7 @@ def test_get_images_webcamv4l(backend_v4l):
     get_images(backend_v4l)
 
 
-def test_get_images_webcamv4l_noswitch_lores(backend_v4l):
+def test_get_images_webcamv4l_noswitch_lores(backend_v4l: WebcamV4lBackend):
     # get lores and hires images from backend and assert
     backend_v4l._config.switch_to_high_resolution_for_stills = False
     # changing switch_to_high_resolution_for_stills may lead to immediate camera mode change that needs to be waited for
@@ -85,9 +85,9 @@ def test_get_images_webcamv4l_noswitch_lores(backend_v4l):
     get_images(backend_v4l)
 
 
-def test_get_images_webcamv4l_yuvy(backend_v4l):
+def test_get_images_webcamv4l_yuvy(backend_v4l: WebcamV4lBackend):
     # get lores and hires images from backend and assert
-    backend_v4l._config.pixel_format = "YUYV"
+    backend_v4l._config.pixel_format_fourcc = "YUYV"
     backend_v4l.stop()
     backend_v4l.start()
     block_until_device_is_running(backend_v4l)

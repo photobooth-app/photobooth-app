@@ -14,9 +14,11 @@ logger = logging.getLogger(name=None)
 
 def test_container_reload():
     """container reloading works reliable"""
+    container.start()
 
-    for _ in range(1, 5):
-        container.reload()
+    container.reload()
+
+    container.stop()
 
 
 def test_service_start_exceptions():

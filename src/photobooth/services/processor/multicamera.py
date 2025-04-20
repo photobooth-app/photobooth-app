@@ -82,7 +82,7 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
 
-        original_filenamepath = Path(filename_str_time()).with_suffix(".jpg")
+        original_filenamepath = Path(filename_str_time()).with_suffix(".gif")
         phase2_mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,
