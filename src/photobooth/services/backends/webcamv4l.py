@@ -110,13 +110,14 @@ class WebcamV4lBackend(AbstractBackend):
             width, height = self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT
 
         try:
-            capture.set_format(width, height, self._config.pixel_format)
+            # pixel_format is handed over to v4l_fourcc, so it needs to be MJPG for MJPEG
+            capture.set_format(width, height, self._config.pixel_format_fourcc)
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
         fmt = capture.get_format()
 
-        logger.info(f"requested {mode}-resolution is {width}x{height}, format {self._config.pixel_format}")
+        logger.info(f"requested {mode}-resolution is {width}x{height}, format {self._config.pixel_format_fourcc}")
         logger.info(f"   actual {mode}-resolution is {fmt.width}x{fmt.height}, format {fmt.pixel_format.name}")
 
         # save for later use
@@ -138,9 +139,9 @@ class WebcamV4lBackend(AbstractBackend):
                 f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
                 "The camera might not work properly!"
             )
-        if self._config.pixel_format.lower() != self._fmt_pixel_format.name.lower():
+        if self._config.pixel_format_fourcc.lower() != self._fmt_pixel_format.name.lower():
             logger.warning(
-                f"Actual camera pixel_format {self._fmt_pixel_format.name} is different from requested format {self._config.pixel_format}! "
+                f"Actual camera pixel_format {self._fmt_pixel_format.name} is different from requested format {self._config.pixel_format_fourcc}! "
                 "The camera might not work properly!"
             )
 
