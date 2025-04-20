@@ -34,14 +34,19 @@ class Container:
     filetransfer_service = FileTransferService()
     config_service = ConfigurationService(pluginmanager_service)
 
-    lock = Lock()
+    _lock_startstop = Lock()
+    _lock_reload = Lock()
+    _container_started: bool = False
 
     def _service_list(self) -> list[BaseService]:
         # list used to start/stop services. List sorted in the order of definition.
         return [getattr(self, attr) for attr in __class__.__dict__ if isinstance(getattr(self, attr), BaseService)]
 
     def start(self):
-        with self.lock:
+        with self._lock_startstop:
+            if self.is_started():
+                raise RuntimeError("Service already started")
+
             for service in self._service_list():
                 try:
                     service.start()
@@ -51,10 +56,14 @@ class Container:
                     logger.exception(exc)
                     logger.critical("could not start service")
 
+            self._container_started = True
             logger.info("started container")
 
     def stop(self):
-        with self.lock:
+        with self._lock_startstop:
+            if not self.is_started():
+                raise RuntimeError("Service already stopped")
+
             for service in reversed(self._service_list()):
                 try:
                     service.stop()
@@ -64,12 +73,24 @@ class Container:
                     logger.exception(exc)
                     logger.critical("could not stop service")
 
+            self._container_started = False
             logger.info("stopped container")
+
+    def is_started(self):
+        return self._container_started
 
     def reload(self):
         """stop all services first (reverse order), then start them again."""
-        self.stop()
-        self.start()
+        with self._lock_reload:  # lock reload so multiple calls cannot interfere and mess with the sequence
+            try:
+                self.stop()
+            except Exception:
+                ...
+
+            try:
+                self.start()
+            except Exception:
+                ...
 
 
 container = Container()
