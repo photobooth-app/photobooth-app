@@ -42,12 +42,14 @@ class Button(ZeroButton):
 
 
 class PinHandler:
-    _instances: dict[int | str, "PinHandler"] = {}  # Class-level cache for pin instances
+    _instances: dict[str, "PinHandler"] = {}  # Class-level cache for pin instances
 
     def __new__(cls, pin_number: str | int, hold_time=1.0):
         if pin_number == "" or None:
             logger.info("Ignored setup gpio-pinhandler because the pin_number given is empty.")
             return
+        # ensure it's str always
+        pin_number = str(pin_number)  # doesn't harm underlying gpiozero lib but instances[] lookup works
 
         try:
             return cls._instances[pin_number]
@@ -114,6 +116,10 @@ class PinHandler:
             logger.info(f"for {self.button.pin} register callback {str(getattr(callback, '__name__', callback))}({args},{kwargs}) ")
             self.callbacks[event_type].append(entry)
 
+    @classmethod
+    def pins_assigned(cls):
+        return [gpio for gpio in sorted(cls._instances.keys())]
+
 
 class GpioService(BaseService):
     def __init__(self, processing_service: ProcessingService, share_service: ShareService, mediacollection_service: MediacollectionService):
@@ -146,14 +152,17 @@ class GpioService(BaseService):
         self._share_service.share(mediaitem, action_index)
 
     def _handle_processing_next_confirm_button(self):
+        print("########### confirm")
         if self._processing_service._is_occupied():
             self._processing_service.continue_process()
 
     def _handle_processing_reject_button(self):
+        print("########### reject")
         if self._processing_service._is_occupied():
             self._processing_service.reject_capture()
 
     def _handle_processing_abort_button(self):
+        print("########### abort")
         if self._processing_service._is_occupied():
             self._processing_service.abort_process()
 
@@ -192,6 +201,8 @@ class GpioService(BaseService):
         job_abort_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_abort, hold_time=0.6)
         if job_abort_btn:
             job_abort_btn.register_callback("pressed", self._handle_processing_abort_button)
+
+        logger.info(f"Pins assigned to GPIO {PinHandler.pins_assigned()}")
 
     def start(self):
         super().start()
