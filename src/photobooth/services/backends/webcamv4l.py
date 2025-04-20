@@ -130,19 +130,19 @@ class WebcamV4lBackend(AbstractBackend):
             linuxpy_video_device.PixelFormat.YUYV,
         ):
             raise RuntimeError(
-                f"Camera selected pixel_format '{fmt.pixel_format.name}', but it is not supported."
+                f"Camera selected pixel_format '{self._fmt_pixel_format.name}', but it is not supported."
                 "Your camera is probably not supported and the error permanent."
             )
 
         if fmt.width != width or fmt.height != height:
             logger.warning(
                 f"Actual camera resolution {fmt.width}x{fmt.height} is different from requested resolution {width}x{height}! "
-                "The camera might not work properly!"
+                "You should consider to set a proper resolution for the camera!"
             )
-        if self._config.pixel_format_fourcc.lower() != self._fmt_pixel_format.name.lower():
+        if linuxpy_video_device.raw.v4l2_fourcc(*self._config.pixel_format_fourcc) != self._fmt_pixel_format:
             logger.warning(
                 f"Actual camera pixel_format {self._fmt_pixel_format.name} is different from requested format {self._config.pixel_format_fourcc}! "
-                "The camera might not work properly!"
+                "You should consider to select the correct pixel format!"
             )
 
     def _frame_to_jpeg(self, frame: "linuxpy_video_device_type.Frame") -> bytes:
