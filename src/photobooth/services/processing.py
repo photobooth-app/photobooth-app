@@ -1,5 +1,5 @@
 import logging
-from queue import Empty, Queue
+from queue import Empty, Full, Queue
 from threading import Thread
 from typing import Literal
 from uuid import UUID
@@ -18,7 +18,7 @@ from .processor.animation import JobModelAnimation
 from .processor.base import Capture
 from .processor.collage import JobModelCollage
 from .processor.image import JobModelImage
-from .processor.machine.processingmachine import ProcessingMachine
+from .processor.machine.processingmachine import ProcessingMachine, userEvents
 from .processor.multicamera import JobModelMulticamera
 from .processor.video import JobModelVideo
 from .sse import sse_service
@@ -101,7 +101,7 @@ class ProcessingService(BaseService):
         self._process_thread: Thread | None = None
 
         # start with clear queue
-        self._external_cmd_queue: Queue[str] = Queue[str](maxsize=1)
+        self._external_cmd_queue: Queue[userEvents] | None = None
 
     def _is_occupied(self) -> bool:
         return self._workflow_jobmodel is not None
@@ -111,6 +111,25 @@ class ProcessingService(BaseService):
             # Job ongoing ⌛There is already a job running. Please wait until it finished.
             sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="processing.machine_occupied"))
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
+
+    def _is_user_input_requested(self) -> bool:
+        """if queue is initialized on _external_cmd_queue, a user request is waited for."""
+        return self._external_cmd_queue is not None
+
+    def _request_user_input(self, timeout: float) -> userEvents:
+        # setup the queue, so external functions can send events
+        self._external_cmd_queue = Queue(maxsize=1)
+        try:
+            event = self._external_cmd_queue.get(block=True, timeout=timeout)
+            logger.debug(f"user chose {event}")
+        except Empty:
+            logger.info(f"no user input within {timeout}s so assume to continue next")
+            event = "next"
+        finally:
+            # clear the event queue, which indicates events sending not possible for externals
+            self._external_cmd_queue = None
+
+        return event
 
     def _process_fun(self):
         assert self._workflow_jobmodel
@@ -123,29 +142,14 @@ class ProcessingService(BaseService):
                 if self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.approval:
                     assert isinstance(self._workflow_jobmodel._configuration_set.jobcontrol, MultiImageJobControl)
 
-                    timeout = self._workflow_jobmodel._configuration_set.jobcontrol.approve_autoconfirm_timeout
-                    try:
-                        event = self._external_cmd_queue.get(block=True, timeout=timeout)
-                        logger.debug(f"user chose {event}")
-                    except Empty:
-                        logger.info(f"no user input within {timeout}s so assume to confirm")
-
-                        event = "next"
-
+                    event = self._request_user_input(timeout=self._workflow_jobmodel._configuration_set.jobcontrol.approve_autoconfirm_timeout)
                     self._workflow_jobmodel._status_sm.send(event)
+
                 elif self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.capture and isinstance(
                     self._workflow_jobmodel, JobModelVideo
                 ):
-                    timeout = self._workflow_jobmodel._configuration_set.processing.video_duration
-                    try:
-                        event = self._external_cmd_queue.get(block=True, timeout=timeout)
-                        logger.debug(f"user chose {event}")
-                        # continue if external_cmd_queue has an event
-                    except Empty:
-                        # after timeout
-                        logger.info(f"no user input within {timeout}s so stopping video")
-                        event = "next"
-
+                    event = self._request_user_input(timeout=self._workflow_jobmodel._configuration_set.processing.video_duration)
+                    event = event if event != "reject" else "next"  # force next if reject because reject is not an allowed transition
                     self._workflow_jobmodel._status_sm.send(event)
                 else:
                     self._workflow_jobmodel._status_sm.send("next")
@@ -233,11 +237,14 @@ class ProcessingService(BaseService):
 
         raise FileNotFoundError(f"cannot find {capture_id} in capture_set")
 
-    def queue_external_event(self, event: Literal["next", "reject", "abort"]):
-        if not self._workflow_jobmodel:
-            raise RuntimeError("no job ongoing, cannot send event!")
+    def queue_external_event(self, event: userEvents):
+        if not self._external_cmd_queue:
+            raise RuntimeError("currently no user input is requested!")
 
-        self._external_cmd_queue.put(event)
+        try:
+            self._external_cmd_queue.put_nowait(event)
+        except Full as exc:
+            raise RuntimeError("cannot send the command because the queue is full") from exc
 
     def continue_process(self):
         self.queue_external_event("next")

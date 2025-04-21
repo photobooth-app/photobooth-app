@@ -1,3 +1,5 @@
+from typing import Literal
+
 from statemachine import Event, State, StateMachine
 
 # TODO: can use as enum so fastapi can use this type also and validate states?
@@ -8,6 +10,8 @@ from statemachine import Event, State, StateMachine
 #     approval = auto()
 #     completed = auto()
 #     finished = auto()
+
+userEvents = Literal["next", "reject", "abort"]
 
 
 class ProcessingMachine(StateMachine):
