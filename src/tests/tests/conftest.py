@@ -43,6 +43,7 @@ def global_function_setup2():
     appconfig.actions.animation[0].jobcontrol.countdown_capture_second_following = 0.2
     appconfig.actions.animation[0].jobcontrol.approve_autoconfirm_timeout = 0.5
     appconfig.actions.video[0].jobcontrol.countdown_capture = 0.2
+    appconfig.actions.video[0].processing.video_duration = 2
 
     yield
 
