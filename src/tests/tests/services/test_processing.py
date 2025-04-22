@@ -27,6 +27,11 @@ def _container() -> Generator[Container, None, None]:
     container.stop()
 
 
+def wait_for_user_input_requested():
+    while not container.processing_service._is_user_input_requested():
+        time.sleep(0.1)
+
+
 def test_capture(_container: Container):
     """this function processes single images (in contrast to collages or videos)"""
 
@@ -87,9 +92,11 @@ def test_collage_manual_approval(_container: Container):
 
     # observer that is used to confirm the captures.
     assert _container.processing_service._workflow_jobmodel is not None  # statemachine was created after trigger_action
-
+    wait_for_user_input_requested()
     _container.processing_service.continue_process()
+    wait_for_user_input_requested()
     _container.processing_service.reject_capture()
+    wait_for_user_input_requested()
     _container.processing_service.continue_process()
 
     _container.processing_service.wait_until_job_finished()

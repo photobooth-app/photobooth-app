@@ -119,15 +119,18 @@ class ProcessingService(BaseService):
     def _request_user_input(self, timeout: float) -> userEvents:
         # setup the queue, so external functions can send events
         self._external_cmd_queue = Queue(maxsize=1)
+
         try:
             event = self._external_cmd_queue.get(block=True, timeout=timeout)
+            self._external_cmd_queue.task_done()
             logger.debug(f"user chose {event}")
         except Empty:
             logger.info(f"no user input within {timeout}s so assume to continue next")
             event = "next"
         finally:
             # clear the event queue, which indicates events sending not possible for externals
-            self._external_cmd_queue = None
+            # self._external_cmd_queue = None
+            pass
 
         return event
 
@@ -243,6 +246,8 @@ class ProcessingService(BaseService):
 
         try:
             self._external_cmd_queue.put_nowait(event)
+            self._external_cmd_queue.join()
+            self._external_cmd_queue = None
         except Full as exc:
             raise RuntimeError("cannot send the command because the queue is full") from exc
 
