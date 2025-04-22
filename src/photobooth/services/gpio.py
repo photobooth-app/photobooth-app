@@ -152,17 +152,17 @@ class GpioService(BaseService):
         self._share_service.share(mediaitem, action_index)
 
     def _handle_processing_next_confirm_button(self):
-        if self._processing_service._is_user_input_requested():
+        if self._processing_service.is_user_input_requested():
             logger.info("continue process chosen by gpio input")
             self._processing_service.continue_process()
 
     def _handle_processing_reject_button(self):
-        if self._processing_service._is_user_input_requested():
+        if self._processing_service.is_user_input_requested():
             logger.info("reject process chosen by gpio input")
             self._processing_service.reject_capture()
 
     def _handle_processing_abort_button(self):
-        if self._processing_service._is_user_input_requested():
+        if self._processing_service.is_user_input_requested():
             logger.info("abort process chosen by gpio input")
             self._processing_service.abort_process()
 

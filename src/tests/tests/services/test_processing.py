@@ -28,8 +28,8 @@ def _container() -> Generator[Container, None, None]:
 
 
 def wait_for_user_input_requested():
-    while not container.processing_service._is_user_input_requested():
-        time.sleep(0.1)
+    if not container.processing_service._external_cmd_required.wait(timeout=5):
+        raise RuntimeError("waiting for user input not within timeout")
 
 
 def test_capture(_container: Container):
@@ -116,8 +116,11 @@ def test_collage_manual_abort(_container: Container):
 
     assert _container.processing_service._workflow_jobmodel is not None
 
+    wait_for_user_input_requested()
     _container.processing_service.continue_process()
+    wait_for_user_input_requested()
     _container.processing_service.reject_capture()
+    wait_for_user_input_requested()
     _container.processing_service.abort_process()
 
     _container.processing_service.wait_until_job_finished()
@@ -183,8 +186,8 @@ def test_video_stop_early(_container: Container):
         if timeout_counter > 10:
             raise RuntimeError("timed out waiting for record to start!")
 
-    # recording active, wait 3 secs before stopping.
-    desired_video_duration = 3
+    # recording active, wait 1 secs before stopping.
+    desired_video_duration = 1
     time.sleep(desired_video_duration)
     _container.processing_service.continue_process()
     _container.processing_service.wait_until_job_finished()

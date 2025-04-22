@@ -1,5 +1,6 @@
 import logging
 from queue import Empty, Full, Queue
+from threading import Event as threadingEvent
 from threading import Thread
 from typing import Literal
 from uuid import UUID
@@ -100,8 +101,10 @@ class ProcessingService(BaseService):
         self._workflow_jobmodel: JobModelImage | JobModelCollage | JobModelAnimation | JobModelVideo | JobModelMulticamera | None = None
         self._process_thread: Thread | None = None
 
-        # start with clear queue
-        self._external_cmd_queue: Queue[userEvents] | None = None
+        # external commands (next/reject/abort) can be sent from frontend api endpoints or gpio.
+        # once a cmd is required, the user answer is queued and read by the job processor to continue as requested
+        self._external_cmd_queue: Queue[userEvents] = Queue(maxsize=1)
+        self._external_cmd_required: threadingEvent = threadingEvent()
 
     def _is_occupied(self) -> bool:
         return self._workflow_jobmodel is not None
@@ -112,24 +115,25 @@ class ProcessingService(BaseService):
             sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="processing.machine_occupied"))
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
 
-    def _is_user_input_requested(self) -> bool:
+    def is_user_input_requested(self) -> bool:
         """if queue is initialized on _external_cmd_queue, a user request is waited for."""
-        return self._external_cmd_queue is not None
+        return self._external_cmd_required.is_set()
 
     def _request_user_input(self, timeout: float) -> userEvents:
-        # setup the queue, so external functions can send events
-        self._external_cmd_queue = Queue(maxsize=1)
+        # reset queue to new instance to ensure there is nothing old in there for whatever reason...
+        self._external_cmd_queue = Queue(1)
+
+        # inform external functions that they should send an event now to the queue
+        self._external_cmd_required.set()
 
         try:
             event = self._external_cmd_queue.get(block=True, timeout=timeout)
-            self._external_cmd_queue.task_done()
             logger.debug(f"user chose {event}")
         except Empty:
             logger.info(f"no user input within {timeout}s so assume to continue next")
             event = "next"
         finally:
             # clear the event queue, which indicates events sending not possible for externals
-            # self._external_cmd_queue = None
             pass
 
         return event
@@ -241,13 +245,12 @@ class ProcessingService(BaseService):
         raise FileNotFoundError(f"cannot find {capture_id} in capture_set")
 
     def queue_external_event(self, event: userEvents):
-        if not self._external_cmd_queue:
+        if not self._external_cmd_required.is_set():
             raise RuntimeError("currently no user input is requested!")
 
         try:
             self._external_cmd_queue.put_nowait(event)
-            self._external_cmd_queue.join()
-            self._external_cmd_queue = None
+            self._external_cmd_required.clear()
         except Full as exc:
             raise RuntimeError("cannot send the command because the queue is full") from exc
 
