@@ -44,6 +44,8 @@ class ResilientService(ABC):
                 except Exception as e:
                     self._report_crash(e)
 
+                    raise ServiceCrashed(e) from e
+
                 try:
                     self.run_service()
                 except Exception as e:
