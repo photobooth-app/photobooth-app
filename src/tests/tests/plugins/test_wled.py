@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from photobooth.plugins.wled.wled import Wled
+from photobooth.plugins.wled.wled import Wled, WledPreset
 
 logger = logging.getLogger(name=None)
 
@@ -21,7 +21,7 @@ def test_disabled(wled_plugin: Wled):
     wled_plugin.start()
 
     # test this, because should be ignored, no error
-    wled_plugin.preset_standby()
+    wled_plugin.send_preset(WledPreset.STANDBY)
 
 
 def test_enabled_nonexistentserialport(wled_plugin: Wled):
@@ -60,11 +60,11 @@ def test_change_presets(wled_plugin: Wled):
 
     time.sleep(0.1)
 
-    wled_plugin.preset_thrill()
+    wled_plugin.send_preset(WledPreset.THRILL)
     time.sleep(0.5)
-    wled_plugin.preset_shoot()
+    wled_plugin.send_preset(WledPreset.SHOOT)
     time.sleep(0.5)
-    wled_plugin.preset_record()
+    wled_plugin.send_preset(WledPreset.RECORD)
     time.sleep(0.5)
-    wled_plugin.preset_standby()
+    wled_plugin.send_preset(WledPreset.STANDBY)
     time.sleep(0.1)
