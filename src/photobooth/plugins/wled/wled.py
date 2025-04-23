@@ -40,9 +40,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         """To start the resilient service"""
         logger.debug(f"{self.__class__.__name__} start called")
 
-        # load updated config
-        self._config = WledConfig()
-
         if not self._config.wled_enabled:
             logger.info("WledService disabled")
             return
@@ -103,7 +100,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
     def send_preset(self, preset: WledPreset):
         if not self._queue:
             # no queue, request ignored.
-            logger.info("IGNORE WLED REQUEST, REMOVE FROM LOG SOON")
             return
 
         try:
