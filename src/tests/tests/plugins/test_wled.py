@@ -56,9 +56,10 @@ def test_restart_class(wled_plugin: Wled):
 
 
 def test_change_presets(wled_plugin: Wled):
+    wled_plugin.start()
     logger.debug("getting service, starting resource")
 
-    time.sleep(0.1)
+    time.sleep(0.4)
 
     wled_plugin.send_preset(WledPreset.THRILL)
     time.sleep(0.5)
