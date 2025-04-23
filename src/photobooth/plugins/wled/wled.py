@@ -70,20 +70,16 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         if target.id == "counting":
             self.send_preset(WledPreset.THRILL)
 
-        elif target.id == "record":
-            self.send_preset(WledPreset.RECORD)
-
         elif target.id == "finished":
             self.send_preset(WledPreset.STANDBY)
 
     @hookimpl
-    def sm_on_exit_state(self, source: State, target: State, event: Event):
-        if source.id == "record":
-            self.send_preset(WledPreset.STANDBY)
+    def acq_before_get_still(self):
+        self.send_preset(WledPreset.SHOOT)
 
     @hookimpl
-    def acq_before_shot(self):
-        self.send_preset(WledPreset.SHOOT)
+    def acq_before_get_video(self):
+        self.send_preset(WledPreset.RECORD)
 
     @hookimpl
     def acq_after_shot(self):
@@ -100,7 +96,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         time.sleep(0.2)
 
         # on run always reset to start with a clear queue
-        self._queue = Queue(maxsize=2)
+        self._queue = Queue(maxsize=3)
 
         self.send_preset(WledPreset.STANDBY)
 
@@ -187,3 +183,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
                 break
 
             self._serial.write(json.dumps({"ps": preset.value}).encode())
+
+            # add a small delay after every write so wled can settle and on fast changes the LED effect is at least
+            # visible for a short time.
+            time.sleep(0.25)

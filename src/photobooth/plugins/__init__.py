@@ -53,6 +53,9 @@ class PluginAcquisitionSpec:
     @hookspec  # triggers before a still only
     def acq_before_get_still(self) -> None: ...
 
+    @hookspec  # triggers before a video only
+    def acq_before_get_video(self) -> None: ...
+
     @hookspec  # triggers before a multicam still only
     def acq_before_get_multicam(self) -> None: ...
 

@@ -155,9 +155,14 @@ class AquisitionService(BaseService):
             pluggy_pm.hook.acq_after_shot()
 
     def start_recording(self, video_framerate: int = 25) -> Path:
+        pluggy_pm.hook.acq_before_shot()
+        pluggy_pm.hook.acq_before_get_video()
+
         return self._get_video_backend().start_recording(video_framerate)
 
     def stop_recording(self):
+        pluggy_pm.hook.acq_after_shot()
+
         self._get_video_backend().stop_recording()
 
     def is_recording(self):
