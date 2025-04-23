@@ -18,9 +18,9 @@ import piexif
 from ... import LOG_PATH
 from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
+from ...utils.resilientservice import ResilientService
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.backends import Orientation
-from .resilientservice import ResilientService
 
 logger = logging.getLogger(__name__)
 
