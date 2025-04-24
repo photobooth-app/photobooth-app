@@ -100,6 +100,20 @@ class LoggingService(BaseService):
 
         self.remove_old_logs()
 
+    def start(self):
+        super().start()
+
+        pass
+
+        super().started()
+
+    def stop(self):
+        super().stop()
+
+        pass
+
+        super().stopped()
+
     def remove_old_logs(self):
         DAYS = 7
         critical_time = DAYS * 86400  # 7 days

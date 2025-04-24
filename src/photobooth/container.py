@@ -43,6 +43,8 @@ class Container:
         return [getattr(self, attr) for attr in __class__.__dict__ if isinstance(getattr(self, attr), BaseService)]
 
     def start(self):
+        services_started = []
+
         with self._lock_startstop:
             if self.is_started():
                 raise RuntimeError("Service already started")
@@ -50,16 +52,20 @@ class Container:
             for service in self._service_list():
                 try:
                     service.start()
+                    services_started.append(f"{service.__class__.__name__}: {service.get_status().name}")
 
-                    logger.info(f"started {service.__class__.__name__}")
                 except Exception as exc:
                     logger.exception(exc)
                     logger.critical("could not start service")
 
             self._container_started = True
+
+            logger.info(f"services status: {services_started}")
             logger.info("started container")
 
     def stop(self):
+        services_stopped = []
+
         with self._lock_startstop:
             if not self.is_started():
                 raise RuntimeError("Service already stopped")
@@ -68,12 +74,14 @@ class Container:
                 try:
                     service.stop()
 
-                    logger.info(f"stopped {service.__class__.__name__}")
+                    services_stopped.append(f"{service.__class__.__name__}: {service.get_status().name}")
                 except Exception as exc:
                     logger.exception(exc)
                     logger.critical("could not stop service")
 
             self._container_started = False
+
+            logger.info(f"services status: {services_stopped}")
             logger.info("stopped container")
 
     def is_started(self):

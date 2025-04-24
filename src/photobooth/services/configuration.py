@@ -15,6 +15,20 @@ class ConfigurationService(BaseService):
 
         self._pms = pluginmanager_service
 
+    def start(self):
+        super().start()
+
+        pass
+
+        super().started()
+
+    def stop(self):
+        super().stop()
+
+        pass
+
+        super().stopped()
+
     def save(self, configurable: str):
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         appconfig_or_plugin_config.persist()

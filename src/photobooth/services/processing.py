@@ -106,6 +106,20 @@ class ProcessingService(BaseService):
         self._external_cmd_queue: Queue[userEvents] = Queue(maxsize=1)
         self._external_cmd_required: threadingEvent = threadingEvent()
 
+    def start(self):
+        super().start()
+
+        pass
+
+        super().started()
+
+    def stop(self):
+        super().stop()
+
+        pass
+
+        super().stopped()
+
     def _is_occupied(self) -> bool:
         return self._workflow_jobmodel is not None
 
