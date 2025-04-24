@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import time
 from enum import Enum
 from queue import Empty, Full, Queue
@@ -30,6 +31,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         self._config: WledConfig = WledConfig()
 
         self._serial: serial.Serial | None = None
+        self._service_ready: threading.Event = threading.Event()
 
         # None in queue can be used on shutdown to reduce waiting for timeout
         # None in variable means there is no wled service running that could process external triggers.
@@ -62,6 +64,35 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
 
         super().stop()
 
+    def setup_resource(self):
+        if not self.device_init():
+            raise OSError("the wled module could not initialize properly, checks logs and module.")
+
+        # add very little time to give wled module and serial connection everything is settled
+        time.sleep(0.2)
+
+        # on run always reset to start with a clear queue
+        self._queue = Queue(maxsize=3)
+
+        self.send_preset(WledPreset.STANDBY)
+
+    def teardown_resource(self):
+        self._service_ready.clear()
+
+        if self._queue:
+            try:
+                # send none to stop waiting for any further events and immediate shutdown
+                self._queue.put_nowait(None)
+            except Exception:
+                pass
+
+        if self._serial:
+            logger.info("close port to WLED module")
+            self._serial.close()
+
+    def wait_until_ready(self, timeout: float = 5) -> bool:
+        return self._service_ready.wait(timeout=timeout)
+
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
         if target.id == "counting":
@@ -82,21 +113,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
     def acq_after_shot(self):
         self.send_preset(WledPreset.STANDBY)
 
-    def is_connected(self) -> bool:
-        return self._serial is not None and self._serial.is_open
-
-    def setup_resource(self):
-        if not self.device_init():
-            raise OSError("the wled module could not initialize properly, checks logs and module.")
-
-        # add very little time to give wled module and serial connection everything is settled
-        time.sleep(0.2)
-
-        # on run always reset to start with a clear queue
-        self._queue = Queue(maxsize=3)
-
-        self.send_preset(WledPreset.STANDBY)
-
     def send_preset(self, preset: WledPreset):
         if not self._queue:
             # no queue, request ignored.
@@ -106,18 +122,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
             self._queue.put_nowait(preset)
         except Full:
             logger.warning("the queue to send wled presets is full, maybe the service died?")
-
-    def teardown_resource(self):
-        if self._queue:
-            try:
-                # send none to stop waiting for any further events and immediate shutdown
-                self._queue.put_nowait(None)
-            except Exception:
-                pass
-
-        if self._serial:
-            logger.info("close port to WLED module")
-            self._serial.close()
 
     def device_init(self) -> bool:
         try:
@@ -167,6 +171,8 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         logger.info("Running service logic...")
         assert self._serial
         assert self._queue
+
+        self._service_ready.set()
 
         while not self._stop_event.is_set():
             try:
