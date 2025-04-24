@@ -57,9 +57,6 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
             if self._config.gpio_light_off_after_capture:
                 self.light(False)
 
-        elif source.id == "record":
-            self.light(False)
-
     def init_io(self):
         # shutdown
         self.light_out = DigitalOutputDevice(self._config.gpio_pin_light, active_high=False)
