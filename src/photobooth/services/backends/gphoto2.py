@@ -164,8 +164,6 @@ class Gphoto2Backend(AbstractBackend):
         self._camera.set_config(config, self._camera_context)
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
-
         assert gp
 
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
@@ -181,13 +179,10 @@ class Gphoto2Backend(AbstractBackend):
         self._set_config("capturetarget", self._config.gcapture_target)
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
-
         if self._camera:
             self._camera.exit()
 
     def run_service(self):
-        logger.info("Running service logic...")
         assert gp
 
         preview_failcounter = 0

@@ -124,13 +124,9 @@ class DigicamcontrolBackend(AbstractBackend):
         self._enabled_liveview = True
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
-
         self._enabled_liveview: bool = False
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
-
         # when stopping the backend also stop the livestream by following command.
         # if livestream is stopped, the camera is available to other processes again.
         session = requests.Session()
@@ -138,8 +134,6 @@ class DigicamcontrolBackend(AbstractBackend):
         # not raise_for_status, because we ignore and want to continue stopping the backend
 
     def run_service(self):
-        logger.info("Running service logic...")
-
         # start in preview mode
         self._on_configure_optimized_for_idle()
 

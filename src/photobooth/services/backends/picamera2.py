@@ -234,8 +234,6 @@ class Picamera2Backend(AbstractBackend):
         logger.debug("autofocus set")
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
-
         if self._picamera2:
             logger.info("closing camera before starting to ensure it's available")
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
@@ -303,8 +301,6 @@ class Picamera2Backend(AbstractBackend):
         self._init_autofocus()
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
-
         # https://github.com/raspberrypi/picamera2/issues/576
         if self._picamera2:
             self._picamera2.stop_encoder()
@@ -312,7 +308,6 @@ class Picamera2Backend(AbstractBackend):
             self._picamera2.close()  # need to close camera so it can be used by other processes also (or be started again)
 
     def run_service(self):
-        logger.info("Running service logic...")
         assert self._picamera2
 
         _metadata = None

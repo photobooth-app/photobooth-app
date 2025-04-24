@@ -102,14 +102,12 @@ class WebcamPyavBackend(AbstractBackend):
         pass
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
+        pass
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
+        pass
 
     def run_service(self):
-        logger.info("Running service logic...")
-
         reformatter = VideoReformatter()
         options = {
             "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",

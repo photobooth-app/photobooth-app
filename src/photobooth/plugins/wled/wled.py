@@ -40,7 +40,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
     @hookimpl
     def start(self):
         """To start the resilient service"""
-        logger.debug(f"{self.__class__.__name__} start called")
 
         if not self._config.wled_enabled:
             logger.info("WledService disabled")
@@ -50,7 +49,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         # and there are no log messages permanently about the false config.
         # but maybe it's better to log this cyclic to show the user there is a mistake in the config?
         if not self._config.wled_serial_port:
-            logger.info("given serial port empty. define valid port!")
+            logger.warning("WLED plugin enabled but given serial port is empty. Define a valid port!")
             return
 
         logger.info(f"WledService enabled and initialized, using port {self._config.wled_serial_port}")
@@ -60,7 +59,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
     @hookimpl
     def stop(self):
         """To stop the resilient service"""
-        logger.debug(f"{self.__class__.__name__} stop called")
 
         super().stop()
 
@@ -168,7 +166,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         return wled_detected
 
     def run_service(self):
-        logger.info("Running service logic...")
         assert self._serial
         assert self._queue
 

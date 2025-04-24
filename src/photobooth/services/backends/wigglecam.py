@@ -98,8 +98,6 @@ class WigglecamBackend(AbstractBackend):
         pass
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
-
         # quick sanity check.
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
         if max_index > len(self._config.nodes) - 1:
@@ -117,11 +115,9 @@ class WigglecamBackend(AbstractBackend):
         logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
+        pass
 
     def run_service(self):
-        logger.info("Running service logic...")
-
         while not self._stop_event.is_set():
             if self._device_enable_lores_flag:
                 try:

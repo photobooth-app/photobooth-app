@@ -270,11 +270,11 @@ class AquisitionService(BaseService):
     @staticmethod
     def _load_ffmpeg():
         # load ffmpeg once to have it in memory. otherwise first video might fail because startup time is not respected by implementation
-        logger.info("running ffmpeg once to have it in memory later for video use")
+
         try:
             subprocess.run(args=["ffmpeg", "-version"], timeout=10, check=True, stdout=subprocess.DEVNULL)
         except Exception as exc:
             logger.warning(f"ffmpeg could not be loaded, error: {exc}")
         else:
             # no error, service restart ok
-            logger.info("ffmpeg loaded successfully")
+            pass

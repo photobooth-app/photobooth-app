@@ -55,9 +55,7 @@ class InformationService(BaseService):
         logger.info([(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()])
         logger.info(f"{psutil.virtual_memory()=}")
         # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-        logger.info(f"{__debug__=}")
-
-        logger.info("initialized information service")
+        # logger.info(f"{__debug__=}")
 
     def start(self):
         super().start()
@@ -221,7 +219,7 @@ class InformationService(BaseService):
                 with open("/proc/device-tree/model") as f:
                     model = f.read()
             except Exception:
-                logger.info("cannot detect computer model")
+                pass
 
         return model
 

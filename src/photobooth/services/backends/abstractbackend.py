@@ -313,9 +313,6 @@ class AbstractBackend(ResilientService, ABC):
             self._video_worker_thread.join()
             logger.info("_video_worker_thread stopped and joined")
 
-        else:
-            logger.info("no _video_worker_thread active that could be stopped")
-
     def _videoworker_fun(self, mp4_output_filepath: Path):
         logger.info("_videoworker_fun start")
         # init worker, set output to None which indicates there is no current video available to get

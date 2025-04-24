@@ -174,14 +174,12 @@ class WebcamV4lBackend(AbstractBackend):
             return linuxpy_video_device.Device(device_text)
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
+        pass
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
+        pass
 
     def run_service(self):
-        logger.info("Running service logic...")
-
         assert linuxpy_video_device
 
         logger.info(f"trying to open camera index={self._config.device_identifier=}")

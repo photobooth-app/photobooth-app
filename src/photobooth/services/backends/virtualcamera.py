@@ -69,16 +69,12 @@ class VirtualCameraBackend(AbstractBackend):
         super().stop()
 
     def setup_resource(self):
-        logger.info("Connecting to resource...")
+        pass
 
     def teardown_resource(self):
-        logger.info("Disconnecting from resource...")
+        pass
 
     def run_service(self):
-        logger.info("Running service logic...")
-
-        # raise RuntimeError("Simulated crash")
-
         last_time_frame = time.time()
         while not self._stop_event.is_set():
             now_time = time.time()
