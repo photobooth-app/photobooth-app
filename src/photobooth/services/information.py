@@ -1,6 +1,5 @@
 import logging
 import platform
-import socket
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -40,22 +39,13 @@ class InformationService(BaseService):
         self._cpu_percent: float = 0.0
 
         # log some very basic common information
-        logger.info(f"{platform.system()=}")
-        logger.info(f"{platform.uname()=}")
-        logger.info(f"{platform.release()=}")
-        logger.info(f"{platform.machine()=}")
-        logger.info(f"{platform.python_version()=}")
-        logger.info(f"{platform.node()=}")
-        logger.info(f"{self._gather_model()=}")
-        logger.info(f"{psutil.cpu_count()=}")
-        logger.info(f"{psutil.cpu_count(logical=False)=}")
-        logger.info(f"{psutil.cpu_freq()=}")
-        logger.info(f"{psutil.disk_partitions()=}")
-        logger.info(f"{psutil.disk_usage(str(Path.cwd().absolute()))=}")
-        logger.info([(name, [addr.address for addr in addrs if addr.family == socket.AF_INET]) for name, addrs in psutil.net_if_addrs().items()])
-        logger.info(f"{psutil.virtual_memory()=}")
-        # run python with -O (optimized) sets debug to false and disables asserts from bytecode
-        # logger.info(f"{__debug__=}")
+        logger.info(f"Platform: {platform.uname()}")
+        logger.info(f"System release: {platform.release()}")
+        logger.info(f"Machine: {platform.machine()}")
+        logger.info(f"Python version: {platform.python_version()}")
+        logger.info(f"Computer model: {self._gather_model()}")
+        logger.info(f"CPU count: {psutil.cpu_count()}")
+        logger.info(f"Disk usage of working dir: {psutil.disk_usage(str(Path.cwd().absolute())).percent}")
 
     def start(self):
         super().start()
