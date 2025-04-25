@@ -105,7 +105,7 @@ jobs:
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage-hosted-windows-${{ matrix.python-version }}
+          name: coverage-hosted-macos-${{ matrix.python-version }}
           path: coverage.xml
 
   tests-hardware-rpi:
