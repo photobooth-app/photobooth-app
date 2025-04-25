@@ -15,13 +15,13 @@ def test_countdowntimer_zero():
 
     ct.start(DURATION)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     ct.wait_countdown_finished()
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     delta = (end_time - start_time) - DURATION
 
-    assert abs(delta) < 0.2  # 0.2 is acceptable tolerance for any inaccuracies
+    assert abs(delta) < 0.1  # 0.1 is acceptable tolerance for any inaccuracies
 
 
 def test_countdowntimer_accuracy():
@@ -33,10 +33,10 @@ def test_countdowntimer_accuracy():
 
     ct.start(DURATION)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     ct.wait_countdown_finished()
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     delta = (end_time - start_time) - DURATION
 
-    assert abs(delta) < (0.1)  # 0.1 is acceptable tolerance for any inaccuracies
+    assert abs(delta) < (0.1)  # 0.2 is acceptable tolerance for any inaccuracies
