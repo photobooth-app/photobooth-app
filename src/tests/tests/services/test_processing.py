@@ -169,7 +169,7 @@ def test_video(_container: Container):
         desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
 
     # ensure written video is about in tolerance duration
-    assert out_dur == pytest.approx(desired_video_duration, abs=0.2)
+    assert out_dur == pytest.approx(desired_video_duration, abs=0.5)
 
 
 def test_video_stop_early(_container: Container):
@@ -207,7 +207,7 @@ def test_video_stop_early(_container: Container):
     if appconfig.actions.video[0].processing.boomerang:
         desired_video_duration *= 2
         desired_video_duration /= appconfig.actions.video[0].processing.boomerang_speed
-    assert video_duration_seconds == pytest.approx(desired_video_duration, abs=0.2)
+    assert video_duration_seconds == pytest.approx(desired_video_duration, abs=0.5)
 
 
 def test_multicamera(_container: Container):

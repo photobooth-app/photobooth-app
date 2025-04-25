@@ -23,17 +23,16 @@ class CountdownTimer:
             self._running = True
             self._duration = duration
 
-            logger.warning(time.monotonic())
             logger.warning(time.perf_counter())
 
             self._thread = threading.Thread(target=self._run_countdown, daemon=True)
             self._thread.start()
+            logger.warning(time.perf_counter())
 
     def _run_countdown(self):
-        logger.warning(time.monotonic())
         logger.warning(time.perf_counter())
         time.sleep(self._duration)
-        logger.warning(time.monotonic())
+
         logger.warning(time.perf_counter())
 
         with self._lock:
@@ -43,7 +42,7 @@ class CountdownTimer:
 
     def wait_countdown_finished(self):
         self._done_event.wait()
-        logger.warning(time.monotonic())
+
         logger.warning(time.perf_counter())
 
     def is_running(self):

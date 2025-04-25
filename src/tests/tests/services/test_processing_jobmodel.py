@@ -26,9 +26,9 @@ def test_jobmodel_start_count():
 
     jm.start_countdown(offset)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     jm.wait_countdown_finished()
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     actual_blocking_time = end_time - start_time
 
