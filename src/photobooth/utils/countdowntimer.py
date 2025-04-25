@@ -24,13 +24,7 @@ class CountdownTimer:
             self._thread.start()
 
     def _run_countdown(self):
-        end_time = time.monotonic() + self._duration
-        while True:
-            remaining = end_time - time.monotonic()
-            if remaining <= 0:
-                break
-
-            time.sleep(min(0.05, remaining))
+        time.sleep(self._duration)
 
         with self._lock:
             self._running = False
