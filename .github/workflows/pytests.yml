@@ -67,6 +67,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+      - uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v5
         with:
@@ -92,6 +93,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+      - uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v5
         with:
