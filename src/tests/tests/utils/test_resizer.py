@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 from PIL import Image, ImageOps
-from turbojpeg import TurboJPEG
 
 from photobooth.database.types import DimensionTypes
 from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
@@ -13,7 +12,13 @@ from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, 
 
 from ..util import get_exiforiented_jpeg, get_jpeg
 
-turbojpeg = TurboJPEG()
+try:
+    from turbojpeg import TurboJPEG
+
+    turbojpeg = TurboJPEG()
+except Exception:
+    pytest.skip("turbojpeg is not avail on this system", allow_module_level=True)
+
 logger = logging.getLogger(name=None)
 
 

@@ -4,10 +4,11 @@ from pathlib import Path
 import av
 import piexif
 from PIL import Image, ImageOps, ImageSequence
-from turbojpeg import TurboJPEG
 
 logger = logging.getLogger(__name__)
 try:
+    from turbojpeg import TurboJPEG
+
     turbojpeg = TurboJPEG()
     print("using turbojpeg to scale images")  # print because log at this point not yet active...
 except Exception:
