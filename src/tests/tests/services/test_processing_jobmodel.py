@@ -1,6 +1,8 @@
 import logging
 import time
 
+import pytest
+
 from photobooth.container import container
 from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
 from photobooth.services.processor.image import JobModelImage
@@ -28,9 +30,9 @@ def test_jobmodel_start_count():
     jm.wait_countdown_finished()
     end_time = time.time()
 
-    actual_blocking_time = (end_time - start_time) - expected_blocking_time
+    actual_blocking_time = end_time - start_time
 
-    assert abs(actual_blocking_time) < (0.1)  # 0.1 is acceptable tolerance for any inaccuracies
+    assert pytest.approx(expected_blocking_time, abs=0.1) == actual_blocking_time  # 0.1 is acceptable tolerance for any inaccuracies
 
 
 def test_jobmodel_start_count_zero():

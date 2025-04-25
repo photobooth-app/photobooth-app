@@ -1,6 +1,8 @@
 import logging
 import time
 
+import pytest
+
 from photobooth.utils.countdowntimer import CountdownTimer
 
 logger = logging.getLogger(name=None)
@@ -19,9 +21,8 @@ def test_countdowntimer_zero():
     ct.wait_countdown_finished()
     end_time = time.perf_counter()
 
-    delta = (end_time - start_time) - DURATION
-
-    assert abs(delta) < 0.1  # 0.1 is acceptable tolerance for any inaccuracies
+    actual = end_time - start_time
+    assert pytest.approx(DURATION, abs=0.1) == actual  # 0.1 is acceptable tolerance for any inaccuracies
 
 
 def test_countdowntimer_accuracy():
@@ -37,6 +38,5 @@ def test_countdowntimer_accuracy():
     ct.wait_countdown_finished()
     end_time = time.perf_counter()
 
-    delta = (end_time - start_time) - DURATION
-
-    assert abs(delta) < (0.1)  # 0.2 is acceptable tolerance for any inaccuracies
+    actual = end_time - start_time
+    assert pytest.approx(DURATION, abs=0.1) == actual  # 0.1 is acceptable tolerance for any inaccuracies
