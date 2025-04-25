@@ -27,7 +27,7 @@ def test_countdowntimer_zero():
 def test_countdowntimer_accuracy():
     """check that timer is accurate enough"""
 
-    DURATION = 3
+    DURATION = 1
 
     ct = CountdownTimer()
 

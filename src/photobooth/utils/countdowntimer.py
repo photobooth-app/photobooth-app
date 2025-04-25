@@ -1,58 +1,38 @@
-import time
-from threading import Condition, Thread
+import threading
 
 
 class CountdownTimer:
-    TIMER_TICK = 0.1
-    TIMER_TOLERANCE = TIMER_TICK / 2  # to account for float not 100% accurate
-
     def __init__(self):
-        self._duration: float = 0
-        self._countdown: float = 0
+        self._lock = threading.Lock()
+        self._done_event = threading.Event()
+        self._thread = None
+        self._running = False
 
-        self._ticker_thread: Thread | None = None
-        self._finished_condition: Condition = Condition()
+        self._duration: float = 0.0
 
     def start(self, duration: float):
-        self._duration = duration
-        self._countdown = duration
+        with self._lock:
+            if self._running:
+                raise RuntimeError("Countdown already running.")
 
-        if self._countdown_finished():
-            # countdown on start already finished because initialized with 0 duration.
-            # no need to start a thread, exit early to continue as fast as possible with job.
-            return
+            self._done_event.clear()
+            self._running = True
+            self._duration = duration
 
-        self._ticker_thread = Thread(name="_countdowntimer_thread", target=self._countdowntimer_fun, daemon=True)
-        self._ticker_thread.start()
+            self._thread = threading.Thread(target=self._run_countdown, daemon=True)
+            self._thread.start()
 
-    def reset(self):
-        self._duration = 0
-        self._countdown = 0
+    def _run_countdown(self):
+        self._done_event.wait(timeout=self._duration)
+
+        with self._lock:
+            self._running = False
+            self._duration = 0.0
+            self._done_event.set()
 
     def wait_countdown_finished(self):
-        # return early if already finished when called.
-        # to avoid any race condition if countdown from 0 but wait_countdown was not called yet so condition is missed.
-        if self._countdown_finished():
-            return
+        self._done_event.wait()
 
-        with self._finished_condition:
-            ret = self._finished_condition.wait(timeout=(self._duration + 1))
-            assert ret is True
-
-    def _countdown_finished(self):
-        return self._countdown <= self.TIMER_TOLERANCE
-
-    def _countdowntimer_fun(self):
-        while not self._countdown_finished():
-            time.sleep(self.TIMER_TICK)
-
-            self._countdown -= self.TIMER_TICK
-
-        # ticker finished, reset
-        self.reset()
-
-        # notify waiting threads
-        with self._finished_condition:
-            self._finished_condition.notify_all()
-
-        # done, exit fun, exit thread
+    def is_running(self):
+        with self._lock:
+            return self._running
