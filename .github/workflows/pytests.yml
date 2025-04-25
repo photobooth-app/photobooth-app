@@ -83,6 +83,31 @@ jobs:
           name: coverage-hosted-windows-${{ matrix.python-version }}
           path: coverage.xml
 
+  tests-hosted-mac:
+    runs-on: macos-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python and uv ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: install the project
+        run: |
+          uv sync --all-extras --dev
+      - name: Run pytest
+        run: |
+          uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-hosted-windows-${{ matrix.python-version }}
+          path: coverage.xml
+
   tests-hardware-rpi:
     env:
       ## Sets environment variable
