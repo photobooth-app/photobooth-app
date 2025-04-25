@@ -32,7 +32,7 @@ def test_jobmodel_start_count():
 
     actual_blocking_time = end_time - start_time
 
-    assert pytest.approx(expected_blocking_time, abs=0.1) == actual_blocking_time  # 0.1 is acceptable tolerance for any inaccuracies
+    assert pytest.approx(expected_blocking_time, abs=0.2) == actual_blocking_time  # 0.2 is acceptable tolerance for any inaccuracies
 
 
 def test_jobmodel_start_count_zero():

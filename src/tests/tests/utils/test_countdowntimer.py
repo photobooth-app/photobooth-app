@@ -22,7 +22,8 @@ def test_countdowntimer_zero():
     end_time = time.perf_counter()
 
     actual = end_time - start_time
-    assert pytest.approx(DURATION, abs=0.1) == actual  # 0.1 is acceptable tolerance for any inaccuracies
+    assert pytest.approx(DURATION, abs=0.2) == actual  # 0.2 is acceptable tolerance for any inaccuracies
+    # macos has higher inaccuracy than linux/windows. 0.1 is too tight for mac.
 
 
 def test_countdowntimer_accuracy():
@@ -39,4 +40,5 @@ def test_countdowntimer_accuracy():
     end_time = time.perf_counter()
 
     actual = end_time - start_time
-    assert pytest.approx(DURATION, abs=0.1) == actual  # 0.1 is acceptable tolerance for any inaccuracies
+    assert pytest.approx(DURATION, abs=0.2) == actual  # 0.2 is acceptable tolerance for any inaccuracies
+    # macos has higher inaccuracy than linux/windows. 0.1 is too tight for mac.
