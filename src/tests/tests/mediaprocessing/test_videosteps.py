@@ -30,4 +30,4 @@ def test_video_boomerang_stage():
     in_dur = video_duration(video_in)
     out_dur = video_duration(video_out)
 
-    assert out_dur == pytest.approx(in_dur * 2.0, 0.3)
+    assert out_dur == pytest.approx(in_dur * 2.0, abs=0.2)
