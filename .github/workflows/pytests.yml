@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  tests:
+  tests-hosted-linux:
     env:
       qrshare__shareservice_apikey: "runnertestingpassword"
       qrshare__shareservice_url: "http://localhost:8082/dl.php"
@@ -55,7 +55,32 @@ jobs:
           cat extras/shareservice/php-error.log || true
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.python-version }}
+          name: coverage-hosted-linux-${{ matrix.python-version }}
+          path: coverage.xml
+
+  tests-hosted-windows:
+    runs-on: windows-latest
+    continue-on-error: false
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python and uv ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: install the project
+        run: |
+          uv sync --all-extras --dev
+      - name: Run pytest
+        run: |
+          uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-hosted-windows-${{ matrix.python-version }}
           path: coverage.xml
 
   tests-hardware-rpi:
@@ -80,11 +105,11 @@ jobs:
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
       - uses: actions/upload-artifact@v4
         with:
-          name: coverage-hardware-rpi
+          name: coverage-selfhosted-rpi
           path: ./coverage.xml
 
   upload-to-codecov:
-    needs: [tests, tests-hardware-rpi]
+    needs: [tests-hosted-windows, tests-hosted-linux, tests-hardware-rpi]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'photobooth-app' }}
     steps:
