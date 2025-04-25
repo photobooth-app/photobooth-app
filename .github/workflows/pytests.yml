@@ -83,7 +83,7 @@ jobs:
           name: coverage-hosted-windows-${{ matrix.python-version }}
           path: coverage.xml
 
-  tests-hosted-mac:
+  tests-hosted-macos:
     runs-on: macos-latest
     continue-on-error: false
     strategy:
@@ -134,7 +134,7 @@ jobs:
           path: ./coverage.xml
 
   upload-to-codecov:
-    needs: [tests-hosted-windows, tests-hosted-linux, tests-hardware-rpi]
+    needs: [tests-hosted-linux, tests-hardware-rpi, tests-hosted-windows, tests-hosted-macos]
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'photobooth-app' }}
     steps:
