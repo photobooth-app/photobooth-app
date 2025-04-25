@@ -10,6 +10,7 @@ from psutil._common import sbattery
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from .. import CACHE_PATH, MEDIA_PATH, RECYCLE_PATH, TMP_PATH
 from ..__version__ import __version__
 from ..database.database import engine
 from ..database.models import Cacheditem, Mediaitem, ShareLimits, UsageStats
@@ -159,13 +160,16 @@ class InformationService(BaseService):
         out = {}
         with Session(engine) as session:
             statement = select(func.count(Mediaitem.id))
-            out["number_mediaitems"] = session.scalars(statement).one()
+            out["db_mediaitems"] = session.scalars(statement).one()
 
             statement = select(func.count(Cacheditem.id))
-            out["number_cacheditems"] = session.scalars(statement).one()
+            out["db_cacheditems"] = session.scalars(statement).one()
 
-            # out["number_outdated_cacheditems"] = "TODO"
-            # out["number_whatelse?"] = "TODO"
+            out["files_media"] = len(list(Path(f"{MEDIA_PATH}").glob("**/*.*")))  ## recursive match of all files with suffix
+            out["files_cache"] = len(list(Path(f"{CACHE_PATH}").glob("**/*.*")))
+            out["files_tmp"] = len(list(Path(f"{TMP_PATH}").glob("**/*.*")))
+
+            out["files_recycle"] = len(list(Path(f"{RECYCLE_PATH}").glob("**/*.*")))
 
         return out
 

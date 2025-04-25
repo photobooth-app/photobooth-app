@@ -14,7 +14,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
-from .. import CACHE_PATH, PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH
+from .. import CACHE_PATH, PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED, RECYCLE_PATH, TMP_PATH
 from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
@@ -130,6 +130,8 @@ class Files:
             for file in Path(f"{PATH_PROCESSED}").glob("*.*"):
                 os.remove(file)
             for file in Path(f"{PATH_CAMERA_ORIGINAL}").glob("*.*"):
+                os.remove(file)
+            for file in Path(f"{TMP_PATH}").glob("*.*"):
                 os.remove(file)
 
         except Exception as exc:
