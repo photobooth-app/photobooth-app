@@ -9,7 +9,6 @@ from threading import Condition
 from typing import TYPE_CHECKING, Literal
 
 import cv2
-from turbojpeg import TurboJPEG
 
 from ...utils.helper import filename_str_time
 from ..config.groups.backends import GroupBackendV4l2
@@ -23,8 +22,17 @@ except ImportError:
 if TYPE_CHECKING:
     import linuxpy.video.device as linuxpy_video_device_type  # type: ignore
 
+try:
+    # try to import the mandatory turbojpeg for this backend. it's guarded so reading this module on app init
+    # doesn't fail for example on windows where turbojpeg libs doesn't need to be installed.
+    # during backend init, check for None and fail if None.
+    from turbojpeg import TurboJPEG
+
+    turbojpeg = TurboJPEG()
+except Exception:
+    turbojpeg = None
+
 logger = logging.getLogger(__name__)
-turbojpeg = TurboJPEG()
 
 
 class WebcamV4lBackend(AbstractBackend):
@@ -33,7 +41,10 @@ class WebcamV4lBackend(AbstractBackend):
         super().__init__(orientation=config.orientation)
 
         if linuxpy_video_device is None:
-            raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
+            raise ModuleNotFoundError("Backend is not available because linuxpy is not found - either wrong platform or not installed!")
+
+        if turbojpeg is None:
+            raise ModuleNotFoundError("Backend is not available because turbojpeg library is not found - either wrong platform or not installed!")
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
         self._fmt_pixel_format: linuxpy_video_device_type.PixelFormat | None = None
