@@ -159,7 +159,7 @@ class LoggingService(BaseService):
             "uvicorn",
         ]:
             lgr = logging.getLogger(name=name)
-            lgr.setLevel(logging.INFO)
+            lgr.setLevel(logging.WARNING)
             lgr.propagate = False
             lgr.handlers = [
                 logging.root.handlers[0],  # this is the streamhandler if not in pytest.
