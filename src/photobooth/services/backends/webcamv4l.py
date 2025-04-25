@@ -161,6 +161,7 @@ class WebcamV4lBackend(AbstractBackend):
         # https://github.com/tiagocoutinho/linuxpy/blob/d223fa2b9078fd5b0ba1415ddea5c38f938398c5/examples/video/web/common.py#L29
         assert linuxpy_video_device
         assert self._fmt_pixel_format is not None
+        assert turbojpeg
 
         if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
             return bytes(frame)
