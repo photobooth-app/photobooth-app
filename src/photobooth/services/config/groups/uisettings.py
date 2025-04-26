@@ -18,8 +18,8 @@ class GroupUiSettings(BaseModel):
     )
 
     SECONDARY_COLOR: Color = Field(
-        default=Color("#b8124f"),
-        description="Secondary color (admin interface, accents).",
+        default=Color("#4283b8"),
+        description="Secondary color (countdown, accents).",
     )
 
     theme: Literal["system", "light", "dark"] = Field(
