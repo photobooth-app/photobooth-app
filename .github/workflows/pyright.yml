@@ -1,5 +1,7 @@
 name: Pyright static type checking
-
+permissions:
+  contents: read
+  
 on: 
   [push, pull_request]
 
