@@ -126,7 +126,7 @@ class AquisitionService(BaseService):
         except Exception as exc:
             logger.critical(f"camera error: {exc}")
             yield __class__._substitute_image(
-                f":| Livestream {type(exc).__name__}",
+                f":| Camera {type(exc).__name__}",
                 f"{exc}",
                 appconfig.uisettings.livestream_mirror_effect,
             )
