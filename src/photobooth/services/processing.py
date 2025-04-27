@@ -31,11 +31,6 @@ logger = logging.getLogger(__name__)
 ActionType = Literal["image", "collage", "animation", "video", "multicamera"]
 
 
-class MachineChangeListenter:
-    def on_enter_state(self, source: State, target: State, event: Event):
-        logger.info(f"Entering {target} by {event}-event, leaving {source}")
-
-
 class DbListenter:
     def __init__(self, mediacollection_service: MediacollectionService):
         self._mediacollection_service = mediacollection_service
@@ -200,7 +195,6 @@ class ProcessingService(BaseService):
         # add listener to the job
         self._workflow_jobmodel._status_sm.add_listener(FrontendNotifierEventHooks())  # 1st listener executed,
         self._workflow_jobmodel._status_sm.add_listener(PluginEventHooks())  # 2nd
-        self._workflow_jobmodel._status_sm.add_listener(MachineChangeListenter())  # 3rd
         self._workflow_jobmodel._status_sm.add_listener(DbListenter(self._mediacollection_service))  # 4rd, then machine, then model.
 
         ## run in separate thread
