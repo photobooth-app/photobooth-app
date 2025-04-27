@@ -5,6 +5,7 @@ manage up to two photobooth-app backends in this module
 import dataclasses
 import logging
 import subprocess
+import time
 from functools import cache
 from importlib import import_module
 from io import BytesIO
@@ -111,14 +112,42 @@ class AquisitionService(BaseService):
 
     def gen_stream(self):
         """
-        assigns a backend to generate a stream
+        yield jpeg images to stream to client (if not created otherwise)
+        this function may be overriden by backends, but this is the default one
+        relies on the backends implementation of _wait_for_lores_image to return a buffer
         """
-
-        if appconfig.backends.enable_livestream:
-            return self._get_stream_from_backend(self._get_video_backend())
-        else:
+        if not appconfig.backends.enable_livestream:
             logger.warning("livestream is disabled.")
             raise ConnectionRefusedError
+
+        try:
+            backend_to_stream_from = self._get_video_backend()
+            logger.info(f"livestream starting on backend {backend_to_stream_from=}")
+        except Exception as exc:
+            logger.critical(f"camera error: {exc}")
+            yield __class__._substitute_image(
+                f":| Livestream {type(exc).__name__}",
+                f"{exc}",
+                appconfig.uisettings.livestream_mirror_effect,
+            )
+            time.sleep(0.5)  # rate limit if it fails
+            return
+
+        while self.is_running():
+            try:
+                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
+            except StopIteration:
+                return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
+            except Exception as exc:
+                # this error probably cannot recover.
+                logger.error(f"streaming exception: {exc}")
+                output_jpeg_bytes = __class__._substitute_image(
+                    f":| Livestream {type(exc).__name__}",
+                    f"{exc}",
+                    appconfig.uisettings.livestream_mirror_effect,
+                )
+
+            yield output_jpeg_bytes
 
     def wait_for_still_file(self):
         """
@@ -209,30 +238,6 @@ class AquisitionService(BaseService):
 
         module = import_module(module_path, package=pkg)
         return getattr(module, class_name)
-
-    def _get_stream_from_backend(self, backend_to_stream_from: AbstractBackend):
-        """
-        yield jpeg images to stream to client (if not created otherwise)
-        this function may be overriden by backends, but this is the default one
-        relies on the backends implementation of _wait_for_lores_image to return a buffer
-        """
-        logger.info(f"livestream started on backend {backend_to_stream_from=}")
-
-        while self.is_running():
-            try:
-                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
-            except StopIteration:
-                return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
-            except Exception as exc:
-                # this error probably cannot recover.
-                logger.error(f"streaming exception: {exc}")
-                output_jpeg_bytes = __class__._substitute_image(
-                    f":| Livestream {type(exc).__name__}",
-                    f"{exc}",
-                    appconfig.uisettings.livestream_mirror_effect,
-                )
-
-            yield output_jpeg_bytes
 
     @staticmethod
     @cache
