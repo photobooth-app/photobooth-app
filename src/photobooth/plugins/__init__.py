@@ -8,6 +8,7 @@ import pkgutil
 import sys
 from enum import Enum
 from importlib.metadata import entry_points
+from pathlib import Path
 
 import pluggy
 from PIL import Image
@@ -74,10 +75,22 @@ class PluginMediaprocessingSpec:
     def mp_userselectable_filter(self) -> list[str]: ...
 
 
+class PluginMediacollectionSpec:
+    @hookspec  # list of files added to the collection
+    def collection_files_added(self, files: list[Path]) -> None: ...
+
+    @hookspec  # list of files that were updated (example, filter applied)
+    def collection_files_updated(self, files: list[Path]) -> None: ...
+
+    @hookspec  # gather all filter to be displayed by plugins
+    def collection_files_deleted(self, files: list[Path]) -> None: ...
+
+
 pm.add_hookspecs(PluginManagementSpec)
 pm.add_hookspecs(PluginAcquisitionSpec)
 pm.add_hookspecs(PluginStatemachineSpec)
 pm.add_hookspecs(PluginMediaprocessingSpec)
+pm.add_hookspecs(PluginMediacollectionSpec)
 
 # included predefined and externally installable plugins
 ENTRY_POINT_GROUP = "photobooth11"  # see pyproject.toml section

@@ -19,6 +19,7 @@ from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
+from ..plugins import pm as pluggy_pm
 from ..utils.resizer import generate_resized
 from .base import BaseService
 from .sse import sse_service
@@ -285,6 +286,8 @@ class MediacollectionService(BaseService):
 
         self.db.add_item(item)
 
+        pluggy_pm.hook.collection_files_added(files=[item.processed, item.unprocessed])
+
         # and insert in client db collection so gallery is up to date.
         if item.show_in_gallery:
             sse_service.dispatch_event(SseEventDbInsert(mediaitem=MediaitemPublic.model_validate(item)))
@@ -296,12 +299,16 @@ class MediacollectionService(BaseService):
 
         self.db.update_item(item)
 
+        pluggy_pm.hook.collection_files_updated(files=[item.processed])
+
         # send update not to clients, so they can load updated images in case needed.
         sse_service.dispatch_event(SseEventDbUpdate(mediaitem=MediaitemPublic.model_validate(item)))
 
     def delete_item(self, item: Mediaitem):
         self.db.delete_item(item)
         self.fs.delete_item(item, appconfig.common.users_delete_to_recycle_dir)
+
+        pluggy_pm.hook.collection_files_deleted(files=[item.processed, item.unprocessed])
 
         # # and remove from client db collection so gallery is up to date.
         # event is even sent if not show_in_gallery, client needs to sort things out
