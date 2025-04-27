@@ -44,9 +44,6 @@ class ShareFtp(ResilientService, BasePlugin[ShareFtpConfig]):
             logger.info("Share FTP is disabled")
             return
 
-        # reset queue on start to avoid any leftovers...
-        self._queue = Queue()
-
         super().start()
 
     @hookimpl
@@ -56,6 +53,9 @@ class ShareFtp(ResilientService, BasePlugin[ShareFtpConfig]):
         super().stop()
 
     def setup_resource(self):
+        # reset queue on start to avoid any leftovers...
+        self._queue = Queue()
+
         # FTP_TLS-Verbindung aufbauen
         self._ftp = FTP_TLS(self._config.ftp_host, timeout=5)
         self._ftp.login(self._config.ftp_username, self._config.ftp_password)
