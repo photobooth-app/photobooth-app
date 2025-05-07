@@ -34,8 +34,14 @@ class PathType(TypeDecorator):
     impl = String
 
     def process_bind_param(self, value, dialect):
-        return str(value)
+        if value is None:
+            return None
+        else:
+            return str(value)
 
     def process_result_value(self, value, dialect):
-        assert value is not None
-        return Path(value)
+        # assert value is not None
+        if value is None:
+            return None
+        else:
+            return Path(value)

@@ -43,10 +43,14 @@ class Mediaitem(Base):
 
     job_identifier: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=None)
 
-    unprocessed: Mapped[Path] = mapped_column(PathType)  # the original!
-    processed: Mapped[Path] = mapped_column(PathType)  # processed original (aka "full" having the pipeline applied)
-    pipeline_config: Mapped[dict] = mapped_column(JSON)  # json config of pipeline? or in separate table?
+    # the original as captured from camera. Defaults to false because phase2 items (collage, animations) to not have a captured original
+    captured_original: Mapped[Path | None] = mapped_column(PathType, default=None)
+    # the unprocessed full-dimension item.
+    unprocessed: Mapped[Path] = mapped_column(PathType)
+    # processed full-dimension, filter pipeline applied
+    processed: Mapped[Path] = mapped_column(PathType)
 
+    pipeline_config: Mapped[dict] = mapped_column(JSON)  # json config of pipeline
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
     def __repr__(self) -> str:
