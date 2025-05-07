@@ -101,6 +101,7 @@ concurrency = ["thread", "multiprocessing"]
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+ignore = ["./experimental/"]
 
 [tool.ruff]
 line-length = 150
