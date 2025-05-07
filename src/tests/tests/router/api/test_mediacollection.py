@@ -55,7 +55,7 @@ def test_get_item_exception(client: TestClient):
         assert "detail" in response.json()
 
 
-@patch("os.remove")
+@patch("pathlib.Path.unlink")
 def test_delete_item(mock_remove, client: TestClient):
     mediaitem = container.mediacollection_service.get_item_latest()
 
@@ -67,7 +67,7 @@ def test_delete_item(mock_remove, client: TestClient):
     mock_remove.assert_called()
 
 
-@patch("os.remove")
+@patch("pathlib.Path.unlink")
 def test_delete_items(mock_remove, client: TestClient):
     response = client.delete("/mediacollection/")
 

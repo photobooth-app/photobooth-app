@@ -3,7 +3,6 @@ Handle all media collection related functions
 """
 
 import logging
-import os
 import time
 from pathlib import Path
 from threading import Lock
@@ -117,13 +116,13 @@ class Files:
         """delete all images, inclusive thumbnails, ..."""
         try:
             for file in Path(f"{PATH_UNPROCESSED}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{PATH_PROCESSED}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{PATH_CAMERA_ORIGINAL}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{TMP_PATH}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
 
         except Exception as exc:
             logger.exception(exc)
@@ -219,7 +218,7 @@ class Cache:
 
             for outdated_filepath in outdated_filepaths:
                 try:
-                    os.remove(outdated_filepath)
+                    outdated_filepath.unlink()
                 except Exception as exc:
                     logger.warning(f"could not delete file {outdated_filepath} from cache, error: {exc}")
 
@@ -235,7 +234,7 @@ class Cache:
 
     def fs_clear_all(self):
         for file in Path(f"{CACHE_PATH}").glob("*.*"):
-            os.remove(file)
+            file.unlink()
 
         logger.info("deleted all files for mediaitems")
 
