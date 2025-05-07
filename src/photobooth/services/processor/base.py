@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED
+from ... import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
