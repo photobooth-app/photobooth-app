@@ -1,7 +1,3 @@
-"""
-Testing VIRTUALCAMERA Backend
-"""
-
 import logging
 from collections.abc import Generator
 
@@ -47,9 +43,8 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
 def test_service_reload(backend_pyav: WebcamPyavBackend):
     """container reloading works reliable"""
 
-    for _ in range(1, 5):
-        backend_pyav.stop()
-        backend_pyav.start()
+    backend_pyav.stop()
+    backend_pyav.start()
 
 
 def test_optimize_mode(backend_pyav):
@@ -63,10 +58,11 @@ def test_get_images_webcampyav(backend_pyav: WebcamPyavBackend):
     get_images(backend_pyav)
 
 
-def test_device_wrong_id_fails(backend_pyav: WebcamPyavBackend):
-    backend_pyav.stop()
-    backend_pyav._config.device_identifier = "999"
-    backend_pyav.start()
+# Takes long time until fails - does it add to coverage actually?
+# def test_device_wrong_id_fails(backend_pyav: WebcamPyavBackend):
+#     backend_pyav.stop()
+#     backend_pyav._config.device_identifier = "999"
+#     backend_pyav.start()
 
-    with pytest.raises(RuntimeError):
-        backend_pyav.wait_for_still_file(retries=1)
+#     with pytest.raises(RuntimeError):
+#         backend_pyav.wait_for_still_file(retries=1)

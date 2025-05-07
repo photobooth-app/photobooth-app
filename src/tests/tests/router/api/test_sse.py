@@ -11,7 +11,7 @@ from photobooth.container import container
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/") as client:
         container.start()

@@ -1,22 +1,11 @@
-from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.application import app
 from photobooth.container import container
 from photobooth.database.schemas import MediaitemPublic
 from photobooth.services.collection import MediacollectionService
-
-
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        container.start()
-        yield client
-        container.stop()
 
 
 def test_get_items(client: TestClient):

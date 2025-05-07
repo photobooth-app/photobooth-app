@@ -1,34 +1,20 @@
 import io
 import logging
-from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 from uuid import uuid4
 
-import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 import photobooth.routers.api.filter
 import photobooth.services
 import photobooth.services.mediaprocessing.steps.image
-from photobooth.application import app
 from photobooth.container import container
 
 from ...util import is_same
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        container.start()
-        # need an image for sure as last item because this is safe to filter
-        # container.processing_service.trigger_action("image", 0)
-        # container.processing_service.wait_until_job_finished()
-        yield client
-        container.stop()
 
 
 def test_get_avail_filter(client: TestClient):

@@ -90,7 +90,7 @@ class ThreadUrl(threading.Thread):
                 f"response code '{r.status_code}', text '{r.text[:100]}' "
                 f"{'[trunc to 100 chars for log msg]' if len(r.text) > 100 else ''}, within {round(r.elapsed.total_seconds(), 1)}s"
             )
-            logger.info(f"request to {r.request.url} finished successfully")
+            logger.info(f"request to {self.url} finished successfully")
 
 
 class Commander(BasePlugin[CommanderConfig]):
