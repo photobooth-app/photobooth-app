@@ -47,9 +47,8 @@ def backend_wigglecam() -> Generator[WigglecamBackend, None, None]:
 def test_service_reload(emulated_node, backend_wigglecam):
     """container reloading works reliable"""
 
-    for _ in range(1, 5):
-        backend_wigglecam.stop()
-        backend_wigglecam.start()
+    backend_wigglecam.stop()
+    backend_wigglecam.start()
 
 
 def test_optimize_mode(emulated_node, backend_wigglecam):

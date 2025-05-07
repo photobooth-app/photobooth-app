@@ -9,7 +9,7 @@ from photobooth.application import app
 from photobooth.container import container
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app=app, base_url="http://test/api/system") as client:
         container.start()
