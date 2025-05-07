@@ -61,6 +61,7 @@ dependencies = [
     "pyturbojpeg>=1.7.0",
     "pluggy>=1.5.0",
     "av>=14.0.1",
+    "alembic>=1.15.2",
 ]
 
 [project.scripts]

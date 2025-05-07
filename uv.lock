@@ -14,6 +14,20 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "alembic"
+version = "1.15.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mako" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e6/57/e314c31b261d1e8a5a5f1908065b4ff98270a778ce7579bd4254477209a7/alembic-1.15.2.tar.gz", hash = "sha256:1c72391bbdeffccfe317eefba686cb9a3c078005478885413b95c3b26c57a8a7", size = 1925573 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/41/18/d89a443ed1ab9bcda16264716f809c663866d4ca8de218aa78fd50b38ead/alembic-1.15.2-py3-none-any.whl", hash = "sha256:2e76bd916d547f6900ec4bb5a90aeac1485d2c92536923d0b138c02b126edc53", size = 231911 },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -846,11 +860,23 @@ name = "linuxpy"
 version = "0.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' and sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9b/29/68e915cd8b2e35161830c06afd7527e0fae8cd4f44f203ffc1b7df484368/linuxpy-0.20.0.tar.gz", hash = "sha256:98d5a6ce5e7618465410bdeaf1c3f9f6ac4c76e1b58a382cbc6a03e5d7521bde", size = 450101 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/b5/4e10fe456fa42e2f1493aba627ed7d9f24cb07657ed59b5d960632761c21/linuxpy-0.20.0-py3-none-any.whl", hash = "sha256:b3e926aa89ca92e885bff7a94026bd68377a489ab8f6af140385527b85ece50c", size = 451154 },
+]
+
+[[package]]
+name = "mako"
+version = "1.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509 },
 ]
 
 [[package]]
@@ -1081,6 +1107,7 @@ wheels = [
 name = "photobooth-app"
 source = { editable = "." }
 dependencies = [
+    { name = "alembic" },
     { name = "av" },
     { name = "fastapi" },
     { name = "gphoto2", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
@@ -1131,6 +1158,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", specifier = ">=1.15.2" },
     { name = "av", specifier = ">=14.0.1" },
     { name = "fastapi", specifier = ">=0.106.0" },
     { name = "gphoto2", marker = "sys_platform == 'darwin' or sys_platform == 'linux'", specifier = "~=2.5.0" },
