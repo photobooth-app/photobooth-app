@@ -1,6 +1,5 @@
 import os
 import shutil
-from collections.abc import Generator
 from dataclasses import asdict
 from pathlib import Path
 from unittest import mock
@@ -10,25 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from photobooth import RECYCLE_PATH, USERDATA_PATH
-from photobooth.application import app
-from photobooth.container import container
 from photobooth.routers.api_admin.files import PathListItem
-
-
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        container.start()
-        yield client
-        container.stop()
-
-
-@pytest.fixture
-def client_authenticated(client) -> Generator[TestClient, None, None]:
-    response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
-    token = response.json()["access_token"]
-    client.headers = {"Authorization": f"Bearer {token}"}
-    yield client
 
 
 @pytest.fixture(

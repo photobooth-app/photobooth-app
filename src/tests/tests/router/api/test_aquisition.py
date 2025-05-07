@@ -1,28 +1,16 @@
 import io
 import logging
 import time
-from collections.abc import Generator
 from unittest import mock
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.appconfig import appconfig
-from photobooth.application import app
-from photobooth.container import container
 from photobooth.services.aquisition import AquisitionService
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        container.start()
-        yield client
-        container.stop()
 
 
 def capture(client: TestClient):
@@ -55,12 +43,12 @@ def test_aquire_still_exception(client: TestClient):
 
 
 def test_aquire_multiple_withmodechange(client: TestClient):
-    for _i in range(0, 4):
+    for _i in range(4):
         response = client.get("/aquisition/mode/capture")
         assert response.status_code == 202
 
         # virtual countdown
-        time.sleep(1)
+        time.sleep(0.2)
 
         capture(client)
 

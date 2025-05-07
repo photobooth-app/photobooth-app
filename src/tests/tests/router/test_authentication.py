@@ -3,17 +3,10 @@ from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.application import app
 from photobooth.routers.auth_dependencies_bearer import User
 
 
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        yield client
-
-
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client_authenticated(client: TestClient) -> Generator[TestClient, None, None]:
     response = client.post("/admin/auth/token", data={"username": "admin", "password": "0000"})
     token = response.json()["access_token"]

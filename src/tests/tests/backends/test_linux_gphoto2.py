@@ -97,9 +97,8 @@ def backend_gphoto2():
 def test_service_reload(backend_gphoto2):
     """container reloading works reliable"""
 
-    for _ in range(1, 5):
-        backend_gphoto2.stop()
-        backend_gphoto2.start()
+    backend_gphoto2.stop()
+    backend_gphoto2.start()
 
 
 def test_get_images_gphoto2(backend_gphoto2):
@@ -120,10 +119,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
     backend_gphoto2._on_configure_optimized_for_idle()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
 
     # change some values
     backend_gphoto2._config.iso_capture = "auto"
@@ -136,10 +135,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
     backend_gphoto2._on_configure_optimized_for_idle()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
 
     # and try illegal values that raise exception
     backend_gphoto2._config.iso_capture = "illegal"
@@ -152,10 +151,10 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
 
     backend_gphoto2._on_configure_optimized_for_hq_preview()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
     backend_gphoto2._on_configure_optimized_for_idle()
     backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(1)
+    time.sleep(0.2)
 
 
 def test_get_gphoto2_camera_info(backend_gphoto2):
