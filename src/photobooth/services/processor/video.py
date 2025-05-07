@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED
+from ... import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
 from ..aquisition import AquisitionService
@@ -58,20 +58,26 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         logger.debug(f"recorded to {capture_to_process=}")
 
         original_filenamepath = Path(filename_str_time()).with_suffix(".mp4")
+
+        # very first, move the capture_to_process to originals. if anything later fails, at least we got the file in safe place.
+        captured_original = capture_to_process.rename(Path(PATH_CAMERA_ORIGINAL, original_filenamepath))
+
         mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,
             media_type=self._media_type,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
             processed=Path(PATH_PROCESSED, original_filenamepath),
+            captured_original=captured_original,
             pipeline_config=self._configuration_set.processing.model_dump(mode="json"),
         )
 
         # apply video pipeline:
-        process_video(capture_to_process, mediaitem)
+        process_video(captured_original, mediaitem)
 
         assert mediaitem.unprocessed.is_file()
         assert mediaitem.processed.is_file()
+        assert mediaitem.captured_original and mediaitem.captured_original.is_file()
 
         # out to db/ui
         self.set_results(mediaitem, mediaitem.id)

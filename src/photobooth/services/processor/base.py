@@ -154,7 +154,8 @@ class JobModelBase(ABC, Generic[T]):
     def on_exit_completed(self): ...
 
     @abstractmethod
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        pass
 
     @property
     @abstractmethod
@@ -200,23 +201,29 @@ class JobModelBase(ABC, Generic[T]):
 
     def complete_phase1image(self, capture_to_process: Path, show_in_gallery: bool, pipeline_config: SingleImageProcessing) -> Mediaitem:
         original_filenamepath = Path(filename_str_time()).with_suffix(capture_to_process.suffix)
+
+        # very first, move the capture_to_process to originals. if anything later fails, at least we got the file in safe place.
+        captured_original = capture_to_process.rename(Path(PATH_CAMERA_ORIGINAL, original_filenamepath))
+
         mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,
             media_type=MediaitemTypes.image,
             unprocessed=Path(PATH_UNPROCESSED, original_filenamepath),
             processed=Path(PATH_PROCESSED, original_filenamepath),
+            captured_original=captured_original,
             pipeline_config=pipeline_config.model_dump(mode="json"),
             show_in_gallery=show_in_gallery,
         )
 
         # TODO: get some clever way to scale AND cache?
         # TODO: check if cache-generation checks for size and if already same as target, don't scale, just copy, clever trick done.
-        generate_resized(capture_to_process, mediaitem.unprocessed, appconfig.mediaprocessing.full_still_length)
+        generate_resized(captured_original, mediaitem.unprocessed, appconfig.mediaprocessing.full_still_length)
         process_phase1images(mediaitem.unprocessed, mediaitem)
 
         assert mediaitem.unprocessed.is_file()
         assert mediaitem.processed.is_file()
+        assert mediaitem.captured_original and mediaitem.captured_original.is_file()
 
         return mediaitem
 

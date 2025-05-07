@@ -1,4 +1,8 @@
-from sqlalchemy import create_engine
+import os
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import create_engine, inspect
 
 from .. import DATABASE_PATH
 
@@ -12,13 +16,25 @@ SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLALCHEMY_DATABASE_FILE}"
 connect_args = {"check_same_thread": False}
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)  # , echo=True)
 
-# not used until now, could be used instead normal Session() below
-# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-# def get_session():
-#     with Session(engine) as session:
-#         yield session
-# SessionDep = Annotated[Session, Depends(get_session)]
-
 
 def create_db_and_tables():
-    Base.metadata.create_all(bind=engine)
+    db_exists = os.path.exists(SQLALCHEMY_DATABASE_FILE)
+    inspector = inspect(engine)  # creates empty db, so db file check needs to be before!
+    alembic_cfg = Config()
+
+    # from your settings or environment
+    alembic_cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+    alembic_cfg.set_main_option("script_location", "./src/photobooth/database/alembic")
+
+    # Check if Alembic has already stamped the DB
+    if not db_exists:
+        print("setup new sqlite database now")
+        command.upgrade(alembic_cfg, "head")
+    elif not inspector.has_table("alembic_version"):
+        print("existing database found that was not stamped yet. stamp it to initial database schema, then run migrations.")
+        # we can stamp because there has been only 1 database out in production until today.
+        command.stamp(alembic_cfg, "7e0d6dfb1b1d")
+        command.upgrade(alembic_cfg, "head")
+    else:
+        print("existing stamped database found. running migrations if needed.")
+        command.upgrade(alembic_cfg, "head")
