@@ -46,7 +46,11 @@ def get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, s
 
 
 def get_remote_filepath(local_root_dir: Path, local_filepath: Path) -> Path:
-    remote_path = local_filepath.relative_to(local_root_dir)
+    try:
+        remote_path = local_filepath.relative_to(local_root_dir)
+    except ValueError as exc:
+        raise ValueError(f"file {local_filepath} needs to be below root dir {local_root_dir}.") from exc
+
     logger.info(f"{local_filepath} maps to {remote_path}")
 
     return remote_path
