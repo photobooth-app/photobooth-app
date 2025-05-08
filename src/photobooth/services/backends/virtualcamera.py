@@ -118,7 +118,8 @@ class VirtualCameraBackend(AbstractBackend):
 
         with self._lores_data.condition:
             ret = self._lores_data.condition.wait(timeout=0.5)
-            assert ret is True  # TimeoutError("timeout receiving frames")
+            assert ret is True
+            # TimeoutError("timeout receiving frames") #TODO: this may fail when the backend restarts but still an image is waited for!?
 
             return self._lores_data.data
 
