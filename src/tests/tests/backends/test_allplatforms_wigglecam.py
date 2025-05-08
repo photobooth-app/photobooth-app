@@ -25,7 +25,7 @@ def run_server():
 def emulated_node() -> Generator[Container, None, None]:
     proc = Process(target=run_server, args=(), daemon=True)
     proc.start()
-    time.sleep(2)  # need to wait until virtual node is actually available. TODO: could improve by actually checking.
+    time.sleep(2.5)  # need to wait until virtual node is actually available. TODO: could improve by actually checking.
     yield __main__.container
     proc.kill()  # Cleanup after test
 

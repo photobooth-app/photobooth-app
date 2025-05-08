@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator
+from multiprocessing import set_start_method
 
 import pytest
 from fastapi.testclient import TestClient
@@ -75,5 +76,13 @@ def global_function_setup2():
 @pytest.fixture(scope="session", autouse=True)
 def session_setup1():
     create_db_and_tables()
+
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def session_setup2():
+    # unify multiprocessing start method to spawn (otherwise fork for linux, spawn for win/mac)
+    set_start_method("spawn")
 
     yield
