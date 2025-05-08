@@ -3,7 +3,11 @@ AppConfig class providing central config
 
 """
 
+from platform import node
+
 from pydantic import BaseModel, ConfigDict, Field
+
+hostname = node() if node() != "" else "localhost"
 
 
 class GroupQrShare(BaseModel):
@@ -25,6 +29,6 @@ class GroupQrShare(BaseModel):
     )
 
     share_custom_qr_url: str = Field(
-        default="http://localhost:8000/media/full/{identifier}",
+        default=f"http://{hostname}:8000/share/#?url=http://{hostname}:8000/media/full/{{identifier}}",
         description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {identifier} is replaced by the actual item's id, {filename} is replaced by the actual filename on the photobooth-data, in QR code.",
     )
