@@ -156,12 +156,9 @@ default-groups = ["dev", "benchmarks"] # by default only dev is automatically in
 path = "./src/photobooth/__version__.py"
 
 [tool.hatch.build.targets.sdist]
-exclude = [
-  "/.github",
-  "/.vscode",
-  "/.uv_cache",
-  "/assets",
-]
+packages = ["./src/photobooth"]
+
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["./src/photobooth"]
