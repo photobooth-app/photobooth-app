@@ -3,8 +3,6 @@ Handle all media collection related functions
 """
 
 import logging
-import os
-import shutil
 import time
 from pathlib import Path
 from threading import Lock
@@ -102,24 +100,15 @@ class Files:
 
         logger.info(f"request delete files of {mediaitem}")
 
-        try:
+        if mediaitem.captured_original:
             if delete_to_recycle_dir:
                 logger.info(f"moving {mediaitem} to recycle directory")
-                shutil.move(mediaitem.unprocessed, Path(RECYCLE_PATH, mediaitem.unprocessed.name))
+                mediaitem.captured_original.rename(Path(RECYCLE_PATH, mediaitem.unprocessed.name))
             else:
-                os.remove(mediaitem.unprocessed)
-        except FileNotFoundError:
-            logger.warning(f"file {mediaitem.unprocessed} not found but ignore because shall be deleted anyways.")
-        except Exception as exc:
-            raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
+                mediaitem.captured_original.unlink(missing_ok=True)
 
-        for file in [mediaitem.processed]:  # could be extended to other processed versions if any again...
-            try:
-                os.remove(file)
-            except FileNotFoundError:
-                logger.warning(f"file {file} not found but ignore because shall be deleted anyways.")
-            except Exception as exc:
-                raise RuntimeError(f"error deleting files for item {mediaitem}") from exc
+        for file in [mediaitem.processed, mediaitem.unprocessed]:  # could be extended to other processed versions if any again...
+            file.unlink(missing_ok=True)
 
         logger.info(f"deleted files of {mediaitem}")
 
@@ -127,13 +116,13 @@ class Files:
         """delete all images, inclusive thumbnails, ..."""
         try:
             for file in Path(f"{PATH_UNPROCESSED}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{PATH_PROCESSED}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{PATH_CAMERA_ORIGINAL}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
             for file in Path(f"{TMP_PATH}").glob("*.*"):
-                os.remove(file)
+                file.unlink()
 
         except Exception as exc:
             logger.exception(exc)
@@ -229,7 +218,7 @@ class Cache:
 
             for outdated_filepath in outdated_filepaths:
                 try:
-                    os.remove(outdated_filepath)
+                    outdated_filepath.unlink()
                 except Exception as exc:
                     logger.warning(f"could not delete file {outdated_filepath} from cache, error: {exc}")
 
@@ -245,7 +234,7 @@ class Cache:
 
     def fs_clear_all(self):
         for file in Path(f"{CACHE_PATH}").glob("*.*"):
-            os.remove(file)
+            file.unlink()
 
         logger.info("deleted all files for mediaitems")
 

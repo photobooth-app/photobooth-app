@@ -1,5 +1,4 @@
 import logging
-import shutil
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -23,21 +22,20 @@ def cs():
 
 
 @pytest.fixture()
-def dummy_item(tmp_path):
-    filepath_unprocessed = tmp_path / "unproc.jpg"
-    filepath_processed = tmp_path / "proc.jpg"
-
-    shutil.copy("./src/tests/assets/input.jpg", filepath_unprocessed)
-    shutil.copy("./src/tests/assets/input.jpg", filepath_processed)
-
-    yield Mediaitem(
+def dummy_item(cs: MediacollectionService):
+    borrow_to_lend_files_from = cs.get_item_latest()
+    new_item_instance = Mediaitem(
         job_identifier=uuid4(),
         media_type=MediaitemTypes.image,
-        unprocessed=filepath_unprocessed,
-        processed=filepath_processed,
+        captured_original=borrow_to_lend_files_from.captured_original,
+        unprocessed=borrow_to_lend_files_from.unprocessed,
+        processed=borrow_to_lend_files_from.processed,
         pipeline_config={},
         show_in_gallery=True,
     )
+    logger.warning(new_item_instance)
+
+    yield new_item_instance
 
 
 def test_start_maintain(cs: MediacollectionService):

@@ -82,8 +82,11 @@ class PluginMediacollectionSpec:
     @hookspec  # list of files that were updated (example, filter applied)
     def collection_files_updated(self, files: list[Path]) -> None: ...
 
-    @hookspec  # gather all filter to be displayed by plugins
+    @hookspec  # deleted a file from collection
     def collection_files_deleted(self, files: list[Path]) -> None: ...
+
+    @hookspec  # despite not in the database the original camera files have a hook here.
+    def collection_original_file_added(self, files: list[Path]) -> None: ...
 
 
 pm.add_hookspecs(PluginManagementSpec)

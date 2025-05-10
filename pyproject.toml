@@ -61,6 +61,7 @@ dependencies = [
     "pyturbojpeg>=1.7.0",
     "pluggy>=1.5.0",
     "av>=14.0.1",
+    "alembic>=1.15.2",
 ]
 
 [project.scripts]
@@ -71,6 +72,7 @@ commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
+share_ftp = 'photobooth.plugins.share_ftp.share_ftp'
 
 
 [project.urls]
@@ -100,6 +102,7 @@ concurrency = ["thread", "multiprocessing"]
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+ignore = ["./experimental/"]
 
 [tool.ruff]
 line-length = 150

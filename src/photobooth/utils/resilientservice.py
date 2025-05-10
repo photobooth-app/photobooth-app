@@ -33,7 +33,7 @@ class ResilientService(ABC):
 
     def _report_crash(self, exc: Exception):
         logger.exception(exc)
-        logger.critical(f"backend crashed, error: {exc}")
+        logger.critical(f"normal service op interrupted, error: {exc}")
 
     def _run(self):
         attempt = 0
@@ -69,7 +69,7 @@ class ResilientService(ABC):
                 if self._stop_event.is_set():
                     break
 
-                logger.info("trying to recover from crash")
+                logger.info("trying to recover from service interruption")
 
                 if self._last_crash and ((time() - self._last_crash) > (self._max_backoff + 2)):
                     logger.info("reset attempt to 0 because last_crash is longer ago than max_backoff")
@@ -78,7 +78,7 @@ class ResilientService(ABC):
                 self._last_crash = time()
                 attempt += 1
                 delay = min(self._retry_delay * (2 ** (attempt - 1)), self._max_backoff)
-                logger.warning(f"service failed (attempt {attempt}). Retrying in {delay}s...")
+                logger.warning(f"normal service operation failed (attempt {attempt}). Retrying in {delay}s...")
 
                 # wait up to delay seconds but if service is stopped,
                 # the wait returns and the loop will exit because it also checks for the stop_event

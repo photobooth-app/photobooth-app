@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Event as threadingEvent
 from threading import Thread
@@ -7,6 +8,7 @@ from uuid import UUID
 
 from statemachine import Event, State
 
+from .. import PATH_CAMERA_ORIGINAL
 from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import ProcessMachineOccupiedError
@@ -16,7 +18,7 @@ from .collection import MediacollectionService
 from .config.groups.actions import MultiImageJobControl
 from .information import InformationService
 from .processor.animation import JobModelAnimation
-from .processor.base import Capture
+from .processor.base import Capture, JobModelBase
 from .processor.collage import JobModelCollage
 from .processor.image import JobModelImage
 from .processor.machine.processingmachine import ProcessingMachine, userEvents
@@ -35,13 +37,26 @@ class DbListenter:
     def __init__(self, mediacollection_service: MediacollectionService):
         self._mediacollection_service = mediacollection_service
 
-    def on_exit_state(self, source: State, target: State, model: JobModelImage | JobModelCollage):
+    def on_exit_state(self, source: State, target: State, model: JobModelBase):
         if source.id == ProcessingMachine.completed.id:
             if model._result_mediaitems:
                 logger.info(f"add {len(model._result_mediaitems)} results to db")
 
                 for items in model._result_mediaitems:
                     self._mediacollection_service.add_item(items)  # and to the db.
+
+    def on_enter_state(self, source: State, target: State, model: JobModelBase):
+        # move all originals to the media folder, otherwise they are kept in the tmp folder and we do not care about them.
+        if target.id == ProcessingMachine.finished.id and model._capture_sets:
+            for capture_set in model._capture_sets:
+                for capture in capture_set.captures:
+                    try:
+                        target_filepath = Path(PATH_CAMERA_ORIGINAL, capture.filepath.name)
+                        capture.filepath.rename(target_filepath)
+                        # the mediacollection db doesnt care about the originals, so we add the plugin call here.
+                        pluggy_pm.hook.collection_original_file_added(files=[target_filepath])
+                    except Exception as exc:
+                        logger.warning(f"error moving file: {exc}")
 
 
 class PluginEventHooks:
