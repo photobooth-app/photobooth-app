@@ -9,6 +9,7 @@ import sys
 from enum import Enum
 from importlib.metadata import entry_points
 from pathlib import Path
+from uuid import UUID
 
 import pluggy
 from PIL import Image
@@ -87,6 +88,9 @@ class PluginMediacollectionSpec:
 
     @hookspec  # despite not in the database the original camera files have a hook here.
     def collection_original_file_added(self, files: list[Path]) -> None: ...
+
+    @hookspec  # share backends shall create a link to the mediaitem ressource so it can be used in qr codes, ...
+    def get_share_link(self, identifier: UUID, filename: str) -> str: ...
 
 
 pm.add_hookspecs(PluginManagementSpec)

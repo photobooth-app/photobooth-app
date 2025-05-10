@@ -8,6 +8,8 @@ from itertools import count
 from pathlib import Path
 from queue import Empty, PriorityQueue
 from typing import Literal
+from urllib.parse import quote
+from uuid import UUID
 
 from ...utils.resilientservice import ResilientService
 from .. import hookimpl
@@ -351,6 +353,18 @@ class ShareFtp(BasePlugin[ShareFtpConfig]):
 
         if self._sync_worker:
             self._sync_worker.stop()
+
+    @hookimpl
+    def get_share_link(self, identifier: UUID, filename: str):
+        logger.info(f"GETTING SHARE LINK {identifier} {filename}")
+
+        download_portal_url = f"{self._config.common.share_url.rstrip('/')}/#/?url="
+
+        mediaitem_url = self._config.common.media_url
+        mediaitem_url = mediaitem_url.replace("{filename}", filename)
+        mediaitem_url = mediaitem_url.replace("{identifier}", str(identifier))
+
+        return download_portal_url + quote(mediaitem_url, safe="")
 
     @hookimpl
     def collection_original_file_added(self, files: list[Path]):

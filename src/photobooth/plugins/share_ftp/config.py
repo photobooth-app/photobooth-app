@@ -12,7 +12,11 @@ class Common(BaseConfig):
     )
 
     share_url: str = Field(
-        default="http://test.de/{filename}",
+        default="",
+    )
+
+    media_url: str = Field(
+        default="/{filename}",
     )
 
 
