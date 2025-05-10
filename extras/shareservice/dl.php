@@ -266,64 +266,9 @@ try {
                 $file = $WORK_DIRECTORY . "/" . $results["filename"];
                 if (file_exists($file)) {
                     $mimetype = mime_content_type($file);
-                    $fileData = file_get_contents($file);
-                    $base64EncodedData = base64_encode($fileData);
-                    $isImage = in_array($mimetype, ['image/png', 'image/jpeg', 'image/gif']);
-                    $isVideo = ($mimetype == 'video/mp4');
-
-                    echo "<!DOCTYPE html>
-                        <html lang='en'>
-                        <head>
-                        <meta charset='UTF-8'>
-                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                        <title>{$translations['download_or_share']}</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background-color: #f4f4f4; color: #333; text-align: center; }
-                            img, video { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
-                            button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #0084ff; color: white; border: none; border-radius: 5px; margin-top: 10px; }
-                            button:hover { background-color: #0056b3; }
-                        </style>
-                        </head>
-                        <body>
-                        <h1>{$translations['download_or_share']}</h1>";
-
-                    if ($isImage) {
-                        echo "<img src='data:$mimetype;base64,$base64EncodedData' alt='Image'>";
-                    } elseif ($isVideo) {
-                        echo "<video controls loop autoplay muted>
-                            <source src='data:$mimetype;base64,$base64EncodedData' type='$mimetype'>
-                            Your browser does not support the video tag.
-                          </video>";
-                    }
-
-                    echo "<br>
-                        <a href='data:$mimetype;base64,$base64EncodedData' download='" . $results["filename"] . "'><button>{$translations['download_button']}</button></a>";
-
-                    // Show share button only if the page is accessed via HTTPS
-                    if (isSecure()) {
-                        echo "<button onclick='shareImage()'>{$translations['share_button']}</button>
-                        <script>
-                        function shareImage() {
-                            if (!navigator.share) {
-                                alert('Web share is not supported in your browser.');
-                                return;
-                            }
-
-                            const file = new File([Uint8Array.from(atob('$base64EncodedData'), c => c.charCodeAt(0))], '" . $results["filename"] . "', {type: '$mimetype'});
-
-                            navigator.share({
-                                files: [file],
-                                title: '{$translations['share_title']}',
-                                text: '{$translations['share_text']}'
-                            })
-                            .then(() => console.log('{$translations['successful_share']}'))
-                            .catch((error) => console.log('{$translations['error_sharing']}', error));
-                        }
-                        </script>";
-                    }
-
-                    echo "</body>
-                        </html>";
+                    header('Content-Type:' . $mimetype);
+                    header("Cache-Control: max-age=300");
+                    readfile($file);
                     exit;
                 } else {
                     throw new RuntimeException($translations['error_cannot_find_file']);
