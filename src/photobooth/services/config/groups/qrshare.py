@@ -28,7 +28,11 @@ class GroupQrShare(BaseModel):
         description="Key to secure the download php script. Set the key in dl.php script to same value. Only if correct key is provided the shareservice works properly.",
     )
 
+    enabled_custom: bool = Field(
+        default=False,
+        description="Enable qr share service. To enable URL needs to be configured and dl.php script setup properly.",
+    )
     share_custom_qr_url: str = Field(
-        default=f"http://{hostname}:8000/share/#?url=http://{hostname}:8000/media/full/{{identifier}}",
+        default=f"http://{hostname}:8000/download/#?url=http://{hostname}:8000/media/full/{{identifier}}",
         description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {identifier} is replaced by the actual item's id, {filename} is replaced by the actual filename on the photobooth-data, in QR code.",
     )

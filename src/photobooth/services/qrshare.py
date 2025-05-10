@@ -5,6 +5,7 @@ https://photobooth-app.org/setup/shareservice/
 import json
 import logging
 import time
+from urllib.parse import quote
 from uuid import UUID
 
 import requests
@@ -52,6 +53,29 @@ class QrShareService(BaseService):
             self._worker_thread.join()
 
         super().stopped()
+
+    def get_share_link(self, identifier: UUID, filename: str) -> list[str]:
+        logger.info(f"GETTING QR    SHARE LINK {identifier} {filename}")
+
+        out_links = []
+
+        # qr share service with dl.php:
+        if appconfig.qrshare.enabled:
+            # this is to the index.html displaying the portal
+            download_portal_url = f"{appconfig.qrshare.shareservice_url.rstrip('/')}/#/?url="
+            # this delivers the actual file (no html around).
+            mediaitem_url = f"{appconfig.qrshare.shareservice_url.rstrip('/')}/dl.php?action=download&id={str(identifier)}"
+
+            out_links.append(download_portal_url + quote(mediaitem_url, safe=""))
+
+        if appconfig.qrshare.enabled_custom:
+            custom_url = appconfig.qrshare.share_custom_qr_url
+            custom_url = custom_url.replace("{filename}", filename)
+            custom_url = custom_url.replace("{identifier}", str(identifier))
+
+            out_links.append(custom_url)
+
+        return out_links
 
     def _worker_fun(self):
         assert self._worker_thread

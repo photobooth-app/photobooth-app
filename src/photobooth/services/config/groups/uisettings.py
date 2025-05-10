@@ -120,6 +120,11 @@ class GroupUiSettings(BaseModel):
         default="Scan above code with your phone.",
         description="Display text below the QR code.",
     )
+    qrcode_link_codes: bool = Field(
+        default=False,
+        description="Clickable link is added to the QR code itself. This can be helpful for testing but should be disabled on a production system to avoid users escape out of the app.",
+    )
+
     gallery_show_filter: bool = Field(
         default=True,
         description="Show filter provided by plugins. Pilgram2 filter are included in the app. See documentation to extend and build your own plugin.",
