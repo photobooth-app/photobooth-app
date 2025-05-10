@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 media_router = APIRouter(prefix="/media", tags=["media"])
 
 
-@media_router.get("/{dimension}/{mediaitem_id}")
+@media_router.api_route("/{dimension}/{mediaitem_id}", methods=["GET", "HEAD"])
 def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
     try:
         # since we use cache busting now, we can actually use the cache in the browser and do not need revalidation on each display.
