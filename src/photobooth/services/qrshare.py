@@ -27,6 +27,8 @@ class QrShareService(BaseService):
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._worker_thread: StoppableThread | None = None
 
+        self.shareservice_dl_php_url = appconfig.qrshare.shareservice_url + "/dl.php"
+
     def start(self):
         super().start()
 
@@ -63,7 +65,7 @@ class QrShareService(BaseService):
             }
             try:
                 r = requests.post(
-                    appconfig.qrshare.shareservice_url,
+                    self.shareservice_dl_php_url,
                     data=payload,
                     stream=True,
                     timeout=8,
@@ -108,7 +110,7 @@ class QrShareService(BaseService):
                         logger.error(
                             f"webserver response from webserver malformed. please check qr shareservice url, "
                             f"webserver setup and webserver's logs. error: {exc}"
-                            f"URL trying to connect is {appconfig.qrshare.shareservice_url}"
+                            f"URL trying to connect is {self.shareservice_dl_php_url}"
                         )
                         time.sleep(5)  # if url is wrong just slow down to not reconnect every second.
                         break
@@ -134,7 +136,7 @@ class QrShareService(BaseService):
 
                         try:
                             r = requests.post(
-                                appconfig.qrshare.shareservice_url,
+                                self.shareservice_dl_php_url,
                                 files=request_upload_file,
                                 data={
                                     "action": "upload",
