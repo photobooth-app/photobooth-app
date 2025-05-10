@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from ...container import container
 from ...database.models import Mediaitem
+from ...plugins import pm as pluggy_pm
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/share", tags=["share"])
@@ -42,3 +43,15 @@ def api_share_item_id(id: UUID, index: int = 0, parameters: dict[str, str] | Non
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
     _share(requested_mediaitem, index, parameters)
+
+
+@router.get("/download/{id}")
+def api_download_item_id_get_sharelinks(id: UUID) -> list[str]:
+    try:
+        requested_mediaitem = container.mediacollection_service.get_item(id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found: {exc}") from exc
+
+    qrcodeservice_link = container.qr_share_service.get_share_link(identifier=requested_mediaitem.id, filename=requested_mediaitem.processed.name)
+
+    return qrcodeservice_link + pluggy_pm.hook.get_share_link(identifier=requested_mediaitem.id, filename=requested_mediaitem.processed.name)
