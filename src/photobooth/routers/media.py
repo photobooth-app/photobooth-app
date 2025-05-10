@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 media_router = APIRouter(prefix="/media", tags=["media"])
 
 
-@media_router.api_route("/{dimension}/{mediaitem_id}", methods=["GET", "HEAD"])
-def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
+def _serve_media_item(mediaitem_id: UUID, dimension: DimensionTypes):
+    # get/head have same handler but for openapi generation, it needs one method per function call otherwise there are duplicates.
+
     try:
         # since we use cache busting now, we can actually use the cache in the browser and do not need revalidation on each display.
         # we need cache busting since there are filter that apply updates to images and the vue rendering is
@@ -30,3 +31,13 @@ def api_getitems(mediaitem_id: UUID, dimension: DimensionTypes):
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
+
+
+@media_router.get("/{dimension}/{mediaitem_id}")
+def api_getitems_get(mediaitem_id: UUID, dimension: DimensionTypes):
+    return _serve_media_item(mediaitem_id, dimension)
+
+
+@media_router.head("/{dimension}/{mediaitem_id}")
+def api_getitems_head(mediaitem_id: UUID, dimension: DimensionTypes):
+    return _serve_media_item(mediaitem_id, dimension)
