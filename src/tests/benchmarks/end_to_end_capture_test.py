@@ -6,7 +6,7 @@ import pytest
 
 from photobooth.container import Container, container
 from photobooth.database.types import DimensionTypes
-from photobooth.routers.media import api_getitems
+from photobooth.routers.media import _serve_media_item
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 from photobooth.services.processing import ActionType
 
@@ -34,7 +34,7 @@ def do_end_to_end(_container: Container, action: ActionType):
     item = _container.mediacollection_service.get_item_latest()
 
     # 2: emulate preview generation that can be downloaded by the client then
-    api_getitems(item.id, DimensionTypes.preview)
+    _serve_media_item(item.id, DimensionTypes.preview)
 
     # job done.
 
