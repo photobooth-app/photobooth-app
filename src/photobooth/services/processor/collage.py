@@ -110,8 +110,8 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
         assert phase2_mediaitem.unprocessed.is_file()
         assert phase2_mediaitem.processed.is_file()
 
-        # out to db/ui
-        self.set_results([*phase1_mediaitems, phase2_mediaitem], phase2_mediaitem.id)
+        # out to db/ui, phase2_mediaitem is used for presentation and so first in array because sync plugins will sync first for qr codes
+        self.set_results([phase2_mediaitem, *phase1_mediaitems], phase2_mediaitem.id)
 
     def on_exit_completed(self): ...
 
