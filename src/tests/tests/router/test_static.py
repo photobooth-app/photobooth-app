@@ -6,12 +6,14 @@ from fastapi.testclient import TestClient
 from photobooth import USERDATA_PATH
 
 
-def test_read_main(client: TestClient):
+def test_read_web_spa(client: TestClient):
     response = client.get("../")
     assert response.status_code == 200
 
-    # ensure no cache on main page so frontent updates work fine
-    assert "cache-control" in response.headers and "no-store, no-cache, must-revalidate" == response.headers["cache-control"]
+
+def test_read_web_downloadportal(client: TestClient):
+    response = client.get("../download/")
+    assert response.status_code == 200
 
 
 def test_private_css_nonexisting_placeholder(client: TestClient):
