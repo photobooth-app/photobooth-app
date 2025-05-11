@@ -81,9 +81,9 @@ def _create_app() -> FastAPI:
     _app.include_router(userdata_router)
 
     # also for convenience serve the share file so when a local hotspot is open it works just out of the box.
-    _app.mount("/download/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_download"), html=True), name="web_download")
+    _app.mount("/download/", StaticFiles(directory=Path(__file__).parent.parent.resolve().joinpath("web/download"), html=True), name="web_download")
     # serve the spa # this is last so it catches all if not found a match earlier.
-    _app.mount("/", StaticFiles(directory=Path(__file__).parent.resolve().joinpath("web_spa")), name="web_spa")
+    _app.mount("/", StaticFiles(directory=Path(__file__).parent.parent.resolve().joinpath("web/frontend"), html=True), name="web_spa")
 
     async def custom_http_exception_handler(request: Request, exc):
         logger.error(f"HTTPException: {request.url=} {exc=}")

@@ -33,35 +33,35 @@ keywords = [
   "picamera2",
 ]
 dependencies = [
-    "fastapi>=0.106.0",
-    "opencv-python-headless>=4.10.0.84",
-    "numpy>=2.0.0",
-    "simplejpeg>=1.8.2",
-    "pillow>=10.0.0",
-    "psutil>=7.0.0",
-    "pydantic>=2.7.0",
-    "pydantic-extra-types>=2.3.0",
-    "pydantic-settings>=2.1.0",
-    "requests>=2.31.0",
-    "sse-starlette>=2.2.0",
-    "uvicorn[standard]>=0.24", # adds websockets and uvloop
-    "python-dotenv>=1.0.0",
-    "pyserial~=3.5",
-    "jsonref>=1.1.0",
-    "pilgram2>=2.0.6",
-    "linuxpy>=0.10.0; platform_system == 'Linux'",
-    "gpiozero~=2.0.0",
-    "gphoto2~=2.5.0; platform_system == 'Linux' or platform_system == 'Darwin'",
-    "python-statemachine>=2.4.0",
-    "python-multipart>=0.0.6",
-    "pyjwt[crypto]>=2.8.0",
-    "wigglecam",
-    "piexif>=1.1.3",
-    "SQLAlchemy>=2.0.37",
-    "pyturbojpeg>=1.7.0",
-    "pluggy>=1.5.0",
-    "av>=14.0.1",
-    "alembic>=1.15.2",
+  "fastapi>=0.106.0",
+  "opencv-python-headless>=4.10.0.84",
+  "numpy>=2.0.0",
+  "simplejpeg>=1.8.2",
+  "pillow>=10.0.0",
+  "psutil>=7.0.0",
+  "pydantic>=2.7.0",
+  "pydantic-extra-types>=2.3.0",
+  "pydantic-settings>=2.1.0",
+  "requests>=2.31.0",
+  "sse-starlette>=2.2.0",
+  "uvicorn[standard]>=0.24",                                                   # adds websockets and uvloop
+  "python-dotenv>=1.0.0",
+  "pyserial~=3.5",
+  "jsonref>=1.1.0",
+  "pilgram2>=2.0.6",
+  "linuxpy>=0.10.0; platform_system == 'Linux'",
+  "gpiozero~=2.0.0",
+  "gphoto2~=2.5.0; platform_system == 'Linux' or platform_system == 'Darwin'",
+  "python-statemachine>=2.4.0",
+  "python-multipart>=0.0.6",
+  "pyjwt[crypto]>=2.8.0",
+  "wigglecam",
+  "piexif>=1.1.3",
+  "SQLAlchemy>=2.0.37",
+  "pyturbojpeg>=1.7.0",
+  "pluggy>=1.5.0",
+  "av>=14.0.1",
+  "alembic>=1.15.2",
 ]
 
 [project.scripts]
@@ -138,15 +138,15 @@ dev = [
   "pytest-httpserver",
   "pydot",
   "pre-commit",
-  "pyright"
+  "pyright",
 ]
-benchmarks = [
-  "pytest-benchmark[histogram]>=5.1.0",
-  "pyvips",
-]
+benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "pyvips"]
 
 [tool.uv]
-default-groups = ["dev", "benchmarks"] # by default only dev is automatically installed, so here add benchmarks
+default-groups = [
+  "dev",
+  "benchmarks",
+] # by default only dev is automatically installed, so here add benchmarks
 
 
 # uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
@@ -158,10 +158,12 @@ default-groups = ["dev", "benchmarks"] # by default only dev is automatically in
 [tool.hatch.version]
 path = "./src/photobooth/__version__.py"
 
-[tool.hatch.build.targets.sdist]
-packages = ["./src/photobooth"]
+[tool.hatch.build]
+sources = ["src"]
 
+[tool.hatch.build.targets.sdist]
+only-include = ["./src/photobooth", "./src/web"]
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["./src/photobooth"]
+only-include = ["./src/photobooth", "./src/web"]
