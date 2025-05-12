@@ -107,7 +107,8 @@ class FtpProtocolClient(BaseProtocolClient):
             ret.append(self._ftp.login(self._username, self._password))
             ret.append(self._ftp.prot_p())
         else:
-            ret.append(self._ftp.login(self._username, self._password))
+            # we still use FTP_TLS as client, so to use non-ssl/tls set secure=False and we don't need to distinguish between them
+            ret.append(self._ftp.login(self._username, self._password, secure=False))
 
         ret.append(self._ftp.cwd(self._root_dir))
 
