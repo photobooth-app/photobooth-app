@@ -276,6 +276,8 @@ class MediacollectionService(BaseService):
         self.db.add_item(item)
 
         pluggy_pm.hook.collection_files_added(files=[item.processed, item.unprocessed])
+        if item.captured_original:
+            pluggy_pm.hook.collection_original_file_added(files=[item.captured_original])
 
         # and insert in client db collection so gallery is up to date.
         if item.show_in_gallery:
