@@ -139,6 +139,7 @@ dev = [
   "pydot",
   "pre-commit",
   "pyright",
+  "pyftpdlib",
 ]
 benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "pyvips"]
 
