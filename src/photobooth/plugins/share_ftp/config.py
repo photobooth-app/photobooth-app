@@ -3,6 +3,7 @@ from pydantic_settings import SettingsConfigDict
 
 from photobooth import CONFIG_PATH
 from photobooth.services.config.baseconfig import BaseConfig
+from photobooth.services.config.serializer import contextual_serializer_password
 
 
 class Common(BaseConfig):
@@ -43,11 +44,7 @@ class FtpServer(BaseConfig):
     # reveal password in admin backend.
     @field_serializer("password")
     def contextual_serializer(self, value, info: SerializationInfo):
-        if info.context:
-            if info.context.get("secrets_is_allowed", False):
-                return value.get_secret_value()
-
-        return "************"
+        return contextual_serializer_password(value, info)
 
 
 class ShareFtpConfig(BaseConfig):
