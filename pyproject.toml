@@ -72,7 +72,7 @@ commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
-share_ftp = 'photobooth.plugins.share_ftp.share_ftp'
+synchronizer = 'photobooth.plugins.synchronizer.synchronizer'
 
 
 [project.urls]
