@@ -1,4 +1,4 @@
-from pydantic import Field, SecretStr, SerializationInfo, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic_settings import SettingsConfigDict
 
 from photobooth import CONFIG_PATH
@@ -21,7 +21,7 @@ class Common(BaseConfig):
     )
 
 
-class FtpServer(BaseConfig):
+class FtpServerConfigGroup(BaseConfig):
     host: str = Field(
         default="",
     )
@@ -37,9 +37,6 @@ class FtpServer(BaseConfig):
     secure: bool = Field(
         default=True,
     )
-    root_dir: str = Field(
-        default="/",
-    )
 
     # reveal password in admin backend.
     @field_serializer("password")
@@ -47,7 +44,25 @@ class FtpServer(BaseConfig):
         return contextual_serializer_password(value, info)
 
 
-class ShareFtpConfig(BaseConfig):
+class FilesystemConfigGroup(BaseConfig):
+    target_dir: str = Field(
+        default="./tmp/test123",
+    )
+
+
+class Backends(BaseModel):
+    model_config = ConfigDict(title="Sync Backend Configuration")
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable synchronization on this backend",
+    )
+
+    ftp_server: FtpServerConfigGroup = FtpServerConfigGroup()
+    filesystem: FilesystemConfigGroup = FilesystemConfigGroup()
+
+
+class SynchronizerConfig(BaseConfig):
     model_config = SettingsConfigDict(
         title="Share FTP Plugin Config",
         json_file=f"{CONFIG_PATH}plugin_shareftp.json",
@@ -55,4 +70,7 @@ class ShareFtpConfig(BaseConfig):
     )
 
     common: Common = Common()
-    ftp_server: FtpServer = FtpServer()
+    backends: list[Backends] = [Backends()]
+
+    ftp_server: FtpServerConfigGroup = FtpServerConfigGroup()
+    filesystem: FilesystemConfigGroup = FilesystemConfigGroup()

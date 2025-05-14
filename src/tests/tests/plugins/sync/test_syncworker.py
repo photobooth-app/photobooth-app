@@ -9,28 +9,30 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import ThreadedFTPServer
 
-from photobooth.plugins.share_ftp.config import Common, FtpServer, ShareFtpConfig
-from photobooth.plugins.share_ftp.share_ftp import ShareFtp
+from photobooth.plugins.synchronizer.config import Common, FilesystemConfigGroup, FtpServerConfigGroup, SynchronizerConfig
+from photobooth.plugins.synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture()
-def shrftp_plugin():
+def synchronizer_plugin():
     # setup
-    shrftp = ShareFtp()
+    shrftp = Synchronizer()
 
-    shrftp._config = ShareFtpConfig(
+    shrftp._config = SynchronizerConfig(
         common=Common(
             enabled=True,
         ),
-        ftp_server=FtpServer(
+        ftp_server=FtpServerConfigGroup(
             host="127.0.0.1",
             port=2121,
             username="testuser",
             password=SecretStr("testpass"),
             secure=False,
-            root_dir="/",
+        ),
+        filesystem=FilesystemConfigGroup(
+            target_dir="/tmp/test123",
         ),
     )
 
@@ -67,9 +69,9 @@ def test_ftp_login(ftp_server):
     ftp.quit()
 
 
-def test_init(ftp_server, shrftp_plugin: ShareFtp):
-    shrftp_plugin.start()
+def test_init(ftp_server, synchronizer_plugin: Synchronizer):
+    synchronizer_plugin.start()
 
     time.sleep(1)
 
-    shrftp_plugin.stop()
+    synchronizer_plugin.stop()
