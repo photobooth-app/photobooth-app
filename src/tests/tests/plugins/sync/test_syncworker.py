@@ -9,7 +9,7 @@ from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import ThreadedFTPServer
 
-from photobooth.plugins.synchronizer.config import Common, FilesystemBackendConfig, FtpServerBackendConfig, SynchronizerConfig
+from photobooth.plugins.synchronizer.config import Backends, Common, FilesystemBackendConfig, FtpServerBackendConfig, SynchronizerConfig
 from photobooth.plugins.synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(name=None)
@@ -24,16 +24,24 @@ def synchronizer_plugin():
         common=Common(
             enabled=True,
         ),
-        ftp_server=FtpServerBackendConfig(
-            host="127.0.0.1",
-            port=2121,
-            username="testuser",
-            password=SecretStr("testpass"),
-            secure=False,
-        ),
-        filesystem=FilesystemBackendConfig(
-            target_dir="/tmp/test123",
-        ),
+        backends=[
+            Backends(
+                enabled=True,
+                backend_config=FtpServerBackendConfig(
+                    host="127.0.0.1",
+                    port=2121,
+                    username="testuser",
+                    password=SecretStr("testpass"),
+                    secure=False,
+                ),
+            ),
+            Backends(
+                enabled=True,
+                backend_config=FilesystemBackendConfig(
+                    target_dir="/tmp/test123",
+                ),
+            ),
+        ],
     )
 
     yield shrftp
