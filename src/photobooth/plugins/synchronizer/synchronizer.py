@@ -6,7 +6,7 @@ from uuid import UUID
 
 from .. import hookimpl
 from ..base_plugin import BasePlugin
-from .backends.fs import FilesystemBackend
+from .backends.filesystem import FilesystemBackend
 from .backends.ftp import FtpBackend
 from .config import SynchronizerConfig
 from .models import SyncTaskDelete, SyncTaskUpload
@@ -28,10 +28,6 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         self._sync_workers: list[SyncWorker] = []
 
-    def get_new_client(self):
-        # could instanciate different clients in future here...
-        return FtpBackend(self._config.ftp_server)
-
     @hookimpl
     def start(self):
         """To start the resilient service"""
@@ -41,9 +37,15 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             return
 
         # consumes the queue and uploads/deletes/modifies remote filesystem according to the queue.
-        sync_client = self.get_new_client()
-        self._sync_workers.append(SyncWorker(sync_client))
-        self._sync_workers.append(SyncWorker(FilesystemBackend(self._config.filesystem)))
+        for backendConfig in self._config.backends:
+            if not backendConfig.enabled:
+                continue
+
+            if backendConfig.backend_config.backend_type == "filesystem":
+                self._sync_workers.append(SyncWorker(FilesystemBackend(backendConfig.backend_config)))
+            elif backendConfig.backend_config.backend_type == "ftp":
+                self._sync_workers.append(SyncWorker(FtpBackend(backendConfig.backend_config)))
+            # else not gonna happen because typed literals...
 
         for sync_worker in self._sync_workers:
             sync_worker.start()

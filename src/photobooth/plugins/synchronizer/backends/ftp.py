@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from ..config import FtpServerConfigGroup
+from ..config import FtpServerBackendConfig
 from .base import BaseBackend
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, s
 
 
 class FtpBackend(BaseBackend):
-    def __init__(self, config: FtpServerConfigGroup):
+    def __init__(self, config: FtpServerBackendConfig):
         super().__init__()
 
         self._host: str = config.host

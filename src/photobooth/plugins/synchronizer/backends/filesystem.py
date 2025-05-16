@@ -2,14 +2,14 @@ import logging
 import shutil
 from pathlib import Path
 
-from ..config import FilesystemConfigGroup
+from ..config import FilesystemBackendConfig
 from .base import BaseBackend
 
 logger = logging.getLogger(__name__)
 
 
 class FilesystemBackend(BaseBackend):
-    def __init__(self, config: FilesystemConfigGroup):
+    def __init__(self, config: FilesystemBackendConfig):
         super().__init__()
 
         self._target_dir: Path = Path(config.target_dir)

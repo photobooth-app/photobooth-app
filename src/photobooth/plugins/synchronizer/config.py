@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, SerializationInfo, field_serializer
+from typing import Literal
+
+from pydantic import BaseModel, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic_settings import SettingsConfigDict
 
 from photobooth import CONFIG_PATH
@@ -12,16 +14,13 @@ class Common(BaseConfig):
         description="Enable integration to sync media files.",
     )
 
-    share_url: str = Field(
-        default="",
-    )
-
-    media_url: str = Field(
-        default="/{filename}",
-    )
+    share_url: str = Field(default="")
+    media_url: str = Field(default="/{filename}")
 
 
-class FtpServerConfigGroup(BaseConfig):
+class FtpServerBackendConfig(BaseConfig):
+    backend_type: Literal["ftp"] = "ftp"
+
     host: str = Field(
         default="",
     )
@@ -44,33 +43,36 @@ class FtpServerConfigGroup(BaseConfig):
         return contextual_serializer_password(value, info)
 
 
-class FilesystemConfigGroup(BaseConfig):
+class FilesystemBackendConfig(BaseConfig):
+    backend_type: Literal["filesystem"] = "filesystem"
+
     target_dir: str = Field(
         default="./tmp/test123",
     )
 
 
 class Backends(BaseModel):
-    model_config = ConfigDict(title="Sync Backend Configuration")
-
     enabled: bool = Field(
-        default=True,
+        default=False,
         description="Enable synchronization on this backend",
     )
 
-    ftp_server: FtpServerConfigGroup = FtpServerConfigGroup()
-    filesystem: FilesystemConfigGroup = FilesystemConfigGroup()
+    description: str = Field(default="backend default name")
+
+    backend_config: FtpServerBackendConfig | FilesystemBackendConfig = Field(discriminator="backend_type")
 
 
 class SynchronizerConfig(BaseConfig):
     model_config = SettingsConfigDict(
         title="Share FTP Plugin Config",
-        json_file=f"{CONFIG_PATH}plugin_shareftp.json",
+        json_file=f"{CONFIG_PATH}plugin_synchronizer.json",
         env_prefix="shareftp-",
     )
 
     common: Common = Common()
-    backends: list[Backends] = [Backends()]
+    backends: list[Backends] = [
+        Backends(enabled=True, description="demo tmp sync", backend_config=FilesystemBackendConfig(target_dir="./tmp/test123"))
+    ]
 
-    ftp_server: FtpServerConfigGroup = FtpServerConfigGroup()
-    filesystem: FilesystemConfigGroup = FilesystemConfigGroup()
+    # ftp_server: FtpServerConfigGroup = FtpServerConfigGroup()
+    # filesystem: FilesystemConfigGroup = FilesystemConfigGroup()
