@@ -77,7 +77,7 @@ def pyvips_scale(gif_bytes, tmp_path):
     lgr.propagate = True
 
     out = pyvips.Image.thumbnail_buffer(gif_bytes, 500, option_string="n=-1")  # type: ignore
-    bytes = out.gifsave_buffer()
+    bytes = out.gifsave_buffer()  # type: ignore
 
     return bytes
 
