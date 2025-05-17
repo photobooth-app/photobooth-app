@@ -60,8 +60,10 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         for sync_worker in self._sync_workers:
             sync_worker.put_to_queue(tasks)
 
+    @hookimpl
     def stats(self):
         print("here we can emit stats for the admin dashboard, maybe?")
+        return {"remaining_sync": "9", "test123": "value123"}
 
     @hookimpl
     def get_share_link(self, identifier: UUID, filename: str):

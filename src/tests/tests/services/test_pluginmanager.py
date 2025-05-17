@@ -17,3 +17,8 @@ def pluginmanager_service():
 
 def test_list_plugins(pluginmanager_service: PluginManagerService):
     assert pluginmanager_service.list_plugins()
+
+
+def test_get_plugin_stats(pluginmanager_service: PluginManagerService):
+    logger.warning(pluginmanager_service.get_plugins_stats())
+    assert False

@@ -30,6 +30,9 @@ class PluginManagementSpec:
     @hookspec
     def stop(self) -> None: ...
 
+    @hookspec
+    def stats(self) -> dict[str, str]: ...
+
 
 class PluginStatemachineSpec:
     @hookspec

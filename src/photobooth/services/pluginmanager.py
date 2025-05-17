@@ -53,6 +53,19 @@ class PluginManagerService(BaseService):
 
         return plugins
 
+    def get_plugins_stats(self):
+        # Safe and semi-documented way to get plugin -> result
+        results = {}
+
+        # Use the `get_hookimpls()` public API
+        for impl in self.pm.hook.stats.get_hookimpls():
+            plugin = impl.plugin
+            plugin_name = self.pm.get_name(plugin)
+            result = impl.function()  # manually call with args
+            results[plugin_name] = result
+
+        return results
+
     @staticmethod
     def is_configurable_plugin(plugin: BasePlugin[BaseConfig]) -> bool:
         try:
