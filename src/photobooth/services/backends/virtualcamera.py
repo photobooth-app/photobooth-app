@@ -117,9 +117,8 @@ class VirtualCameraBackend(AbstractBackend):
         """for other threads to receive a lores JPEG image"""
 
         with self._lores_data.condition:
-            ret = self._lores_data.condition.wait(timeout=0.5)
-            assert ret is True
-            # TimeoutError("timeout receiving frames") #TODO: this may fail when the backend restarts but still an image is waited for!?
+            if not self._lores_data.condition.wait(timeout=0.5):
+                raise TimeoutError("timeout receiving frames")
 
             return self._lores_data.data
 
