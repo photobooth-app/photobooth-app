@@ -1,5 +1,4 @@
 import logging
-import threading
 from itertools import count
 from pathlib import Path
 from queue import Empty
@@ -10,7 +9,6 @@ from .models import SyncTaskDelete, SyncTaskUpload
 from .types import priorityQueueSyncType, priorityTaskSyncType
 
 logger = logging.getLogger(__name__)
-lock = threading.Lock()
 counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
 
 
