@@ -145,7 +145,6 @@ class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
-        logger.debug(f"{self.__class__.__name__} start called")
 
         # reset the request for this backend to deliver lores frames
         self._device_enable_lores_flag = False
@@ -155,7 +154,6 @@ class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-        logger.debug(f"{self.__class__.__name__} stop called")
 
         self.stop_recording()
 
