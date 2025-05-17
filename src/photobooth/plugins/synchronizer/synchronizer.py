@@ -22,18 +22,14 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config: SynchronizerConfig = SynchronizerConfig()
-        self._local_root_dir: Path = Path("./media/")
-
-        # self._queue: priorityQueueSyncType = priorityQueueSyncType()
+        # self._local_root_dir: Path = Path("./media/")
 
         self._sync_workers: list[SyncWorker] = []
 
     @hookimpl
     def start(self):
-        """To start the resilient service"""
-
         if not self._config.common.enabled:
-            logger.info("Share FTP is disabled")
+            logger.info("Synchronizer Plugin is disabled")
             return
 
         # consumes the queue and uploads/deletes/modifies remote filesystem according to the queue.
@@ -67,6 +63,10 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
     @hookimpl
     def get_share_link(self, identifier: UUID, filename: str):
+        if not self._config.common.enable_share_link:
+            print("share link for qr code disabled")
+            return
+
         logger.info(f"GETTING SHARE LINK {identifier} {filename}")
 
         download_portal_url = f"{self._config.common.share_url.rstrip('/')}/#/?url="
