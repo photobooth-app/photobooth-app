@@ -36,9 +36,6 @@ class FtpBackend(BaseBackend):
 
         self._ftp: FTP_TLS | None = None
 
-        # None in queue can be used on shutdown to reduce waiting for timeout
-        # self._queue: Queue[SyncTaskUpload | SyncTaskDelete | None] = Queue()
-
     def connect(self):
         ret = []
 
@@ -58,7 +55,6 @@ class FtpBackend(BaseBackend):
             # we still use FTP_TLS as client, so to use non-ssl/tls set secure=False and we don't need to distinguish between them
             ret.append(self._ftp.login(self._username, self._password, secure=False))
 
-        # ret.append(self._ftp.cwd(self._root_dir))
         ret.append(self._ftp.cwd("/"))
 
         logger.info("FTP-Server Msg: " + "; ".join(ret))
@@ -70,8 +66,8 @@ class FtpBackend(BaseBackend):
                 self._ftp = None
                 logger.debug("FTP-Server Msg: " + ret)
             except all_errors as exc:
-                print(exc)
-                print("error disconn, but we just ignore this because on disc. failing quit means its disconnected from client perspective")
+                # error during disconnecting is not reraised because that means probably we are disconnected...
+                logger.error(f"error disconnting: {exc}")
 
     def get_folder_list(self, remote_path: Path):
         folder_list = get_folder_list_cached(self._ftp, remote_path)

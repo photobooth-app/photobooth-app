@@ -50,9 +50,11 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
     def stop(self):
         """To stop the resilient service"""
 
+        # stop first, so following None (stop-NOW indicator) will be effective
         for sync_worker in self._sync_workers:
-            self._put_to_workers_queues((0, next(counter), None))  # lowest (==highest) priority for None to stop processing.
             sync_worker.stop()
+
+        self._put_to_workers_queues((0, next(counter), None))  # lowest (==highest) priority for None to stop processing.
 
     def _put_to_workers_queues(self, tasks: priorityTaskSyncType):
         for sync_worker in self._sync_workers:
