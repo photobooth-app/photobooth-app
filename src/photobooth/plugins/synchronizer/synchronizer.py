@@ -8,6 +8,7 @@ from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .backends.filesystem import FilesystemBackend
 from .backends.ftp import FtpBackend
+from .backends.nextcloud import NextcloudBackend
 from .config import SynchronizerConfig
 from .models import SyncTaskDelete, SyncTaskUpload
 from .types import priorityTaskSyncType
@@ -41,6 +42,8 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
                 self._sync_workers.append(SyncWorker(FilesystemBackend(backendConfig.backend_config)))
             elif backendConfig.backend_config.backend_type == "ftp":
                 self._sync_workers.append(SyncWorker(FtpBackend(backendConfig.backend_config)))
+            elif backendConfig.backend_config.backend_type == "nextcloud":
+                self._sync_workers.append(SyncWorker(NextcloudBackend(backendConfig.backend_config)))
             # else not gonna happen because typed literals...
 
         for sync_worker in self._sync_workers:

@@ -40,6 +40,14 @@ class FilesystemBackendConfig(BaseConfig):
 
     target_dir: str = Field(default="")
 
+class NextcloudBackendConfig(BaseConfig):
+    model_config = SettingsConfigDict(title="NextCloud")
+
+    backend_type: Literal["nextcloud"] = "nextcloud"
+
+    url: str = Field(default="")
+    username: str = Field(default="")
+    password: SecretStr = Field(default=SecretStr(""))
 
 class Backend(BaseModel):
     enabled: bool = Field(default=False, description="Enable synchronization on this backend")
