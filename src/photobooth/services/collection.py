@@ -70,7 +70,11 @@ class Database:
 
     def list_items(self, offset: int = 0, limit: int = 500) -> list[Mediaitem]:
         with Session(engine) as session:
-            galleryitems = list(session.scalars(select(Mediaitem).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)).all())
+            galleryitems = list(
+                session.scalars(
+                    select(Mediaitem).where(Mediaitem.show_in_gallery).order_by(Mediaitem.created_at.desc()).offset(offset).limit(limit)
+                ).all()
+            )
 
             return galleryitems
 
