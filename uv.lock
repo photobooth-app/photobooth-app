@@ -866,7 +866,7 @@ name = "linuxpy"
 version = "0.21.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' and sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/36/86/42feb1cceab4a5245df00fbd9620fda14f2c281f7ab60d954918a37677bc/linuxpy-0.21.0.tar.gz", hash = "sha256:d774d6c9333516fc803cd510e28df24d01e1edecf1cac54c88497e78b0e41c6a", size = 448261 }
 wheels = [
@@ -1156,6 +1156,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pydot" },
     { name = "pyftpdlib" },
+    { name = "pyopenssl" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1208,6 +1209,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pydot" },
     { name = "pyftpdlib" },
+    { name = "pyopenssl" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1586,6 +1588,19 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pyopenssl"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/8c/cd89ad05804f8e3c17dea8f178c3f40eeab5694c30e0c9f5bcd49f576fc3/pyopenssl-25.1.0.tar.gz", hash = "sha256:8d031884482e0c67ee92bf9a4d8cceb08d92aba7136432ffb0703c5280fc205b", size = 179937 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/28/2659c02301b9500751f8d42f9a6632e1508aa5120de5e43042b8b30f8d5d/pyopenssl-25.1.0-py3-none-any.whl", hash = "sha256:2b11f239acc47ac2e5aca04fd7fa829800aeee22a2eb30d744572a157bd8a1ab", size = 56771 },
 ]
 
 [[package]]

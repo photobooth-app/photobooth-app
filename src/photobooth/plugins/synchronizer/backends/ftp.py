@@ -1,6 +1,5 @@
 import logging
-import threading
-from ftplib import FTP_TLS, all_errors, error_perm
+from ftplib import FTP_TLS
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -9,17 +8,13 @@ from ..config import FtpServerBackendConfig
 from .base import BaseBackend
 
 logger = logging.getLogger(__name__)
-lock = threading.Lock()
 
 
 @lru_cache(maxsize=16)
 def get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, str]]:
     # print(folder)
     # out = {x[0]: int(x[1].get("size", 0)) for x in _ftp.mlsd(str(folder), ["size","type"])}
-    try:
-        out = {entry[0]: entry[1] for entry in _ftp.mlsd(str(folder), ["size", "type"])}
-    except error_perm as exc:
-        raise RuntimeError(f"FTP server does not support listing directory content, error: {exc}") from exc
+    out = {entry[0]: entry[1] for entry in _ftp.mlsd(str(folder), ["size", "type"])}
 
     return out
 
@@ -65,9 +60,21 @@ class FtpBackend(BaseBackend):
                 ret = self._ftp.quit()
                 self._ftp = None
                 logger.debug("FTP-Server Msg: " + ret)
-            except all_errors as exc:
+            except Exception as exc:
                 # error during disconnecting is not reraised because that means probably we are disconnected...
                 logger.error(f"error disconnting: {exc}")
+
+    def is_connected(self) -> bool:
+        if not self._ftp:
+            return False
+
+        try:
+            # Send a NOOP command to check connection
+            self._ftp.voidcmd("NOOP")
+            return True
+        except Exception as e:
+            print(f"FTP connection check failed: {e}")
+            return False
 
     def get_folder_list(self, remote_path: Path):
         folder_list = get_folder_list_cached(self._ftp, remote_path)
@@ -113,19 +120,15 @@ class FtpBackend(BaseBackend):
     def do_upload(self, local_path: Path, remote_path: Path):
         assert self._ftp
 
-        # print(local_path)
-        # print(remote_path)
-
-        with lock:  # two clients *could* operate on the same folder in theory.
-            if not self.get_remote_istype(remote_path.parent, "dir"):
-                logger.debug(f"creating remote folder: {remote_path}")
-                try:
-                    self._ftp.mkd(str(remote_path.parent))
-                except Exception as exc:
-                    logger.error(f"error creating folder {remote_path}: {exc}")
-                    raise exc
-                else:
-                    get_folder_list_cached.cache_clear()
+        if not self.get_remote_istype(remote_path.parent, "dir"):
+            logger.debug(f"creating remote folder: {remote_path}")
+            try:
+                self._ftp.mkd(str(remote_path.parent))
+            except Exception as exc:
+                logger.error(f"error creating folder {remote_path}: {exc}")
+                raise exc
+            else:
+                get_folder_list_cached.cache_clear()
 
         with open(local_path, "rb") as f:
             self._ftp.storbinary(f"STOR {remote_path}", f)

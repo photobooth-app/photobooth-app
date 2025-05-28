@@ -1,6 +1,7 @@
+from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr, SerializationInfo, field_serializer
+from pydantic import BaseModel, DirectoryPath, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic_settings import SettingsConfigDict
 
 from photobooth import CONFIG_PATH
@@ -38,7 +39,7 @@ class FilesystemBackendConfig(BaseConfig):
 
     backend_type: Literal["filesystem"] = "filesystem"
 
-    target_dir: str = Field(default="")
+    target_dir: DirectoryPath | None = Field(default=None)
 
 
 class Backend(BaseModel):
@@ -57,4 +58,4 @@ class SynchronizerConfig(BaseConfig):
     )
 
     common: Common = Common()
-    backends: list[Backend] = [Backend(enabled=True, description="demo tmp sync", backend_config=FilesystemBackendConfig(target_dir="./tmp/test123"))]
+    backends: list[Backend] = [Backend(enabled=True, description="demo tmp sync", backend_config=FilesystemBackendConfig(target_dir=Path("./tmp")))]

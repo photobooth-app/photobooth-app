@@ -140,6 +140,7 @@ dev = [
   "pre-commit",
   "pyright",
   "pyftpdlib",
+  "PyOpenSSL",         # for pyftplib to support FTPS during tests
 ]
 benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "pyvips"]
 

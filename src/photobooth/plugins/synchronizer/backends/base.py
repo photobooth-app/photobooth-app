@@ -3,12 +3,12 @@ from pathlib import Path
 
 
 class BaseBackend(ABC):
-    pass
-
     @abstractmethod
     def connect(self): ...
     @abstractmethod
     def disconnect(self): ...
+    @abstractmethod
+    def is_connected(self) -> bool: ...
 
     @abstractmethod
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool: ...
