@@ -1,7 +1,13 @@
 {
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["--basetemp=./tests_tmp/", "-v", "./"],
+  "python.testing.pytestArgs": [
+    "--basetemp=./tests_tmp/",
+    "-v",
+    "--cov",
+    "--cov-report=xml:coverage.xml",
+    "./"
+  ],
   "[python]": {
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
