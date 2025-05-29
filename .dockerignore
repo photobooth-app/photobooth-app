@@ -1,0 +1,11 @@
+# ignore user folders
+/config
+/cache
+/data
+/database
+/media
+/log
+/userdata
+/tmp
+/recycle
+/plugins
