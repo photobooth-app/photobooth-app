@@ -1,12 +1,13 @@
 import logging
 from pathlib import Path
 
-import nc_py_api
+from nc_py_api import Nextcloud
 
 from ..config import NextcloudBackendConfig
 from .base import BaseBackend
 
 logger = logging.getLogger(__name__)
+
 
 class NextcloudBackend(BaseBackend):
     def __init__(self, config: NextcloudBackendConfig):
@@ -18,33 +19,50 @@ class NextcloudBackend(BaseBackend):
 
         self._target_dir: Path = Path(config.target_dir)
 
-    def connect(self):
-        ret = []
+        self.nc: Nextcloud | None = None
 
+    def connect(self):
         if not self._url:
             raise ValueError("no host given!")
 
         # create Nextcloud client instance class
-        self.nc = nc_py_api.Nextcloud(nextcloud_url=self._url, nc_auth_user=self._username, nc_auth_pass=self._password)
+        self.nc = Nextcloud(nextcloud_url=self._url, nc_auth_user=self._username, nc_auth_pass=self._password)
 
-        logger.info("Nextcloud: " + str(self.nc.srv_version))
+        logger.info(f"Nextcloud server connected: v{self.nc.srv_version}")
 
     def disconnect(self):
-        raise NotImplementedError
+        # Nexcloud client seems to be stateless(?), so no disconnect needed.
+        pass
+
+    def is_connected(self) -> bool:
+        if not self.nc:
+            return False
+
+        try:
+            self.nc.update_server_info()
+            # self.nc.user_status.get_current()
+        except Exception:
+            return False
+        else:
+            return True
 
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
         raise NotImplementedError
 
     def do_upload(self, local_path: Path, remote_path: Path):
+        assert self.nc
+
         full_path = self._target_dir.joinpath(remote_path)
         # Ensure directory exists
         self.nc.files.makedirs(str(full_path.parent), True)
-        # Do upload
-        res = self.nc.files.upload_stream(str(full_path), local_path)
-        logger.info("Uploaded: " + res.full_path)
 
+        # Do upload
+        self.nc.files.upload_stream(str(full_path), local_path)
+        logger.info(f"Uploaded {local_path} to remote {full_path}")
 
     def do_delete_remote(self, remote_path: Path):
+        assert self.nc
+
         full_path = self._target_dir.joinpath(remote_path)
         self.nc.files.delete(str(full_path))
-        logger.info("Deleted: " + str(full_path))
+        logger.info(f"Deleted {full_path} from remote")
