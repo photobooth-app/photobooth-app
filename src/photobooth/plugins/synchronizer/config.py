@@ -54,7 +54,7 @@ class Backend(BaseModel):
 
     description: str = Field(default="backend default name")
 
-    backend_config: FtpServerBackendConfig | FilesystemBackendConfig = Field(discriminator="backend_type")
+    backend_config: FtpServerBackendConfig | FilesystemBackendConfig | NextcloudBackendConfig = Field(discriminator="backend_type")
 
 
 class SynchronizerConfig(BaseConfig):
