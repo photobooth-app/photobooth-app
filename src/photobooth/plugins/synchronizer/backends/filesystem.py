@@ -38,28 +38,33 @@ class FilesystemBackend(BaseBackend):
 
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
         assert self._target_dir
+
         try:
-            return local_path.samefile(self._target_dir.joinpath(remote_path))
-        except Exception as exc:
-            print(exc)
+            stat_local = local_path.stat()
+            stat_remote = self._target_dir.joinpath(remote_path).stat()
+
+        except Exception:
             return False
+        else:
+            # compare modified time (int) and size which should work on all platforms to detect equality
+            return stat_local.st_size == stat_remote.st_size and int(stat_local.st_mtime) == int(stat_remote.st_mtime)
 
     def do_upload(self, local_path: Path, remote_path: Path):
         assert self._target_dir
 
-        if not self._target_dir.joinpath(remote_path).parent.is_dir():
-            print("target dir not existing, creating")
-            self._target_dir.joinpath(remote_path).parent.mkdir(parents=True, exist_ok=True)
+        remote_path_joined_target = self._target_dir.joinpath(remote_path)
+        remote_path_parent_folder_joined_target = remote_path_joined_target.parent
 
-        if self.get_remote_samefile(local_path, remote_path):
-            print("samefile, no copy")
-            return
+        if not remote_path_parent_folder_joined_target.is_dir():
+            logger.info(f"creating target (sub)dir {remote_path_parent_folder_joined_target} before copying file")
+            remote_path_parent_folder_joined_target.mkdir(parents=True, exist_ok=True)
 
-        print("copy file")
-        shutil.copy2(local_path, self._target_dir.joinpath(remote_path))
+        logger.info(f"copy file {local_path} to {remote_path_joined_target}")
+        shutil.copy2(local_path, remote_path_joined_target)
 
     def do_delete_remote(self, remote_path: Path):
         assert self._target_dir
 
-        print("delete file")
+        logger.info(f"deleting file {remote_path} from remote")
+
         self._target_dir.joinpath(remote_path).unlink(missing_ok=True)
