@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-import nextcloud_client
+import nc_py_api
 
 from ..config import NextcloudBackendConfig
 from .base import BaseBackend
@@ -16,15 +16,18 @@ class NextcloudBackend(BaseBackend):
         self._username: str = config.username
         self._password: str = config.password.get_secret_value()
 
+        self._target_dir: Path = Path(config.target_dir)
+
     def connect(self):
         ret = []
 
         if not self._url:
             raise ValueError("no host given!")
 
-        self.nc = nextcloud_client.Client(self._url)
+        # create Nextcloud client instance class
+        self.nc = nc_py_api.Nextcloud(nextcloud_url=self._url, nc_auth_user=self._username, nc_auth_pass=self._password)
 
-        self.nc.login(self._username, self._password)
+        logger.info("Nextcloud: " + str(self.nc.srv_version))
 
     def disconnect(self):
         raise NotImplementedError
@@ -33,7 +36,15 @@ class NextcloudBackend(BaseBackend):
         raise NotImplementedError
 
     def do_upload(self, local_path: Path, remote_path: Path):
-        self.nc.put_file(remote_path, local_path)
+        full_path = self._target_dir.joinpath(remote_path)
+        # Ensure directory exists
+        self.nc.files.makedirs(str(full_path.parent), True)
+        # Do upload
+        res = self.nc.files.upload_stream(str(full_path), local_path)
+        logger.info("Uploaded: " + res.full_path)
+
 
     def do_delete_remote(self, remote_path: Path):
-        self.nc.drop_file(str(remote_path))
+        full_path = self._target_dir.joinpath(remote_path)
+        self.nc.files.delete(str(full_path))
+        logger.info("Deleted: " + str(full_path))

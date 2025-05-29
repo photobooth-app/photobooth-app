@@ -49,6 +49,10 @@ class NextcloudBackendConfig(BaseConfig):
     username: str = Field(default="")
     password: SecretStr = Field(default=SecretStr(""))
 
+    # Remote directory
+    target_dir: str = Field(default="")
+
+
 class Backend(BaseModel):
     enabled: bool = Field(default=False, description="Enable synchronization on this backend")
 
