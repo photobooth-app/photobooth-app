@@ -41,13 +41,25 @@ class FilesystemBackendConfig(BaseConfig):
 
     target_dir: DirectoryPath | None = Field(default=None)
 
+class NextcloudBackendConfig(BaseConfig):
+    model_config = SettingsConfigDict(title="NextCloud")
+
+    backend_type: Literal["nextcloud"] = "nextcloud"
+
+    url: str = Field(default="")
+    username: str = Field(default="")
+    password: SecretStr = Field(default=SecretStr(""))
+
+    # Remote directory
+    target_dir: str = Field(default="")
+
 
 class Backend(BaseModel):
     enabled: bool = Field(default=False, description="Enable synchronization on this backend")
 
     description: str = Field(default="backend default name")
 
-    backend_config: FtpServerBackendConfig | FilesystemBackendConfig = Field(discriminator="backend_type")
+    backend_config: FtpServerBackendConfig | FilesystemBackendConfig | NextcloudBackendConfig = Field(discriminator="backend_type")
 
 
 class SynchronizerConfig(BaseConfig):
