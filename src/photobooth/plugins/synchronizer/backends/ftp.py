@@ -83,57 +83,56 @@ class FtpBackend(BaseBackend):
     def get_remote_istype(self, filepath: Path, type: Literal["dir", "cdir", "pdir", "file"]) -> bool:
         assert self._ftp
 
-        ftype = None
-
         folder_list = self.get_folder_list(filepath.parent)
 
         # if file is not found in the list, return None which means the file probably needs to be uploaded.
-        facts = folder_list.get(filepath.name, None)
-
-        if facts:
-            ftype = facts.get("type", None)
+        try:
+            ftype = folder_list[filepath.name]["type"]  # raise KeyError if name not in list
+        except Exception:
+            ftype = None
 
         return ftype == type
-
-    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
-        raise NotImplementedError
 
     def get_remote_filesize(self, filepath: Path) -> int | None:
         assert self._ftp
 
-        size = None
-        out = None
-
         folder_list = self.get_folder_list(filepath.parent)
 
         # if file is not found in the list, return None which means the file probably needs to be uploaded.
-        facts = folder_list.get(filepath.name, None)
+        try:
+            size = int(folder_list[filepath.name]["size"])  # raise KeyError if name/type not in list
+        except Exception:
+            size = None
 
-        if facts:
-            size = facts.get("size", None)
+        return size
 
-        if size:
-            out = int(size)
+    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
+        assert self._ftp
 
-        return out
+        try:
+            size_local = local_path.stat().st_size
+            size_remote = self.get_remote_filesize(remote_path)
+        except Exception:
+            return False
+        else:
+            # compare size which should work on all platforms to detect equality
+            return size_local == size_remote
 
     def do_upload(self, local_path: Path, remote_path: Path):
         assert self._ftp
 
         if not self.get_remote_istype(remote_path.parent, "dir"):
             logger.debug(f"creating remote folder: {remote_path}")
-            try:
-                self._ftp.mkd(str(remote_path.parent))
-            except Exception as exc:
-                logger.error(f"error creating folder {remote_path}: {exc}")
-                raise exc
-            else:
-                get_folder_list_cached.cache_clear()
+            self._ftp.mkd(str(remote_path.parent))
+
+        get_folder_list_cached.cache_clear()
 
         with open(local_path, "rb") as f:
             self._ftp.storbinary(f"STOR {remote_path}", f)
 
     def do_delete_remote(self, remote_path: Path):
         assert self._ftp
+
+        get_folder_list_cached.cache_clear()
 
         self._ftp.delete(str(remote_path))

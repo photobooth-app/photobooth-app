@@ -116,8 +116,15 @@ def test_upload_compare(ftp_server, ftp_backend: FtpBackend):
     assert Path(server_home_dir, "subdir1/input_lores_uploaded.jpg").is_file()
 
     # step2:  compare
-    # not yet supported by this backend!
-    # assert ftp_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+    assert ftp_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+
+
+def test_compare_exceptions(ftp_server, ftp_backend: FtpBackend):
+    ftp_backend.connect()
+    assert ftp_backend.is_connected()
+
+    assert ftp_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("input_lores_nonexistent.jpg")) is False
+    assert ftp_backend.get_remote_samefile(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
 
 
 def test_upload_delete(ftp_server, ftp_backend: FtpBackend):
