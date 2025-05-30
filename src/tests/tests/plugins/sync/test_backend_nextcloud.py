@@ -3,6 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import requests
 from nc_py_api import NextcloudException
 from pydantic import SecretStr
 
@@ -10,12 +11,21 @@ from photobooth.plugins.synchronizer.backends.nextcloud import NextcloudBackend,
 
 logger = logging.getLogger(name=None)
 
+TEST_URL = "http://127.0.0.1:8083"
+
+
+try:
+    r = requests.get(TEST_URL, allow_redirects=False)
+    r.raise_for_status()
+except Exception:
+    pytest.skip("no nextcloud service found, skipping tests", allow_module_level=True)
+
 
 @pytest.fixture()
 def nextcloud_backend():
     nextcloud_backend = NextcloudBackend(
         NextcloudBackendConfig(
-            url="http://127.0.0.1:8083",
+            url=TEST_URL,
             username="testuser",
             password=SecretStr("testpass"),
             target_dir=str(uuid4()),
@@ -48,6 +58,7 @@ def test_connect_disconnect(nextcloud_backend: NextcloudBackend):
 def test_upload_compare(nextcloud_backend: NextcloudBackend):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
+    assert nextcloud_backend.nc
 
     with pytest.raises(NextcloudException):
         nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir1/input_lores_uploaded.jpg")))
@@ -71,12 +82,13 @@ def test_compare_exceptions(nextcloud_backend: NextcloudBackend):
 def test_upload_delete(nextcloud_backend: NextcloudBackend):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
-    # server_home_dir = ftp_server.handler.authorizer.get_home_dir("testuser")
+    assert nextcloud_backend.nc
 
     # step1: upload
-    nextcloud_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
-    # assert Path(server_home_dir, "subdir1/input_lores_uploaded.jpg").is_file()
+    nextcloud_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir2/input_lores_uploaded.jpg"))
+    assert nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir1/input_lores_uploaded.jpg"))) is not None
 
     # step2:  delete
-    nextcloud_backend.do_delete_remote(Path("subdir1/input_lores_uploaded.jpg"))
-    # assert Path(server_home_dir, "subdir1/input_lores_uploaded.jpg").is_file() is False
+    nextcloud_backend.do_delete_remote(Path("subdir2/input_lores_uploaded.jpg"))
+    with pytest.raises(NextcloudException):
+        nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir2/input_lores_uploaded.jpg")))
