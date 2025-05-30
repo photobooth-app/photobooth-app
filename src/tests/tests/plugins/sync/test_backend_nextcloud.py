@@ -86,7 +86,7 @@ def test_upload_delete(nextcloud_backend: NextcloudBackend):
 
     # step1: upload
     nextcloud_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir2/input_lores_uploaded.jpg"))
-    assert nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir1/input_lores_uploaded.jpg"))) is not None
+    assert nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir2/input_lores_uploaded.jpg"))) is not None
 
     # step2:  delete
     nextcloud_backend.do_delete_remote(Path("subdir2/input_lores_uploaded.jpg"))
