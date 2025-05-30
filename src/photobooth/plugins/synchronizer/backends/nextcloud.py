@@ -47,7 +47,16 @@ class NextcloudBackend(BaseBackend):
             return True
 
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
-        raise NotImplementedError
+        assert self.nc
+
+        try:
+            local_size = local_path.stat().st_size
+            remote_size = self.nc.files.by_path(str(self._target_dir.joinpath(remote_path))).info.size  # type: ignore
+        except Exception:
+            return False
+        else:
+            # compare size which should work on all platforms to detect equality
+            return local_size == remote_size
 
     def do_upload(self, local_path: Path, remote_path: Path):
         assert self.nc
