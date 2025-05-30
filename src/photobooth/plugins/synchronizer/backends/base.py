@@ -20,3 +20,6 @@ class BaseBackend(ABC):
 
     # @abstractmethod
     # def get_share_link(self, remote_path: Path): ...
+
+    def __str__(self):
+        return f"{self.__class__.__name__}"
