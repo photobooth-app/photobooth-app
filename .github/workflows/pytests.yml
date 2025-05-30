@@ -22,6 +22,22 @@ jobs:
       fail-fast: true
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    
+    services:
+      nextcloud:
+        image: nextcloud
+        ports:
+          - 8083:80
+        env:
+          SQLITE_DATABASE: db.sqlite
+          NEXTCLOUD_ADMIN_USER: testuser
+          NEXTCLOUD_ADMIN_PASSWORD: testpass
+        options: >-
+          --health-cmd="curl -f http://localhost || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
