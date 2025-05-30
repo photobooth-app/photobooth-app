@@ -5,6 +5,7 @@
     "--basetemp=./tests_tmp/",
     "-v",
     "--cov",
+    "--cov-append",
     "--cov-report=xml:coverage.xml",
     "./"
   ],
