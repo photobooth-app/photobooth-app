@@ -66,7 +66,7 @@ class SyncWorker(ResilientService):
                 if not self._idle_mode:
                     self._idle_since_seconds += queue_timeout
                     if self._idle_since_seconds >= idle_mode_timeout:
-                        logger.debug(f"No files to sync since {idle_mode_timeout}s, disconnecting from server, waiting in idle mode")
+                        logger.debug(f"No files to sync since {idle_mode_timeout}s, disconnecting from {self._sync_backend}, waiting in idle mode")
                         self._idle_mode = True
                         self._sync_backend.disconnect()
 
@@ -80,7 +80,7 @@ class SyncWorker(ResilientService):
                     break
 
                 if self._idle_mode:
-                    logger.debug("Resume from idle mode, connecting to server")
+                    logger.debug(f"Resume from idle mode, connecting to server {self._sync_backend}")
                     self._sync_backend.connect()
                     self._idle_mode = False
 
