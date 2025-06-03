@@ -88,7 +88,7 @@ def dslr_gphoto2() -> list[int]:
         logger.info("no camera detected")
         return []
 
-    for index, (name, addr) in enumerate(camera_list):
+    for index, (name, addr) in enumerate(camera_list.items()):
         available_indexes.append(index)
         logger.info(f"found camera - {index}:  {addr}  {name}")
 
