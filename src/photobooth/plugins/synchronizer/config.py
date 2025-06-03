@@ -60,23 +60,6 @@ class ShareConfig(BaseModel):
     downloadportal_url: str = Field(default="")
 
 
-# class FtpShareConfig(BaseShareConfig):
-#     ...
-#     # media_url: str = Field(default="/{filename}")
-#     # autoupdate_download_portal: bool = Field(default=True)
-
-
-# class FilesystemShareConfig(BaseShareConfig):
-#     ...
-#     # media_urlTODOFORFILESYSTEM: str = Field(default="/{filename}")
-
-
-# class NextcloudShareConfig(BaseShareConfig):
-#     ...
-#     # share_url: str = Field(default="")
-#     # media_url: str = Field(default="/{filename}")
-
-
 class BaseBackendConfig(BaseModel): ...
 
 

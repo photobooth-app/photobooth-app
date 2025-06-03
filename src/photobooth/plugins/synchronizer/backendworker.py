@@ -131,8 +131,5 @@ class BackendWorker(ResilientService):
 
         return out
 
-        # mediaitem_url = mediaitem_url.replace("{filename}", filename)
-        # mediaitem_url = mediaitem_url.replace("{identifier}", str(identifier))
-
     def get_remote_mediaitem_link(self, filepath_local: Path) -> str | None:
         return self._connector.mediaitem_link(get_remote_filepath(filepath_local))
