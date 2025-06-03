@@ -4,7 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from photobooth.plugins.synchronizer.config import Backend, Common, FilesystemBackendConfig, SynchronizerConfig
+from photobooth.plugins.synchronizer.config import (
+    Backend,
+    Common,
+    FilesystemBackendConfig,
+    FilesystemConnectorConfig,
+    ShareConfig,
+    SynchronizerConfig,
+)
 from photobooth.plugins.synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(name=None)
@@ -23,7 +30,8 @@ def synchronizer_plugin(tmp_path: Path):
             Backend(
                 enabled=True,
                 backend_config=FilesystemBackendConfig(
-                    target_dir=tmp_path,
+                    connector=FilesystemConnectorConfig(target_dir=tmp_path),
+                    share=ShareConfig(),
                 ),
             ),
         ],

@@ -187,8 +187,8 @@ class QrShareService(BaseService):
                     logger.debug("stop workerthread requested")
                     break
 
-            logger.info("request timed out, error occured or shutdown requested")
             if not self._worker_thread.stopped():
+                # usually dl.php finishes after several minutes and the client needs to reconnect again.
                 logger.info("restarting loop wait 1 second")
                 time.sleep(1)
 

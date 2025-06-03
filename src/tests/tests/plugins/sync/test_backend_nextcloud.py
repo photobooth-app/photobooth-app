@@ -7,7 +7,7 @@ import requests
 from nc_py_api import NextcloudException
 from pydantic import SecretStr
 
-from photobooth.plugins.synchronizer.backends.nextcloud import NextcloudBackend, NextcloudBackendConfig
+from photobooth.plugins.synchronizer.connectors.nextcloud import NextcloudConnector, NextcloudConnectorConfig
 
 logger = logging.getLogger(name=None)
 
@@ -23,8 +23,8 @@ except Exception:
 
 @pytest.fixture()
 def nextcloud_backend():
-    nextcloud_backend = NextcloudBackend(
-        NextcloudBackendConfig(
+    nextcloud_backend = NextcloudConnector(
+        NextcloudConnectorConfig(
             url=TEST_URL,
             username="testuser",
             password=SecretStr("testpass"),
@@ -39,7 +39,7 @@ def nextcloud_backend():
         nextcloud_backend.disconnect()
 
 
-def test_connect_check_no_empty_host(nextcloud_backend: NextcloudBackend):
+def test_connect_check_no_empty_host(nextcloud_backend: NextcloudConnector):
     nextcloud_backend._url = ""
     with pytest.raises(ValueError):
         nextcloud_backend.connect()
@@ -47,7 +47,7 @@ def test_connect_check_no_empty_host(nextcloud_backend: NextcloudBackend):
     assert nextcloud_backend.is_connected() is False
 
 
-def test_connect_disconnect(nextcloud_backend: NextcloudBackend):
+def test_connect_disconnect(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
     nextcloud_backend.disconnect()
@@ -55,7 +55,7 @@ def test_connect_disconnect(nextcloud_backend: NextcloudBackend):
     assert nextcloud_backend.is_connected() is True
 
 
-def test_upload_compare(nextcloud_backend: NextcloudBackend):
+def test_upload_compare(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
     assert nextcloud_backend.nc
@@ -71,7 +71,7 @@ def test_upload_compare(nextcloud_backend: NextcloudBackend):
     assert nextcloud_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
 
 
-def test_compare_exceptions(nextcloud_backend: NextcloudBackend):
+def test_compare_exceptions(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
 
@@ -79,7 +79,7 @@ def test_compare_exceptions(nextcloud_backend: NextcloudBackend):
     assert nextcloud_backend.get_remote_samefile(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
 
 
-def test_upload_delete(nextcloud_backend: NextcloudBackend):
+def test_upload_delete(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
     assert nextcloud_backend.nc

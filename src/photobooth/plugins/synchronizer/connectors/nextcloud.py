@@ -3,14 +3,14 @@ from pathlib import Path
 
 from nc_py_api import Nextcloud
 
-from ..config import NextcloudBackendConfig
-from .base import BaseBackend
+from ..config import NextcloudConnectorConfig
+from .base import BaseConnector
 
 logger = logging.getLogger(__name__)
 
 
-class NextcloudBackend(BaseBackend):
-    def __init__(self, config: NextcloudBackendConfig):
+class NextcloudConnector(BaseConnector):
+    def __init__(self, config: NextcloudConnectorConfig):
         super().__init__()
 
         self._url: str = config.url
@@ -18,6 +18,8 @@ class NextcloudBackend(BaseBackend):
         self._password: str = config.password.get_secret_value()
 
         self._target_dir: Path = Path(config.target_dir)
+
+        self._share_id: str = config.share_id
 
         self.nc: Nextcloud | None = None
 
@@ -75,3 +77,6 @@ class NextcloudBackend(BaseBackend):
         full_path = self._target_dir.joinpath(remote_path)
         self.nc.files.delete(str(full_path))
         logger.info(f"Deleted {full_path} from remote")
+
+    def mediaitem_link(self, remote_path: Path) -> str | None:
+        return f"{self._url}/public.php/dav/files/{self._share_id}/{remote_path}"

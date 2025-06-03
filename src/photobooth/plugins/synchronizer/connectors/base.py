@@ -1,8 +1,14 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+# T = TypeVar("T", bound=BaseClientConfig)
 
-class BaseBackend(ABC):
+
+# class BaseClient(ABC,Generic[T]):
+class BaseConnector(ABC):
+    # def __init__(self):
+    #     self._config: T
+
     @abstractmethod
     def connect(self): ...
     @abstractmethod
@@ -18,8 +24,8 @@ class BaseBackend(ABC):
     @abstractmethod
     def do_delete_remote(self, remote_path: Path): ...
 
-    # @abstractmethod
-    # def get_share_link(self, remote_path: Path): ...
+    @abstractmethod
+    def mediaitem_link(self, remote_path: Path) -> str | None: ...
 
     def __str__(self):
         return f"{self.__class__.__name__}"

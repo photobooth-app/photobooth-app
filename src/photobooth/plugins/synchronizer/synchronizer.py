@@ -1,18 +1,13 @@
 import logging
 from itertools import count
 from pathlib import Path
-from urllib.parse import quote
-from uuid import UUID
 
 from .. import hookimpl
 from ..base_plugin import BasePlugin
-from .backends.filesystem import FilesystemBackend
-from .backends.ftp import FtpBackend
-from .backends.nextcloud import NextcloudBackend
+from .backendworker import BackendWorker
 from .config import SynchronizerConfig
 from .models import SyncTaskDelete, SyncTaskUpload
 from .types import priorityTaskSyncType
-from .worker import SyncWorker
 
 logger = logging.getLogger(__name__)
 counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
@@ -25,10 +20,13 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         self._config: SynchronizerConfig = SynchronizerConfig()
         # self._local_root_dir: Path = Path("./media/")
 
-        self._sync_workers: list[SyncWorker] = []
+        self._backend_workers: list[BackendWorker] = []
+        # self._sharelink_workers: list[ShareWorker] = []
 
     @hookimpl
     def start(self):
+        self.reset()
+
         if not self._config.common.enabled:
             logger.info("Synchronizer Plugin is disabled")
             return
@@ -38,49 +36,48 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             if not backendConfig.enabled:
                 continue
 
-            if backendConfig.backend_config.backend_type == "filesystem":
-                self._sync_workers.append(SyncWorker(FilesystemBackend(backendConfig.backend_config)))
-            elif backendConfig.backend_config.backend_type == "ftp":
-                self._sync_workers.append(SyncWorker(FtpBackend(backendConfig.backend_config)))
-            elif backendConfig.backend_config.backend_type == "nextcloud":
-                self._sync_workers.append(SyncWorker(NextcloudBackend(backendConfig.backend_config)))
-            # else not gonna happen because typed literals...
+            self._backend_workers.append(BackendWorker(backendConfig.backend_config))
 
-        for sync_worker in self._sync_workers:
-            sync_worker.start()
+        for backend_worker in self._backend_workers:
+            backend_worker.start()
+        # map(lambda backend_worker: backend_worker.start(), self._backend_workers)
 
     @hookimpl
     def stop(self):
         """To stop the resilient service"""
 
         # stop first, so following None (stop-NOW indicator) will be effective
-        for sync_worker in self._sync_workers:
-            sync_worker.stop()
+        for backend_worker in self._backend_workers:
+            backend_worker.stop()
+        # map(lambda backend_worker: backend_worker.stop(), self._backend_workers)
 
         self._put_to_workers_queues((0, next(counter), None))  # lowest (==highest) priority for None to stop processing.
 
+    def reset(self):
+        self._backend_workers = []
+
     def _put_to_workers_queues(self, tasks: priorityTaskSyncType):
-        for sync_worker in self._sync_workers:
+        # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
+        for sync_worker in self._backend_workers:
             sync_worker.put_to_queue(tasks)
 
     def stats(self):
         print("here we can emit stats for the admin dashboard, maybe?")
 
     @hookimpl
-    def get_share_link(self, identifier: UUID, filename: str):
-        if not self._config.common.enable_share_link:
-            print("share link for qr code disabled")
-            return
+    def get_share_links(self, filepath_local: Path) -> list[str]:
+        share_links: list[str] = []
 
-        logger.info(f"GETTING SHARE LINK {identifier} {filename}")
+        if not self._config.common.enable_share_links:
+            logger.info("share link generation is disabled globally in synchronizer plugin")
+            return []
 
-        download_portal_url = f"{self._config.common.share_url.rstrip('/')}/#/?url="
+        for worker in self._backend_workers:
+            share_link = worker.get_share_link(filepath_local)
+            if share_link:
+                share_links.append(share_link)
 
-        mediaitem_url = self._config.common.media_url
-        mediaitem_url = mediaitem_url.replace("{filename}", filename)
-        mediaitem_url = mediaitem_url.replace("{identifier}", str(identifier))
-
-        return download_portal_url + quote(mediaitem_url, safe="")
+        return share_links
 
     @hookimpl
     def collection_original_file_added(self, files: list[Path]):
@@ -125,15 +122,8 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 #         super().stop()
 
 #     def setup_resource(self):
-#         self._sync_backend.connect()
-
-#     def teardown_resource(self):
-#         self._sync_backend.disconnect()
-
-#     def run_service(self):
-#         assert self._sync_backend
-#         assert self._queue
-
+#         self._sync_backend.connect()nk(self, filepath_local: Path) -> str | None:
+#     return self._s
 #         while not self._stop_event.is_set():
 #             print("Starte Initial-datei sync...")
 

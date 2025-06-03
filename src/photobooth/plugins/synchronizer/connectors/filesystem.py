@@ -2,17 +2,19 @@ import logging
 import shutil
 from pathlib import Path
 
-from ..config import FilesystemBackendConfig
-from .base import BaseBackend
+from ..config import FilesystemConnectorConfig
+from .base import BaseConnector
 
 logger = logging.getLogger(__name__)
 
 
-class FilesystemBackend(BaseBackend):
-    def __init__(self, config: FilesystemBackendConfig):
+class FilesystemConnector(BaseConnector):
+    def __init__(self, config: FilesystemConnectorConfig):
         super().__init__()
 
         self._target_dir: Path | None = config.target_dir
+
+        self._media_url: str = config.media_url
 
     def connect(self):
         if not self._target_dir:
@@ -22,7 +24,7 @@ class FilesystemBackend(BaseBackend):
             raise ValueError(f"target_dir {self._target_dir} exists but is not a directory. The target needs to be a directory.")
 
         if not self._target_dir.exists():
-            print("target dir not existing, creating")
+            logger.info(f"target dir {self._target_dir} not existing, creating")
             self._target_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info("filesystem ready to sync")
@@ -68,3 +70,11 @@ class FilesystemBackend(BaseBackend):
         logger.info(f"deleting file {remote_path} from remote")
 
         self._target_dir.joinpath(remote_path).unlink(missing_ok=True)
+
+    def mediaitem_link(self, remote_path: Path) -> str | None:
+        if not self._media_url:
+            return None
+
+        mediaitem_url = f"{self._media_url.rstrip('/')}/{remote_path.as_posix()}"
+        # mediaitem_url = mediaitem_url.replace("{filename}", remote_path.name)
+        return mediaitem_url

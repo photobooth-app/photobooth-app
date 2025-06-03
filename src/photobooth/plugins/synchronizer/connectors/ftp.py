@@ -4,8 +4,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from ..config import FtpServerBackendConfig
-from .base import BaseBackend
+from ..config import FtpConnectorConfig
+from .base import BaseConnector
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ def get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, s
     return out
 
 
-class FtpBackend(BaseBackend):
-    def __init__(self, config: FtpServerBackendConfig):
+class FtpConnector(BaseConnector):
+    def __init__(self, config: FtpConnectorConfig):
         super().__init__()
 
         self._host: str = config.host
@@ -28,6 +28,8 @@ class FtpBackend(BaseBackend):
         self._username: str = config.username
         self._password: str = config.password.get_secret_value()
         self._secure: bool = config.secure
+
+        self._media_url: str = config.media_url
 
         self._ftp: FTP_TLS | None = None
 
@@ -73,7 +75,7 @@ class FtpBackend(BaseBackend):
             self._ftp.voidcmd("NOOP")
             return True
         except Exception as e:
-            print(f"FTP connection check failed: {e}")
+            logger.debug(f"FTP connection check failed: {e}")
             return False
 
     def get_folder_list(self, remote_path: Path):
@@ -98,7 +100,7 @@ class FtpBackend(BaseBackend):
 
         folder_list = self.get_folder_list(filepath.parent)
 
-        # if file is not found in the list, return None which means the file probably needs to be uploaded.
+        # if file is not found in the list,NextcloudBackend return None which means the file probably needs to be uploaded.
         try:
             size = int(folder_list[filepath.name]["size"])  # raise KeyError if name/type not in list
         except Exception:
@@ -130,9 +132,19 @@ class FtpBackend(BaseBackend):
         with open(local_path, "rb") as f:
             self._ftp.storbinary(f"STOR {remote_path}", f)
 
+        logger.info(f"Uploaded {local_path} to remote {remote_path}")
+
     def do_delete_remote(self, remote_path: Path):
         assert self._ftp
 
         get_folder_list_cached.cache_clear()
 
         self._ftp.delete(str(remote_path))
+
+    def mediaitem_link(self, remote_path: Path) -> str | None:
+        if not self._media_url:
+            return None
+
+        mediaitem_url = f"{self._media_url.rstrip('/')}/{remote_path.as_posix()}"
+        # mediaitem_url = mediaitem_url.replace("{filename}", remote_path.name)
+        return mediaitem_url

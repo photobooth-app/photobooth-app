@@ -9,24 +9,23 @@ from photobooth.services.config.baseconfig import BaseConfig
 from photobooth.services.config.serializer import contextual_serializer_password
 
 
-class Common(BaseConfig):
+class Common(BaseModel):
     enabled: bool = Field(default=False, description="Enable integration to sync media files.")
 
-    enable_share_link: bool = Field(default=True)
-    share_url: str = Field(default="")
-    media_url: str = Field(default="/{filename}")
+    enable_share_links: bool = Field(default=True)
 
 
-class FtpServerBackendConfig(BaseConfig):
-    model_config = SettingsConfigDict(title="FTP Server")
+class BaseConnectorConfig(BaseModel): ...
 
-    backend_type: Literal["ftp"] = "ftp"
 
+class FtpConnectorConfig(BaseConnectorConfig):
     host: str = Field(default="")
     port: int = Field(default=21)
     username: str = Field(default="")
     password: SecretStr = Field(default=SecretStr(""))
     secure: bool = Field(default=True)
+
+    media_url: str = Field(default="")
 
     # reveal password in admin backend.
     @field_serializer("password")
@@ -34,18 +33,13 @@ class FtpServerBackendConfig(BaseConfig):
         return contextual_serializer_password(value, info)
 
 
-class FilesystemBackendConfig(BaseConfig):
-    model_config = SettingsConfigDict(title="Filesystem")
-
-    backend_type: Literal["filesystem"] = "filesystem"
-
+class FilesystemConnectorConfig(BaseConnectorConfig):
     target_dir: DirectoryPath | None = Field(default=None)
 
-class NextcloudBackendConfig(BaseConfig):
-    model_config = SettingsConfigDict(title="NextCloud")
+    media_url: str = Field(default="")
 
-    backend_type: Literal["nextcloud"] = "nextcloud"
 
+class NextcloudConnectorConfig(BaseConnectorConfig):
     url: str = Field(default="")
     username: str = Field(default="")
     password: SecretStr = Field(default=SecretStr(""))
@@ -53,13 +47,72 @@ class NextcloudBackendConfig(BaseConfig):
     # Remote directory
     target_dir: str = Field(default="")
 
+    share_id: str = Field(default="")
+
+    # reveal password in admin backend.
+    @field_serializer("password")
+    def contextual_serializer(self, value, info: SerializationInfo):
+        return contextual_serializer_password(value, info)
+
+
+class ShareConfig(BaseModel):
+    enable_share_link: bool = Field(default=True)
+    downloadportal_url: str = Field(default="")
+
+
+# class FtpShareConfig(BaseShareConfig):
+#     ...
+#     # media_url: str = Field(default="/{filename}")
+#     # autoupdate_download_portal: bool = Field(default=True)
+
+
+# class FilesystemShareConfig(BaseShareConfig):
+#     ...
+#     # media_urlTODOFORFILESYSTEM: str = Field(default="/{filename}")
+
+
+# class NextcloudShareConfig(BaseShareConfig):
+#     ...
+#     # share_url: str = Field(default="")
+#     # media_url: str = Field(default="/{filename}")
+
+
+class BaseBackendConfig(BaseModel): ...
+
+
+class FtpBackendConfig(BaseBackendConfig):
+    model_config = SettingsConfigDict(title="FTP Server")
+
+    backend_type: Literal["ftp"] = "ftp"
+
+    connector: FtpConnectorConfig = FtpConnectorConfig()
+    share: ShareConfig = ShareConfig()
+
+
+class FilesystemBackendConfig(BaseBackendConfig):
+    model_config = SettingsConfigDict(title="Filesystem")
+
+    backend_type: Literal["filesystem"] = "filesystem"
+
+    connector: FilesystemConnectorConfig = FilesystemConnectorConfig()
+    share: ShareConfig = ShareConfig()
+
+
+class NextcloudBackendConfig(BaseBackendConfig):
+    model_config = SettingsConfigDict(title="NextCloud")
+
+    backend_type: Literal["nextcloud"] = "nextcloud"
+
+    connector: NextcloudConnectorConfig = NextcloudConnectorConfig()
+    share: ShareConfig = ShareConfig()
+
 
 class Backend(BaseModel):
     enabled: bool = Field(default=False, description="Enable synchronization on this backend")
 
     description: str = Field(default="backend default name")
 
-    backend_config: FtpServerBackendConfig | FilesystemBackendConfig | NextcloudBackendConfig = Field(discriminator="backend_type")
+    backend_config: FtpBackendConfig | FilesystemBackendConfig | NextcloudBackendConfig = Field(discriminator="backend_type")
 
 
 class SynchronizerConfig(BaseConfig):
@@ -70,4 +123,10 @@ class SynchronizerConfig(BaseConfig):
     )
 
     common: Common = Common()
-    backends: list[Backend] = [Backend(enabled=True, description="demo tmp sync", backend_config=FilesystemBackendConfig(target_dir=Path("./tmp")))]
+    backends: list[Backend] = [
+        Backend(
+            enabled=True,
+            description="demo tmp sync",
+            backend_config=FilesystemBackendConfig(connector=FilesystemConnectorConfig(target_dir=Path("./tmp"))),
+        )
+    ]
