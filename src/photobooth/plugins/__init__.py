@@ -9,7 +9,6 @@ import sys
 from enum import Enum
 from importlib.metadata import entry_points
 from pathlib import Path
-from uuid import UUID
 
 import pluggy
 from PIL import Image
