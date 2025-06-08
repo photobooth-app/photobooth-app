@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 from ..config import FilesystemConnectorConfig
-from .base import BaseConnector
+from .base import BaseConnector, BaseMediashare
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +13,6 @@ class FilesystemConnector(BaseConnector):
         super().__init__()
 
         self._target_dir: Path | None = config.target_dir
-
-        self._media_url: str = config.media_url
 
     def connect(self):
         if not self._target_dir:
@@ -71,10 +69,9 @@ class FilesystemConnector(BaseConnector):
 
         self._target_dir.joinpath(remote_path).unlink(missing_ok=True)
 
-    def mediaitem_link(self, remote_path: Path) -> str | None:
-        if not self._media_url:
-            return None
 
-        mediaitem_url = f"{self._media_url.rstrip('/')}/{remote_path.as_posix()}"
-        # mediaitem_url = mediaitem_url.replace("{filename}", remote_path.name)
-        return mediaitem_url
+class FilesystemMediashare(BaseMediashare):
+    def __init__(self, media_url: str):
+        mediaitem_url = media_url.rstrip("/") + "{remote_path}"
+
+        super().__init__(mediaitem_url)

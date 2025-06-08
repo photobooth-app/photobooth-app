@@ -1,11 +1,12 @@
 import logging
+import threading
 from ftplib import FTP_TLS
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
 from ..config import FtpConnectorConfig
-from .base import BaseConnector
+from .base import BaseConnector, BaseMediashare
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,8 @@ class FtpConnector(BaseConnector):
         self._password: str = config.password.get_secret_value()
         self._secure: bool = config.secure
 
-        self._media_url: str = config.media_url
-
         self._ftp: FTP_TLS | None = None
+        self._lock = threading.Lock()
 
     def connect(self):
         ret = []
@@ -78,8 +78,16 @@ class FtpConnector(BaseConnector):
             logger.debug(f"FTP connection check failed: {e}")
             return False
 
+    def ensure_connected(self):
+        if not self.is_connected():
+            self.connect()
+
     def get_folder_list(self, remote_path: Path):
-        folder_list = get_folder_list_cached(self._ftp, remote_path)
+        with self._lock:
+            self.ensure_connected()
+
+            folder_list = get_folder_list_cached(self._ftp, remote_path)
+
         return folder_list
 
     def get_remote_istype(self, filepath: Path, type: Literal["dir", "cdir", "pdir", "file"]) -> bool:
@@ -123,28 +131,33 @@ class FtpConnector(BaseConnector):
     def do_upload(self, local_path: Path, remote_path: Path):
         assert self._ftp
 
-        if not self.get_remote_istype(remote_path.parent, "dir"):
-            logger.debug(f"creating remote folder: {remote_path}")
-            self._ftp.mkd(str(remote_path.parent))
+        with self._lock:
+            self.ensure_connected()
 
-        get_folder_list_cached.cache_clear()
+            if not self.get_remote_istype(remote_path.parent, "dir"):
+                logger.debug(f"creating remote folder: {remote_path}")
+                self._ftp.mkd(str(remote_path.parent))
 
-        with open(local_path, "rb") as f:
-            self._ftp.storbinary(f"STOR {remote_path}", f)
+            get_folder_list_cached.cache_clear()
 
-        logger.info(f"Uploaded {local_path} to remote {remote_path}")
+            with open(local_path, "rb") as f:
+                self._ftp.storbinary(f"STOR {remote_path}", f)
+
+            logger.info(f"Uploaded {local_path} to remote {remote_path}")
 
     def do_delete_remote(self, remote_path: Path):
         assert self._ftp
 
-        get_folder_list_cached.cache_clear()
+        with self._lock:
+            self.ensure_connected()
 
-        self._ftp.delete(str(remote_path))
+            get_folder_list_cached.cache_clear()
 
-    def mediaitem_link(self, remote_path: Path) -> str | None:
-        if not self._media_url:
-            return None
+            self._ftp.delete(str(remote_path))
 
-        mediaitem_url = f"{self._media_url.rstrip('/')}/{remote_path.as_posix()}"
-        # mediaitem_url = mediaitem_url.replace("{filename}", remote_path.name)
-        return mediaitem_url
+
+class FtpMediashare(BaseMediashare):
+    def __init__(self, media_url: str):
+        mediaitem_url = media_url.rstrip("/") + "{remote_path}"
+
+        super().__init__(mediaitem_url)

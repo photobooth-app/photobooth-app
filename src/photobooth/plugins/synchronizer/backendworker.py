@@ -1,4 +1,5 @@
 import logging
+from importlib import resources
 from itertools import count
 from pathlib import Path
 from queue import Empty
@@ -6,25 +7,14 @@ from urllib.parse import quote
 
 from ...utils.resilientservice import ResilientService
 from .config import FilesystemBackendConfig, FtpBackendConfig, NextcloudBackendConfig
-from .connectors.filesystem import FilesystemConnector
-from .connectors.ftp import FtpConnector
-from .connectors.nextcloud import NextcloudConnector
+from .connectors.filesystem import FilesystemConnector, FilesystemMediashare
+from .connectors.ftp import FtpConnector, FtpMediashare
+from .connectors.nextcloud import NextcloudConnector, NextcloudMediashare
 from .models import SyncTaskDelete, SyncTaskUpload
-from .types import priorityQueueSyncType, priorityTaskSyncType
+from .types import queueSyncType, taskSyncType
 
 logger = logging.getLogger(__name__)
 counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
-
-
-def get_remote_filepath(local_filepath: Path, local_root_dir: Path = Path("./media/")) -> Path:
-    try:
-        remote_path = local_filepath.relative_to(local_root_dir)
-    except ValueError as exc:
-        raise ValueError(f"file {local_filepath} needs to be below root dir {local_root_dir}.") from exc
-
-    logger.info(f"{local_filepath} maps to {remote_path}")
-
-    return remote_path
 
 
 class BackendWorker(ResilientService):
@@ -35,14 +25,17 @@ class BackendWorker(ResilientService):
 
         if backend_config.backend_type == "filesystem":
             self._connector = FilesystemConnector(backend_config.connector)
+            self._share = FilesystemMediashare(backend_config.share.media_url)
         elif backend_config.backend_type == "ftp":
             self._connector = FtpConnector(backend_config.connector)
+            self._share = FtpMediashare(backend_config.share.media_url)
         elif backend_config.backend_type == "nextcloud":
             self._connector = NextcloudConnector(backend_config.connector)
+            self._share = NextcloudMediashare(backend_config.connector.url, backend_config.share.share_id)
         # else not gonna happen because typed literals...
 
         # start with fresh queue
-        self._queue: priorityQueueSyncType = priorityQueueSyncType()
+        self._queue: queueSyncType = queueSyncType()
 
         self._idle_since_seconds: int = 0
         self._idle_mode: bool = False
@@ -53,7 +46,7 @@ class BackendWorker(ResilientService):
     def stop(self):
         super().stop()
 
-    def put_to_queue(self, task: priorityTaskSyncType):
+    def put_to_queue(self, task: taskSyncType):
         self._queue.put_nowait(task)
 
     def setup_resource(self):
@@ -86,7 +79,7 @@ class BackendWorker(ResilientService):
                 continue
             else:
                 self._idle_since_seconds = 0
-                task = priotask[2]
+                task = priotask
 
                 # quit on shutdown.
                 if task is None:
@@ -97,18 +90,30 @@ class BackendWorker(ResilientService):
                     self._connector.connect()
                     self._idle_mode = False
 
-                self._run_task(task)
+                if isinstance(task, SyncTaskUpload):
+                    self._connector.do_upload(task.filepath_local, task.filepath_remote)
+                elif isinstance(task, SyncTaskDelete):
+                    self._connector.do_delete_remote(task.filepath_remote)
+                # else:
+                #     raise RuntimeError()
+                # TODO: what if task failed? reinsert to sync queue?
 
-    def _run_task(self, task: SyncTaskUpload | SyncTaskDelete):
-        if isinstance(task, SyncTaskUpload):
-            self._connector.do_upload(task.filepath_local, get_remote_filepath(task.filepath_local))
-        elif isinstance(task, SyncTaskDelete):
-            self._connector.do_delete_remote(get_remote_filepath(task.filepath_local))
-        # else:
-        #     raise RuntimeError()
-        # TODO: what if task failed? reinsert to sync queue?
+                logger.info(f"sync job finished: {task}")
 
-        logger.info(f"sync job finished: {task}")
+    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
+        return self._connector.get_remote_samefile(local_path, remote_path)
+
+    def copy_downloadportal(self):
+        source_path = Path(str(resources.files("web").joinpath("download", "index.html")))
+
+        print(source_path)
+
+        self._connector.do_upload(source_path)
+
+        # shutil.copy(source_path, "/path/to/destination/myfile.txt")
+
+        # with resources.open_text("mypackage.subpkg", "config.yaml") as f:
+        #     content = f.read()
 
     def get_share_link(self, filepath_local: Path) -> str | None:
         if not self._config.share.enable_share_link:
@@ -120,7 +125,7 @@ class BackendWorker(ResilientService):
             logger.error("cannot share because there is no URL available for the media file provided by the connector")
             return None
 
-        if self._config.share.downloadportal_url:
+        if self._config.share.use_downloadportal:
             downloadportal_url = f"{self._config.share.downloadportal_url.rstrip('/')}/#/?url="
             mediaitem_url_safe = quote(mediaitem_url, safe="")
             out = downloadportal_url + mediaitem_url_safe
@@ -132,4 +137,4 @@ class BackendWorker(ResilientService):
         return out
 
     def get_remote_mediaitem_link(self, filepath_local: Path) -> str | None:
-        return self._connector.mediaitem_link(get_remote_filepath(filepath_local))
+        return self._share.mediaitem_link(get_remote_filepath(filepath_local))

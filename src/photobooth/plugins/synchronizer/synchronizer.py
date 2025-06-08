@@ -7,7 +7,7 @@ from ..base_plugin import BasePlugin
 from .backendworker import BackendWorker
 from .config import SynchronizerConfig
 from .models import SyncTaskDelete, SyncTaskUpload
-from .types import priorityTaskSyncType
+from .types import taskSyncType
 
 logger = logging.getLogger(__name__)
 counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
@@ -40,7 +40,6 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         for backend_worker in self._backend_workers:
             backend_worker.start()
-        # map(lambda backend_worker: backend_worker.start(), self._backend_workers)
 
     @hookimpl
     def stop(self):
@@ -49,14 +48,13 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         # stop first, so following None (stop-NOW indicator) will be effective
         for backend_worker in self._backend_workers:
             backend_worker.stop()
-        # map(lambda backend_worker: backend_worker.stop(), self._backend_workers)
 
-        self._put_to_workers_queues((0, next(counter), None))  # lowest (==highest) priority for None to stop processing.
+        self._put_to_workers_queues(None)
 
     def reset(self):
         self._backend_workers = []
 
-    def _put_to_workers_queues(self, tasks: priorityTaskSyncType):
+    def _put_to_workers_queues(self, tasks: taskSyncType):
         # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
         for sync_worker in self._backend_workers:
             sync_worker.put_to_queue(tasks)
@@ -83,71 +81,33 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
     def collection_original_file_added(self, files: list[Path]):
         logger.info(f"SYNC File ORIGINAL ADDED NOTE {files}")
         for file in files:
-            self._put_to_workers_queues((20, next(counter), SyncTaskUpload(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_added(self, files: list[Path]):
         logger.info(f"SYNC File added NOTE {files}")
         for file in files:
-            self._put_to_workers_queues((10, next(counter), SyncTaskUpload(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_updated(self, files: list[Path]):
         logger.info(f"SYNC File updated NOTE {files}")
         for file in files:
-            self._put_to_workers_queues((10, next(counter), SyncTaskUpload(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         logger.info(f"SYNC File delete NOTE {files}")
         for file in files:
-            self._put_to_workers_queues((15, next(counter), SyncTaskDelete(file)))
+            self._put_to_workers_queues(SyncTaskDelete(self.get_remote_filepath(file)))
 
+    @staticmethod
+    def get_remote_filepath(local_filepath: Path, local_root_dir: Path = Path("./media/")) -> Path:
+        try:
+            remote_path = local_filepath.relative_to(local_root_dir)
+        except ValueError as exc:
+            raise ValueError(f"file {local_filepath} needs to be below root dir {local_root_dir}.") from exc
 
-# class RegularCompleteSync(ResilientService):
-#     def __init__(self, sync_backend, queue, local_root_dir: Path):
-#         super().__init__()
+        logger.info(f"{local_filepath} maps to {remote_path}")
 
-#         self._sync_backend: BaseProtocolClient = sync_backend  # FTPClient, ... derived from BaseClient.
-#         self._queue: priorityQueueSyncType = queue
-#         self._local_root_dir: Path = local_root_dir
-
-#         # start resilient service activates below functions
-#         self.start()
-
-#     def start(self):
-#         super().start()
-
-#     def stop(self):
-#         super().stop()
-
-#     def setup_resource(self):
-#         self._sync_backend.connect()nk(self, filepath_local: Path) -> str | None:
-#     return self._s
-#         while not self._stop_event.is_set():
-#             print("Starte Initial-datei sync...")
-
-#             for local_path in Path(self._local_root_dir).glob("**/*.*"):
-#                 # if self._stop_event.is_set():
-#                 #     print("stop queueuing because shutdown already requested.")
-#                 #     return
-
-#                 try:
-#                     remote_path = get_remote_filepath(self._local_root_dir, local_path)
-#                     size = self._sync_backend.get_remote_filesize(remote_path)
-#                     local_size = os.path.getsize(local_path)
-
-#                     if size != local_size:
-#                         self._queue.put_nowait((50, next(counter), SyncTaskUpload(local_path, remote_path)))
-#                         print(f"queueud for upload: {local_path}")
-
-#                 except Exception as e:
-#                     print(f"Fehler bei verarbeitung von {local_path}: {e}")
-#                     raise e
-
-#             print(get_folder_list_cached.cache_info())
-
-#             print("Initial-Synchronisation abgeschlossen.")
-
-#             # self.stop()
-#             # TODO: stop from within thread is not allowed (deadlock!) need to figure out a way to have a one-time living service.
+        return remote_path

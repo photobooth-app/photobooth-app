@@ -24,8 +24,23 @@ class BaseConnector(ABC):
     @abstractmethod
     def do_delete_remote(self, remote_path: Path): ...
 
-    @abstractmethod
-    def mediaitem_link(self, remote_path: Path) -> str | None: ...
+    # @abstractmethod
+    # def mediaitem_link(self, remote_path: Path) -> str | None: ...
 
     def __str__(self):
         return f"{self.__class__.__name__}"
+
+
+class BaseMediashare:
+    def __init__(self, media_url: str):
+        super().__init__()
+
+        self._media_url: str = media_url
+
+    def mediaitem_link(self, remote_path: Path) -> str | None:
+        if not self._media_url:
+            return None
+
+        # mediaitem_url = f"{self._media_url.rstrip('/')}/{remote_path.as_posix()}"
+        mediaitem_url = self._media_url.replace("{remote_path}", remote_path.as_posix())
+        return mediaitem_url

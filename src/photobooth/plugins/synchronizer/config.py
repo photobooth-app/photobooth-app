@@ -25,8 +25,6 @@ class FtpConnectorConfig(BaseConnectorConfig):
     password: SecretStr = Field(default=SecretStr(""))
     secure: bool = Field(default=True)
 
-    media_url: str = Field(default="")
-
     # reveal password in admin backend.
     @field_serializer("password")
     def contextual_serializer(self, value, info: SerializationInfo):
@@ -35,8 +33,6 @@ class FtpConnectorConfig(BaseConnectorConfig):
 
 class FilesystemConnectorConfig(BaseConnectorConfig):
     target_dir: DirectoryPath | None = Field(default=None)
-
-    media_url: str = Field(default="")
 
 
 class NextcloudConnectorConfig(BaseConnectorConfig):
@@ -47,17 +43,32 @@ class NextcloudConnectorConfig(BaseConnectorConfig):
     # Remote directory
     target_dir: str = Field(default="")
 
-    share_id: str = Field(default="")
-
     # reveal password in admin backend.
     @field_serializer("password")
     def contextual_serializer(self, value, info: SerializationInfo):
         return contextual_serializer_password(value, info)
 
 
-class ShareConfig(BaseModel):
+class BaseShareConfig(BaseModel):
     enable_share_link: bool = Field(default=True)
+    use_downloadportal: bool = Field(default=True)
     downloadportal_url: str = Field(default="")
+
+
+class FtpShareConfig(BaseShareConfig):
+    downloadportal_autoupload: bool = Field(default=True)
+
+    media_url: str = Field(default="")
+
+
+class FilesystemShareConfig(BaseShareConfig):
+    downloadportal_autoupload: bool = Field(default=True)
+
+    media_url: str = Field(default="")
+
+
+class NextcloudShareConfig(BaseShareConfig):
+    share_id: str = Field(default="")
 
 
 class BaseBackendConfig(BaseModel): ...
@@ -69,7 +80,7 @@ class FtpBackendConfig(BaseBackendConfig):
     backend_type: Literal["ftp"] = "ftp"
 
     connector: FtpConnectorConfig = FtpConnectorConfig()
-    share: ShareConfig = ShareConfig()
+    share: FtpShareConfig = FtpShareConfig()
 
 
 class FilesystemBackendConfig(BaseBackendConfig):
@@ -78,7 +89,7 @@ class FilesystemBackendConfig(BaseBackendConfig):
     backend_type: Literal["filesystem"] = "filesystem"
 
     connector: FilesystemConnectorConfig = FilesystemConnectorConfig()
-    share: ShareConfig = ShareConfig()
+    share: FilesystemShareConfig = FilesystemShareConfig()
 
 
 class NextcloudBackendConfig(BaseBackendConfig):
@@ -87,7 +98,7 @@ class NextcloudBackendConfig(BaseBackendConfig):
     backend_type: Literal["nextcloud"] = "nextcloud"
 
     connector: NextcloudConnectorConfig = NextcloudConnectorConfig()
-    share: ShareConfig = ShareConfig()
+    share: NextcloudShareConfig = NextcloudShareConfig()
 
 
 class Backend(BaseModel):
