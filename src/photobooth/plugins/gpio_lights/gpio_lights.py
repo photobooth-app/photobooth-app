@@ -66,13 +66,15 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
             self.light_out[2] = DigitalOutputDevice(self._config.gpio_pin_light3, active_high=False)
 
     def uninit_io(self):
-        if self.light_out:
-            self.light_out.close()
-            self.light_out = None
+        for light_out in self.light_out:
+            if light_out:
+                light_out.close()
+                light_out = None
 
     def light(self, on: bool):
-        if self.light_out:
-            try:
-                self.light_out.on() if on else self.light_out.off()
-            except Exception as exc:
-                logger.error(f"could not switch light, error: {exc}")
+        for light_out in self.light_out:
+            if light_out:
+                try:
+                    light_out.on() if on else light_out.off()
+                except Exception as exc:
+                    logger.error(f"could not switch light, error: {exc}")
