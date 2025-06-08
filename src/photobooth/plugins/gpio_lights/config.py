@@ -21,11 +21,11 @@ class GpioLightsConfig(BaseConfig):
         default=False,
         description="Set to True if the GPIO pin is active high, False if it is active low.",
     )
-    gpio_pin_light2: int = Field(
-        default=12,
+    gpio_pin_light2: int | None = Field(
+        default=None,
         description="Second GPIO pin to control a light (leave empty if not used).",
     )
-    gpio_pin_light3: int = Field(
+    gpio_pin_light3: int | None = Field(
         default=13,
         description="Third GPIO pin to control a light (leave empty if not used).",
     )
