@@ -15,7 +15,15 @@ class GpioLightsConfig(BaseConfig):
 
     gpio_pin_light: int = Field(
         default=2,
-        description="GPIO pin to control a light.",
+        description="First GPIO pin to control a light.",
+    )
+    gpio_pin_light2: int = Field(
+        default=12,
+        description="Second GPIO pin to control a light (leave empty if not used).",
+    )
+    gpio_pin_light3: int = Field(
+        default=13,
+        description="Third GPIO pin to control a light (leave empty if not used).",
     )
     gpio_light_off_after_capture: bool = Field(
         default=True,
