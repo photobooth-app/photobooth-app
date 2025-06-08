@@ -16,7 +16,7 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
         super().__init__()
 
         self._config: GpioLightsConfig = GpioLightsConfig()
-        self.light_out_list: list[DigitalOutputDevice | None]
+        self.light_out_list: list[DigitalOutputDevice | None] = [None] * 3
 
     @hookimpl
     def start(self):
