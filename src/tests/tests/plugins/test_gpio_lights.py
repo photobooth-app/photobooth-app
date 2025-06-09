@@ -7,7 +7,7 @@ import pytest
 from gpiozero.pins.mock import MockPin
 
 from photobooth.container import Container, container
-from photobooth.plugins.gpio_lights.gpio_lights import GpioLights
+from photobooth.plugins.gpio_lights.gpio_lights import GpioLights, GpioLightsConfig
 
 from ..util import get_impl_func_for_plugin
 
@@ -23,6 +23,17 @@ def _container() -> Generator[Container, None, None]:
     container.start()
     yield container
     container.stop()
+
+
+def test_gpio_pin_light_migration(_container):
+    """
+    Migration from old gpio_pin_light (int) attr
+    to new gpio_pin_light_list (list of int) attr.
+    Also checks that old attr is removed from config.
+    """
+    config = GpioLightsConfig.model_validate({"gpio_pin_light": 5})
+    assert config.gpio_pin_light_list == [5]
+    assert not hasattr(config, "gpio_pin_light")
 
 
 def test_hooks_integration(_container: Container):

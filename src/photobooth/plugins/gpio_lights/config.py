@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from photobooth import CONFIG_PATH
@@ -18,7 +18,17 @@ class GpioLightsConfig(BaseConfig):
             2,
         ],
         description="List of GPIO pins to control lights. The first pin is mandatory, the others are optional. ",
+        validation_alias=AliasChoices("gpio_pin_light_list", "gpio_pin_light"),
     )
+
+    # Ensures that the old format single pin attribute is converted to a list
+    @field_validator("gpio_pin_light_list", mode="before")
+    @classmethod
+    def convert_single_pin_to_list(cls, value):
+        if isinstance(value, int):
+            return [value]
+        return value
+
     active_high: bool = Field(
         default=False,
         description="Set to True if the GPIO pin is active high, False if it is active low.",
