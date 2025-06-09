@@ -40,39 +40,50 @@ def test_hooks_integration(_container: Container):
 def test_light_switched_during_process(_container: Container):
     gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
 
-    assert gpio_lights_plugin.light_out
-    pin = cast(MockPin, gpio_lights_plugin.light_out.pin)
-    pin.clear_states()
+    assert gpio_lights_plugin.light_out_list
+
+    for light_out in gpio_lights_plugin.light_out_list:
+        pin = cast(MockPin, light_out.pin)
+        pin.clear_states()
 
     _container.processing_service.trigger_action("image", 0)
     _container.processing_service.wait_until_job_finished()
 
     # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True], strict=True):
-        assert actual.state == expected
+    for light_out in gpio_lights_plugin.light_out_list:
+        pin = cast(MockPin, light_out.pin)
+        for actual, expected in zip(pin.states, [True, False, True], strict=True):
+            assert actual.state == expected
 
 
 def test_light_switched_during_process_turn_off_after_capture(_container: Container):
     gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
     gpio_lights_plugin._config.gpio_light_off_after_capture = True
 
-    assert gpio_lights_plugin.light_out
-    pin = cast(MockPin, gpio_lights_plugin.light_out.pin)
-    pin.clear_states()
+    assert gpio_lights_plugin.light_out_list
+
+    for light_out in gpio_lights_plugin.light_out_list:
+        pin = cast(MockPin, light_out.pin)
+        pin.clear_states()
 
     _container.processing_service.trigger_action("collage", 0)
     _container.processing_service.wait_until_job_finished()
 
     # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True, False, True], strict=True):
-        assert actual.state == expected
+    for light_out in gpio_lights_plugin.light_out_list:
+        pin = cast(MockPin, light_out.pin)
+        for actual, expected in zip(pin.states, [True, False, True, False, True], strict=True):
+            assert actual.state == expected
+
+        pin.clear_states()
 
     gpio_lights_plugin._config.gpio_light_off_after_capture = False
-    pin.clear_states()
 
     _container.processing_service.trigger_action("collage", 0)
     _container.processing_service.wait_until_job_finished()
 
     # could use also pin.assert_states but strict is false and so it would not fail if more states are present.
-    for actual, expected in zip(pin.states, [True, False, True], strict=True):
-        assert actual.state == expected
+    for light_out in gpio_lights_plugin.light_out_list:
+        pin = cast(MockPin, light_out.pin)
+        for actual, expected in zip(pin.states, [True, False, True], strict=True):
+            assert actual.state == expected
