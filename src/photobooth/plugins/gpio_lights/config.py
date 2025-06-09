@@ -13,21 +13,15 @@ class GpioLightsConfig(BaseConfig):
         description="Enable to start the plugin with app startup",
     )
 
-    gpio_pin_light: int = Field(
-        default=2,
-        description="First GPIO pin to control a light.",
+    gpio_pin_light_list: list[int] = Field(
+        default_factory=lambda: [
+            2,
+        ],
+        description="List of GPIO pins to control lights. The first pin is mandatory, the others are optional. ",
     )
     active_high: bool = Field(
         default=False,
         description="Set to True if the GPIO pin is active high, False if it is active low.",
-    )
-    gpio_pin_light2: int | None = Field(
-        default=None,
-        description="Second GPIO pin to control a light (leave empty if not used).",
-    )
-    gpio_pin_light3: int | None = Field(
-        default=13,
-        description="Third GPIO pin to control a light (leave empty if not used).",
     )
     gpio_light_off_after_capture: bool = Field(
         default=True,

@@ -16,7 +16,7 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
         super().__init__()
 
         self._config: GpioLightsConfig = GpioLightsConfig()
-        self.light_out_list: list[DigitalOutputDevice | None] = [None] * 3
+        self.light_out_list: list[DigitalOutputDevice | None] = []
 
     @hookimpl
     def start(self):
@@ -59,11 +59,8 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
 
     def init_io(self):
         # shutdown
-        self.light_out_list[0] = DigitalOutputDevice(self._config.gpio_pin_light, active_high=self._config.active_high)
-        if self._config.gpio_pin_light2:
-            self.light_out_list[1] = DigitalOutputDevice(self._config.gpio_pin_light2, active_high=self._config.active_high)
-        if self._config.gpio_pin_light3:
-            self.light_out_list[2] = DigitalOutputDevice(self._config.gpio_pin_light3, active_high=self._config.active_high)
+        for gpio_pin_light in self._config.gpio_pin_light_list:
+            self.light_out_list.append(DigitalOutputDevice(gpio_pin_light, active_high=self._config.active_high))
 
     def uninit_io(self):
         for light_out in self.light_out_list:
