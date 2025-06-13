@@ -2,6 +2,7 @@
 pyav webcam implementation backend
 """
 
+import io
 import logging
 import sys
 from pathlib import Path
@@ -152,11 +153,19 @@ class WebcamPyavBackend(AbstractBackend):
                 if self._hires_data.request.is_set():
                     self._hires_data.request.clear()
 
-                    jpeg_bytes_packet = bytes(next(input_device.demux()))
+                    codec_name = input_stream.codec.name
+                    if codec_name == "mjpeg":
+                        jpeg_bytes_hires = bytes(next(input_device.demux()))
+                    elif codec_name == "rawvideo":
+                        image_bytesio = io.BytesIO()
+                        frame.to_image().save(image_bytesio, format="JPEG", quality=90)
+                        jpeg_bytes_hires = image_bytesio.getvalue()
+                    else:
+                        raise RuntimeError(f"The webcams output codec {codec_name} is not supported!")
 
                     # only capture one pic and return to lores streaming afterwards
                     with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
-                        f.write(jpeg_bytes_packet)
+                        f.write(jpeg_bytes_hires)
 
                     self._hires_data.filepath = Path(f.name)
                     with self._hires_data.condition:
