@@ -8,7 +8,7 @@ from typing import Literal
 
 from ....utils.stoppablethread import StoppableThread
 from ..config import FtpConnectorConfig
-from .base import BaseConnector, BaseMediashare
+from .base import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +22,9 @@ def _get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, 
     return out
 
 
-class FtpConnector(BaseConnector):
+class FtpConnector(AbstractConnector):
     def __init__(self, config: FtpConnectorConfig):
-        super().__init__()
+        super().__init__(config)
 
         self._host: str = config.host
         self._port: int = config.port
@@ -39,6 +39,9 @@ class FtpConnector(BaseConnector):
         self._idle_monitor_thread = StoppableThread(name="_ftp_monitor_idle_thread", target=self._monitor_idle_fun, daemon=True)
         self._idle_monitor_last_used: float = 0
         self._idle_monitor_thread.start()
+
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self._host}"
 
     def _monitor_idle_fun(self):
         assert self._idle_monitor_thread
@@ -121,7 +124,6 @@ class FtpConnector(BaseConnector):
 
     def _ensure_connected(self):
         if not self._is_connected():
-            print("Reconnecting due to no active FTP connection...")
             self._connect()
 
         self._idle_monitor_last_used = time.monotonic()
@@ -133,18 +135,26 @@ class FtpConnector(BaseConnector):
 
         return folder_list
 
-    def _get_remote_istype(self, filepath: Path, type: Literal["dir", "cdir", "pdir", "file"]) -> bool:
+    def _get_remote_istype(self, filepath: Path, rtype: tuple[Literal["dir", "cdir", "pdir", "file"], ...]) -> bool:
         assert self._ftp
 
         folder_list = self._get_folder_list(filepath.parent)
 
         # if file is not found in the list, return None which means the file probably needs to be uploaded.
         try:
-            ftype = folder_list[filepath.name]["type"]  # raise KeyError if name not in list
+            ftype = folder_list[str(filepath)]["type"]  # raise KeyError if name not in list
         except Exception:
             ftype = None
-
-        return ftype == type
+        # print(filepath)
+        # print(str(filepath))
+        # print(filepath.parents)
+        # print(filepath.parts)
+        # print(filepath.name)
+        # print(filepath.resolve())
+        # print(folder_list)
+        # print(ftype)
+        # print(rtype)
+        return ftype in rtype
 
     def _get_remote_filesize(self, filepath: Path) -> int | None:
         assert self._ftp
@@ -178,8 +188,8 @@ class FtpConnector(BaseConnector):
             self._ensure_connected()
             assert self._ftp
 
-            if not self._get_remote_istype(remote_path.parent, "dir"):
-                logger.debug(f"creating remote folder: {remote_path}")
+            if not self._get_remote_istype(remote_path.parent, ("dir", "cdir")):
+                logger.debug(f"creating remote folder: {remote_path.parent}")
                 self._ftp.mkd(str(remote_path.parent))
 
             _get_folder_list_cached.cache_clear()
@@ -197,10 +207,3 @@ class FtpConnector(BaseConnector):
             _get_folder_list_cached.cache_clear()
 
             self._ftp.delete(str(remote_path))
-
-
-class FtpMediashare(BaseMediashare):
-    def __init__(self, media_url: str):
-        mediaitem_url = media_url.rstrip("/") + "{remote_path}"
-
-        super().__init__(mediaitem_url)

@@ -3,16 +3,19 @@ import shutil
 from pathlib import Path
 
 from ..config import FilesystemConnectorConfig
-from .base import BaseConnector, BaseMediashare
+from .base import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
 
-class FilesystemConnector(BaseConnector):
+class FilesystemConnector(AbstractConnector):
     def __init__(self, config: FilesystemConnectorConfig):
-        super().__init__()
+        super().__init__(config)
 
         self._target_dir: Path | None = config.target_dir
+
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self._target_dir}"
 
     def connect(self):
         if not self._target_dir:
@@ -68,10 +71,3 @@ class FilesystemConnector(BaseConnector):
         logger.info(f"deleting file {remote_path} from remote")
 
         self._target_dir.joinpath(remote_path).unlink(missing_ok=True)
-
-
-class FilesystemMediashare(BaseMediashare):
-    def __init__(self, media_url: str):
-        mediaitem_url = media_url.rstrip("/") + "{remote_path}"
-
-        super().__init__(mediaitem_url)

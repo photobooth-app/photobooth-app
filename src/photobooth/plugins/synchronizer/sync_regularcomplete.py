@@ -1,22 +1,20 @@
 import logging
 import time
-from itertools import count
 from pathlib import Path
 
 from photobooth.utils.resilientservice import ResilientService
 
-from .backendworker import BackendWorker
 from .models import SyncTaskUpload
+from .sync_queue import SyncQueue
 
 logger = logging.getLogger(__name__)
-counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
 
 
-class RegularCompleteSync(ResilientService):
+class SyncRegularcomplete(ResilientService):
     def __init__(self, backendworker, local_root_dir: Path):
         super().__init__()
 
-        self._backendworker: BackendWorker = backendworker
+        self._backendworker: SyncQueue = backendworker
         self._local_root_dir: Path = local_root_dir
 
         # start resilient service activates below functions

@@ -4,9 +4,11 @@ from pathlib import Path
 
 from .. import hookimpl
 from ..base_plugin import BasePlugin
-from .backendworker import BackendWorker
 from .config import SynchronizerConfig
+from .connectors import connector_factory
 from .models import SyncTaskDelete, SyncTaskUpload
+from .share import AbstractMediashare, share_factory
+from .sync_queue import SyncQueue
 from .types import taskSyncType
 
 logger = logging.getLogger(__name__)
@@ -18,10 +20,8 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config: SynchronizerConfig = SynchronizerConfig()
-        # self._local_root_dir: Path = Path("./media/")
-
-        self._backend_workers: list[BackendWorker] = []
-        # self._sharelink_workers: list[ShareWorker] = []
+        self._backend_workers: list[SyncQueue] = []
+        self._shares: list[AbstractMediashare] = []
 
     @hookimpl
     def start(self):
@@ -36,7 +36,14 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             if not backendConfig.enabled:
                 continue
 
-            self._backend_workers.append(BackendWorker(backendConfig.backend_config))
+            connector = connector_factory.connector_factory(backendConfig.backend_config.connector)
+            # connector for syncqueue is reused - could be a new one also but not needed actually.
+            share = share_factory(backendConfig.backend_config, connector)
+            share.update_downloadportal()
+
+            # finally lets hold a reference here for future disptaching.
+            self._backend_workers.append(SyncQueue(connector))
+            self._shares.append(share)
 
         for backend_worker in self._backend_workers:
             backend_worker.start()
@@ -53,6 +60,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
     def reset(self):
         self._backend_workers = []
+        self._shares = []
 
     def _put_to_workers_queues(self, tasks: taskSyncType):
         # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
@@ -70,7 +78,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             logger.info("share link generation is disabled globally in synchronizer plugin")
             return []
 
-        for worker in self._backend_workers:
+        for worker in self._shares:
             filepath_remote = self.get_remote_filepath(filepath_local)
             share_link = worker.get_share_link(filepath_remote)
             if share_link:

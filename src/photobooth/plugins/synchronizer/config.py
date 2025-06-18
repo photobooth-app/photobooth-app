@@ -56,13 +56,13 @@ class BaseShareConfig(BaseModel):
     downloadportal_url: str = Field(default="")
 
 
-class FtpShareConfig(BaseShareConfig):
+class FilesystemShareConfig(BaseShareConfig):
     downloadportal_autoupload: bool = Field(default=True)
 
     media_url: str = Field(default="")
 
 
-class FilesystemShareConfig(BaseShareConfig):
+class FtpShareConfig(BaseShareConfig):
     downloadportal_autoupload: bool = Field(default=True)
 
     media_url: str = Field(default="")
@@ -102,12 +102,17 @@ class NextcloudBackendConfig(BaseBackendConfig):
     share: NextcloudShareConfig = NextcloudShareConfig()
 
 
+BackendConfig = FilesystemBackendConfig | FtpBackendConfig | NextcloudBackendConfig
+ConnectorConfig = FilesystemConnectorConfig | FtpConnectorConfig | NextcloudConnectorConfig
+ShareConfig = FilesystemShareConfig | FtpShareConfig | NextcloudShareConfig
+
+
 class Backend(BaseModel):
     enabled: bool = Field(default=False, description="Enable synchronization on this backend")
 
     description: str = Field(default="backend default name")
 
-    backend_config: FtpBackendConfig | FilesystemBackendConfig | NextcloudBackendConfig = Field(discriminator="backend_type")
+    backend_config: BackendConfig = Field(discriminator="backend_type")
 
 
 class SynchronizerConfig(BaseConfig):
