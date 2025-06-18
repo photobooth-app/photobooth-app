@@ -47,7 +47,7 @@ class ResilientService(ABC):
                     raise ServiceCrashed(e) from e
 
                 try:
-                    logger.info(f"{self.__class__.__name__}-resilient service start running service logic")
+                    logger.info(f"{self}-resilient service start running service logic")
                     self.run_service()
                 except Exception as e:
                     self._report_crash(e)
@@ -89,7 +89,9 @@ class ResilientService(ABC):
             if self._started:
                 return
 
-            logger.debug(f"{self.__class__.__name__}-resilient service starting")
+            # returns the class info like <__main__.MyClass object at 0x...> or __str__ if defined in the class
+            # the classes should therefore define a reasonable name and maybe additional information add there
+            logger.debug(f"{self}-resilient service starting")
 
             self._stop_event.clear()
             self._thread = threading.Thread(target=self._run, daemon=True)
@@ -101,7 +103,7 @@ class ResilientService(ABC):
             if not self._started:
                 return
 
-            logger.debug(f"{self.__class__.__name__}-resilient service shutting down")
+            logger.debug(f"{self}-resilient service shutting down")
 
             assert self._thread
             self._stop_event.set()
@@ -109,7 +111,7 @@ class ResilientService(ABC):
             self._started = False
 
     def restart(self):
-        logger.info(f"{self.__class__.__name__}-resilient service restarting")
+        logger.info(f"{self}-resilient service restarting")
 
         self.stop()
         self.start()

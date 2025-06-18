@@ -15,7 +15,6 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
-from ..utils.stoppablethread import StoppableThread
 from .backends.abstractbackend import AbstractBackend
 from .base import BaseService
 
@@ -27,7 +26,6 @@ class AquisitionService(BaseService):
         super().__init__()
 
         self._backends: list[AbstractBackend] = []
-        self._supervisor_thread: StoppableThread | None = None
 
     def start(self):
         super().start()
