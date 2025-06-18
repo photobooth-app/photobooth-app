@@ -63,12 +63,10 @@ class BackendWorker(ResilientService):
             #     print(f"noch {queue_size} zu verarbeiten.")
 
             try:
-                priotask = self._queue.get(timeout=queue_timeout)
+                task = self._queue.get(timeout=queue_timeout)
             except Empty:
                 continue
             else:
-                task = priotask
-
                 # quit on shutdown.
                 if task is None:
                     break
@@ -91,19 +89,14 @@ class BackendWorker(ResilientService):
 
         print(source_path)
 
-        self._connector.do_upload(source_path)
+        self._connector.do_upload(source_path, Path(source_path.name))
 
-        # shutil.copy(source_path, "/path/to/destination/myfile.txt")
-
-        # with resources.open_text("mypackage.subpkg", "config.yaml") as f:
-        #     content = f.read()
-
-    def get_share_link(self, filepath_local: Path) -> str | None:
+    def get_share_link(self, filepath_remote: Path) -> str | None:
         if not self._config.share.enable_share_link:
             logger.info("generating share links in synchronizer plugin is disabled for this backend")
             return None
 
-        mediaitem_url = self.get_remote_mediaitem_link(filepath_local)
+        mediaitem_url = self.get_remote_mediaitem_link(filepath_remote)
         if not mediaitem_url:
             logger.error("cannot share because there is no URL available for the media file provided by the connector")
             return None
@@ -115,10 +108,9 @@ class BackendWorker(ResilientService):
         else:
             out = mediaitem_url
 
-        logger.info(f"share link created for {filepath_local}: {out}")
+        logger.info(f"share link created for {filepath_remote}: {out}")
 
         return out
 
-    def get_remote_mediaitem_link(self, filepath_local: Path) -> str | None:
-        return "TODO:"
-        # return self._share.mediaitem_link(get_remote_filepath(filepath_local))
+    def get_remote_mediaitem_link(self, filepath_remote: Path) -> str | None:
+        return self._share.mediaitem_link(filepath_remote)

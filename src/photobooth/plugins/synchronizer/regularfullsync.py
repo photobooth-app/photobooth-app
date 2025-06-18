@@ -5,7 +5,7 @@ from pathlib import Path
 
 from photobooth.utils.resilientservice import ResilientService
 
-from .backendworker import BackendWorker, get_remote_filepath
+from .backendworker import BackendWorker
 from .models import SyncTaskUpload
 
 logger = logging.getLogger(__name__)
@@ -42,11 +42,12 @@ class RegularCompleteSync(ResilientService):
                     return
 
                 try:
-                    remote_path = get_remote_filepath(local_path)
+                    remote_path = Path("TODO.file")
+                    # TODO: # remote_path = get_remote_filepath(local_path)
                     is_same_file = self._backendworker.get_remote_samefile(local_path, remote_path)
 
                     if not is_same_file:
-                        self._backendworker.put_to_queue(SyncTaskUpload(local_path))
+                        self._backendworker.put_to_queue(SyncTaskUpload(local_path, remote_path))
                         print(f"queueud for upload: {local_path}")
 
                 except Exception as e:

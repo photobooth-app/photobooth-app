@@ -6,10 +6,10 @@ import pytest
 
 from photobooth.plugins.synchronizer.config import (
     Backend,
-    BaseShareConfig,
     Common,
     FilesystemBackendConfig,
     FilesystemConnectorConfig,
+    FilesystemShareConfig,
     SynchronizerConfig,
 )
 from photobooth.plugins.synchronizer.synchronizer import Synchronizer
@@ -31,7 +31,7 @@ def synchronizer_plugin(tmp_path: Path):
                 enabled=True,
                 backend_config=FilesystemBackendConfig(
                     connector=FilesystemConnectorConfig(target_dir=tmp_path),
-                    share=BaseShareConfig(),
+                    share=FilesystemShareConfig(),
                 ),
             ),
         ],

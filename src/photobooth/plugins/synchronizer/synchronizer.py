@@ -71,7 +71,8 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             return []
 
         for worker in self._backend_workers:
-            share_link = worker.get_share_link(filepath_local)
+            filepath_remote = self.get_remote_filepath(filepath_local)
+            share_link = worker.get_share_link(filepath_remote)
             if share_link:
                 share_links.append(share_link)
 
