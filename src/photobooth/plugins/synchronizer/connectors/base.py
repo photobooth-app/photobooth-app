@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Generic, TypeVar
 
-# T = TypeVar("T", bound=BaseClientConfig)
+from ..config import BaseConnectorConfig
+
+T = TypeVar("T", bound=BaseConnectorConfig)
 
 
-# class BaseClient(ABC,Generic[T]):
-class BaseConnector(ABC):
-    # def __init__(self):
-    #     self._config: T
+class AbstractConnector(ABC, Generic[T]):
+    # class AbstractConnector(ABC):
+    def __init__(self, config: T):
+        ...
+        # self._config: T = config
 
     @abstractmethod
     def connect(self): ...
@@ -25,7 +29,4 @@ class BaseConnector(ABC):
     def do_delete_remote(self, remote_path: Path): ...
 
     @abstractmethod
-    def mediaitem_link(self, remote_path: Path) -> str | None: ...
-
-    def __str__(self):
-        return f"{self.__class__.__name__}"
+    def __str__(self) -> str: ...

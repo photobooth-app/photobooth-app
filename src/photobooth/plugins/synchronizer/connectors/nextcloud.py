@@ -4,14 +4,14 @@ from pathlib import Path
 from nc_py_api import Nextcloud
 
 from ..config import NextcloudConnectorConfig
-from .base import BaseConnector
+from .base import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
 
-class NextcloudConnector(BaseConnector):
+class NextcloudConnector(AbstractConnector):
     def __init__(self, config: NextcloudConnectorConfig):
-        super().__init__()
+        super().__init__(config)
 
         self._url: str = config.url
         self._username: str = config.username
@@ -19,9 +19,10 @@ class NextcloudConnector(BaseConnector):
 
         self._target_dir: Path = Path(config.target_dir)
 
-        self._share_id: str = config.share_id
-
         self.nc: Nextcloud | None = None
+
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self._url}/{self._target_dir}"
 
     def connect(self):
         if not self._url:
@@ -77,6 +78,3 @@ class NextcloudConnector(BaseConnector):
         full_path = self._target_dir.joinpath(remote_path)
         self.nc.files.delete(str(full_path))
         logger.info(f"Deleted {full_path} from remote")
-
-    def mediaitem_link(self, remote_path: Path) -> str | None:
-        return f"{self._url}/public.php/dav/files/{self._share_id}/{remote_path}"
