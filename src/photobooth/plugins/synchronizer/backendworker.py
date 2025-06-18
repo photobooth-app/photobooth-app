@@ -37,9 +37,6 @@ class BackendWorker(ResilientService):
         # start with fresh queue
         self._queue: queueSyncType = queueSyncType()
 
-        self._idle_since_seconds: int = 0
-        self._idle_mode: bool = False
-
     def start(self):
         super().start()
 
@@ -59,7 +56,6 @@ class BackendWorker(ResilientService):
         assert self._connector
         assert self._queue
         queue_timeout = 1  # wait until timout for a queue entry to process.
-        idle_mode_timeout = 30  # after timeout disconnect and be in idle mode.
 
         while not self._stop_event.is_set():
             # queue_size = self._queue.qsize()
@@ -69,26 +65,13 @@ class BackendWorker(ResilientService):
             try:
                 priotask = self._queue.get(timeout=queue_timeout)
             except Empty:
-                if not self._idle_mode:
-                    self._idle_since_seconds += queue_timeout
-                    if self._idle_since_seconds >= idle_mode_timeout:
-                        logger.debug(f"No files to sync since {idle_mode_timeout}s, disconnecting from {self._connector}, waiting in idle mode")
-                        self._idle_mode = True
-                        self._connector.disconnect()
-
                 continue
             else:
-                self._idle_since_seconds = 0
                 task = priotask
 
                 # quit on shutdown.
                 if task is None:
                     break
-
-                if self._idle_mode:
-                    logger.debug(f"Resume from idle mode, connecting to server {self._connector}")
-                    self._connector.connect()
-                    self._idle_mode = False
 
                 if isinstance(task, SyncTaskUpload):
                     self._connector.do_upload(task.filepath_local, task.filepath_remote)
@@ -137,4 +120,5 @@ class BackendWorker(ResilientService):
         return out
 
     def get_remote_mediaitem_link(self, filepath_local: Path) -> str | None:
-        return self._share.mediaitem_link(get_remote_filepath(filepath_local))
+        return "TODO:"
+        # return self._share.mediaitem_link(get_remote_filepath(filepath_local))

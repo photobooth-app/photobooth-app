@@ -24,6 +24,7 @@ class FtpConnectorConfig(BaseConnectorConfig):
     username: str = Field(default="")
     password: SecretStr = Field(default=SecretStr(""))
     secure: bool = Field(default=True)
+    idle_timeout: int = Field(default=30)
 
     # reveal password in admin backend.
     @field_serializer("password")

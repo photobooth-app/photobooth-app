@@ -1,10 +1,12 @@
 import logging
 import threading
+import time
 from ftplib import FTP_TLS
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from ....utils.stoppablethread import StoppableThread
 from ..config import FtpConnectorConfig
 from .base import BaseConnector, BaseMediashare
 
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=16)
-def get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, str]]:
+def _get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, str]]:
     # print(folder)
     # out = {x[0]: int(x[1].get("size", 0)) for x in _ftp.mlsd(str(folder), ["size","type"])}
     out = {entry[0]: entry[1] for entry in _ftp.mlsd(str(folder), ["size", "type"])}
@@ -29,11 +31,49 @@ class FtpConnector(BaseConnector):
         self._username: str = config.username
         self._password: str = config.password.get_secret_value()
         self._secure: bool = config.secure
+        self._idle_timeout: int = config.idle_timeout
 
         self._ftp: FTP_TLS | None = None
         self._lock = threading.Lock()
 
+        self._idle_monitor_thread = StoppableThread(name="_ftp_monitor_idle_thread", target=self._monitor_idle_fun, daemon=True)
+        self._idle_monitor_last_used: float = 0
+        self._idle_monitor_thread.start()
+
+    def _monitor_idle_fun(self):
+        assert self._idle_monitor_thread
+
+        while not self._idle_monitor_thread.stopped():
+            time.sleep(1)
+
+            with self._lock:
+                if self._ftp and (time.monotonic() - self._idle_monitor_last_used) > self._idle_timeout:
+                    logger.info(f"Ftp connection idle timeout exceeded after {self._idle_timeout}. Disconnecting from server...")
+                    try:
+                        self._ftp.quit()
+                    except Exception:
+                        pass
+
+                    self._ftp = None
+
     def connect(self):
+        with self._lock:
+            self._connect()
+
+    def disconnect(self):
+        with self._lock:
+            self._disconnect()
+
+        if self._idle_monitor_thread and self._idle_monitor_thread.is_alive():
+            self._idle_monitor_thread.stop()
+            self._idle_monitor_thread.join()
+
+    def is_connected(self) -> bool:
+        """externally usable function to check for connection - lock protected as all other externally used funcs"""
+        with self._lock:
+            return self._is_connected()
+
+    def _connect(self):
         ret = []
 
         if not self._host:
@@ -56,7 +96,7 @@ class FtpConnector(BaseConnector):
 
         logger.info("FTP-Server Msg: " + "; ".join(ret))
 
-    def disconnect(self):
+    def _disconnect(self):
         if self._ftp:
             try:
                 ret = self._ftp.quit()
@@ -66,7 +106,8 @@ class FtpConnector(BaseConnector):
                 # error during disconnecting is not reraised because that means probably we are disconnected...
                 logger.error(f"error disconnting: {exc}")
 
-    def is_connected(self) -> bool:
+    def _is_connected(self) -> bool:
+        """internally used to check connection. no lock protection, because other functions check for it"""
         if not self._ftp:
             return False
 
@@ -78,22 +119,24 @@ class FtpConnector(BaseConnector):
             logger.debug(f"FTP connection check failed: {e}")
             return False
 
-    def ensure_connected(self):
-        if not self.is_connected():
-            self.connect()
+    def _ensure_connected(self):
+        if not self._is_connected():
+            print("Reconnecting due to no active FTP connection...")
+            self._connect()
 
-    def get_folder_list(self, remote_path: Path):
-        with self._lock:
-            self.ensure_connected()
+        self._idle_monitor_last_used = time.monotonic()
 
-            folder_list = get_folder_list_cached(self._ftp, remote_path)
+    def _get_folder_list(self, remote_path: Path):
+        assert self._ftp
+
+        folder_list = _get_folder_list_cached(self._ftp, remote_path)
 
         return folder_list
 
-    def get_remote_istype(self, filepath: Path, type: Literal["dir", "cdir", "pdir", "file"]) -> bool:
+    def _get_remote_istype(self, filepath: Path, type: Literal["dir", "cdir", "pdir", "file"]) -> bool:
         assert self._ftp
 
-        folder_list = self.get_folder_list(filepath.parent)
+        folder_list = self._get_folder_list(filepath.parent)
 
         # if file is not found in the list, return None which means the file probably needs to be uploaded.
         try:
@@ -103,10 +146,10 @@ class FtpConnector(BaseConnector):
 
         return ftype == type
 
-    def get_remote_filesize(self, filepath: Path) -> int | None:
+    def _get_remote_filesize(self, filepath: Path) -> int | None:
         assert self._ftp
 
-        folder_list = self.get_folder_list(filepath.parent)
+        folder_list = self._get_folder_list(filepath.parent)
 
         # if file is not found in the list,NextcloudBackend return None which means the file probably needs to be uploaded.
         try:
@@ -117,28 +160,29 @@ class FtpConnector(BaseConnector):
         return size
 
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
-        assert self._ftp
+        with self._lock:
+            self._ensure_connected()
+            assert self._ftp
 
-        try:
-            size_local = local_path.stat().st_size
-            size_remote = self.get_remote_filesize(remote_path)
-        except Exception:
-            return False
-        else:
-            # compare size which should work on all platforms to detect equality
-            return size_local == size_remote
+            try:
+                size_local = local_path.stat().st_size
+                size_remote = self._get_remote_filesize(remote_path)
+            except Exception:
+                return False
+            else:
+                # compare size which should work on all platforms to detect equality
+                return size_local == size_remote
 
     def do_upload(self, local_path: Path, remote_path: Path):
-        assert self._ftp
-
         with self._lock:
-            self.ensure_connected()
+            self._ensure_connected()
+            assert self._ftp
 
-            if not self.get_remote_istype(remote_path.parent, "dir"):
+            if not self._get_remote_istype(remote_path.parent, "dir"):
                 logger.debug(f"creating remote folder: {remote_path}")
                 self._ftp.mkd(str(remote_path.parent))
 
-            get_folder_list_cached.cache_clear()
+            _get_folder_list_cached.cache_clear()
 
             with open(local_path, "rb") as f:
                 self._ftp.storbinary(f"STOR {remote_path}", f)
@@ -146,12 +190,11 @@ class FtpConnector(BaseConnector):
             logger.info(f"Uploaded {local_path} to remote {remote_path}")
 
     def do_delete_remote(self, remote_path: Path):
-        assert self._ftp
-
         with self._lock:
-            self.ensure_connected()
+            self._ensure_connected()
+            assert self._ftp
 
-            get_folder_list_cached.cache_clear()
+            _get_folder_list_cached.cache_clear()
 
             self._ftp.delete(str(remote_path))
 
