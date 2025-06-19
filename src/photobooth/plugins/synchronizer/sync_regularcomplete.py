@@ -4,19 +4,20 @@ from pathlib import Path
 
 from photobooth.utils.resilientservice import ResilientService
 
-from .models import SyncTaskUpload
-from .sync_queue import SyncQueue
+from .connectors.base import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
 
 class SyncRegularcomplete(ResilientService):
-    def __init__(self, backendworker, local_root_dir: Path):
+    def __init__(self, connector: AbstractConnector, local_root_dir: Path):
         super().__init__()
 
-        self._backendworker: SyncQueue = backendworker
+        self._connector: AbstractConnector = connector
         self._local_root_dir: Path = local_root_dir
 
+        # start with fresh queue
+        # self._queue: queueSyncType = queueSyncType()
         # start resilient service activates below functions
         self.start()
 
@@ -42,10 +43,10 @@ class SyncRegularcomplete(ResilientService):
                 try:
                     remote_path = Path("TODO.file")
                     # TODO: # remote_path = get_remote_filepath(local_path)
-                    is_same_file = self._backendworker.get_remote_samefile(local_path, remote_path)
+                    is_same_file = self._connector.get_remote_samefile(local_path, remote_path)
 
                     if not is_same_file:
-                        self._backendworker.put_to_queue(SyncTaskUpload(local_path, remote_path))
+                        self._connector.do_upload(local_path, remote_path)
                         print(f"queueud for upload: {local_path}")
 
                 except Exception as e:

@@ -18,7 +18,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config: SynchronizerConfig = SynchronizerConfig()
-        self._backend_workers: list[SyncQueue] = []
+        self._sync_queue: list[SyncQueue] = []
         self._shares: list[AbstractMediashare] = []
 
     @hookimpl
@@ -30,40 +30,41 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             return
 
         # consumes the queue and uploads/deletes/modifies remote filesystem according to the queue.
-        for backendConfig in self._config.backends:
-            if not backendConfig.enabled:
+        for cfg in self._config.backends:
+            if not cfg.enabled:
                 continue
 
-            connector = connector_factory.connector_factory(backendConfig.backend_config.connector)
+            connector = connector_factory.connector_factory(cfg.backend_config.connector)
             # connector for syncqueue is reused - could be a new one also but not needed actually.
-            share = share_factory(backendConfig.backend_config, connector)
+            share = share_factory(cfg.backend_config, connector)
             share.update_downloadportal()
 
             # finally lets hold a reference here for future disptaching.
-            self._backend_workers.append(SyncQueue(connector))
+            self._sync_queue.append(SyncQueue(connector))
             self._shares.append(share)
 
-        for backend_worker in self._backend_workers:
-            backend_worker.start()
+        for sync_queue in self._sync_queue:
+            sync_queue.start()
 
     @hookimpl
     def stop(self):
         """To stop the resilient service"""
 
         # stop first, so following None (stop-NOW indicator) will be effective
-        for backend_worker in self._backend_workers:
-            backend_worker.stop()
+        for sync_queue in self._sync_queue:
+            sync_queue.stop()
 
+        # TODO: because stop joins, this does not have any effect actually.
         self._put_to_workers_queues(None)
 
     def reset(self):
-        self._backend_workers = []
+        self._sync_queue = []
         self._shares = []
 
     def _put_to_workers_queues(self, tasks: taskSyncType):
         # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
-        for sync_worker in self._backend_workers:
-            sync_worker.put_to_queue(tasks)
+        for sync_queue in self._sync_queue:
+            sync_queue.put_to_queue(tasks)
 
     def stats(self):
         print("here we can emit stats for the admin dashboard, maybe?")
