@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from importlib import resources
 from pathlib import Path
+from typing import Generic, TypeVar
 from urllib.parse import quote
 
 from .config import (
@@ -16,10 +17,12 @@ from .connectors.base import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=BackendConfig)
 
-class AbstractMediashare(ABC):
-    def __init__(self, backend_config: BackendConfig, connector: AbstractConnector):
-        self._config = backend_config
+
+class AbstractMediashare(ABC, Generic[T]):
+    def __init__(self, backend_config: T, connector: AbstractConnector):
+        self._config: T = backend_config
         self._connector = connector
 
     @abstractmethod
@@ -77,7 +80,7 @@ class AbstractMediashare(ABC):
                 logger.info("downloadportal autoupload is enabled but remote file up to date. Nothing to do.")
 
 
-class FilesystemMediashare(AbstractMediashare):
+class FilesystemMediashare(AbstractMediashare[FilesystemBackendConfig]):
     def mediaitem_link(self, remote_path: Path) -> str | None:
         if not self._config.share.media_url:
             logger.error("missing url for nextcloud mediaitem link")
@@ -88,7 +91,7 @@ class FilesystemMediashare(AbstractMediashare):
         return mediaitem_url
 
 
-class FtpMediashare(AbstractMediashare):
+class FtpMediashare(AbstractMediashare[FtpBackendConfig]):
     def mediaitem_link(self, remote_path: Path) -> str | None:
         if not self._config.share.media_url:
             logger.error("missing url for nextcloud mediaitem link")
@@ -98,7 +101,7 @@ class FtpMediashare(AbstractMediashare):
         return mediaitem_url
 
 
-class NextcloudMediashare(AbstractMediashare):
+class NextcloudMediashare(AbstractMediashare[NextcloudBackendConfig]):
     def mediaitem_link(self, remote_path: Path) -> str | None:
         nc_url = self._config.connector.url
         nc_shareid = self._config.share.share_id

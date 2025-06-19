@@ -1,5 +1,4 @@
 import logging
-from itertools import count
 from pathlib import Path
 
 from .. import hookimpl
@@ -12,7 +11,6 @@ from .sync_queue import SyncQueue
 from .types import taskSyncType
 
 logger = logging.getLogger(__name__)
-counter = count()  # tie-breaker, always incr on put to queue so the following dataclass is not compared
 
 
 class Synchronizer(BasePlugin[SynchronizerConfig]):
