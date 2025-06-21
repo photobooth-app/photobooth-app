@@ -9,8 +9,10 @@ T = TypeVar("T", bound=BaseConnectorConfig)
 
 class AbstractConnector(ABC, Generic[T]):
     # class AbstractConnector(ABC):
+    @abstractmethod
     def __init__(self, config: T):
         ...
+
         # self._config: T = config
 
     @abstractmethod

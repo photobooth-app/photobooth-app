@@ -4,7 +4,7 @@ from pathlib import Path
 
 from photobooth.utils.resilientservice import ResilientService
 
-from .connectors.base import AbstractConnector
+from .connectors.abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
 

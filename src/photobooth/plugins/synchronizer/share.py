@@ -13,7 +13,7 @@ from .config import (
     FtpShareConfig,
     NextcloudBackendConfig,
 )
-from .connectors.base import AbstractConnector
+from .connectors.abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,5 @@
 from ..config import ConnectorConfig, FilesystemConnectorConfig, FtpConnectorConfig, NextcloudConnectorConfig
-from .base import AbstractConnector
+from .abstractconnector import AbstractConnector
 from .filesystem import FilesystemConnector
 from .ftp import FtpConnector
 from .nextcloud import NextcloudConnector

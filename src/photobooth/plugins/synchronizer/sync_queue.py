@@ -2,7 +2,7 @@ import logging
 from queue import Empty
 
 from ...utils.resilientservice import ResilientService
-from .connectors.base import AbstractConnector
+from .connectors.abstractconnector import AbstractConnector
 from .models import SyncTaskDelete, SyncTaskUpload
 from .types import queueSyncType, taskSyncType
 

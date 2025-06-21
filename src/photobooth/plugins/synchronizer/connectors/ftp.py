@@ -8,7 +8,7 @@ from typing import Literal
 
 from ....utils.stoppablethread import StoppableThread
 from ..config import FtpConnectorConfig
-from .base import AbstractConnector
+from .abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def _get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, 
 
 class FtpConnector(AbstractConnector):
     def __init__(self, config: FtpConnectorConfig):
-        super().__init__(config)
+        # super().__init__(config)
 
         self._host: str = config.host
         self._port: int = config.port

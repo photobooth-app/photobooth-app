@@ -3,14 +3,14 @@ import shutil
 from pathlib import Path
 
 from ..config import FilesystemConnectorConfig
-from .base import AbstractConnector
+from .abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
 
 class FilesystemConnector(AbstractConnector):
     def __init__(self, config: FilesystemConnectorConfig):
-        super().__init__(config)
+        # super().__init__(config)
 
         self._target_dir: Path | None = config.target_dir
 

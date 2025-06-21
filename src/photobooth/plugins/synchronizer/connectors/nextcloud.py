@@ -4,14 +4,14 @@ from pathlib import Path
 from nc_py_api import Nextcloud
 
 from ..config import NextcloudConnectorConfig
-from .base import AbstractConnector
+from .abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
 
 
 class NextcloudConnector(AbstractConnector):
     def __init__(self, config: NextcloudConnectorConfig):
-        super().__init__(config)
+        # super().__init__(config)
 
         self._url: str = config.url
         self._username: str = config.username
