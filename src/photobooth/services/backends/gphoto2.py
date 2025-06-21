@@ -195,7 +195,8 @@ class Gphoto2Backend(AbstractBackend):
                     self._configure_optimized_for_idle_video()
 
                     try:
-                        capture = self._camera.capture_preview()
+                        camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
+                        capture = self._camera.capture_preview(camera_file)
 
                     except Exception as exc:
                         preview_failcounter += 1
@@ -301,7 +302,8 @@ class Gphoto2Backend(AbstractBackend):
                             suffix=".jpg",
                         ).name
                     )
-                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
+                    camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
+                    self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL, camera_file)  # pyright: ignore [reportAttributeAccessIssue]
                     camera_file.save(str(filepath))
 
                 except gp.GPhoto2Error as exc:
