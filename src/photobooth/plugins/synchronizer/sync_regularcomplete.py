@@ -45,17 +45,12 @@ class SyncRegularcomplete(ResilientService):
                 if self._stop_event.is_set():
                     return
 
-                try:
-                    remote_path = get_remote_filepath(local_path)
-                    is_same_file = self._connector.get_remote_samefile(local_path, remote_path)
+                remote_path = get_remote_filepath(local_path)
+                is_same_file = self._connector.get_remote_samefile(local_path, remote_path)
 
-                    if not is_same_file:
-                        self._connector.do_upload(local_path, remote_path)
-                        logger.info(f"uploaded: {local_path} to {remote_path} on using connector {self._connector}")
-
-                except Exception as e:
-                    logger.error(f"error processing file {local_path}: {e}")
-                    raise e
+                if not is_same_file:
+                    self._connector.do_upload(local_path, remote_path)
+                    logger.info(f"uploaded: {local_path} to {remote_path} on using connector {self._connector}")
 
             while not self._stop_event.is_set():
                 if slept_counter < sync_every_x_seconds:
