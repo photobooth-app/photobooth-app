@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class FilesystemConnector(AbstractConnector):
     def __init__(self, config: FilesystemConnectorConfig):
-        # super().__init__(config)
+        super().__init__(config)
 
         self._target_dir: Path | None = config.target_dir
 

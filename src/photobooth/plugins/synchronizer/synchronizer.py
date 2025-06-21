@@ -8,7 +8,9 @@ from .connectors import connector_factory
 from .models import SyncTaskDelete, SyncTaskUpload
 from .share import AbstractMediashare, share_factory
 from .sync_queue import SyncQueue
+from .sync_regularcomplete import SyncRegularcomplete
 from .types import taskSyncType
+from .utils import get_remote_filepath
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         self._config: SynchronizerConfig = SynchronizerConfig()
         self._sync_queue: list[SyncQueue] = []
         self._shares: list[AbstractMediashare] = []
+        self._regular_complete_sync: list[SyncRegularcomplete] = []
 
     @hookimpl
     def start(self):
@@ -38,13 +41,24 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             # connector for syncqueue is reused - could be a new one also but not needed actually.
             share = share_factory(cfg.backend_config, connector)
             share.update_downloadportal()
+            self._shares.append(share)
 
             # finally lets hold a reference here for future disptaching.
             self._sync_queue.append(SyncQueue(connector))
-            self._shares.append(share)
+
+            if cfg.enable_regular_sync:
+                self._regular_complete_sync.append(
+                    SyncRegularcomplete(
+                        connector_factory.connector_factory(cfg.backend_config.connector),
+                        Path("./media/"),
+                    )
+                )
 
         for sync_queue in self._sync_queue:
             sync_queue.start()
+
+        for regular_complete_sync in self._regular_complete_sync:
+            regular_complete_sync.start()
 
     @hookimpl
     def stop(self):
@@ -54,12 +68,16 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         for sync_queue in self._sync_queue:
             sync_queue.stop()
 
+        for regular_complete_sync in self._regular_complete_sync:
+            regular_complete_sync.stop()
+
         # TODO: because stop joins, this does not have any effect actually.
         self._put_to_workers_queues(None)
 
     def reset(self):
         self._sync_queue = []
         self._shares = []
+        self._regular_complete_sync = []
 
     def _put_to_workers_queues(self, tasks: taskSyncType):
         # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
@@ -78,7 +96,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             return []
 
         for worker in self._shares:
-            filepath_remote = self.get_remote_filepath(filepath_local)
+            filepath_remote = get_remote_filepath(filepath_local)
             share_link = worker.get_share_link(filepath_remote)
             if share_link:
                 share_links.append(share_link)
@@ -89,33 +107,22 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
     def collection_original_file_added(self, files: list[Path]):
         logger.info(f"SYNC File ORIGINAL ADDED NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_added(self, files: list[Path]):
         logger.info(f"SYNC File added NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_updated(self, files: list[Path]):
         logger.info(f"SYNC File updated NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, self.get_remote_filepath(file)))
+            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
 
     @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         logger.info(f"SYNC File delete NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskDelete(self.get_remote_filepath(file)))
-
-    @staticmethod
-    def get_remote_filepath(local_filepath: Path, local_root_dir: Path = Path("./media/")) -> Path:
-        try:
-            remote_path = local_filepath.relative_to(local_root_dir)
-        except ValueError as exc:
-            raise ValueError(f"file {local_filepath} needs to be below root dir {local_root_dir}.") from exc
-
-        logger.info(f"{local_filepath} maps to {remote_path}")
-
-        return remote_path
+            self._put_to_workers_queues(SyncTaskDelete(get_remote_filepath(file)))

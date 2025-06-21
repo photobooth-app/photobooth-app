@@ -34,6 +34,8 @@ class SyncQueue(ResilientService):
         self._connector.connect()
 
     def teardown_resource(self):
+        self._queue = queueSyncType()  # clear to abort processing in service
+        self._queue.put_nowait(None)
         self._connector.disconnect()
 
     def run_service(self):

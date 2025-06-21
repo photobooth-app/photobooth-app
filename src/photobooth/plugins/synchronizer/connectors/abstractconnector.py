@@ -1,19 +1,17 @@
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, TypeVar
 
 from ..config import BaseConnectorConfig
 
+logger = logging.getLogger(__name__)
+
 T = TypeVar("T", bound=BaseConnectorConfig)
 
 
 class AbstractConnector(ABC, Generic[T]):
-    # class AbstractConnector(ABC):
-    @abstractmethod
-    def __init__(self, config: T):
-        ...
-
-        # self._config: T = config
+    def __init__(self, config: T): ...
 
     @abstractmethod
     def connect(self): ...

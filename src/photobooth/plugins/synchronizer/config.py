@@ -112,6 +112,8 @@ class Backend(BaseModel):
 
     description: str = Field(default="backend default name")
 
+    enable_regular_sync: bool = Field(default=True, description="Check media folder every 5 minutes and upload any missing files")
+
     backend_config: BackendConfig = Field(discriminator="backend_type")
 
 
