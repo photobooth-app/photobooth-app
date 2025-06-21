@@ -164,7 +164,7 @@ class DigicamcontrolBackend(AbstractBackend):
                         # text = r.text if (not r.headers.get("Content-Type") == "image/jpeg") else "IMAGE-data removed"
                         raise RuntimeError(f"error capture, digicamcontrol exception, status_code {r.status_code}, text: {r.text}")
 
-                    for attempt in range(1, 5):
+                    for attempt in range(10):
                         try:
                             # it could happen, that the http request finished, but the image is not yet fully processed. retry with little delay again
                             r = session.get(f"{self._config.base_url}/?slc=get&param1=lastcaptured&param2=")
@@ -178,16 +178,15 @@ class DigicamcontrolBackend(AbstractBackend):
                                 break  # no else below, its fine, proceed deliver image
 
                         except Exception as exc:
-                            logger.error(exc)
-                            logger.error(f"still waiting for picture, {attempt=}, retrying")
+                            logger.warning(f"still waiting for picture, {attempt=}, retrying. error: {exc}")
 
-                            time.sleep(0.2)
+                            time.sleep(0.3)
                             continue
 
                     else:
                         # we failed finally all the attempts - deal with the consequences.
-                        logger.critical("finally failed after 5 attempts to capture image!")
-                        raise RuntimeError("finally failed after 5 attempts to capture image!")
+                        logger.critical("finally failed after 10 attempts to capture image!")
+                        raise RuntimeError("finally failed after 10 attempts to capture image!")
 
                     # success
                     with self._hires_data.condition:
