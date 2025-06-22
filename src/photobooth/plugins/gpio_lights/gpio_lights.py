@@ -16,7 +16,7 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
         super().__init__()
 
         self._config: GpioLightsConfig = GpioLightsConfig()
-        self.light_out: DigitalOutputDevice | None = None
+        self.light_out_list: list[DigitalOutputDevice] = []
 
     @hookimpl
     def start(self):
@@ -59,16 +59,19 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
 
     def init_io(self):
         # shutdown
-        self.light_out = DigitalOutputDevice(self._config.gpio_pin_light, active_high=False)
+        for gpio_pin_light in self._config.gpio_pin_light_list:
+            self.light_out_list.append(DigitalOutputDevice(gpio_pin_light, active_high=self._config.active_high))
 
     def uninit_io(self):
-        if self.light_out:
-            self.light_out.close()
-            self.light_out = None
+        for light_out in self.light_out_list:
+            if light_out:
+                light_out.close()
+                light_out = None
 
     def light(self, on: bool):
-        if self.light_out:
-            try:
-                self.light_out.on() if on else self.light_out.off()
-            except Exception as exc:
-                logger.error(f"could not switch light, error: {exc}")
+        for light_out in self.light_out_list:
+            if light_out:
+                try:
+                    light_out.on() if on else light_out.off()
+                except Exception as exc:
+                    logger.error(f"could not switch light, error: {exc}")
