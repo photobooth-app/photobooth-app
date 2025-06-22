@@ -70,11 +70,10 @@ class NextcloudConnector(AbstractConnector):
 
         # Do upload
         self.nc.files.upload_stream(str(full_path), local_path)
-        logger.info(f"Uploaded {local_path} to remote {full_path}")
 
     def do_delete_remote(self, remote_path: Path):
         assert self.nc
 
         full_path = self._target_dir.joinpath(remote_path)
+
         self.nc.files.delete(str(full_path))
-        logger.info(f"Deleted {full_path} from remote")

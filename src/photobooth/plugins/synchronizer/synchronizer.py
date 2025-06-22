@@ -40,7 +40,6 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
             if cfg.enable_share_link:
                 share = share_factory(cfg.backend_config, connector_factory.connector_factory(cfg.backend_config.connector))
-                print(share)
                 share.update_downloadportal()
                 self._shares.append(share)
 
@@ -80,7 +79,10 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             sync_queue.put_to_queue(priorized_task)
 
     def stats(self):
-        print("here we can emit stats for the admin dashboard, maybe?")
+        out = []
+        for sync_queue in self._sync_queue:
+            out.append(sync_queue._stats)
+        return out
 
     @hookimpl
     def get_share_links(self, filepath_local: Path) -> list[str]:

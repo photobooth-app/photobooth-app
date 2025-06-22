@@ -62,12 +62,9 @@ class FilesystemConnector(AbstractConnector):
             logger.info(f"creating target (sub)dir {remote_path_parent_folder_joined_target} before copying file")
             remote_path_parent_folder_joined_target.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"copy file {local_path} to {remote_path_joined_target}")
         shutil.copy2(local_path, remote_path_joined_target)
 
     def do_delete_remote(self, remote_path: Path):
         assert self._target_dir
-
-        logger.info(f"deleting file {remote_path} from remote")
 
         self._target_dir.joinpath(remote_path).unlink(missing_ok=True)
