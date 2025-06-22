@@ -6,9 +6,16 @@ from statemachine import Event, State
 
 from .. import hookimpl
 from ..base_plugin import BasePlugin
-from .config import GpioLightsConfig
+from .config import Events, GpioLightsConfig
 
 logger = logging.getLogger(__name__)
+
+
+class AppDigitalOutputDevice(DigitalOutputDevice):
+    def __init__(self, events: list[Events], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._events: list[Events] = events
 
 
 class GpioLights(BasePlugin[GpioLightsConfig]):
@@ -16,13 +23,13 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
         super().__init__()
 
         self._config: GpioLightsConfig = GpioLightsConfig()
-        self.light_out_list: list[DigitalOutputDevice] = []
+        self._digital_output_devices: list[AppDigitalOutputDevice] = []
 
     @hookimpl
     def start(self):
         self.uninit_io()
 
-        if not self._config.plugin_enabled:
+        if not self._config.enabled:
             logger.info("gpio lights plugin disabled, start aborted")
             return
 
@@ -37,6 +44,8 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
 
         logger.info("gpio lights enabled and initialized")
 
+        self.light("on@start", True)
+
     @hookimpl
     def stop(self):
         self.uninit_io()
@@ -46,32 +55,36 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
         if target.id == "counting":
-            self.light(True)
+            self.light("on@countdown_start", True)
 
         elif target.id == "finished":
-            self.light(False)
+            self.light("off@after_finished", False)
 
     @hookimpl
     def sm_on_exit_state(self, source: State, target: State, event: Event):
         if source.id == "capture":
-            if self._config.gpio_light_off_after_capture:
-                self.light(False)
+            self.light("off@after_capture", False)
 
     def init_io(self):
-        # shutdown
-        for gpio_pin_light in self._config.gpio_pin_light_list:
-            self.light_out_list.append(DigitalOutputDevice(gpio_pin_light, active_high=self._config.active_high))
+        for cfg_gpio_light in self._config.gpio_lights:
+            self._digital_output_devices.append(
+                AppDigitalOutputDevice(
+                    cfg_gpio_light.events,
+                    pin=cfg_gpio_light.gpio_pin,
+                    active_high=cfg_gpio_light.active_high,
+                )
+            )
 
     def uninit_io(self):
-        for light_out in self.light_out_list:
-            if light_out:
-                light_out.close()
-                light_out = None
+        while self._digital_output_devices:
+            digital_output_device = self._digital_output_devices.pop()
+            digital_output_device.off()
+            digital_output_device.close()
 
-    def light(self, on: bool):
-        for light_out in self.light_out_list:
-            if light_out:
+    def light(self, event: Events, on: bool):
+        for device in self._digital_output_devices:
+            if event in device._events:
                 try:
-                    light_out.on() if on else light_out.off()
+                    device.on() if on else device.off()
                 except Exception as exc:
                     logger.error(f"could not switch light, error: {exc}")
