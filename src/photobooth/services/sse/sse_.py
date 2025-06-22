@@ -228,14 +228,11 @@ class SseService:
 
     def setup_client(self, client: Client):
         self._clients.append(client)
-        logger.info(f"SSE subscription added for client {client.request.client}")
-        logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
+        logger.debug(f"SSE clients connected: {[_client.request.client for _client in self._clients]}")
         # print(f"client.queue {[client.queue for client in self._clients]}")
         # print(f"qsize {[client.queue.qsize() for client in self._clients]}")
 
     def remove_client(self, client: Client):
-        logger.debug(f"SSE subscription remove for {client.request.client} requested")
-
         # iterate over client list and remove.
         for index, _client in enumerate(self._clients):
             if _client.request is client.request:
@@ -243,7 +240,7 @@ class SseService:
                 logger.debug(f"SSE subscription removed for {removed_client.request.client}")
                 break
 
-        logger.debug(f"SSE clients listed {[_client.request for _client in self._clients]}")
+        logger.debug(f"SSE clients connected: {[_client.request.client for _client in self._clients]}")
 
     def dispatch_event(self, sse_event_data):
         for client in self._clients:
