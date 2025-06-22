@@ -3,11 +3,11 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, TypeVar
 
-from ..config import BaseConnectorConfig
+from ..config import ConnectorConfig
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseConnectorConfig)
+T = TypeVar("T", bound=ConnectorConfig)
 
 
 class AbstractConnector(ABC, Generic[T]):

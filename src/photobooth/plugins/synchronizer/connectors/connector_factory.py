@@ -1,4 +1,9 @@
-from ..config import ConnectorConfig, FilesystemConnectorConfig, FtpConnectorConfig, NextcloudConnectorConfig
+from ..config import (
+    ConnectorConfig,
+    FilesystemConnectorConfig,
+    FtpConnectorConfig,
+    NextcloudConnectorConfig,
+)
 from .abstractconnector import AbstractConnector
 from .filesystem import FilesystemConnector
 from .ftp import FtpConnector
@@ -12,6 +17,6 @@ def connector_factory(connector_config: ConnectorConfig) -> AbstractConnector[Co
         NextcloudConnectorConfig: NextcloudConnector,
     }
 
-    ConnectorClass = connector_map[type(connector_config)]
+    klass = connector_map[type(connector_config)]
 
-    return ConnectorClass(connector_config)
+    return klass(connector_config)

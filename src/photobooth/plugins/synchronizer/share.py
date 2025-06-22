@@ -40,16 +40,12 @@ class AbstractMediashare(ABC, Generic[T]):
             return None
 
     def get_share_link(self, filepath_remote: Path) -> str | None:
-        if not self._config.share.enable_share_link:
-            logger.info("generating share links in synchronizer plugin is disabled for this backend")
-            return None
-
         downloadportal_url = self.downloadportal_url()
         mediaitem_url = self.mediaitem_link(filepath_remote)
 
         # sanity check on media url
         if not mediaitem_url:
-            logger.error("cannot share because there is no URL available for the media file provided by the connector")
+            logger.error(f"cannot share because there is no URL available for the media file provided by the connector {self._connector}")
             return None
 
         # sanity check on downloadportal url
@@ -83,7 +79,7 @@ class AbstractMediashare(ABC, Generic[T]):
 class FilesystemMediashare(AbstractMediashare[FilesystemBackendConfig]):
     def mediaitem_link(self, remote_path: Path) -> str | None:
         if not self._config.share.media_url:
-            logger.error("missing url for nextcloud mediaitem link")
+            logger.error(f"missing url for {self} mediaitem link")
             return None
 
         mediaitem_url = self._config.share.media_url.rstrip("/") + "/" + remote_path.as_posix()
@@ -94,7 +90,7 @@ class FilesystemMediashare(AbstractMediashare[FilesystemBackendConfig]):
 class FtpMediashare(AbstractMediashare[FtpBackendConfig]):
     def mediaitem_link(self, remote_path: Path) -> str | None:
         if not self._config.share.media_url:
-            logger.error("missing url for nextcloud mediaitem link")
+            logger.error(f"missing url for {self} mediaitem link")
             return None
 
         mediaitem_url = self._config.share.media_url.rstrip("/") + "/" + remote_path.as_posix()
@@ -106,10 +102,10 @@ class NextcloudMediashare(AbstractMediashare[NextcloudBackendConfig]):
         nc_url = self._config.connector.url
         nc_shareid = self._config.share.share_id
         if not nc_url:
-            logger.error("missing url for nextcloud mediaitem link")
+            logger.error(f"missing url for {self} mediaitem link")
             return None
         if not nc_shareid:
-            logger.error("missing share_id for nextcloud mediaitem link")
+            logger.error(f"missing share_id for {self} mediaitem link")
             return None
 
         mediaitem_url = mediaitem_url = f"{nc_url.rstrip('/')}/public.php/dav/files/{nc_shareid}/" + remote_path.as_posix()

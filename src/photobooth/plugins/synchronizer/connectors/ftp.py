@@ -41,7 +41,7 @@ class FtpConnector(AbstractConnector):
         self._idle_monitor_thread.start()
 
     def __str__(self):
-        return f"{self.__class__.__name__}:{self._host}"
+        return f"{self.__class__.__name__} ({self._host})"
 
     def _monitor_idle_fun(self):
         assert self._idle_monitor_thread
@@ -51,7 +51,7 @@ class FtpConnector(AbstractConnector):
 
             with self._lock:
                 if self._ftp and (time.monotonic() - self._idle_monitor_last_used) > self._idle_timeout:
-                    logger.info(f"Ftp connection idle timeout exceeded after {self._idle_timeout}. Disconnecting from server...")
+                    logger.debug(f"Ftp connection idle for {self._idle_timeout}s. Disconnecting from server...")
                     try:
                         self._ftp.quit()
                     except Exception:
@@ -196,8 +196,6 @@ class FtpConnector(AbstractConnector):
 
             with open(local_path, "rb") as f:
                 self._ftp.storbinary(f"STOR {remote_path}", f)
-
-            logger.info(f"Uploaded {local_path} to remote {remote_path}")
 
     def do_delete_remote(self, remote_path: Path):
         with self._lock:

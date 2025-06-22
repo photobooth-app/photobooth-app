@@ -22,7 +22,7 @@ class NextcloudConnector(AbstractConnector):
         self.nc: Nextcloud | None = None
 
     def __str__(self):
-        return f"{self.__class__.__name__}:{self._url}/{self._target_dir}"
+        return f"{self.__class__.__name__} ({self._url}/{self._target_dir})"
 
     def connect(self):
         if not self._url:

@@ -5,11 +5,10 @@ from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import SynchronizerConfig
 from .connectors import connector_factory
-from .models import SyncTaskDelete, SyncTaskUpload
 from .share import AbstractMediashare, share_factory
-from .sync_queue import SyncQueue
 from .sync_regularcomplete import SyncRegularcomplete
-from .types import taskSyncType
+from .threadedqueueprocessor import ThreadedQueueProcessor
+from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 from .utils import get_remote_filepath
 
 logger = logging.getLogger(__name__)
@@ -20,7 +19,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config: SynchronizerConfig = SynchronizerConfig()
-        self._sync_queue: list[SyncQueue] = []
+        self._sync_queue: list[ThreadedQueueProcessor] = []
         self._shares: list[AbstractMediashare] = []
         self._regular_complete_sync: list[SyncRegularcomplete] = []
 
@@ -37,52 +36,48 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             if not cfg.enabled:
                 continue
 
-            connector = connector_factory.connector_factory(cfg.backend_config.connector)
-            # connector for syncqueue is reused - could be a new one also but not needed actually.
-            share = share_factory(cfg.backend_config, connector)
-            share.update_downloadportal()
-            self._shares.append(share)
+            threadedqueueprocessor = ThreadedQueueProcessor(cfg.backend_config.connector)
 
-            # finally lets hold a reference here for future disptaching.
-            self._sync_queue.append(SyncQueue(connector))
+            if cfg.enable_share_link:
+                share = share_factory(cfg.backend_config, connector_factory.connector_factory(cfg.backend_config.connector))
+                print(share)
+                share.update_downloadportal()
+                self._shares.append(share)
 
             if cfg.enable_regular_sync:
                 self._regular_complete_sync.append(
                     SyncRegularcomplete(
                         connector_factory.connector_factory(cfg.backend_config.connector),
+                        threadedqueueprocessor,
                         Path("./media/"),
                     )
                 )
 
-        for sync_queue in self._sync_queue:
-            sync_queue.start()
+            if cfg.enable_immediate_sync:
+                self._sync_queue.append(threadedqueueprocessor)
 
-        for regular_complete_sync in self._regular_complete_sync:
-            regular_complete_sync.start()
+        for instance in self._sync_queue:
+            instance.start()
+
+        for instance in self._regular_complete_sync:
+            instance.start()
 
     @hookimpl
     def stop(self):
-        """To stop the resilient service"""
+        for instance in self._sync_queue:
+            instance.stop()
 
-        # stop first, so following None (stop-NOW indicator) will be effective
-        for sync_queue in self._sync_queue:
-            sync_queue.stop()
-
-        for regular_complete_sync in self._regular_complete_sync:
-            regular_complete_sync.stop()
-
-        # TODO: because stop joins, this does not have any effect actually.
-        self._put_to_workers_queues(None)
+        for instance in self._regular_complete_sync:
+            instance.stop()
 
     def reset(self):
         self._sync_queue = []
         self._shares = []
         self._regular_complete_sync = []
 
-    def _put_to_workers_queues(self, tasks: taskSyncType):
-        # map(lambda backend_worker: backend_worker.put_to_queue(tasks), self._backend_workers)
+    def _put_to_workers_queues(self, priorized_task: PriorizedTask):
         for sync_queue in self._sync_queue:
-            sync_queue.put_to_queue(tasks)
+            sync_queue.put_to_queue(priorized_task)
 
     def stats(self):
         print("here we can emit stats for the admin dashboard, maybe?")
@@ -95,9 +90,9 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             logger.info("share link generation is disabled globally in synchronizer plugin")
             return []
 
-        for worker in self._shares:
+        for instance in self._shares:
             filepath_remote = get_remote_filepath(filepath_local)
-            share_link = worker.get_share_link(filepath_remote)
+            share_link = instance.get_share_link(filepath_remote)
             if share_link:
                 share_links.append(share_link)
 
@@ -105,24 +100,20 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
     @hookimpl
     def collection_original_file_added(self, files: list[Path]):
-        logger.info(f"SYNC File ORIGINAL ADDED NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
+            self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_added(self, files: list[Path]):
-        logger.info(f"SYNC File added NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
+            self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_updated(self, files: list[Path]):
-        logger.info(f"SYNC File updated NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskUpload(file, get_remote_filepath(file)))
+            self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_deleted(self, files: list[Path]):
-        logger.info(f"SYNC File delete NOTE {files}")
         for file in files:
-            self._put_to_workers_queues(SyncTaskDelete(get_remote_filepath(file)))
+            self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskDelete(get_remote_filepath(file))))

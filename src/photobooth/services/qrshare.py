@@ -55,7 +55,7 @@ class QrShareService(BaseService):
         super().stopped()
 
     def get_share_link(self, identifier: UUID, filename: str) -> list[str]:
-        logger.info(f"GETTING QR    SHARE LINK {identifier} {filename}")
+        logger.debug(f"generating qr share links for {identifier} {filename}")
 
         out_links = []
 

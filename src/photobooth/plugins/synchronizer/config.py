@@ -10,7 +10,7 @@ from photobooth.services.config.serializer import contextual_serializer_password
 
 
 class Common(BaseModel):
-    enabled: bool = Field(default=False, description="Enable integration to sync media files.")
+    enabled: bool = Field(default=False, description="Enable plugin to sync media files globally.")
 
     enable_share_links: bool = Field(default=True)
 
@@ -51,7 +51,6 @@ class NextcloudConnectorConfig(BaseConnectorConfig):
 
 
 class BaseShareConfig(BaseModel):
-    enable_share_link: bool = Field(default=True)
     use_downloadportal: bool = Field(default=True)
     downloadportal_url: str = Field(default="")
 
@@ -113,6 +112,14 @@ class Backend(BaseModel):
     description: str = Field(default="backend default name")
 
     enable_regular_sync: bool = Field(default=True, description="Check media folder every 5 minutes and upload any missing files")
+    enable_immediate_sync: bool = Field(
+        default=True,
+        description="Sync immediate when media is added/modified/deleted in the gallery. Enable this for QR code sharing.",
+    )
+    enable_share_link: bool = Field(
+        default=True,
+        description="Enable to generate a link displayed as QR code. You can have multiple QR codes, but it is recommended to enable only one.",
+    )
 
     backend_config: BackendConfig = Field(discriminator="backend_type")
 

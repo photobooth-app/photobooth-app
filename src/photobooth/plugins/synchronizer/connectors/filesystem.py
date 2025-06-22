@@ -15,7 +15,7 @@ class FilesystemConnector(AbstractConnector):
         self._target_dir: Path | None = config.target_dir
 
     def __str__(self):
-        return f"{self.__class__.__name__}:{self._target_dir}"
+        return f"{self.__class__.__name__} ({self._target_dir})"
 
     def connect(self):
         if not self._target_dir:
