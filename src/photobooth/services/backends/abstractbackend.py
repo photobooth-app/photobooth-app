@@ -115,7 +115,7 @@ class AbstractBackend(ResilientService, ABC):
         # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
         # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
         # the backend-implementation has to decide how to handle this once True.
-        self._device_enable_lores_flag: bool = False
+        self._last_requested_timestamp: float | None = None
 
         # video feature
         self._video_worker_capture_started: Event = Event()
@@ -142,12 +142,19 @@ class AbstractBackend(ResilientService, ABC):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
         self._framerate.current_timestamp = time.monotonic_ns()
 
+    @property
+    def livestream_requested(self) -> bool:
+        if self._last_requested_timestamp is None:
+            return False
+        else:
+            return (time.monotonic() - self._last_requested_timestamp) < 20
+
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
 
         # reset the request for this backend to deliver lores frames
-        self._device_enable_lores_flag = False
+        self._last_requested_timestamp = None
 
         super().start()
 
@@ -259,9 +266,10 @@ class AbstractBackend(ResilientService, ABC):
         Returns:
             _type_: _description_
         """
-        self._device_enable_lores_flag = True
 
         for _ in range(retries):
+            self._last_requested_timestamp = time.monotonic()
+
             try:
                 img_bytes = self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
                 img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)

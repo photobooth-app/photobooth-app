@@ -117,6 +117,16 @@ class Gphoto2Backend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         self._configure_optimized_for_hq_capture_flag = True
 
+    def _configure_optimized_for_livestream_paused(self):
+        # pause is to stop streaming from the camera to avoid overheating of the sensor
+        # this is an internal event so no flag reset, it's handled differently
+
+        # disable viewfinder;
+        self._set_config("viewfinder", 0)
+
+        if self._config.canon_eosmoviemode:
+            self._set_config("eosmoviemode", 0)
+
     def _configure_optimized_for_hq_capture(self):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
@@ -186,13 +196,15 @@ class Gphoto2Backend(AbstractBackend):
         assert gp
 
         preview_failcounter = 0
+        livestream_was_started = False
         self._on_configure_optimized_for_idle()
 
         while not self._stop_event.is_set():  # repeat until stopped
             if not self._hires_data.request.is_set():
-                if self._device_enable_lores_flag:
+                if self.livestream_requested:
                     # check if flag is true and configure if so once.
                     self._configure_optimized_for_idle_video()
+                    livestream_was_started = True
 
                     try:
                         camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
@@ -233,6 +245,10 @@ class Gphoto2Backend(AbstractBackend):
                     # giving gphoto2 time to settle and avoid flooded logs.
                     time.sleep(0.04)
                 else:
+                    if livestream_was_started is True:
+                        self._configure_optimized_for_livestream_paused()
+                        livestream_was_started = False
+
                     time.sleep(0.05)
             else:
                 # hold a list of captured files during capture. this is needed if JPG+RAW is shot.
