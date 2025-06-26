@@ -4,26 +4,10 @@ AppConfig class providing central config
 """
 
 import sys
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
-
-from ..validators import ensure_no_webcamcv2
-
-BackendsBase = Literal["VirtualCamera", "WebcamPyav", "Wigglecam"]
-BackendsLinux = Literal["Picamera2", "WebcamV4l", "Gphoto2"]
-BackendsWindows = Literal["Digicamcontrol"]
-BackendsDarwin = Literal["Gphoto2"]
-
-if sys.platform == "win32":
-    BackendsPlatform = Literal[BackendsBase, BackendsWindows]
-elif sys.platform == "linux":
-    BackendsPlatform = Literal[BackendsBase, BackendsLinux]
-elif sys.platform == "darwin":
-    BackendsPlatform = Literal[BackendsBase, BackendsDarwin]
-else:
-    BackendsPlatform = BackendsBase
 
 Orientation = Literal["1: 0°", "2: 0° mirrored", "3: 180°", "4: 180° mirrored", "5: 90°", "6: 90° mirrored", "7: 270°", "8: 270° mirrored"]
 
@@ -37,7 +21,7 @@ class BaseBackendModel(BaseModel):
 
 class GroupBackendVirtualcamera(BaseBackendModel):
     model_config = ConfigDict(title="VirtualCamera")
-    # no additional configuration yet!
+    backend_type: Literal["VirtualCamera"] = "VirtualCamera"
 
     framerate: int = Field(
         default=15,
@@ -59,6 +43,7 @@ class GroupBackendVirtualcamera(BaseBackendModel):
 
 class GroupBackendPicamera2(BaseBackendModel):
     model_config = ConfigDict(title="Picamera2")
+    backend_type: Literal["Picamera2"] = "Picamera2"
 
     camera_num: int = Field(
         default=0,
@@ -133,6 +118,7 @@ class GroupBackendPicamera2(BaseBackendModel):
 
 class GroupBackendGphoto2(BaseBackendModel):
     model_config = ConfigDict(title="Gphoto2")
+    backend_type: Literal["Gphoto2"] = "Gphoto2"
 
     gcapture_target: str = Field(
         default="",
@@ -168,6 +154,7 @@ class GroupBackendGphoto2(BaseBackendModel):
 
 class GroupBackendPyav(BaseBackendModel):
     model_config = ConfigDict(title="PyAV")
+    backend_type: Literal["WebcamPyav"] = "WebcamPyav"
 
     device_identifier: str = Field(
         default="Insta360 Link 2C",
@@ -202,6 +189,7 @@ class GroupBackendPyav(BaseBackendModel):
 
 class GroupBackendV4l2(BaseBackendModel):
     model_config = ConfigDict(title="V4l2")
+    backend_type: Literal["WebcamV4l"] = "WebcamV4l"
 
     device_identifier: str = Field(
         default="0",
@@ -245,6 +233,8 @@ class GroupBackendV4l2(BaseBackendModel):
 class GroupBackendDigicamcontrol(BaseBackendModel):
     model_config = ConfigDict(title="Digicamcontrol")
 
+    backend_type: Literal["Digicamcontrol"] = "Digicamcontrol"
+
     base_url: str = Field(
         default="http://127.0.0.1:5513",
         description="Base URL used to connect to the host running the digicamcontrol software. Usually photobooth-app and digicamcontrol are on the same computer and no adjustmend needed.",
@@ -253,6 +243,8 @@ class GroupBackendDigicamcontrol(BaseBackendModel):
 
 class GroupBackendWigglecam(ConfigCameraPool):
     model_config = ConfigDict(title="Wigglecam Connector")
+
+    backend_type: Literal["Wigglecam"] = "Wigglecam"
 
     index_cam_stills: int = Field(
         default=0,
@@ -268,6 +260,20 @@ class GroupBackendWigglecam(ConfigCameraPool):
     ]
 
 
+BackendsBase = GroupBackendVirtualcamera | GroupBackendPyav | GroupBackendWigglecam
+BackendsLinux = GroupBackendPicamera2 | GroupBackendV4l2 | GroupBackendGphoto2
+BackendsWindows = GroupBackendDigicamcontrol
+BackendsDarwin = GroupBackendGphoto2
+if sys.platform == "win32":
+    BackendsPlatform = BackendsBase | BackendsWindows
+elif sys.platform == "linux":
+    BackendsPlatform = BackendsBase | BackendsLinux
+elif sys.platform == "darwin":
+    BackendsPlatform = BackendsBase | BackendsDarwin
+else:
+    BackendsPlatform = BackendsBase
+
+
 class GroupBackend(BaseModel):
     """
     Choose backends for still images/high quality images captured on main backend.
@@ -277,29 +283,27 @@ class GroupBackend(BaseModel):
 
     model_config = ConfigDict(title="Main Backend Configuration")
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_prev8_structure(cls, data):
+        """transform non-discriminant config structure <v8 to new one. The new structure looks nicer in the frontend."""
+
+        if "backend_config" not in data:
+            print("migrating <v8 backend config structure to new model")
+            data["backend_config"] = data[str(data["selected_device"]).lower()]
+            data["backend_config"]["backend_type"] = data["selected_device"]  # discriminator migrate
+
+        return data
+
     enabled: bool = Field(
         title="Load and start backend",
         default=True,
         description="Selected device will be loaded and started.",
     )
 
-    selected_device: Annotated[BackendsPlatform, BeforeValidator(ensure_no_webcamcv2)] = Field(
-        title="Configure device",
-        default="VirtualCamera",
-        description="Select backend and configure the device below",
-    )
+    description: str = Field(default="backend default name")
 
-    virtualcamera: GroupBackendVirtualcamera = GroupBackendVirtualcamera()
-    webcampyav: GroupBackendPyav = GroupBackendPyav()
-    wigglecam: GroupBackendWigglecam = GroupBackendWigglecam()
-
-    if sys.platform == "linux":
-        picamera2: GroupBackendPicamera2 = GroupBackendPicamera2()
-        webcamv4l: GroupBackendV4l2 = GroupBackendV4l2()
-        gphoto2: GroupBackendGphoto2 = GroupBackendGphoto2()
-
-    if sys.platform == "win32":
-        digicamcontrol: GroupBackendDigicamcontrol = GroupBackendDigicamcontrol()
+    backend_config: BackendsPlatform = Field(discriminator="backend_type")
 
 
 class GroupBackends(BaseModel):
@@ -342,4 +346,4 @@ class GroupBackends(BaseModel):
         description="Index of one backend below used for multicamera images (wigglegrams).",
     )
 
-    group_backends: list[GroupBackend] = [GroupBackend()]
+    group_backends: list[GroupBackend] = [GroupBackend(backend_config=GroupBackendVirtualcamera())]

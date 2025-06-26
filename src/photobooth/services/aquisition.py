@@ -33,15 +33,13 @@ class AquisitionService(BaseService):
         self._backends = []
 
         # get backend obj and instanciate
-        for backend_config in appconfig.backends.group_backends:
-            if backend_config.enabled:
-                backend: AbstractBackend = self._import_backend(backend_config.selected_device)(
-                    getattr(backend_config, str(backend_config.selected_device).lower())
-                )
+        for cfg in appconfig.backends.group_backends:
+            if cfg.enabled:
+                backend: AbstractBackend = self._import_backend(cfg.backend_config.backend_type)(cfg.backend_config)
 
                 self._backends.append(backend)
             else:
-                logger.info(f"skipped starting backend {backend_config} because not enabled")
+                logger.info(f"skipped starting backend {cfg} because not enabled")
 
         if not self._backends:
             raise RuntimeError("no backend enabled!")
