@@ -84,6 +84,8 @@ class GpioLights(BasePlugin[GpioLightsConfig]):
     def light(self, event: Events, on: bool):
         for device in self._digital_output_devices:
             if event in device._events:
+                logger.debug(f"switch gpio_light {device}: {on=}")
+
                 try:
                     device.on() if on else device.off()
                 except Exception as exc:
