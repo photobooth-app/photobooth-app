@@ -18,7 +18,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
     gpio_lights_plugin = cast(GpioLights, container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
-    gpio_lights_plugin._config.plugin_enabled = True
+    gpio_lights_plugin._config.enabled = True
 
     container.start()
     yield container
@@ -40,8 +40,8 @@ def test_hooks_integration(_container: Container):
 def test_light_switched_during_process(_container: Container):
     gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
 
-    assert gpio_lights_plugin.light_out
-    pin = cast(MockPin, gpio_lights_plugin.light_out.pin)
+    assert gpio_lights_plugin._digital_output_devices[0]
+    pin = cast(MockPin, gpio_lights_plugin._digital_output_devices[0].pin)
     pin.clear_states()
 
     _container.processing_service.trigger_action("image", 0)
@@ -54,10 +54,11 @@ def test_light_switched_during_process(_container: Container):
 
 def test_light_switched_during_process_turn_off_after_capture(_container: Container):
     gpio_lights_plugin = cast(GpioLights, _container.pluginmanager_service.get_plugin("photobooth.plugins.gpio_lights.gpio_lights"))
-    gpio_lights_plugin._config.gpio_light_off_after_capture = True
+    gpio_lights_plugin._digital_output_devices[0]._events = ["on@countdown_start", "off@after_capture"]
 
-    assert gpio_lights_plugin.light_out
-    pin = cast(MockPin, gpio_lights_plugin.light_out.pin)
+    assert gpio_lights_plugin._digital_output_devices[0]
+
+    pin = cast(MockPin, gpio_lights_plugin._digital_output_devices[0].pin)
     pin.clear_states()
 
     _container.processing_service.trigger_action("collage", 0)
@@ -67,8 +68,9 @@ def test_light_switched_during_process_turn_off_after_capture(_container: Contai
     for actual, expected in zip(pin.states, [True, False, True, False, True], strict=True):
         assert actual.state == expected
 
-    gpio_lights_plugin._config.gpio_light_off_after_capture = False
     pin.clear_states()
+
+    gpio_lights_plugin._digital_output_devices[0]._events = ["on@countdown_start", "off@after_finished"]
 
     _container.processing_service.trigger_action("collage", 0)
     _container.processing_service.wait_until_job_finished()
