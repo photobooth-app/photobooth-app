@@ -207,8 +207,8 @@ class Gphoto2Backend(AbstractBackend):
                     livestream_was_started = True
 
                     try:
-                        camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
-                        capture = self._camera.capture_preview(camera_file)
+                        camera_file = self._camera.capture_preview()
+                        img_bytes = memoryview(camera_file.get_data_and_size()).tobytes()
 
                     except Exception as exc:
                         preview_failcounter += 1
@@ -231,13 +231,11 @@ class Gphoto2Backend(AbstractBackend):
                     else:
                         preview_failcounter = 0
 
-                    img_bytes = memoryview(capture.get_data_and_size()).tobytes()
+                        with self._lores_data.condition:
+                            self._lores_data.data = img_bytes
+                            self._lores_data.condition.notify_all()
 
-                    with self._lores_data.condition:
-                        self._lores_data.data = img_bytes
-                        self._lores_data.condition.notify_all()
-
-                    self._frame_tick()
+                        self._frame_tick()
 
                     # Pi5 seems too fast for the old fashioned gphoto lib, permanently producing
                     # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)
@@ -318,8 +316,8 @@ class Gphoto2Backend(AbstractBackend):
                             suffix=".jpg",
                         ).name
                     )
-                    camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
-                    self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL, camera_file)  # pyright: ignore [reportAttributeAccessIssue]
+
+                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     camera_file.save(str(filepath))
 
                 except gp.GPhoto2Error as exc:
