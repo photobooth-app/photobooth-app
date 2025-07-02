@@ -68,7 +68,6 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
 
     # deliver
     backend.start()
-    backend._device_enable_lores_flag = True
     block_until_device_is_running(backend)
     yield backend
     backend.stop()

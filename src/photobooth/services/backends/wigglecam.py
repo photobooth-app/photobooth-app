@@ -97,6 +97,9 @@ class WigglecamBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def setup_resource(self):
         # quick sanity check.
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
@@ -119,7 +122,7 @@ class WigglecamBackend(AbstractBackend):
 
     def run_service(self):
         while not self._stop_event.is_set():
-            if self._device_enable_lores_flag:
+            if self.livestream_requested:
                 try:
                     r = requests.get(
                         f"{self._config.nodes[self._config.index_cam_video].base_url}/api/camera/stream.mjpg", stream=True, timeout=(2, 5)

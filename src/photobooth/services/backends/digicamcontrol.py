@@ -107,6 +107,9 @@ class DigicamcontrolBackend(AbstractBackend):
     def _on_configure_optimized_for_idle(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
         try:
@@ -202,7 +205,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
             else:
                 # one time enable liveview
-                if self._device_enable_lores_flag and not self._enabled_liveview:
+                if self.livestream_requested and not self._enabled_liveview:
                     self._enable_liveview()
 
                 if self._enabled_liveview:

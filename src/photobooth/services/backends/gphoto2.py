@@ -34,8 +34,9 @@ class Gphoto2Backend(AbstractBackend):
         self._camera_context = gp.Context()  # pyright: ignore [reportAttributeAccessIssue]
 
         # if True signal to switch optimized, set none after switch again.
-        self._configure_optimized_for_hq_capture_flag = None
-        self._configure_optimized_for_idle_video_flag = None
+        self._configure_optimized_for_hq_capture_flag: bool = False
+        self._configure_optimized_for_idle_video_flag: bool = False
+        self._configure_optimized_for_livestream_paused_flag: bool = False
 
         # generate dict for clear events clear text names
         # defined events http://www.gphoto.org/doc/api/gphoto2-camera_8h.html#a438ab2ac60ad5d5ced30e4201476800b
@@ -117,10 +118,26 @@ class Gphoto2Backend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         self._configure_optimized_for_hq_capture_flag = True
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        self._configure_optimized_for_livestream_paused_flag = True
+
+    def _configure_optimized_for_livestream_paused(self):
+        # pause is to stop streaming from the camera to avoid overheating of the sensor
+        # this is an internal event so no flag reset, it's handled differently
+        if self._configure_optimized_for_livestream_paused_flag:
+            logger.debug("configure camera optimized for livestream paused")
+            self._configure_optimized_for_livestream_paused_flag = False
+
+            # disable viewfinder;
+            self._set_config("viewfinder", 0)
+
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 0)
+
     def _configure_optimized_for_hq_capture(self):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
-            self._configure_optimized_for_hq_capture_flag = None
+            self._configure_optimized_for_hq_capture_flag = False
 
             # disable viewfinder;
             # allows camera to autofocus fast in native mode not contrast mode
@@ -137,7 +154,7 @@ class Gphoto2Backend(AbstractBackend):
     def _configure_optimized_for_idle_video(self):
         if self._configure_optimized_for_idle_video_flag:
             logger.debug("configure camera optimized for idle/video")
-            self._configure_optimized_for_idle_video_flag = None
+            self._configure_optimized_for_idle_video_flag = False
 
             self._set_config("iso", self._config.iso_liveview)
             self._set_config("shutterspeed", self._config.shutter_speed_liveview)
@@ -169,7 +186,12 @@ class Gphoto2Backend(AbstractBackend):
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
         # better use fresh object.
         self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
-        self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
+        try:
+            self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
+        except gp.GPhoto2Error as exc:
+            # logger.error(f"could not get camera information, error {exc}")
+            logger.debug("error occured, please check https://photobooth-app.org/help/faq/#gphoto2-camera-found-but-no-access for troubleshooting.")
+            raise ConnectionError(f"Could not connect to camera, error: {exc}") from exc
 
         try:
             logger.info(str(self._camera.get_summary()))
@@ -190,13 +212,13 @@ class Gphoto2Backend(AbstractBackend):
 
         while not self._stop_event.is_set():  # repeat until stopped
             if not self._hires_data.request.is_set():
-                if self._device_enable_lores_flag:
+                if self.livestream_requested:
                     # check if flag is true and configure if so once.
                     self._configure_optimized_for_idle_video()
 
                     try:
-                        camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
-                        capture = self._camera.capture_preview(camera_file)
+                        camera_file = self._camera.capture_preview()
+                        img_bytes = memoryview(camera_file.get_data_and_size()).tobytes()
 
                     except Exception as exc:
                         preview_failcounter += 1
@@ -219,13 +241,11 @@ class Gphoto2Backend(AbstractBackend):
                     else:
                         preview_failcounter = 0
 
-                    img_bytes = memoryview(capture.get_data_and_size()).tobytes()
+                        with self._lores_data.condition:
+                            self._lores_data.data = img_bytes
+                            self._lores_data.condition.notify_all()
 
-                    with self._lores_data.condition:
-                        self._lores_data.data = img_bytes
-                        self._lores_data.condition.notify_all()
-
-                    self._frame_tick()
+                        self._frame_tick()
 
                     # Pi5 seems too fast for the old fashioned gphoto lib, permanently producing
                     # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)
@@ -233,6 +253,8 @@ class Gphoto2Backend(AbstractBackend):
                     # giving gphoto2 time to settle and avoid flooded logs.
                     time.sleep(0.04)
                 else:
+                    self._configure_optimized_for_livestream_paused()
+
                     time.sleep(0.05)
             else:
                 # hold a list of captured files during capture. this is needed if JPG+RAW is shot.
@@ -302,8 +324,8 @@ class Gphoto2Backend(AbstractBackend):
                             suffix=".jpg",
                         ).name
                     )
-                    camera_file = gp.CameraFile()  # pyright: ignore [reportAttributeAccessIssue]
-                    self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL, camera_file)  # pyright: ignore [reportAttributeAccessIssue]
+
+                    camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
                     camera_file.save(str(filepath))
 
                 except gp.GPhoto2Error as exc:

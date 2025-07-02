@@ -111,6 +111,9 @@ class WebcamV4lBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def _set_mode(self, capture: "linuxpy_video_device_type.VideoCapture", mode: Literal["hires", "lores"]):
         assert linuxpy_video_device
         logger.info(f"switch_mode to {mode} requested")

@@ -195,6 +195,9 @@ class Picamera2Backend(AbstractBackend):
         """switch to hq capture is done during hq preview call already because it avoids switch delay on the actual capture"""
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def _switch_mode(self):
         assert self._picamera2
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
