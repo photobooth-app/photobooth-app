@@ -102,6 +102,9 @@ class WebcamPyavBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def setup_resource(self):
         pass
 

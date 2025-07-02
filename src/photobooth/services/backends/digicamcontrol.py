@@ -107,6 +107,9 @@ class DigicamcontrolBackend(AbstractBackend):
     def _on_configure_optimized_for_idle(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
         try:

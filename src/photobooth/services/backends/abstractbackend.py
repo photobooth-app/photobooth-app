@@ -24,6 +24,9 @@ from ..config.groups.backends import Orientation
 
 logger = logging.getLogger(__name__)
 
+PAUSE_CAMERA_ON_LIVESTREAM_INACTIVE = True
+TIMEOUT_UNTIL_INACTIVE = 30
+
 
 @dataclass
 class BackendStats:
@@ -116,6 +119,7 @@ class AbstractBackend(ResilientService, ABC):
         # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
         # the backend-implementation has to decide how to handle this once True.
         self._last_requested_timestamp: float | None = None
+        self._liveview_idle_thread: StoppableThread | None = None
 
         # video feature
         self._video_worker_capture_started: Event = Event()
@@ -144,10 +148,28 @@ class AbstractBackend(ResilientService, ABC):
 
     @property
     def livestream_requested(self) -> bool:
-        if self._last_requested_timestamp is None:
-            return False
-        else:
-            return (time.monotonic() - self._last_requested_timestamp) < 20
+        return self._last_requested_timestamp is not None
+
+    def _liveview_idle_fun(self):
+        assert self._liveview_idle_thread
+        logger.info("_liveview_idle_fun start")
+
+        while not self._liveview_idle_thread.stopped():
+            time.sleep(1)
+
+            if self._last_requested_timestamp is None:
+                continue
+
+            inactive_seconds = time.monotonic() - self._last_requested_timestamp
+            liveview_active = inactive_seconds < TIMEOUT_UNTIL_INACTIVE
+
+            if liveview_active is False:  # and flag_active_to_inactive_requested is False:
+                # reset _last_requested_timestamp so this thread pauses processing
+                # and indicate to backend to reconfigure.
+                self._last_requested_timestamp = None
+                logger.info(f"pause camera stream after {TIMEOUT_UNTIL_INACTIVE} idle timeout.")
+
+                self._on_configure_optimized_for_livestream_paused()
 
     @abstractmethod
     def start(self):
@@ -156,6 +178,11 @@ class AbstractBackend(ResilientService, ABC):
         # reset the request for this backend to deliver lores frames
         self._last_requested_timestamp = None
 
+        if PAUSE_CAMERA_ON_LIVESTREAM_INACTIVE:
+            logger.info(f"pausing livestream from camera after {TIMEOUT_UNTIL_INACTIVE}s is enabled.")
+            self._liveview_idle_thread = StoppableThread(name="_liveview_idle_fun", target=self._liveview_idle_fun, daemon=True)
+            self._liveview_idle_thread.start()
+
         super().start()
 
     @abstractmethod
@@ -163,6 +190,10 @@ class AbstractBackend(ResilientService, ABC):
         """To stop the backend to serve"""
 
         self.stop_recording()
+
+        if self._liveview_idle_thread and self._liveview_idle_thread.is_alive():
+            self._liveview_idle_thread.stop()
+            self._liveview_idle_thread.join()
 
         super().stop()
 
@@ -452,6 +483,10 @@ class AbstractBackend(ResilientService, ABC):
         """
         function blocks until frame is available for preview stream
         """
+
+    @abstractmethod
+    def _on_configure_optimized_for_livestream_paused(self):
+        """called internally by supervising if liveview frames are requested"""
 
     @abstractmethod
     def _on_configure_optimized_for_idle(self):

@@ -34,8 +34,9 @@ class Gphoto2Backend(AbstractBackend):
         self._camera_context = gp.Context()  # pyright: ignore [reportAttributeAccessIssue]
 
         # if True signal to switch optimized, set none after switch again.
-        self._configure_optimized_for_hq_capture_flag = None
-        self._configure_optimized_for_idle_video_flag = None
+        self._configure_optimized_for_hq_capture_flag: bool = False
+        self._configure_optimized_for_idle_video_flag: bool = False
+        self._configure_optimized_for_livestream_paused_flag: bool = False
 
         # generate dict for clear events clear text names
         # defined events http://www.gphoto.org/doc/api/gphoto2-camera_8h.html#a438ab2ac60ad5d5ced30e4201476800b
@@ -117,20 +118,26 @@ class Gphoto2Backend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         self._configure_optimized_for_hq_capture_flag = True
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        self._configure_optimized_for_livestream_paused_flag = True
+
     def _configure_optimized_for_livestream_paused(self):
         # pause is to stop streaming from the camera to avoid overheating of the sensor
         # this is an internal event so no flag reset, it's handled differently
+        if self._configure_optimized_for_livestream_paused_flag:
+            logger.debug("configure camera optimized for livestream paused")
+            self._configure_optimized_for_livestream_paused_flag = False
 
-        # disable viewfinder;
-        self._set_config("viewfinder", 0)
+            # disable viewfinder;
+            self._set_config("viewfinder", 0)
 
-        if self._config.canon_eosmoviemode:
-            self._set_config("eosmoviemode", 0)
+            if self._config.canon_eosmoviemode:
+                self._set_config("eosmoviemode", 0)
 
     def _configure_optimized_for_hq_capture(self):
         if self._configure_optimized_for_hq_capture_flag:
             logger.debug("configure camera optimized for still capture")
-            self._configure_optimized_for_hq_capture_flag = None
+            self._configure_optimized_for_hq_capture_flag = False
 
             # disable viewfinder;
             # allows camera to autofocus fast in native mode not contrast mode
@@ -147,7 +154,7 @@ class Gphoto2Backend(AbstractBackend):
     def _configure_optimized_for_idle_video(self):
         if self._configure_optimized_for_idle_video_flag:
             logger.debug("configure camera optimized for idle/video")
-            self._configure_optimized_for_idle_video_flag = None
+            self._configure_optimized_for_idle_video_flag = False
 
             self._set_config("iso", self._config.iso_liveview)
             self._set_config("shutterspeed", self._config.shutter_speed_liveview)
@@ -179,7 +186,12 @@ class Gphoto2Backend(AbstractBackend):
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
         # better use fresh object.
         self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
-        self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
+        try:
+            self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
+        except gp.GPhoto2Error as exc:
+            # logger.error(f"could not get camera information, error {exc}")
+            logger.debug("error occured, please check https://photobooth-app.org/help/faq/#gphoto2-camera-found-but-no-access for troubleshooting.")
+            raise ConnectionError(f"Could not connect to camera, error: {exc}") from exc
 
         try:
             logger.info(str(self._camera.get_summary()))
@@ -196,7 +208,6 @@ class Gphoto2Backend(AbstractBackend):
         assert gp
 
         preview_failcounter = 0
-        livestream_was_started = False
         self._on_configure_optimized_for_idle()
 
         while not self._stop_event.is_set():  # repeat until stopped
@@ -204,7 +215,6 @@ class Gphoto2Backend(AbstractBackend):
                 if self.livestream_requested:
                     # check if flag is true and configure if so once.
                     self._configure_optimized_for_idle_video()
-                    livestream_was_started = True
 
                     try:
                         camera_file = self._camera.capture_preview()
@@ -243,9 +253,7 @@ class Gphoto2Backend(AbstractBackend):
                     # giving gphoto2 time to settle and avoid flooded logs.
                     time.sleep(0.04)
                 else:
-                    if livestream_was_started is True:
-                        self._configure_optimized_for_livestream_paused()
-                        livestream_was_started = False
+                    self._configure_optimized_for_livestream_paused()
 
                     time.sleep(0.05)
             else:

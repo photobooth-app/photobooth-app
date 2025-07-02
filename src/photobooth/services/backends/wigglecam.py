@@ -97,6 +97,9 @@ class WigglecamBackend(AbstractBackend):
     def _on_configure_optimized_for_hq_capture(self):
         pass
 
+    def _on_configure_optimized_for_livestream_paused(self):
+        pass
+
     def setup_resource(self):
         # quick sanity check.
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
