@@ -169,7 +169,7 @@ class Gphoto2Backend(AbstractBackend):
             logger.debug(f"{field} value empty, ignore")
             return
         try:
-            logger.info(f"setting custom {field} to {val}")
+            logger.info(f"setting {field} to {val}")
             self._gp_set_config(field, val)
         except gp.GPhoto2Error as exc:
             logger.warning(f"cannot set {field} to {val}, command ignored {exc}")
