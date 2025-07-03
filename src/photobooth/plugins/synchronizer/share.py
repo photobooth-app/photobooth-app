@@ -25,6 +25,9 @@ class AbstractMediashare(ABC, Generic[T]):
         self._config: T = backend_config
         self._connector = connector
 
+    def __str__(self):
+        return f"{self.__class__.__name__} ({self._connector})"
+
     @abstractmethod
     def mediaitem_link(self, remote_path: Path) -> str | None: ...
 
