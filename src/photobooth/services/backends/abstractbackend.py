@@ -24,9 +24,6 @@ from ..config.groups.backends import Orientation
 
 logger = logging.getLogger(__name__)
 
-PAUSE_CAMERA_ON_LIVESTREAM_INACTIVE = True
-TIMEOUT_UNTIL_INACTIVE = 30
-
 
 @dataclass
 class BackendStats:
@@ -107,9 +104,11 @@ class Framerate:
 
 class AbstractBackend(ResilientService, ABC):
     @abstractmethod
-    def __init__(self, orientation: Orientation = "1: 0°"):
+    def __init__(self, orientation: Orientation = "1: 0°", pause_camera_on_livestream_inactive: bool = False, timeout_until_inactive: int = 30):
         # init
         self._orientation: Orientation = orientation
+        self._pause_camera_on_livestream_inactive: bool = pause_camera_on_livestream_inactive
+        self._timeout_until_inactive: int = timeout_until_inactive
 
         # statisitics attributes
         self._backendstats: BackendStats = BackendStats(backend_name=self.__class__.__name__)
@@ -161,13 +160,13 @@ class AbstractBackend(ResilientService, ABC):
                 continue
 
             inactive_seconds = time.monotonic() - self._last_requested_timestamp
-            liveview_active = inactive_seconds < TIMEOUT_UNTIL_INACTIVE
+            liveview_active = inactive_seconds < self._timeout_until_inactive
 
             if liveview_active is False:  # and flag_active_to_inactive_requested is False:
                 # reset _last_requested_timestamp so this thread pauses processing
                 # and indicate to backend to reconfigure.
                 self._last_requested_timestamp = None
-                logger.info(f"pause camera stream after {TIMEOUT_UNTIL_INACTIVE} idle timeout.")
+                logger.info(f"pause camera stream after {self._timeout_until_inactive} idle timeout.")
 
                 self._on_configure_optimized_for_livestream_paused()
 
@@ -178,8 +177,8 @@ class AbstractBackend(ResilientService, ABC):
         # reset the request for this backend to deliver lores frames
         self._last_requested_timestamp = None
 
-        if PAUSE_CAMERA_ON_LIVESTREAM_INACTIVE:
-            logger.info(f"pausing livestream from camera after {TIMEOUT_UNTIL_INACTIVE}s is enabled.")
+        if self._pause_camera_on_livestream_inactive:
+            logger.info(f"pausing livestream from camera after {self._timeout_until_inactive}s is enabled.")
             self._liveview_idle_thread = StoppableThread(name="_liveview_idle_fun", target=self._liveview_idle_fun, daemon=True)
             self._liveview_idle_thread.start()
 

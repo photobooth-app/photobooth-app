@@ -151,6 +151,15 @@ class GroupBackendGphoto2(BaseBackendModel):
         description="Canon specific. Switch on/off eosmoviemode when streaming videos. Might not work with every camera.",
     )
 
+    pause_camera_on_livestream_inactive: bool = Field(
+        default=False,
+        description="When enabled, the app tries to disable the cameras livestream when no livestream is requested. It helps to avoid sensor overheating for older cameras by setting viewfinder=0.",
+    )
+    timeout_until_inactive: int = Field(
+        default=30,
+        description="Delay after which the livestream is considered as inactive and camera should idle.",
+    )
+
 
 class GroupBackendPyav(BaseBackendModel):
     model_config = ConfigDict(title="PyAV")

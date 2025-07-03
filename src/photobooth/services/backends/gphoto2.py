@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class Gphoto2Backend(AbstractBackend):
     def __init__(self, config: GroupBackendGphoto2):
         self._config: GroupBackendGphoto2 = config
-        super().__init__(orientation=config.orientation)
+        super().__init__(config.orientation, config.pause_camera_on_livestream_inactive, config.timeout_until_inactive)
 
         if gp is None:
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
