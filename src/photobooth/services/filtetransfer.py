@@ -9,12 +9,12 @@ from psutil import _common
 
 from photobooth.utils.stoppablethread import StoppableThread
 
-from .. import PATH_PROCESSED, PATH_UNPROCESSED
+from .. import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ..appconfig import appconfig
 from .base import BaseService
 
 logger = logging.getLogger(__name__)
-LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED]
+LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED, PATH_CAMERA_ORIGINAL]
 
 
 class FileTransferService(BaseService):
