@@ -17,15 +17,18 @@ class GroupQrShare(BaseModel):
 
     enabled: bool = Field(
         default=False,
-        description="Enable qr share service. To enable URL needs to be configured and dl.php script setup properly.",
+        description="(DEPRECATED in v8) Enable qr share service. To enable URL needs to be configured and dl.php script setup properly.",
+        json_schema_extra={"deprecated": "v8"},
     )
     shareservice_url: str = Field(
         default="https://photobooth-app.org/extras/shareservice-landing/",
-        description="URL of php script that is used to serve files and share via QR code. The default is a landingpage with further instructions how to setup.",
+        description="(DEPRECATED in v8) URL of php script that is used to serve files and share via QR code. The default is a landingpage with further instructions how to setup.",
+        json_schema_extra={"deprecated": "v8"},
     )
     shareservice_apikey: str = Field(
         default="changedefault!",
-        description="Key to secure the download php script. Set the key in dl.php script to same value. Only if correct key is provided the shareservice works properly.",
+        description="(DEPRECATED in v8) Key to secure the download php script. Set the key in dl.php script to same value. Only if correct key is provided the shareservice works properly.",
+        json_schema_extra={"deprecated": "v8"},
     )
 
     enabled_custom: bool = Field(
