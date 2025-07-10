@@ -174,7 +174,9 @@ class WebcamV4lBackend(AbstractBackend):
             # turbojpeg.encode_from_yuv would be most efficient but needs planar data YUV, but webcam YUVY is non-planar.
             # cv2 to convert to planar YUV would be most efficient but is not avail :(
             bgr = cv2.cvtColor(data, cv2.COLOR_YUV2BGR_YUYV)
-            return turbojpeg.encode(bgr, quality=90)
+            encoded = turbojpeg.encode(bgr, quality=90)
+            assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
+            return encoded
         else:
             raise RuntimeError(f"pixel_format {self._fmt_pixel_format} not supported")
 
