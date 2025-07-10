@@ -198,6 +198,13 @@ class Gphoto2Backend(AbstractBackend):
         except gp.GPhoto2Error as exc:
             logger.error(f"could not get camera information, error {exc}")
 
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            # https://github.com/jim-easterbrook/python-gphoto2/issues/192#issuecomment-3055702591
+            if gp.gp_library_version(gp.GP_VERSION_SHORT)[0] == "2.5.32":  # pyright: ignore [reportAttributeAccessIssue]
+                logger.warning("temporary fix for gphoto lib 2.5.32; remove once new version is released.")
+                # workaround for https://github.com/gphoto/libgphoto2/issues/1136
+                self._camera.folder_list_folders("/store_00010001")
+
         self._set_config("capturetarget", self._config.gcapture_target)
 
     def teardown_resource(self):
@@ -343,5 +350,3 @@ class Gphoto2Backend(AbstractBackend):
                 with self._hires_data.condition:
                     self._hires_data.filepath = filepath
                     self._hires_data.condition.notify_all()
-
-        logger.warning("_worker_fun exits")
