@@ -1,5 +1,7 @@
 import logging
 import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from ...utils.resilientservice import ResilientService
@@ -11,6 +13,22 @@ from .utils import get_remote_filepath
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class Stats:
+    check_active: bool = False
+    last_check_started: datetime | None = None  # datetime to convert be
+    last_duration: float | None = None
+    next_check: datetime | None = None  # .astimezone().strftime('%Y%m%d-%H%M%S')
+
+    # def to_dict(self):
+    #     return {
+    #         "check_active": self.check_active,
+    #         "last_check_started": self.last_check_started.astimezone().strftime("%X") if self.last_check_started else None,
+    #         "last_duration": self.last_duration,
+    #         "next_check": self.next_check.astimezone().strftime("%X") if self.next_check else None,
+    #     }
+
+
 class SyncRegularcomplete(ResilientService):
     def __init__(self, connector: AbstractConnector, threadedqueueprocessor: ThreadedQueueProcessor, local_root_dir: Path):
         super().__init__()
@@ -18,6 +36,8 @@ class SyncRegularcomplete(ResilientService):
         self._control_connection: AbstractConnector = connector
         self._threadedqueueprocessor: ThreadedQueueProcessor = threadedqueueprocessor
         self._local_root_dir: Path = local_root_dir
+
+        self._stats: Stats = Stats()
 
         self.start()
 
@@ -31,6 +51,7 @@ class SyncRegularcomplete(ResilientService):
         super().stop()
 
     def setup_resource(self):
+        self._stats = Stats()
         self._control_connection.connect()
 
     def teardown_resource(self):
@@ -45,6 +66,8 @@ class SyncRegularcomplete(ResilientService):
             ## Monitoring phase
             logger.info(f"Start regular re-sync check for {self._control_connection}.")
             tms = time.time()
+            self._stats.last_check_started = datetime.now()
+            self._stats.check_active = True
 
             for local_path in Path(self._local_root_dir).glob("**/*.*"):
                 if self._stop_event.is_set():
@@ -58,10 +81,13 @@ class SyncRegularcomplete(ResilientService):
                     logger.debug(f"added {local_path} to upload queue in {self._control_connection}")
 
             tme = time.time()
-            duration = round(tme - tms)
+            duration = round(tme - tms, 1)
+            self._stats.check_active = False
+            self._stats.last_duration = duration
             logger.info(f"Completed regular re-sync check after {duration}s duration. Media was added to the queue to upload separately if needed.")
 
             ## Sleeping phase
+            self._stats.next_check = datetime.now() + timedelta(seconds=sync_every_x_seconds)
             while not self._stop_event.is_set():
                 if slept_counter < sync_every_x_seconds:
                     time.sleep(sleep_time)

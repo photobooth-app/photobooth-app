@@ -21,6 +21,7 @@ from .aquisition import AquisitionService
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
+from .synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(__name__)
 STATS_INTERVAL_TIMER = 2  # every x seconds
@@ -29,10 +30,11 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, aquisition_service: AquisitionService):
+    def __init__(self, aquisition_service: AquisitionService, synchronizer_service: Synchronizer):
         super().__init__()
 
         self._aquisition_service = aquisition_service
+        self._synchronizer_service = synchronizer_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
@@ -125,8 +127,6 @@ class InformationService(BaseService):
         self._on_stats_interval_timer()
 
     def _on_stats_interval_timer(self):
-        """_summary_"""
-
         # gather information to be sent off on timer tick:
         sse_service.dispatch_event(
             SseEventIntervalInformationRecord(
@@ -139,6 +139,7 @@ class InformationService(BaseService):
                 battery_percent=self._gather_battery(),
                 temperatures=self._gather_temperatures(),
                 mediacollection=self._gather_mediacollection(),
+                synchronizer=self._gather_synchronizer(),
             ),
         )
 
@@ -243,3 +244,6 @@ class InformationService(BaseService):
                 temperatures[name] = round(entry[0].current, 1)  # there could be multiple sensors to one zone, we just use the first.
 
         return temperatures
+
+    def _gather_synchronizer(self) -> dict[str, Any]:
+        return self._synchronizer_service.stats()

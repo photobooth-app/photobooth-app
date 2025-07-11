@@ -9,6 +9,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from photobooth.database.models import Mediaitem, MediaitemTypes
 from photobooth.services.collection import MediacollectionService
+from photobooth.services.synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(name=None)
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture()
 def cs():
     # setup
-    cs = MediacollectionService()
+    cs = MediacollectionService(Synchronizer())
 
     yield cs
 

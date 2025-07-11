@@ -42,6 +42,13 @@ class Stats:
         with self.lock:
             return f"Stats: Success: {self.success:3d} Failed: {self.fail:3d}  Remaining Files: {self.remaining_files:3d}"
 
+    def to_dict(self):
+        return {
+            "success": self.success,
+            "fail": self.fail,
+            "remaining_files": self.remaining_files,
+        }
+
 
 class ThreadedQueueProcessor(ResilientService, Generic[T]):
     def __init__(self, config: T):
@@ -55,7 +62,6 @@ class ThreadedQueueProcessor(ResilientService, Generic[T]):
         return f"{self.__class__.__name__}: {self._connector}"
 
     def start(self):
-        self._stats: Stats = Stats()
         super().start()
 
     def stop(self):
@@ -66,6 +72,7 @@ class ThreadedQueueProcessor(ResilientService, Generic[T]):
         self._stats.add_remaining()
 
     def setup_resource(self):
+        self._stats: Stats = Stats()
         self._connector.connect()
 
     def teardown_resource(self):

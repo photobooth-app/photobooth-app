@@ -1,9 +1,10 @@
 import logging
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any
 
-from .. import hookimpl
-from ..base_plugin import BasePlugin
-from .config import SynchronizerConfig
+from ...appconfig import appconfig
+from ..base import BaseService
 from .connectors import connector_factory
 from .share import AbstractMediashare, share_factory
 from .sync_regularcomplete import SyncRegularcomplete
@@ -14,25 +15,46 @@ from .utils import get_remote_filepath
 logger = logging.getLogger(__name__)
 
 
-class Synchronizer(BasePlugin[SynchronizerConfig]):
+@dataclass
+class SubStats:
+    name: str
+    val: str | int | float | None
+    format: str | None = None
+
+
+@dataclass
+class SubList:
+    name: str
+    val: list[SubStats]
+
+
+@dataclass
+class GenericStats:
+    id: str
+    actions: list[str] = field(default_factory=list)
+    stats: list[SubStats | SubList] = field(default_factory=list)
+
+
+class Synchronizer(BaseService):
     def __init__(self):
         super().__init__()
 
-        self._config: SynchronizerConfig = SynchronizerConfig()
         self._sync_queue: list[ThreadedQueueProcessor] = []
-        self._shares: list[AbstractMediashare] = []
         self._regular_complete_sync: list[SyncRegularcomplete] = []
+        self._shares: list[AbstractMediashare] = []
 
-    @hookimpl
     def start(self):
+        super().start()
+
         self.reset()
 
-        if not self._config.common.enabled:
+        if not appconfig.synchronizer.common.enabled:
             logger.info("Synchronizer Plugin is disabled")
+            super().disabled()
             return
 
         # consumes the queue and uploads/deletes/modifies remote filesystem according to the queue.
-        for cfg in self._config.backends:
+        for cfg in appconfig.synchronizer.backends:
             if not cfg.enabled:
                 continue
 
@@ -61,34 +83,66 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         for instance in self._regular_complete_sync:
             instance.start()
 
-    @hookimpl
+        super().started()
+
     def stop(self):
+        super().stop()
+
         for instance in self._sync_queue:
             instance.stop()
 
         for instance in self._regular_complete_sync:
             instance.stop()
 
+        super().stopped()
+
     def reset(self):
         self._sync_queue = []
-        self._shares = []
         self._regular_complete_sync = []
+        self._shares = []
 
     def _put_to_workers_queues(self, priorized_task: PriorizedTask):
         for sync_queue in self._sync_queue:
             sync_queue.put_to_queue(priorized_task)
 
-    def stats(self):
-        out = []
-        for sync_queue in self._sync_queue:
-            out.append(sync_queue._stats)
-        return out
+    def stats(self) -> dict[str, Any]:
+        out = GenericStats(id="tis Plugin ID")
 
-    @hookimpl
+        for sync_queue in self._sync_queue:
+            sqs = sync_queue._stats
+            out.stats.append(
+                SubList(
+                    str(sync_queue),
+                    [
+                        SubStats("remaining", sqs.remaining_files),
+                        SubStats("success", sqs.success),
+                        SubStats("failed", sqs.fail),
+                    ],
+                )
+            )
+
+        for regular_complete_sync in self._regular_complete_sync:
+            rcss = regular_complete_sync._stats
+
+            out.stats.append(
+                SubList(
+                    str(regular_complete_sync),
+                    [
+                        SubStats("check_active", rcss.check_active),
+                        SubStats("last_check_started", rcss.last_check_started.astimezone().strftime("%X") if rcss.last_check_started else None),
+                        SubStats("last_duration", rcss.last_duration),
+                        SubStats("next_check", rcss.next_check.astimezone().strftime("%X") if rcss.next_check else None),
+                    ],
+                )
+            )
+        out_dict = asdict(out)
+        print(out_dict)
+        return out_dict
+
     def get_share_links(self, filepath_local: Path) -> list[str]:
         share_links: list[str] = []
 
-        if not self._config.common.enable_share_links:
+        if not appconfig.synchronizer.common.enable_share_links:
             logger.info("share link generation is disabled globally in synchronizer plugin")
             return []
 
@@ -100,22 +154,22 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         return share_links
 
-    @hookimpl
+    # @hookimpl
     def collection_original_file_added(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    @hookimpl
+    # @hookimpl
     def collection_files_added(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    @hookimpl
+    # @hookimpl
     def collection_files_updated(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    @hookimpl
+    # @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskDelete(get_remote_filepath(file))))

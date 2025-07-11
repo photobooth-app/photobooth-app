@@ -193,6 +193,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     battery_percent: int | None
     temperatures: dict[str, Any]
     mediacollection: dict[str, Any]
+    synchronizer: dict[str, Any]
 
     event: str = "InformationRecord"
 
@@ -209,6 +210,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 battery_percent=self.battery_percent,
                 temperatures=self.temperatures,
                 mediacollection=self.mediacollection,
+                synchronizer=self.synchronizer,
             )
         )
 

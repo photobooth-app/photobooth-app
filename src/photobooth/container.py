@@ -13,6 +13,7 @@ from .services.pluginmanager import PluginManagerService
 from .services.processing import ProcessingService
 from .services.qrshare import QrShareService
 from .services.share import ShareService
+from .services.synchronizer.synchronizer import Synchronizer
 from .services.system import SystemService
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,9 @@ class Container:
     pluginmanager_service = PluginManagerService()
 
     aquisition_service = AquisitionService()
-    mediacollection_service = MediacollectionService()
-    information_service = InformationService(aquisition_service)
+    synchronizer_service = Synchronizer()
+    mediacollection_service = MediacollectionService(synchronizer_service)
+    information_service = InformationService(aquisition_service, synchronizer_service)
     processing_service = ProcessingService(aquisition_service, mediacollection_service, information_service)
     system_service = SystemService()
     share_service = ShareService()

@@ -10,6 +10,7 @@ from pydantic import PrivateAttr
 from pydantic_settings import SettingsConfigDict
 
 from ... import CONFIG_PATH
+from ..synchronizer.config import SynchronizerConfig
 from .baseconfig import BaseConfig
 from .groups.actions import GroupActions
 from .groups.backends import GroupBackends
@@ -47,6 +48,7 @@ class AppConfig(BaseConfig):
     common: GroupCommon = GroupCommon()
     actions: GroupActions = GroupActions()
     share: GroupShare = GroupShare()
+    synchronizer: SynchronizerConfig = SynchronizerConfig()
     qrshare: GroupQrShare = GroupQrShare()
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
