@@ -7,7 +7,7 @@ from threading import Condition
 
 import requests
 
-from ..config.groups.backends import GroupBackendDigicamcontrol
+from ..config.groups.cameras import GroupCameraDigicamcontrol
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
@@ -51,8 +51,8 @@ class DigicamcontrolBackend(AbstractBackend):
 
     """
 
-    def __init__(self, config: GroupBackendDigicamcontrol):
-        self._config: GroupBackendDigicamcontrol = config
+    def __init__(self, config: GroupCameraDigicamcontrol):
+        self._config: GroupCameraDigicamcontrol = config
         super().__init__(orientation=config.orientation)
 
         self._enabled_liveview: bool = False

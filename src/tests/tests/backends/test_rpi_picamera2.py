@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from photobooth.appconfig import appconfig
-from photobooth.services.config.groups.backends import GroupBackendPicamera2
+from photobooth.services.config.groups.cameras import GroupCameraPicamera2
 from photobooth.utils.helper import is_rpi
 
 from ..util import block_until_device_is_running, get_images
@@ -34,7 +34,7 @@ def backend_picamera2():
     from photobooth.services.backends.picamera2 import Picamera2Backend
 
     # setup
-    backend = Picamera2Backend(GroupBackendPicamera2(optimized_lowlight_short_exposure=True))
+    backend = Picamera2Backend(GroupCameraPicamera2(optimized_lowlight_short_exposure=True))
 
     # deliver
     backend.start()

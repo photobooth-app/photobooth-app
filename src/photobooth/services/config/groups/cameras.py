@@ -12,14 +12,14 @@ from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 Orientation = Literal["1: 0°", "2: 0° mirrored", "3: 180°", "4: 180° mirrored", "5: 90°", "6: 90° mirrored", "7: 270°", "8: 270° mirrored"]
 
 
-class BaseBackendModel(BaseModel):
+class BaseModelCamera(BaseModel):
     orientation: Orientation = Field(
         default="1: 0°",
         description="Choose the orientation of the camera. 0° is default orientation and applies no adjustment. The orientation will be set in the EXIF data so transformations are applied lossless.",
     )
 
 
-class GroupBackendVirtualcamera(BaseBackendModel):
+class GroupCameraVirtual(BaseModelCamera):
     model_config = ConfigDict(title="VirtualCamera")
     backend_type: Literal["VirtualCamera"] = "VirtualCamera"
 
@@ -41,7 +41,7 @@ class GroupBackendVirtualcamera(BaseBackendModel):
     )
 
 
-class GroupBackendPicamera2(BaseBackendModel):
+class GroupCameraPicamera2(BaseModelCamera):
     model_config = ConfigDict(title="Picamera2")
     backend_type: Literal["Picamera2"] = "Picamera2"
 
@@ -116,7 +116,7 @@ class GroupBackendPicamera2(BaseBackendModel):
     )
 
 
-class GroupBackendGphoto2(BaseBackendModel):
+class GroupCameraGphoto2(BaseModelCamera):
     model_config = ConfigDict(title="Gphoto2")
     backend_type: Literal["Gphoto2"] = "Gphoto2"
 
@@ -161,7 +161,7 @@ class GroupBackendGphoto2(BaseBackendModel):
     )
 
 
-class GroupBackendPyav(BaseBackendModel):
+class GroupCameraPyav(BaseModelCamera):
     model_config = ConfigDict(title="PyAV")
     backend_type: Literal["WebcamPyav"] = "WebcamPyav"
 
@@ -196,7 +196,7 @@ class GroupBackendPyav(BaseBackendModel):
     )
 
 
-class GroupBackendV4l2(BaseBackendModel):
+class GroupCameraV4l2(BaseModelCamera):
     model_config = ConfigDict(title="V4l2")
     backend_type: Literal["WebcamV4l"] = "WebcamV4l"
 
@@ -239,7 +239,7 @@ class GroupBackendV4l2(BaseBackendModel):
     )
 
 
-class GroupBackendDigicamcontrol(BaseBackendModel):
+class GroupCameraDigicamcontrol(BaseModelCamera):
     model_config = ConfigDict(title="Digicamcontrol")
 
     backend_type: Literal["Digicamcontrol"] = "Digicamcontrol"
@@ -250,7 +250,7 @@ class GroupBackendDigicamcontrol(BaseBackendModel):
     )
 
 
-class GroupBackendWigglecam(ConfigCameraPool):
+class GroupCameraWigglecam(ConfigCameraPool):
     model_config = ConfigDict(title="Wigglecam Connector")
 
     backend_type: Literal["Wigglecam"] = "Wigglecam"
@@ -269,10 +269,10 @@ class GroupBackendWigglecam(ConfigCameraPool):
     ]
 
 
-BackendsBase = GroupBackendVirtualcamera | GroupBackendPyav | GroupBackendWigglecam
-BackendsLinux = GroupBackendPicamera2 | GroupBackendV4l2 | GroupBackendGphoto2
-BackendsWindows = GroupBackendDigicamcontrol
-BackendsDarwin = GroupBackendGphoto2
+BackendsBase = GroupCameraVirtual | GroupCameraPyav | GroupCameraWigglecam
+BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2
+BackendsWindows = GroupCameraDigicamcontrol
+BackendsDarwin = GroupCameraGphoto2
 if sys.platform == "win32":
     BackendsPlatform = BackendsBase | BackendsWindows
 elif sys.platform == "linux":
@@ -290,7 +290,7 @@ class GroupBackend(BaseModel):
     or main backend.
     """
 
-    model_config = ConfigDict(title="Main Backend Configuration")
+    model_config = ConfigDict(title="Camera Configuration")
 
     @model_validator(mode="before")
     @classmethod
@@ -315,14 +315,14 @@ class GroupBackend(BaseModel):
     backend_config: BackendsPlatform = Field(discriminator="backend_type")
 
 
-class GroupBackends(BaseModel):
+class GroupCameras(BaseModel):
     """
     Choose backends for still images/high quality images captured on main backend.
     If the livepreview is enabled, the video is captured from live backend (if configured)
     or main backend.
     """
 
-    model_config = ConfigDict(title="Camera Backend Config")
+    model_config = ConfigDict(title="Camera Configurations")
 
     enable_livestream: bool = Field(
         default=True,
@@ -355,4 +355,4 @@ class GroupBackends(BaseModel):
         description="Index of one backend below used for multicamera images (wigglegrams).",
     )
 
-    group_backends: list[GroupBackend] = [GroupBackend(backend_config=GroupBackendVirtualcamera())]
+    group_backends: list[GroupBackend] = [GroupBackend(backend_config=GroupCameraVirtual())]

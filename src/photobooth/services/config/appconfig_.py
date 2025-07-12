@@ -13,7 +13,7 @@ from ... import CONFIG_PATH
 from ..synchronizer.config import SynchronizerConfig
 from .baseconfig import BaseConfig
 from .groups.actions import GroupActions
-from .groups.backends import GroupBackends
+from .groups.cameras import GroupCameras
 from .groups.common import GroupCommon
 from .groups.filetransfer import GroupFileTransfer
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
@@ -53,6 +53,6 @@ class AppConfig(BaseConfig):
     filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
-    backends: GroupBackends = GroupBackends()
+    backends: GroupCameras = GroupCameras()
     hardwareinputoutput: GroupHardwareInputOutput = GroupHardwareInputOutput()
     misc: GroupMisc = GroupMisc()

@@ -17,7 +17,7 @@ from simplejpeg import encode_jpeg_yuv_planes
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
-from ..config.groups.backends import GroupBackendPyav
+from ..config.groups.cameras import GroupCameraPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ else:
 
 
 class WebcamPyavBackend(AbstractBackend):
-    def __init__(self, config: GroupBackendPyav):
-        self._config: GroupBackendPyav = config
+    def __init__(self, config: GroupCameraPyav):
+        self._config: GroupCameraPyav = config
         super().__init__(orientation=config.orientation)
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())

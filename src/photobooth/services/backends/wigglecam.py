@@ -11,15 +11,15 @@ from wigglecam.connector.models import ConfigCameraPool
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
-from ..config.groups.backends import GroupBackendWigglecam
+from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
 
 class WigglecamBackend(AbstractBackend):
-    def __init__(self, config: GroupBackendWigglecam):
-        self._config: GroupBackendWigglecam = config
+    def __init__(self, config: GroupCameraWigglecam):
+        self._config: GroupCameraWigglecam = config
         super().__init__()
 
         self._camera_pool: CameraPool | None = None

@@ -4,7 +4,7 @@ import pytest
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.webcamv4l import WebcamV4lBackend, linuxpy_video_device
-from photobooth.services.config.groups.backends import GroupBackendV4l2
+from photobooth.services.config.groups.cameras import GroupCameraV4l2
 from photobooth.utils.enumerate import webcameras
 
 from ..util import block_until_device_is_running, get_images
@@ -27,7 +27,7 @@ if linuxpy_video_device is None:
 @pytest.fixture()
 def backend_v4l():
     # setup
-    backend = WebcamV4lBackend(GroupBackendV4l2())
+    backend = WebcamV4lBackend(GroupCameraV4l2())
 
     logger.info("probing for available cameras")
     _availableCameraIndexes = webcameras()

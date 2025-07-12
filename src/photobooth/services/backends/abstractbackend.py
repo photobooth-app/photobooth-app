@@ -20,7 +20,7 @@ from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
 from ...utils.resilientservice import ResilientService
 from ...utils.stoppablethread import StoppableThread
-from ..config.groups.backends import Orientation
+from ..config.groups.cameras import Orientation
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 from threading import Condition
 
 from ...utils.helper import filename_str_time
-from ..config.groups.backends import GroupBackendGphoto2
+from ..config.groups.cameras import GroupCameraGphoto2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 try:
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class Gphoto2Backend(AbstractBackend):
-    def __init__(self, config: GroupBackendGphoto2):
-        self._config: GroupBackendGphoto2 = config
+    def __init__(self, config: GroupCameraGphoto2):
+        self._config: GroupCameraGphoto2 = config
         super().__init__(config.orientation, config.pause_camera_on_livestream_inactive, config.timeout_until_inactive)
 
         if gp is None:

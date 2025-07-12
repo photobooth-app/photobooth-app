@@ -12,7 +12,7 @@ from threading import Condition
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
-from ..config.groups.backends import GroupBackendVirtualcamera
+from ..config.groups.cameras import GroupCameraVirtual
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,9 @@ class CyclicImageSource:
 
 
 class VirtualCameraBackend(AbstractBackend):
-    def __init__(self, config: GroupBackendVirtualcamera):
+    def __init__(self, config: GroupCameraVirtual):
         # print(VirtualCameraBackend.__mro__)
-        self._config: GroupBackendVirtualcamera = config
+        self._config: GroupCameraVirtual = config
         super().__init__(orientation=config.orientation)
 
         self._images_iterator = CyclicImageSource().images()

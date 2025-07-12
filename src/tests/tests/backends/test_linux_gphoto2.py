@@ -8,7 +8,7 @@ from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
-from photobooth.services.config.groups.backends import GroupBackendGphoto2
+from photobooth.services.config.groups.cameras import GroupCameraGphoto2
 from photobooth.utils.enumerate import dslr_gphoto2 as enumerate_dslr_gphoto2
 
 from ..util import block_until_device_is_running
@@ -83,7 +83,7 @@ def backend_gphoto2():
     if not avail_cams:
         pytest.skip("no camera found, skipping test")
 
-    backend = Gphoto2Backend(GroupBackendGphoto2())
+    backend = Gphoto2Backend(GroupCameraGphoto2())
     # deliver
     backend.start()
     block_until_device_is_running(backend)

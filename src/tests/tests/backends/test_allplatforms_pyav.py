@@ -4,7 +4,7 @@ from collections.abc import Generator
 import pytest
 
 from photobooth.services.backends.webcampyav import WebcamPyavBackend
-from photobooth.services.config.groups.backends import GroupBackendPyav
+from photobooth.services.config.groups.cameras import GroupCameraPyav
 from photobooth.utils.enumerate import webcameras
 
 from ..util import block_until_device_is_running, get_images
@@ -15,7 +15,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture()
 def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     # setup
-    backend = WebcamPyavBackend(GroupBackendPyav())
+    backend = WebcamPyavBackend(GroupCameraPyav())
 
     logger.info("probing for available cameras")
     avail_cams = webcameras()

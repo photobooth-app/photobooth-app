@@ -9,7 +9,7 @@ from collections.abc import Generator
 import pytest
 
 from photobooth.services.backends.virtualcamera import VirtualCameraBackend
-from photobooth.services.config.groups.backends import GroupBackendVirtualcamera
+from photobooth.services.config.groups.cameras import GroupCameraVirtual
 
 from ..util import block_until_device_is_running, get_images
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture()
 def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     # setup
-    backend = VirtualCameraBackend(GroupBackendVirtualcamera())
+    backend = VirtualCameraBackend(GroupCameraVirtual())
 
     # deliver
     backend.start()

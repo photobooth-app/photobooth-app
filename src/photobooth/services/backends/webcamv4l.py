@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal
 import cv2
 
 from ...utils.helper import filename_str_time
-from ..config.groups.backends import GroupBackendV4l2
+from ..config.groups.cameras import GroupCameraV4l2
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 try:
@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 class WebcamV4lBackend(AbstractBackend):
-    def __init__(self, config: GroupBackendV4l2):
-        self._config: GroupBackendV4l2 = config
+    def __init__(self, config: GroupCameraV4l2):
+        self._config: GroupCameraV4l2 = config
         super().__init__(orientation=config.orientation)
 
         if linuxpy_video_device is None:

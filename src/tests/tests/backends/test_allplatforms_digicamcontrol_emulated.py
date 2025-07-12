@@ -11,7 +11,7 @@ from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Request, Response
 
 from photobooth.services.backends.digicamcontrol import DigicamcontrolBackend
-from photobooth.services.config.groups.backends import GroupBackendDigicamcontrol
+from photobooth.services.config.groups.cameras import GroupCameraDigicamcontrol
 
 from ..util import block_until_device_is_running, get_images
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(name=None)
 @pytest.fixture()
 def backend_digicamcontrol_emulated(httpserver: HTTPServer):
     # setup
-    backend = DigicamcontrolBackend(GroupBackendDigicamcontrol())
+    backend = DigicamcontrolBackend(GroupCameraDigicamcontrol())
 
     def handler_liveview_response(request: Request):
         # deliver some random images.

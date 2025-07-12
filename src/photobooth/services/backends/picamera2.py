@@ -18,7 +18,7 @@ from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
 
 from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
-from ..config.groups.backends import GroupBackendPicamera2
+from ..config.groups.cameras import GroupCameraPicamera2
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
@@ -45,8 +45,8 @@ class PicamLoresData(io.BufferedIOBase):
 
 
 class Picamera2Backend(AbstractBackend):
-    def __init__(self, config: GroupBackendPicamera2):
-        self._config: GroupBackendPicamera2 = config
+    def __init__(self, config: GroupCameraPicamera2):
+        self._config: GroupCameraPicamera2 = config
         super().__init__(orientation=config.orientation)
 
         # private props
