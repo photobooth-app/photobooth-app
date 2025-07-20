@@ -70,7 +70,7 @@ class SyncRegularcomplete(ResilientService):
 
                 if not is_same_file:
                     self._threadedqueueprocessor.put_to_queue(PriorizedTask(Priority.LOW, SyncTaskUpload(local_path, remote_path)))
-                    logger.debug(f"added {local_path} to upload queue in {self._control_connection}")
+                    # logger.debug(f"added {local_path} to upload queue in {self._control_connection}")
 
             tme = time.time()
             duration = round(tme - tms, 1)

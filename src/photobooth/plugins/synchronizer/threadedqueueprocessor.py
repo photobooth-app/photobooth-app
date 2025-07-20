@@ -125,4 +125,4 @@ class ThreadedQueueProcessor(ResilientService, Generic[T]):
                     # TODO: what if task failed? reinsert to sync queue?
                 else:
                     self._stats.increment_success()
-                    logger.info(f"successfully processed task {priorizedTask}")
+                    # logger.info(f"successfully processed task {priorizedTask}")
