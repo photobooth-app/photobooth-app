@@ -104,6 +104,7 @@ concurrency = ["thread", "multiprocessing"]
 venvPath = "."
 venv = ".venv"
 ignore = ["./experimental/"]
+# strict = ["./src/photobooth/*"] # TODO: in future, enable
 
 [tool.ruff]
 line-length = 150
@@ -142,6 +143,7 @@ dev = [
   "pyright",
   "pyftpdlib",
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
+  "poethepoet",
 ]
 benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "pyvips"]
 
@@ -153,10 +155,19 @@ default-groups = [
 
 
 # uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
-# [tool.uv.tasks]
-# test = "pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov --durations=10"
-# benchmark = "pytest --benchmark-only --benchmark-autosave --basetemp=./tests_tmp/ -v ./src/tests/benchmarks"
-# check = "pyright"
+[tool.poe.tasks]
+lint = [
+  { cmd = "uv run pyright" },
+  { cmd = "uv run ruff check" },
+  { cmd = "uv run ruff format --check" },
+]
+format = [{ cmd = "uv run ruff check --fix" }, { cmd = "uv run ruff format" }]
+test = [
+  { cmd = "pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov --durations=10" },
+]
+benchmark = [
+  { cmd = "pytest --benchmark-only --benchmark-autosave --basetemp=./tests_tmp/ -v ./src/tests/benchmarks" },
+]
 
 [tool.hatch.version]
 path = "./src/photobooth/__version__.py"
