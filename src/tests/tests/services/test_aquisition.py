@@ -126,7 +126,6 @@ def test_get_livestream_virtualcamera(_container: Container):
     i = 0
     for frame in g_stream:  # frame is bytes
         i = i + 1
-        frame: bytes
 
         # ensure we always receive a valid jpeg frame, nothing else.
         # in case the backend failed, we receive a substitute image

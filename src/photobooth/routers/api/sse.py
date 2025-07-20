@@ -28,8 +28,8 @@ async def subscribe(request: Request):
     # async since queue reuses the async thread
     # that would not be avail if outer function of queue is sync.
     # https://docs.python.org/3.11/library/asyncio-queue.html
-    queue = Queue(100)
-    client = Client(request, queue)
+    queue: Queue[ServerSentEvent] = Queue(100)
+    client: Client = Client(request, queue)
     sse_service.setup_client(client=client)
 
     # following modules send some data on connection init to client:

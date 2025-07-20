@@ -5,6 +5,7 @@ https://photobooth-app.org/setup/shareservice/
 import json
 import logging
 import time
+from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
@@ -57,7 +58,7 @@ class QrShareService(BaseService):
     def get_share_link(self, identifier: UUID, filename: str) -> list[str]:
         logger.debug(f"generating qr share links for {identifier} {filename}")
 
-        out_links = []
+        out_links: list[str] = []
 
         # qr share service with dl.php:
         if appconfig.qrshare.enabled:
@@ -129,7 +130,7 @@ class QrShareService(BaseService):
                 if line:
                     try:
                         # if webserver not correctly setup, decoding might fail. catch exception mostly to inform user to debug
-                        decoded_line: dict = json.loads(line)
+                        decoded_line: dict[str, Any] = json.loads(line)
                     except json.JSONDecodeError as exc:
                         logger.error(
                             f"webserver response from webserver malformed. please check qr shareservice url, "

@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import UUID, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.sqlite import JSON
@@ -50,7 +51,7 @@ class Mediaitem(Base):
     # processed full-dimension, filter pipeline applied
     processed: Mapped[Path] = mapped_column(PathType)
 
-    pipeline_config: Mapped[dict] = mapped_column(JSON)  # json config of pipeline
+    pipeline_config: Mapped[dict[str, Any]] = mapped_column(JSON)  # json config of pipeline
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
     def __repr__(self) -> str:

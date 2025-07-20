@@ -222,7 +222,7 @@ class Client:
     """Class each individual client connected"""
 
     request: Request
-    queue: Queue
+    queue: Queue[ServerSentEvent]
 
 
 class SseService:
@@ -246,7 +246,7 @@ class SseService:
 
         logger.debug(f"SSE clients connected: {[_client.request.client for _client in self._clients]}")
 
-    def dispatch_event(self, sse_event_data):
+    def dispatch_event(self, sse_event_data: ServerSentEvent):
         for client in self._clients:
             try:
                 client.queue.put_nowait(
@@ -263,7 +263,7 @@ class SseService:
                 # on the other side, queue better not infinite if disconnect is not working proper and queue remains getting larger
                 pass
 
-    async def event_iterator(self, client: Client, timeout=0.0):
+    async def event_iterator(self, client: Client, timeout: float = 0.0):
         if "PYTEST_CURRENT_TEST" in os.environ:
             # FIXME: workaround for testing until testing with mocks/patching works well...
             timeout = 3.5

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import av
 import piexif
+from av import VideoStream
 from PIL import Image, ImageOps, ImageSequence
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,7 @@ def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
             yield thumbnail
 
     # to recover the original durations in scaled versions
-    durations = []
+    durations: list[int] = []
     for frame in ImageSequence.Iterator(gif_image):
         duration = frame.info.get("duration", 1000)  # fallback 1sec if info not avail.
         durations.append(duration)
@@ -111,7 +112,7 @@ def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
 
 def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    def scale_image_to_min_longest_side(width, height, max_longest_side):
+    def scale_image_to_min_longest_side(width: int, height: int, max_longest_side: int):
         longest_side = max(width, height)
 
         # Only scale down if it's larger than the max allowed
@@ -135,7 +136,7 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     ow, oh = scale_image_to_min_longest_side(input_stream.width, input_stream.height, scaled_min_length)
 
     output_container = av.open(filepath_out, mode="w")
-    output_stream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
+    output_stream: VideoStream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
     output_stream.width = ow
     output_stream.height = oh
     output_stream.codec_context.options["movflags"] = "faststart"

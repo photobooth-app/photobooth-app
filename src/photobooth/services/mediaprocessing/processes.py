@@ -12,7 +12,7 @@ from ...appconfig import appconfig
 from ...database.models import Mediaitem
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
-from .pipeline import NextStep, Pipeline
+from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
@@ -126,38 +126,37 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
     collage_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = CollageContext(canvas, collage_images)
-    steps = []
-    steps.append(AddPredefinedImagesStep(config.merge_definition))
-    steps.append(PostPredefinedImagesStep(config.merge_definition))
-    steps.append(MergeCollageStep(config.merge_definition))
-    pipeline = Pipeline[CollageContext](*steps)
+    steps_phase1: list[PipelineStep[CollageContext]] = []
+    steps_phase1.append(AddPredefinedImagesStep(config.merge_definition))
+    steps_phase1.append(PostPredefinedImagesStep(config.merge_definition))
+    steps_phase1.append(MergeCollageStep(config.merge_definition))
+    pipeline = Pipeline[CollageContext](*steps_phase1)
     pipeline(context)
 
     canvas = context.canvas
 
     ## phase 2
     context = ImageContext(canvas, False)
-    steps = []
+    steps_phase2: list[PipelineStep[ImageContext]] = []
 
     # assemble pipeline
-
     if config.canvas_img_background_enable:
         if not config.canvas_img_background_file:
             raise ValueError("image background enabled, but no file given")
-        steps.append(ImageMountStep(config.canvas_img_background_file))
+        steps_phase2.append(ImageMountStep(config.canvas_img_background_file))
 
     if config.canvas_fill_background_enable:
-        steps.append(FillBackgroundStep(config.canvas_fill_background_color))
+        steps_phase2.append(FillBackgroundStep(config.canvas_fill_background_color))
 
     if config.canvas_img_front_enable:
         if not config.canvas_img_front_file:
             raise ValueError("image frame enabled, but no file given")
-        steps.append(ImageMountStep(config.canvas_img_front_file, reverse=True))
+        steps_phase2.append(ImageMountStep(config.canvas_img_front_file, reverse=True))
 
     if config.canvas_texts_enable:
-        steps.append(TextStep(config.canvas_texts))
+        steps_phase2.append(TextStep(config.canvas_texts))
 
-    pipeline = Pipeline[ImageContext](*steps)
+    pipeline = Pipeline[ImageContext](*steps_phase2)
     pipeline(context)
 
     canvas = context.image
