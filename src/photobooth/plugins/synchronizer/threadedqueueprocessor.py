@@ -68,6 +68,10 @@ class ThreadedQueueProcessor(ResilientService, Generic[T]):
         super().stop()
 
     def put_to_queue(self, task: PriorizedTask):
+        if self._stop_event.is_set():
+            logger.info(f"{self} shutting down, ignored request to queue task {task}!")
+            return
+
         self._queue.put_nowait(task)
         self._stats.add_remaining()
 
@@ -103,7 +107,8 @@ class ThreadedQueueProcessor(ResilientService, Generic[T]):
                 assert isinstance(task, taskSyncType)
 
                 # quit on shutdown.
-                if task is None:
+                if task is None or self._stop_event.is_set():
+                    logger.info(f"stop processing on shutdown {self}")
                     break
 
                 try:
