@@ -1,0 +1,14 @@
+{
+  "pythonVersion": "3.10",
+  "venvPath": ".",
+  "venv": ".venv",
+  "exclude": ["**/site-packages/**"],
+  "ignore": ["./.venv","./experimental/"],
+  "typeCheckingMode": "basic",
+  "rules": {
+    "src/photobooth/": {
+      "typeCheckingMode": "strict",
+      "reportMissingTypeStubs": false
+    }
+  }
+}

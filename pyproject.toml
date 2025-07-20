@@ -100,11 +100,6 @@ omit = ["test_*.py", "./src/tests/*"]
 parallel = true
 concurrency = ["thread", "multiprocessing"]
 
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-ignore = ["./experimental/"]
-# strict = ["./src/photobooth/*"] # TODO: in future, enable
 
 [tool.ruff]
 line-length = 150
