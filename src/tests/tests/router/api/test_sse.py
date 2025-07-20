@@ -22,7 +22,8 @@ def client() -> Generator[TestClient, None, None]:
 def test_sse_stream(client: TestClient):
     processstateinfo_counter = 0
     logrecord_counter = 0
-    informationrecord_counter = 0
+    onetimeinformationrecord_counter = 0
+    intervalinformationrecord_counter = 0
     ping_counter = 0
 
     # start a job so there will be some Process StateInfo
@@ -34,8 +35,10 @@ def test_sse_stream(client: TestClient):
                 processstateinfo_counter += 1
             if sse.event == "LogRecord":
                 logrecord_counter += 1
-            if sse.event == "InformationRecord":
-                informationrecord_counter += 1
+            if sse.event == "OnetimeInformationRecord":
+                onetimeinformationrecord_counter += 1
+            if sse.event == "IntervalInformationRecord":
+                intervalinformationrecord_counter += 1
             if sse.event == "ping":
                 ping_counter += 1
 
@@ -43,10 +46,11 @@ def test_sse_stream(client: TestClient):
 
     logger.info(
         f"seen {processstateinfo_counter} processstateinfos, {logrecord_counter} logrecords, "
-        f"{informationrecord_counter} informations and {ping_counter} pings"
+        f"{intervalinformationrecord_counter} interval-informations {onetimeinformationrecord_counter} onetime-informations and {ping_counter} pings"
     )
 
     assert processstateinfo_counter > 0
     assert logrecord_counter > 0
-    assert informationrecord_counter > 0
+    assert onetimeinformationrecord_counter > 0
+    assert intervalinformationrecord_counter > 0
     assert ping_counter > 0
