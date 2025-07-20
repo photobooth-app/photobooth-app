@@ -4,6 +4,8 @@ from typing import Literal
 from pydantic import BaseModel, DirectoryPath, Field, SecretStr, SerializationInfo, field_serializer
 from pydantic_settings import SettingsConfigDict
 
+from photobooth import CONFIG_PATH
+from photobooth.services.config.baseconfig import BaseConfig
 from photobooth.services.config.serializer import contextual_serializer_password
 
 
@@ -122,8 +124,12 @@ class Backend(BaseModel):
     backend_config: BackendConfig = Field(discriminator="backend_type")
 
 
-class SynchronizerConfig(BaseModel):
-    model_config = SettingsConfigDict(title="Synchronizer and Share-Link Generation")
+class SynchronizerConfig(BaseConfig):
+    model_config = SettingsConfigDict(
+        title="Synchronizer and Share-Link Generation",
+        json_file=f"{CONFIG_PATH}plugin_synchronizer.json",
+        env_prefix="synchronizer-",
+    )
 
     common: Common = Common()
     backends: list[Backend] = [

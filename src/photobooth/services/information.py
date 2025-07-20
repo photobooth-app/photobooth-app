@@ -15,13 +15,14 @@ from ..__version__ import __version__
 from ..database.database import engine
 from ..database.models import Cacheditem, Mediaitem, ShareLimits, UsageStats
 from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
+from ..models.genericstats import GenericStats
+from ..plugins import pm as pluggy_pm
 from ..utils.repeatedtimer import RepeatedTimer
 from ..utils.stoppablethread import StoppableThread
 from .aquisition import AquisitionService
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
-from .synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(__name__)
 STATS_INTERVAL_TIMER = 2  # every x seconds
@@ -30,11 +31,10 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, aquisition_service: AquisitionService, synchronizer_service: Synchronizer):
+    def __init__(self, aquisition_service: AquisitionService):
         super().__init__()
 
         self._aquisition_service = aquisition_service
-        self._synchronizer_service = synchronizer_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
@@ -103,59 +103,61 @@ class InformationService(BaseService):
         except Exception as exc:
             raise RuntimeError(f"failed to update statscounter, error: {exc}") from exc
 
+    def get_initial_inforecord(self):
+        return SseEventOnetimeInformationRecord(
+            version=__version__,
+            platform_system=platform.system(),
+            platform_release=platform.release(),
+            platform_machine=platform.machine(),
+            platform_python_version=platform.python_version(),
+            platform_node=platform.node(),
+            platform_cpu_count=psutil.cpu_count(),
+            model=self._gather_model(),
+            data_directory=Path.cwd().resolve(),
+            python_executable=sys.executable,
+            disk=self._gather_disk(),
+        )
+
+    def get_interval_inforecord(self):
+        return SseEventIntervalInformationRecord(
+            cpu_percent=self._gather_cpu_percent(),
+            memory=self._gather_memory(),
+            cma=self._gather_cma(),
+            backends=self._gather_backends_stats(),
+            stats_counter=self._gather_stats_counter(),
+            limits_counter=self._gather_limits_counter(),
+            battery_percent=self._gather_battery(),
+            temperatures=self._gather_temperatures(),
+            mediacollection=self._gather_mediacollection(),
+            plugins=self._gather_plugins(),
+        )
+
     def initial_emit(self):
         """_summary_"""
 
         # gather one time on connect information to be sent off:
-        sse_service.dispatch_event(
-            SseEventOnetimeInformationRecord(
-                version=__version__,
-                platform_system=platform.system(),
-                platform_release=platform.release(),
-                platform_machine=platform.machine(),
-                platform_python_version=platform.python_version(),
-                platform_node=platform.node(),
-                platform_cpu_count=psutil.cpu_count(),
-                model=self._gather_model(),
-                data_directory=Path.cwd().resolve(),
-                python_executable=sys.executable,
-                disk=self._gather_disk(),
-            ),
-        )
+        sse_service.dispatch_event(self.get_initial_inforecord())
 
         # also send interval data initially once
         self._on_stats_interval_timer()
 
     def _on_stats_interval_timer(self):
         # gather information to be sent off on timer tick:
-        sse_service.dispatch_event(
-            SseEventIntervalInformationRecord(
-                cpu_percent=self._gather_cpu_percent(),
-                memory=self._gather_memory(),
-                cma=self._gather_cma(),
-                backends=self._gather_backends_stats(),
-                stats_counter=self._gather_stats_counter(),
-                limits_counter=self._gather_limits_counter(),
-                battery_percent=self._gather_battery(),
-                temperatures=self._gather_temperatures(),
-                mediacollection=self._gather_mediacollection(),
-                synchronizer=self._gather_synchronizer(),
-            ),
-        )
+        sse_service.dispatch_event(self.get_interval_inforecord())
 
-    def _gather_limits_counter(self) -> list[dict[str, Any]]:
+    def _gather_limits_counter(self) -> list[ShareLimitsPublic]:
         with Session(engine) as session:
             statement = select(ShareLimits)
             results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
-            return [ShareLimitsPublic.model_validate(result).model_dump(mode="json") for result in results]
+            return [ShareLimitsPublic.model_validate(result) for result in results]
 
-    def _gather_stats_counter(self) -> list[dict[str, Any]]:
+    def _gather_stats_counter(self) -> list[UsageStatsPublic]:
         with Session(engine) as session:
             statement = select(UsageStats)
             results = session.scalars(statement).all()
             # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
-            return [UsageStatsPublic.model_validate(result).model_dump(mode="json") for result in results]
+            return [UsageStatsPublic.model_validate(result) for result in results]
 
     def _gather_mediacollection(self) -> dict[str, Any]:
         out = {}
@@ -184,7 +186,7 @@ class InformationService(BaseService):
     def _gather_memory(self):
         return psutil.virtual_memory()._asdict()
 
-    def _gather_cma(self):
+    def _gather_cma(self) -> dict[str, int | None] | dict[str, None]:
         try:
             with open("/proc/meminfo", encoding="utf-8") as file:
                 meminfo = dict((i.split()[0].rstrip(":"), int(i.split()[1])) for i in file.readlines())
@@ -202,7 +204,7 @@ class InformationService(BaseService):
     def _gather_backends_stats(self):
         return self._aquisition_service.stats()
 
-    def _gather_disk(self):
+    def _gather_disk(self) -> dict[str, int | float]:
         return psutil.disk_usage(str(Path.cwd().absolute()))._asdict()
 
     def _gather_model(self) -> str:
@@ -245,5 +247,5 @@ class InformationService(BaseService):
 
         return temperatures
 
-    def _gather_synchronizer(self) -> dict[str, Any]:
-        return self._synchronizer_service.stats()
+    def _gather_plugins(self) -> list[GenericStats]:
+        return pluggy_pm.hook.get_stats()

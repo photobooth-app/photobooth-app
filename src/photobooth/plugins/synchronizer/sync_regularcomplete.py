@@ -16,17 +16,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Stats:
     check_active: bool = False
-    last_check_started: datetime | None = None  # datetime to convert be
+    last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
     last_duration: float | None = None
-    next_check: datetime | None = None  # .astimezone().strftime('%Y%m%d-%H%M%S')
-
-    # def to_dict(self):
-    #     return {
-    #         "check_active": self.check_active,
-    #         "last_check_started": self.last_check_started.astimezone().strftime("%X") if self.last_check_started else None,
-    #         "last_duration": self.last_duration,
-    #         "next_check": self.next_check.astimezone().strftime("%X") if self.next_check else None,
-    #     }
+    next_check: datetime | None = None
 
 
 class SyncRegularcomplete(ResilientService):

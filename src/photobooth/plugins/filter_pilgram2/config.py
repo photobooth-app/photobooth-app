@@ -51,7 +51,11 @@ available_filter = Literal[
 
 
 class FilterPilgram2Config(BaseConfig):
-    model_config = SettingsConfigDict(title="Filter Stage Pilgram2 Plugin Config", json_file=f"{CONFIG_PATH}plugin_filter_pilgram2.json")
+    model_config = SettingsConfigDict(
+        title="Filter Stage Pilgram2 Plugin Config",
+        json_file=f"{CONFIG_PATH}plugin_filter_pilgram2.json",
+        env_prefix="filter-pilgram2-",
+    )
 
     add_userselectable_filter: bool = Field(
         default=True,

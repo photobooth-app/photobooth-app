@@ -14,6 +14,8 @@ import pluggy
 from PIL import Image
 from statemachine import Event, State
 
+from ..models.genericstats import GenericStats
+
 pm = pluggy.PluginManager("photobooth-app")
 hookspec = pluggy.HookspecMarker("photobooth-app")
 hookimpl = pluggy.HookimplMarker("photobooth-app")
@@ -28,6 +30,9 @@ class PluginManagementSpec:
 
     @hookspec
     def stop(self) -> None: ...
+
+    @hookspec
+    def get_stats(self) -> GenericStats: ...
 
 
 class PluginStatemachineSpec:

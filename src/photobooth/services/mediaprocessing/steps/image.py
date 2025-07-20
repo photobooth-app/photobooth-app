@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
-from .... import plugins
+from ....plugins import pm
 from ....utils.exceptions import PipelineError
 from ...config.models import models
 from ..context import ImageContext
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_plugin_avail_filters():
-    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*plugins.pm.hook.mp_avail_filter()))
+    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*pm.hook.mp_avail_filter()))
 
 
 def get_plugin_userselectable_filters():
-    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*plugins.pm.hook.mp_userselectable_filter()))
+    return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*pm.hook.mp_userselectable_filter()))
 
 
 PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)
@@ -42,7 +42,7 @@ class PluginFilterStep(PipelineStep):
             return  # needed, otherwise remaining code will be executed after returning from next_step
 
         try:
-            manipulated_image = plugins.pm.hook.mp_filter_pipeline_step(
+            manipulated_image = pm.hook.mp_filter_pipeline_step(
                 image=context.image.copy(),
                 plugin_filter=self.plugin_filter.value,
                 preview=context.preview,

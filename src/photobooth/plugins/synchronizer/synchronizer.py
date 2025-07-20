@@ -1,10 +1,10 @@
 import logging
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
 
-from ...appconfig import appconfig
-from ..base import BaseService
+from ...models.genericstats import DisplayEnum, GenericStats, SubList, SubStats
+from .. import hookimpl
+from ..base_plugin import BasePlugin
+from .config import SynchronizerConfig
 from .connectors import connector_factory
 from .share import AbstractMediashare, share_factory
 from .sync_regularcomplete import SyncRegularcomplete
@@ -15,46 +15,25 @@ from .utils import get_remote_filepath
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class SubStats:
-    name: str
-    val: str | int | float | None
-    format: str | None = None
-
-
-@dataclass
-class SubList:
-    name: str
-    val: list[SubStats]
-
-
-@dataclass
-class GenericStats:
-    id: str
-    actions: list[str] = field(default_factory=list)
-    stats: list[SubStats | SubList] = field(default_factory=list)
-
-
-class Synchronizer(BaseService):
+class Synchronizer(BasePlugin[SynchronizerConfig]):
     def __init__(self):
         super().__init__()
 
+        self._config = SynchronizerConfig()
         self._sync_queue: list[ThreadedQueueProcessor] = []
         self._regular_complete_sync: list[SyncRegularcomplete] = []
         self._shares: list[AbstractMediashare] = []
 
+    @hookimpl
     def start(self):
-        super().start()
-
         self.reset()
 
-        if not appconfig.synchronizer.common.enabled:
+        if not self._config.common.enabled:
             logger.info("Synchronizer Plugin is disabled")
-            super().disabled()
             return
 
         # consumes the queue and uploads/deletes/modifies remote filesystem according to the queue.
-        for cfg in appconfig.synchronizer.backends:
+        for cfg in self._config.backends:
             if not cfg.enabled:
                 continue
 
@@ -83,18 +62,13 @@ class Synchronizer(BaseService):
         for instance in self._regular_complete_sync:
             instance.start()
 
-        super().started()
-
+    @hookimpl
     def stop(self):
-        super().stop()
-
         for instance in self._sync_queue:
             instance.stop()
 
         for instance in self._regular_complete_sync:
             instance.stop()
-
-        super().stopped()
 
     def reset(self):
         self._sync_queue = []
@@ -105,15 +79,16 @@ class Synchronizer(BaseService):
         for sync_queue in self._sync_queue:
             sync_queue.put_to_queue(priorized_task)
 
-    def stats(self) -> dict[str, Any]:
-        out = GenericStats(id="tis Plugin ID")
+    @hookimpl
+    def get_stats(self) -> GenericStats:
+        out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
 
         for sync_queue in self._sync_queue:
             sqs = sync_queue._stats
             out.stats.append(
                 SubList(
-                    str(sync_queue),
-                    [
+                    name=f"Queue: {str(sync_queue._connector)}",
+                    val=[
                         SubStats("remaining", sqs.remaining_files),
                         SubStats("success", sqs.success),
                         SubStats("failed", sqs.fail),
@@ -126,23 +101,22 @@ class Synchronizer(BaseService):
 
             out.stats.append(
                 SubList(
-                    str(regular_complete_sync),
-                    [
-                        SubStats("check_active", rcss.check_active),
+                    name=f"Regular Sync: {str(regular_complete_sync._control_connection)}",
+                    val=[
+                        SubStats("check_active", rcss.check_active, display=DisplayEnum.spinner),
                         SubStats("last_check_started", rcss.last_check_started.astimezone().strftime("%X") if rcss.last_check_started else None),
-                        SubStats("last_duration", rcss.last_duration),
+                        SubStats("last_duration", rcss.last_duration, unit="s"),
                         SubStats("next_check", rcss.next_check.astimezone().strftime("%X") if rcss.next_check else None),
                     ],
                 )
             )
-        out_dict = asdict(out)
-        print(out_dict)
-        return out_dict
+
+        return out
 
     def get_share_links(self, filepath_local: Path) -> list[str]:
         share_links: list[str] = []
 
-        if not appconfig.synchronizer.common.enable_share_links:
+        if not self._config.common.enable_share_links:
             logger.info("share link generation is disabled globally in synchronizer plugin")
             return []
 
@@ -154,22 +128,22 @@ class Synchronizer(BaseService):
 
         return share_links
 
-    # @hookimpl
+    @hookimpl
     def collection_original_file_added(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    # @hookimpl
+    @hookimpl
     def collection_files_added(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    # @hookimpl
+    @hookimpl
     def collection_files_updated(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
-    # @hookimpl
+    @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         for file in files:
             self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskDelete(get_remote_filepath(file))))

@@ -22,7 +22,6 @@ from ..utils.resizer import generate_resized
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventDbInsert, SseEventDbRemove, SseEventDbUpdate
-from .synchronizer.synchronizer import Synchronizer
 
 logger = logging.getLogger(__name__)
 
@@ -247,14 +246,12 @@ class Cache:
 class MediacollectionService(BaseService):
     """Handle all image related stuff"""
 
-    def __init__(self, synchronizer_service: Synchronizer):
+    def __init__(self):
         super().__init__()
 
         self.cache: Cache = Cache()
         self.db: Database = Database()
         self.fs: Files = Files()
-
-        self._synchronizer_service = synchronizer_service
 
         # don't access database during init because it might not be set up during tests...
 
@@ -282,12 +279,9 @@ class MediacollectionService(BaseService):
 
         self.db.add_item(item)
 
-        self._synchronizer_service.collection_files_added([item.processed, item.unprocessed])
         pluggy_pm.hook.collection_files_added(files=[item.processed, item.unprocessed])
 
         if item.captured_original:
-            # sync service for now is a regular service, maybe this changes to plugin in future
-            self._synchronizer_service.collection_original_file_added([item.captured_original])
             pluggy_pm.hook.collection_original_file_added(files=[item.captured_original])
 
         # and insert in client db collection so gallery is up to date.
@@ -301,7 +295,6 @@ class MediacollectionService(BaseService):
 
         self.db.update_item(item)
 
-        self._synchronizer_service.collection_files_updated([item.processed])
         pluggy_pm.hook.collection_files_updated(files=[item.processed])
 
         # send update not to clients, so they can load updated images in case needed.
@@ -311,7 +304,6 @@ class MediacollectionService(BaseService):
         self.db.delete_item(item)
         self.fs.delete_item(item, appconfig.common.users_delete_to_recycle_dir)
 
-        self._synchronizer_service.collection_files_deleted([item.processed, item.unprocessed])
         pluggy_pm.hook.collection_files_deleted(files=[item.processed, item.unprocessed])
 
         # # and remove from client db collection so gallery is up to date.

@@ -4,8 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field, FilePath, NonNegativeInt, PositiveInt
 from pydantic_extra_types.color import Color
 
-from photobooth.services.mediaprocessing.steps.image import PluginFilters
-
+from ...mediaprocessing.steps.image import PluginFilters
 from ..validators import ensure_demoassets
 
 

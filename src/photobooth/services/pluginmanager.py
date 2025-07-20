@@ -53,6 +53,10 @@ class PluginManagerService(BaseService):
 
         return plugins
 
+    def exec_plugin_action(self, plugin, action):
+        # get plugin in route and exec from there?
+        raise NotImplementedError
+
     @staticmethod
     def is_configurable_plugin(plugin: BasePlugin[BaseConfig]) -> bool:
         try:

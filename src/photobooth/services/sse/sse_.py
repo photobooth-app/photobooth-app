@@ -9,7 +9,7 @@ import os
 import time
 import uuid
 from asyncio import Queue, QueueFull
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,8 @@ from fastapi import Request
 from sse_starlette.event import ServerSentEvent
 from statemachine import State
 
-from ...database.schemas import MediaitemPublic
+from ...database.schemas import MediaitemPublic, ShareLimitsPublic, UsageStatsPublic
+from ...models.genericstats import GenericStats
 from ..processor.base import JobModelBase
 
 logger = logging.getLogger(__name__)
@@ -157,9 +158,9 @@ class SseEventOnetimeInformationRecord(SseEventBase):
     model: str
     data_directory: Path
     python_executable: str
-    disk: dict[str, Any]
+    disk: dict[str, int | float]
 
-    event: str = "InformationRecord"
+    event: str = "OnetimeInformationRecord"
 
     @property
     def data(self) -> str:
@@ -185,17 +186,17 @@ class SseEventIntervalInformationRecord(SseEventBase):
     """basic class for sse events"""
 
     cpu_percent: float
-    memory: dict[str, Any]
-    cma: dict[str, Any]
+    memory: dict[str, int | float]
+    cma: dict[str, int | None] | dict[str, None]
     backends: dict[str, dict[str, Any]]
-    stats_counter: list[dict[str, Any]]
-    limits_counter: list[dict[str, Any]]
+    stats_counter: list[UsageStatsPublic]
+    limits_counter: list[ShareLimitsPublic]
     battery_percent: int | None
     temperatures: dict[str, Any]
     mediacollection: dict[str, Any]
-    synchronizer: dict[str, Any]
+    plugins: list[GenericStats]
 
-    event: str = "InformationRecord"
+    event: str = "IntervalInformationRecord"
 
     @property
     def data(self) -> str:
@@ -205,12 +206,13 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 memory=self.memory,
                 cma=self.cma,
                 backends=self.backends,
-                stats_counter=self.stats_counter,
-                limits_counter=self.limits_counter,
+                # https://stackoverflow.com/questions/77637278/sqlalchemy-model-to-json
+                stats_counter=[UsageStatsPublic.model_validate(entry).model_dump(mode="json") for entry in self.stats_counter],
+                limits_counter=[ShareLimitsPublic.model_validate(entry).model_dump(mode="json") for entry in self.limits_counter],
                 battery_percent=self.battery_percent,
                 temperatures=self.temperatures,
                 mediacollection=self.mediacollection,
-                synchronizer=self.synchronizer,
+                plugins=[asdict(entry) for entry in self.plugins],
             )
         )
 

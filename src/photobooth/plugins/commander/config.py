@@ -8,7 +8,11 @@ from .models import HttpRequestParameters, TaskCommand, TaskHttpRequest
 
 
 class CommanderConfig(BaseConfig):
-    model_config = SettingsConfigDict(title="Commander Plugin Config", json_file=f"{CONFIG_PATH}plugin_commander.json")
+    model_config = SettingsConfigDict(
+        title="Commander Plugin Config",
+        json_file=f"{CONFIG_PATH}plugin_commander.json",
+        env_prefix="commander-",
+    )
 
     enable_tasks_processing: bool = Field(
         default=False,

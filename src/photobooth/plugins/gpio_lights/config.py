@@ -32,7 +32,11 @@ class GpioLight(BaseModel):
 
 
 class GpioLightsConfig(BaseConfig):
-    model_config = SettingsConfigDict(title="GPIO Lights Plugin Config", json_file=f"{CONFIG_PATH}plugin_gpiolights.json")
+    model_config = SettingsConfigDict(
+        title="GPIO Lights Plugin Config",
+        json_file=f"{CONFIG_PATH}plugin_gpiolights.json",
+        env_prefix="gpiolights-",
+    )
 
     enabled: bool = Field(
         default=False,
