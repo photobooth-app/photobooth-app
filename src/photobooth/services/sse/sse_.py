@@ -8,6 +8,7 @@ import logging
 import os
 import time
 import uuid
+from abc import ABC, abstractmethod
 from asyncio import Queue, QueueFull
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -25,11 +26,16 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SseEventBase:
+class SseEventBase(ABC):
     """basic class for sse events"""
 
-    # event: str
-    # data: str
+    @property
+    @abstractmethod
+    def event(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def data(self) -> str: ...
 
 
 @dataclass
@@ -246,7 +252,7 @@ class SseService:
 
         logger.debug(f"SSE clients connected: {[_client.request.client for _client in self._clients]}")
 
-    def dispatch_event(self, sse_event_data: ServerSentEvent):
+    def dispatch_event(self, sse_event_data: SseEventBase):
         for client in self._clients:
             try:
                 client.queue.put_nowait(
