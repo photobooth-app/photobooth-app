@@ -61,6 +61,10 @@ def ftp_backend():
         ftp_backend.disconnect()
 
 
+def test_get_str(ftp_backend: FtpConnector):
+    assert ftp_backend.__str__()
+
+
 def test_ftp_login(ftp_server):
     # just test the server itself is working fine...
     ftp = FTP()
@@ -103,6 +107,13 @@ def test_disconnect_already_disconnected_raises_nothing(ftp_server, ftp_backend:
     assert ftp_backend._ftp
     ftp_backend._ftp.quit()  # directly close the connection, which will provoke an err on subseq disconnect cmd
     ftp_backend.disconnect()  # does not raise an error
+    assert ftp_backend.is_connected() is False
+
+
+def test_connect_check_host_down(ftp_server, ftp_backend: FtpConnector):
+    ftp_backend.connect()
+    assert ftp_backend.is_connected()
+    ftp_server.close_all()
     assert ftp_backend.is_connected() is False
 
 

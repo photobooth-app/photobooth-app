@@ -23,6 +23,10 @@ def fs_backend(tmp_path):
         fs_backend.disconnect()
 
 
+def test_get_str(fs_backend: FilesystemConnector):
+    assert fs_backend.__str__()
+
+
 def test_connect_creates_target_dir(fs_backend: FilesystemConnector):
     assert fs_backend._target_dir
     testfolder = Path(fs_backend._target_dir, "anyother/folder/sub")
@@ -53,7 +57,7 @@ def test_connect_check_for_existing_file_target_dir(fs_backend: FilesystemConnec
     assert fs_backend.is_connected() is False
 
 
-def test_connect_disconnect(fs_backend: FilesystemConnector):
+def test_connect_disconnect(fs_backend: FilesystemConnector, tmp_path: Path):
     fs_backend.connect()
     assert fs_backend.is_connected()
     fs_backend.disconnect()
@@ -61,7 +65,7 @@ def test_connect_disconnect(fs_backend: FilesystemConnector):
     assert fs_backend.is_connected() is True
 
     # is_connected=False if no dir as target...
-    fs_backend._target_dir = Path("nonexistant_anything")
+    fs_backend._target_dir = Path(tmp_path, "nonexistent_anything")
     assert fs_backend.is_connected() is False
 
 

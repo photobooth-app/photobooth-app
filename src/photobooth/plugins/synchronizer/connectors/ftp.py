@@ -145,15 +145,7 @@ class FtpConnector(AbstractConnector):
             ftype = folder_list[str(filepath)]["type"]  # raise KeyError if name not in list
         except Exception:
             ftype = None
-        # print(filepath)
-        # print(str(filepath))
-        # print(filepath.parents)
-        # print(filepath.parts)
-        # print(filepath.name)
-        # print(filepath.resolve())
-        # print(folder_list)
-        # print(ftype)
-        # print(rtype)
+
         return ftype in rtype
 
     def _get_remote_filesize(self, filepath: Path) -> int | None:

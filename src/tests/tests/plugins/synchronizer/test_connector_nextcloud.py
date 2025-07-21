@@ -39,10 +39,23 @@ def nextcloud_backend():
         nextcloud_backend.disconnect()
 
 
+def test_get_str(nextcloud_backend: NextcloudConnector):
+    assert nextcloud_backend.__str__()
+
+
 def test_connect_check_no_empty_host(nextcloud_backend: NextcloudConnector):
     nextcloud_backend._url = ""
     with pytest.raises(ValueError):
         nextcloud_backend.connect()
+
+    assert nextcloud_backend.is_connected() is False
+
+
+def test_connect_check_nonexistent_host(nextcloud_backend: NextcloudConnector):
+    nextcloud_backend.connect()
+
+    # destroy the instance to provoke exception
+    nextcloud_backend.nc = None
 
     assert nextcloud_backend.is_connected() is False
 
