@@ -48,7 +48,9 @@ class SseEventTranslateableFrontendNotification(SseEventBase):
     icon: str | None = None  # could a quasar icon or None, the UI default
     spinner: bool | None = None  # could be True or False, None same as False
 
-    event: str = "TranslateableFrontendNotification"
+    @property
+    def event(self) -> str:
+        return "TranslateableFrontendNotification"
 
     @property
     def data(self) -> str:
@@ -71,7 +73,9 @@ class SseEventProcessStateinfo(SseEventBase):
     target: State
     jobmodel: JobModelBase | None
 
-    event: str = "ProcessStateinfo"
+    @property
+    def event(self) -> str:
+        return "ProcessStateinfo"
 
     @property
     def data(self) -> str:
@@ -92,7 +96,9 @@ class SseEventProcessStateinfo(SseEventBase):
 class SseEventDbInsert(SseEventBase):
     mediaitem: MediaitemPublic
 
-    event: str = "DbInsert"
+    @property
+    def event(self) -> str:
+        return "DbInsert"
 
     @property
     def data(self) -> str:
@@ -103,7 +109,9 @@ class SseEventDbInsert(SseEventBase):
 class SseEventDbUpdate(SseEventBase):
     mediaitem: MediaitemPublic
 
-    event: str = "DbUpdate"
+    @property
+    def event(self) -> str:
+        return "DbUpdate"
 
     @property
     def data(self) -> str:
@@ -114,7 +122,9 @@ class SseEventDbUpdate(SseEventBase):
 class SseEventDbRemove(SseEventBase):
     mediaitem: MediaitemPublic
 
-    event: str = "DbRemove"
+    @property
+    def event(self) -> str:
+        return "DbRemove"
 
     @property
     def data(self) -> str:
@@ -133,7 +143,9 @@ class SseEventLogRecord(SseEventBase):
     lineno: str
     # display_notification: bool
 
-    event: str = "LogRecord"
+    @property
+    def event(self) -> str:
+        return "LogRecord"
 
     @property
     def data(self) -> str:
@@ -166,7 +178,9 @@ class SseEventOnetimeInformationRecord(SseEventBase):
     python_executable: str
     disk: dict[str, int | float]
 
-    event: str = "OnetimeInformationRecord"
+    @property
+    def event(self) -> str:
+        return "OnetimeInformationRecord"
 
     @property
     def data(self) -> str:
@@ -202,7 +216,9 @@ class SseEventIntervalInformationRecord(SseEventBase):
     mediacollection: dict[str, Any]
     plugins: list[GenericStats]
 
-    event: str = "IntervalInformationRecord"
+    @property
+    def event(self) -> str:
+        return "IntervalInformationRecord"
 
     @property
     def data(self) -> str:
