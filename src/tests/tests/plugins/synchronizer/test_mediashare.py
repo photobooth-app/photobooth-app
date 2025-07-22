@@ -34,6 +34,13 @@ def remote_path():
     return Path("some/media/file.mp4")
 
 
+def test_get_str(mock_connector):
+    cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com/media"))
+    share = FilesystemMediashare(cfg, mock_connector)
+
+    assert share.__str__()
+
+
 def test_filesystem_mediaitem_link(mock_connector, remote_path):
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com/media"))
     share = FilesystemMediashare(cfg, mock_connector)
