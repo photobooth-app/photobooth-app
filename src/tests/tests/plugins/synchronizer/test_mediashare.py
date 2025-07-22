@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -89,13 +89,7 @@ def test_downloadportal_url_autoupload_enabled(mock_connector):
     # downloadportal_url is ignored in case autoupload.
 
 
-@patch("photobooth.plugins.synchronizer.mediashare.resources.files")
-def test_update_downloadportal_upload_triggered(mock_files, mock_connector):
-    dummy_html = Mock()
-    dummy_html.name = "index.html"
-    dummy_html.is_file.return_value = True
-    mock_files.return_value.joinpath.return_value = dummy_html
-
+def test_update_downloadportal_upload_triggered(mock_connector):
     mock_connector.get_remote_samefile.return_value = False
 
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com", downloadportal_autoupload=True))
@@ -105,13 +99,7 @@ def test_update_downloadportal_upload_triggered(mock_files, mock_connector):
     mock_connector.do_upload.assert_called_once()
 
 
-@patch("photobooth.plugins.synchronizer.mediashare.resources.files")
-def test_update_downloadportal_skipped_when_same(mock_files, mock_connector):
-    dummy_html = Mock()
-    dummy_html.name = "index.html"
-    dummy_html.is_file.return_value = True
-    mock_files.return_value.joinpath.return_value = dummy_html
-
+def test_update_downloadportal_skipped_when_same(mock_connector):
     mock_connector.get_remote_samefile.return_value = True
 
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com", downloadportal_autoupload=True))
