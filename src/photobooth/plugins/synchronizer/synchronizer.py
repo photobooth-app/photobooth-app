@@ -6,7 +6,7 @@ from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import SynchronizerConfig
 from .connectors import connector_factory
-from .share import AbstractMediashare, share_factory
+from .mediashare import AbstractMediashare, share_factory
 from .sync_regularcomplete import SyncRegularcomplete
 from .threadedqueueprocessor import ThreadedQueueProcessor
 from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload

@@ -31,6 +31,10 @@ class AbstractMediashare(ABC, Generic[T]):
     @abstractmethod
     def mediaitem_link(self, remote_path: Path) -> str | None: ...
 
+    @staticmethod
+    def _build_mediaitem_url(base_url: str, remote_path: Path) -> str:
+        return base_url.rstrip("/") + "/" + remote_path.as_posix()
+
     def downloadportal_url(self) -> str | None:
         if isinstance(self._config.share, FtpShareConfig | FilesystemShareConfig) and self._config.share.downloadportal_autoupload:
             dlportal_raw_url = self._config.share.media_url
@@ -85,7 +89,7 @@ class FilesystemMediashare(AbstractMediashare[FilesystemBackendConfig]):
             logger.error(f"missing url for {self} mediaitem link")
             return None
 
-        mediaitem_url = self._config.share.media_url.rstrip("/") + "/" + remote_path.as_posix()
+        mediaitem_url = self._build_mediaitem_url(self._config.share.media_url, remote_path)
 
         return mediaitem_url
 
@@ -96,7 +100,8 @@ class FtpMediashare(AbstractMediashare[FtpBackendConfig]):
             logger.error(f"missing url for {self} mediaitem link")
             return None
 
-        mediaitem_url = self._config.share.media_url.rstrip("/") + "/" + remote_path.as_posix()
+        mediaitem_url = self._build_mediaitem_url(self._config.share.media_url, remote_path)
+
         return mediaitem_url
 
 
@@ -111,7 +116,7 @@ class NextcloudMediashare(AbstractMediashare[NextcloudBackendConfig]):
             logger.error(f"missing share_id for {self} mediaitem link")
             return None
 
-        mediaitem_url = mediaitem_url = f"{nc_url.rstrip('/')}/public.php/dav/files/{nc_shareid}/" + remote_path.as_posix()
+        mediaitem_url = self._build_mediaitem_url(f"{nc_url.rstrip('/')}/public.php/dav/files/{nc_shareid}/", remote_path)
 
         return mediaitem_url
 
