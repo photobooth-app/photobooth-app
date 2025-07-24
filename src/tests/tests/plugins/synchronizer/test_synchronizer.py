@@ -24,7 +24,6 @@ def synchronizer(tmp_path: Path):
         backends=[
             Backend(
                 enabled=True,
-                enable_immediate_sync=False,
                 backend_config=FilesystemBackendConfig(
                     connector=FilesystemConnectorConfig(target_dir=tmp_path),
                     share=FilesystemShareConfig(media_url="http://test.dummy.local/remote/"),
