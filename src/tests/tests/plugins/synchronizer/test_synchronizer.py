@@ -1,6 +1,5 @@
-import logging
-import time
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -13,12 +12,11 @@ from photobooth.plugins.synchronizer.config import (
     SynchronizerConfig,
 )
 from photobooth.plugins.synchronizer.synchronizer import Synchronizer
-
-logger = logging.getLogger(name=None)
+from photobooth.plugins.synchronizer.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 
 
 @pytest.fixture()
-def synchronizer_plugin(tmp_path: Path):
+def synchronizer(tmp_path: Path):
     # setup
     synchronizer = Synchronizer()
     synchronizer._config = SynchronizerConfig(
@@ -26,9 +24,10 @@ def synchronizer_plugin(tmp_path: Path):
         backends=[
             Backend(
                 enabled=True,
+                enable_immediate_sync=False,
                 backend_config=FilesystemBackendConfig(
                     connector=FilesystemConnectorConfig(target_dir=tmp_path),
-                    share=FilesystemShareConfig(),
+                    share=FilesystemShareConfig(media_url="http://test.dummy.local/remote/"),
                 ),
             ),
         ],
@@ -37,9 +36,128 @@ def synchronizer_plugin(tmp_path: Path):
     yield synchronizer
 
 
-def test_init(synchronizer_plugin: Synchronizer):
-    synchronizer_plugin.start()
+def test_reset(synchronizer: Synchronizer):
+    synchronizer._sync_queue = [MagicMock()]
+    synchronizer._regular_complete_sync = [MagicMock()]
+    synchronizer._shares = [MagicMock()]
 
-    time.sleep(1)
+    synchronizer.reset()
 
-    synchronizer_plugin.stop()
+    assert synchronizer._sync_queue == []
+    assert synchronizer._regular_complete_sync == []
+    assert synchronizer._shares == []
+
+
+def test_start_runs_components(synchronizer: Synchronizer):
+    synchronizer.start()
+
+    assert len(synchronizer._sync_queue) == 1
+    assert len(synchronizer._regular_complete_sync) == 1
+    assert len(synchronizer._shares) == 1
+
+
+def test_stop_calls_stop_on_all(synchronizer: Synchronizer):
+    q1 = MagicMock()
+    q2 = MagicMock()
+    r1 = MagicMock()
+    r2 = MagicMock()
+    synchronizer._sync_queue = [q1, q2]
+    synchronizer._regular_complete_sync = [r1, r2]
+
+    synchronizer.stop()
+
+    for i in [q1, q2, r1, r2]:
+        i.stop.assert_called_once()
+
+
+def test_put_to_workers_queues(synchronizer: Synchronizer):
+    mock_worker = MagicMock()
+    synchronizer._sync_queue = [mock_worker]
+    task = PriorizedTask(Priority.HIGH, MagicMock())
+
+    synchronizer._put_to_workers_queues(task)
+
+    mock_worker.put_to_queue.assert_called_once_with(task)
+
+
+def test_get_share_links_enabled(synchronizer: Synchronizer):
+    synchronizer.start()
+
+    result = synchronizer.get_share_links(Path("media/file.jpg"))
+
+    assert result == ["http://test.dummy.local/remote/#/?url=http%3A%2F%2Ftest.dummy.local%2Fremote%2Ffile.jpg"]
+
+
+def test_get_share_links_disabled(synchronizer: Synchronizer):
+    synchronizer._config.common.enable_share_links = False
+    synchronizer.start()
+
+    result = synchronizer.get_share_links(Path("media/file.txt"))
+    assert result == []
+
+
+def test_collection_files_added(synchronizer: Synchronizer):
+    mock_worker = MagicMock()
+    synchronizer._sync_queue = [mock_worker]
+    files = [Path("media/file1.txt"), Path("media/file2.txt")]
+
+    synchronizer.collection_files_added(files)
+
+    assert mock_worker.put_to_queue.call_count == 2
+    calls = [call.args[0] for call in mock_worker.put_to_queue.call_args_list]
+    for c in calls:
+        assert isinstance(c, PriorizedTask)
+        assert isinstance(c.task, SyncTaskUpload)
+        assert c.priority == Priority.HIGH
+
+
+def test_collection_files_original_added(synchronizer: Synchronizer):
+    mock_worker = MagicMock()
+    synchronizer._sync_queue = [mock_worker]
+    files = [Path("media/file1.txt"), Path("media/file2.txt")]
+
+    synchronizer.collection_original_file_added(files)
+
+    assert mock_worker.put_to_queue.call_count == 2
+    calls = [call.args[0] for call in mock_worker.put_to_queue.call_args_list]
+    for c in calls:
+        assert isinstance(c, PriorizedTask)
+        assert isinstance(c.task, SyncTaskUpload)
+        assert c.priority == Priority.LOW
+
+
+def test_collection_files_deleted(synchronizer: Synchronizer):
+    mock_worker = MagicMock()
+    synchronizer._sync_queue = [mock_worker]
+    files = [Path("media/delete1.txt")]
+
+    synchronizer.collection_files_deleted(files)
+
+    assert mock_worker.put_to_queue.call_count == 1
+
+    call = mock_worker.put_to_queue.call_args[0][0]
+    assert isinstance(call.task, SyncTaskDelete)
+    assert call.priority == Priority.LOW
+
+
+# def test_get_stats(synchronizer):
+#     mock_sync_queue = MagicMock()
+#     mock_sync_queue._connector = "SyncBackend"
+#     mock_sync_queue._stats.remaining_files = 5
+#     mock_sync_queue._stats.success = 3
+#     mock_sync_queue._stats.fail = 1
+
+#     mock_regular_sync = MagicMock()
+#     mock_regular_sync._control_connection = "RegularBackend"
+#     mock_regular_sync._stats.check_active = True
+#     mock_regular_sync._stats.last_check_started = None
+#     mock_regular_sync._stats.last_duration = 2.5
+#     mock_regular_sync._stats.next_check = None
+
+#     synchronizer._sync_queue = [mock_sync_queue]
+#     synchronizer._regular_complete_sync = [mock_regular_sync]
+
+#     stats = synchronizer.get_stats()
+#     assert stats.id == "hook-plugin-synchronizer"
+#     assert any("Queue:" in sub.name for sub in stats.stats)
+#     assert any("Regular Sync:" in sub.name for sub in stats.stats)

@@ -29,11 +29,6 @@ def mock_connector():
     return Mock(spec=AbstractConnector)
 
 
-@pytest.fixture
-def remote_path():
-    return Path("some/media/file.mp4")
-
-
 def test_get_str(mock_connector):
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com/media"))
     share = FilesystemMediashare(cfg, mock_connector)
@@ -41,39 +36,39 @@ def test_get_str(mock_connector):
     assert share.__str__()
 
 
-def test_filesystem_mediaitem_link(mock_connector, remote_path):
+def test_filesystem_mediaitem_link(mock_connector):
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com/media"))
     share = FilesystemMediashare(cfg, mock_connector)
 
     expected = "http://example.com/media/some/media/file.mp4"
-    assert share.mediaitem_link(remote_path) == expected
+    assert share.mediaitem_link(Path("some/media/file.mp4")) == expected
 
 
-def test_ftp_mediaitem_link(mock_connector, remote_path):
+def test_ftp_mediaitem_link(mock_connector):
     cfg = FtpBackendConfig(share=FtpShareConfig(media_url="ftp://media.server/files"))
     share = FtpMediashare(cfg, mock_connector)
 
     expected = "ftp://media.server/files/some/media/file.mp4"
-    assert share.mediaitem_link(remote_path) == expected
+    assert share.mediaitem_link(Path("some/media/file.mp4")) == expected
 
 
-def test_nextcloud_mediaitem_link(mock_connector, remote_path):
+def test_nextcloud_mediaitem_link(mock_connector):
     cfg = NextcloudBackendConfig(connector=NextcloudConnectorConfig(url="https://nextcloud.local"), share=NextcloudShareConfig(share_id="SHARE123"))
     share = NextcloudMediashare(cfg, mock_connector)
 
     expected = "https://nextcloud.local/public.php/dav/files/SHARE123/some/media/file.mp4"
-    assert share.mediaitem_link(remote_path) == expected
+    assert share.mediaitem_link(Path("some/media/file.mp4")) == expected
 
 
-def test_get_share_link_direct(mock_connector, remote_path):
+def test_get_share_link_direct(mock_connector):
     cfg = FilesystemBackendConfig(share=FilesystemShareConfig(media_url="http://example.com", use_downloadportal=False))
     share = FilesystemMediashare(cfg, mock_connector)
 
     expected = "http://example.com/some/media/file.mp4"
-    assert share.get_share_link(remote_path) == expected
+    assert share.get_share_link(Path("some/media/file.mp4")) == expected
 
 
-def test_get_share_link_downloadportal(mock_connector, remote_path):
+def test_get_share_link_downloadportal(mock_connector):
     cfg = FilesystemBackendConfig(
         share=FilesystemShareConfig(
             media_url="http://example.com",
@@ -84,7 +79,7 @@ def test_get_share_link_downloadportal(mock_connector, remote_path):
     )
     share = FilesystemMediashare(cfg, mock_connector)
 
-    result = share.get_share_link(remote_path)
+    result = share.get_share_link(Path("some/media/file.mp4"))
     assert result == "https://dlportal.local/#/?url=http%3A%2F%2Fexample.com%2Fsome%2Fmedia%2Ffile.mp4"
 
 
