@@ -104,9 +104,7 @@ class QueueProcessor(ResilientService, Generic[T]):
                         self._connector.do_upload(task.filepath_local, task.filepath_remote)
                     elif isinstance(task, SyncTaskDelete):
                         self._connector.do_delete_remote(task.filepath_remote)
-                    else:
-                        ...
-                        # never as per typing
+                    # else never as per typing
 
                 except Exception as exc:
                     self._stats.increment_fail()
