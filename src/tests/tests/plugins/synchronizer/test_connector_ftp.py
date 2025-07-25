@@ -82,6 +82,11 @@ def test_connect_check_no_empty_host(ftp_server, ftp_backend: FtpConnector):
     assert ftp_backend.is_connected() is False
 
 
+def test_noconnect_ensureconnected(ftp_server, ftp_backend: FtpConnector):
+    ftp_backend._ensure_connected()
+    assert ftp_backend.is_connected()
+
+
 def test_connect_disconnect(ftp_server, ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
