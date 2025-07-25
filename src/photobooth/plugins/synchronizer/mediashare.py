@@ -57,7 +57,7 @@ class AbstractMediashare(ABC, Generic[T]):
 
         # sanity check on downloadportal url
         if self._config.share.use_downloadportal and not downloadportal_url:
-            logger.error("cannot share because use of downloadportal is enabled but no URL available")
+            logger.error(f"cannot share because use of downloadportal is enabled but no URL available for {self._connector}")
             return None
 
         if self._config.share.use_downloadportal and downloadportal_url:
