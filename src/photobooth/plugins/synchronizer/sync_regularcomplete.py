@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ...utils.resilientservice import ResilientService
 from .connectors.abstractconnector import AbstractConnector
-from .threadedqueueprocessor import ThreadedQueueProcessor
+from .queueprocessor import QueueProcessor
 from .types import Priority, PriorizedTask, SyncTaskUpload
 from .utils import get_remote_filepath
 
@@ -22,11 +22,11 @@ class Stats:
 
 
 class SyncRegularcomplete(ResilientService):
-    def __init__(self, connector: AbstractConnector, threadedqueueprocessor: ThreadedQueueProcessor, local_root_dir: Path):
+    def __init__(self, connector: AbstractConnector, threadedqueueprocessor: QueueProcessor, local_root_dir: Path):
         super().__init__()
 
         self._control_connection: AbstractConnector = connector
-        self._threadedqueueprocessor: ThreadedQueueProcessor = threadedqueueprocessor
+        self._threadedqueueprocessor: QueueProcessor = threadedqueueprocessor
         self._local_root_dir: Path = local_root_dir
 
         self._stats: Stats = Stats()

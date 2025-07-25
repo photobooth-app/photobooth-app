@@ -7,8 +7,8 @@ from ..base_plugin import BasePlugin
 from .config import SynchronizerConfig
 from .connectors import connector_factory
 from .mediashare import AbstractMediashare, share_factory
+from .queueprocessor import QueueProcessor
 from .sync_regularcomplete import SyncRegularcomplete
-from .threadedqueueprocessor import ThreadedQueueProcessor
 from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 from .utils import get_remote_filepath
 
@@ -20,7 +20,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config = SynchronizerConfig()
-        self._sync_queue: list[ThreadedQueueProcessor] = []
+        self._sync_queue: list[QueueProcessor] = []
         self._regular_complete_sync: list[SyncRegularcomplete] = []
         self._shares: list[AbstractMediashare] = []
 
@@ -37,7 +37,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             if not cfg.enabled:
                 continue
 
-            threadedqueueprocessor = ThreadedQueueProcessor(cfg.backend_config.connector)
+            threadedqueueprocessor = QueueProcessor(cfg.backend_config.connector)
 
             if cfg.enable_share_link:
                 share = share_factory(cfg.backend_config, connector_factory.connector_factory(cfg.backend_config.connector))

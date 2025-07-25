@@ -50,7 +50,7 @@ class Stats:
         }
 
 
-class ThreadedQueueProcessor(ResilientService, Generic[T]):
+class QueueProcessor(ResilientService, Generic[T]):
     def __init__(self, config: T):
         super().__init__()
 
