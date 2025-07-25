@@ -42,13 +42,6 @@ class Stats:
         with self.lock:
             return f"Stats: Success: {self.success:3d} Failed: {self.fail:3d}  Remaining Files: {self.remaining_files:3d}"
 
-    def to_dict(self):
-        return {
-            "success": self.success,
-            "fail": self.fail,
-            "remaining_files": self.remaining_files,
-        }
-
 
 class QueueProcessor(ResilientService, Generic[T]):
     def __init__(self, config: T):
@@ -80,6 +73,7 @@ class QueueProcessor(ResilientService, Generic[T]):
 
     def teardown_resource(self):
         self._queue = PriorityQueue[PriorizedTask]()  # clear to abort processing in service
+        self._stats = Stats()
         self._connector.disconnect()
 
     def run_service(self):
