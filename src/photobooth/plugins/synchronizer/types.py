@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
-from queue import PriorityQueue
 
 
 @dataclass
@@ -21,11 +20,10 @@ class SyncTaskDelete:
         return self.filepath_remote.name
 
 
-taskSyncType = SyncTaskUpload | SyncTaskDelete | None
+taskSyncType = SyncTaskUpload | SyncTaskDelete
 
 
 class Priority(IntEnum):
-    SHUTDOWN = 0  # highest for None on shutdown
     HIGH = 1  # high for immediate syncs
     LOW = 2  # low for regular syncs
 
@@ -37,6 +35,3 @@ class PriorizedTask:
 
     def __str__(self):
         return f"{self.task} - {self.priority.name} priority)"
-
-
-queueSyncType = PriorityQueue[PriorizedTask]

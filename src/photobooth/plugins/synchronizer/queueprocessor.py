@@ -2,14 +2,14 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from queue import Empty
+from queue import Empty, PriorityQueue
 from typing import Generic, TypeVar
 
 from ...utils.resilientservice import ResilientService
 from .config import ConnectorConfig
 from .connectors.abstractconnector import AbstractConnector
 from .connectors.connector_factory import connector_factory
-from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload, queueSyncType, taskSyncType
+from .types import PriorizedTask, SyncTaskDelete, SyncTaskUpload, taskSyncType
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class QueueProcessor(ResilientService, Generic[T]):
         super().__init__()
 
         self._connector: AbstractConnector = connector_factory(config)  # TODO: multiple, later... lets start with resilientservice
-        self._queue: queueSyncType = queueSyncType()
+        self._queue: PriorityQueue[PriorizedTask] = PriorityQueue[PriorizedTask]()
         self._stats: Stats = Stats()
 
     def __str__(self):
@@ -76,12 +76,10 @@ class QueueProcessor(ResilientService, Generic[T]):
         self._stats.add_remaining()
 
     def setup_resource(self):
-        self._stats: Stats = Stats()
         self._connector.connect()
 
     def teardown_resource(self):
-        self._queue = queueSyncType()  # clear to abort processing in service
-        self._queue.put_nowait(PriorizedTask(Priority.SHUTDOWN, None))
+        self._queue = PriorityQueue[PriorizedTask]()  # clear to abort processing in service
         self._connector.disconnect()
 
     def run_service(self):
@@ -102,14 +100,10 @@ class QueueProcessor(ResilientService, Generic[T]):
 
             except Empty:
                 continue
+
             else:
                 task = priorizedTask.task
                 assert isinstance(task, taskSyncType)
-
-                # quit on shutdown.
-                if task is None or self._stop_event.is_set():
-                    logger.info(f"stop processing on shutdown {self}")
-                    break
 
                 try:
                     if isinstance(task, SyncTaskUpload):
@@ -117,7 +111,8 @@ class QueueProcessor(ResilientService, Generic[T]):
                     elif isinstance(task, SyncTaskDelete):
                         self._connector.do_delete_remote(task.filepath_remote)
                     else:
-                        raise RuntimeError(f"Error processing unknown task: {priorizedTask}")
+                        ...
+                        # never as per typing
 
                 except Exception as exc:
                     self._stats.increment_fail()
@@ -126,3 +121,7 @@ class QueueProcessor(ResilientService, Generic[T]):
                 else:
                     self._stats.increment_success()
                     # logger.info(f"successfully processed task {priorizedTask}")
+                finally:
+                    self._queue.task_done()
+
+        logger.info(f"left processing {self}")
