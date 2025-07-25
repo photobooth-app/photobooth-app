@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 import requests
-from nc_py_api import NextcloudException
+from nc_py_api import Nextcloud, NextcloudException
 from pydantic import SecretStr
 
 from photobooth.plugins.synchronizer.connectors.nextcloud import NextcloudConnector, NextcloudConnectorConfig
@@ -56,6 +56,14 @@ def test_connect_check_nonexistent_host(nextcloud_backend: NextcloudConnector):
 
     # destroy the instance to provoke exception
     nextcloud_backend.nc = None
+
+    assert nextcloud_backend.is_connected() is False
+
+
+def test_connect_check_disconnected(nextcloud_backend: NextcloudConnector):
+    # destroy the instance to provoke exception
+    nextcloud_backend.nc = Nextcloud(nextcloud_url="", nc_auth_user="none", nc_auth_pass="none")
+    nextcloud_backend.connect()
 
     assert nextcloud_backend.is_connected() is False
 
