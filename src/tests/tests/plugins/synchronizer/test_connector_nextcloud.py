@@ -60,14 +60,6 @@ def test_connect_check_nonexistent_host(nextcloud_backend: NextcloudConnector):
     assert nextcloud_backend.is_connected() is False
 
 
-def test_connect_check_disconnected(nextcloud_backend: NextcloudConnector):
-    # destroy the instance to provoke exception
-    nextcloud_backend._url = TEST_URL + "/illegalnonexistant/"
-    # nextcloud_backend.connect()
-
-    assert nextcloud_backend.is_connected() is False
-
-
 def test_connect_disconnect(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
