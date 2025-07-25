@@ -113,6 +113,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         return out
 
+    @hookimpl
     def get_share_links(self, filepath_local: Path) -> list[str]:
         share_links: list[str] = []
 
