@@ -4,6 +4,7 @@ import logging
 import signal
 import threading
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 from pathlib import Path
 from types import FrameType
 
@@ -13,7 +14,6 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.requests import Request
 from fastapi.staticfiles import StaticFiles
 
-from .__version__ import __version__
 from .container import container
 from .routers import api, api_admin
 from .routers.media import media_router
@@ -58,7 +58,7 @@ def _create_app() -> FastAPI:
     _app = FastAPI(
         title="Photobooth-App API",
         description="API may change any time.",
-        version=__version__,
+        version=version("photobooth-app"),
         contact={
             "name": "mgineer85",
             "url": "https://github.com/photobooth-app/photobooth-app",

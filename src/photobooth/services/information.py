@@ -2,6 +2,7 @@ import logging
 import platform
 import sys
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from .. import CACHE_PATH, MEDIA_PATH, RECYCLE_PATH, TMP_PATH
-from ..__version__ import __version__
 from ..database.database import engine
 from ..database.models import Cacheditem, Mediaitem, ShareLimits, UsageStats
 from ..database.schemas import ShareLimitsPublic, UsageStatsPublic
@@ -105,7 +105,7 @@ class InformationService(BaseService):
 
     def get_initial_inforecord(self):
         return SseEventOnetimeInformationRecord(
-            version=__version__,
+            version=version("photobooth-app"),
             platform_system=platform.system(),
             platform_release=platform.release(),
             platform_machine=platform.machine(),

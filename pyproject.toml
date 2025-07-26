@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
+version = "v8.0.0a2"
 requires-python = ">=3.10,<3.14"
-dynamic = ["version"]
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgineer85.de" }]
@@ -80,11 +80,6 @@ synchronizer = 'photobooth.plugins.synchronizer.synchronizer'
 Homepage = "https://github.com/photobooth-app/photobooth-app"
 Repository = "https://github.com/photobooth-app/photobooth-app"
 Documentation = "https://photobooth-app.org"
-
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 
 [tool.pytest.ini_options]
@@ -170,15 +165,19 @@ benchmark = [
   { cmd = "pytest --benchmark-only --benchmark-autosave --basetemp=./tests_tmp/ -v ./src/tests/benchmarks" },
 ]
 
-[tool.hatch.version]
-path = "./src/photobooth/__version__.py"
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
 
-[tool.hatch.build]
-sources = ["src"]
+# [tool.hatch.build.targets.sdist]
+# only-include = ["./src/photobooth", "./src/web"]
 
-[tool.hatch.build.targets.sdist]
-only-include = ["./src/photobooth", "./src/web"]
+# [tool.hatch.build.targets.wheel]
+# only-include = ["./src/photobooth", "./src/web"]
 
+[build-system]
+requires = ["uv_build>=0.8.3,<0.9.0"]
+build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-only-include = ["./src/photobooth", "./src/web"]
+[tool.uv.build-backend]
+module-name = ["photobooth", "web"]

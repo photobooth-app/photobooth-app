@@ -6,11 +6,11 @@ Photobooth Application start script
 import argparse
 import logging
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import uvicorn
 
-from .__version__ import __version__
 from .database.database import create_db_and_tables
 
 parser = argparse.ArgumentParser()
@@ -36,7 +36,7 @@ def main(args=None, run_server: bool = True):
 
     logger.info(f"photobooth directory: {Path(__file__).parent.resolve()}")
     logger.info(f"working directory: {Path.cwd().resolve()}")
-    logger.info(f"app version started: {__version__}")
+    logger.info(f"app version started: {version('photobooth-app')}")
 
     server = uvicorn.Server(uvicorn.Config(app=app, host=host, port=port, log_level="info", workers=None))
 
