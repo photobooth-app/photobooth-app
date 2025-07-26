@@ -23,19 +23,19 @@ class GroupMediaprocessing(BaseModel):
         default=1500,
         ge=800,
         le=5000,
-        description="Dimension of longer side used for scaling full images. Shorter side of the image is calculated to keep aspect ratio. For performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
+        description="Minimum dimension of the longer side used to scale full captures. The shorter side is calculated to keep aspect ratio. For best performance choose as low as possible but still gives decent print quality. Example: 1500/6inch=250dpi",
     )
     preview_still_length: int = Field(
         default=1200,
         ge=200,
         le=2500,
-        description="Dimension of longer side used for scaling previews. Shorter side of the image is calculated to keep aspect ratio.",
+        description="Minimum dimension of the longer side used to scale preview captures. The shorter side is calculated to keep aspect ratio.",
     )
     thumbnail_still_length: int = Field(
         default=400,
         ge=100,
         le=1000,
-        description="Dimension of longer side used for scaling thumbnails. Shorter side of the image is calculated to keep aspect ratio.",
+        description="Minimum dimension of the longer side used to scale thumbnails captures. The shorter side is calculated to keep aspect ratio.",
     )
 
     video_bitrate: int = Field(
