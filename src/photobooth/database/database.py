@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
@@ -24,7 +25,7 @@ def create_db_and_tables():
 
     # from your settings or environment
     alembic_cfg.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
-    alembic_cfg.set_main_option("script_location", "./src/photobooth/database/alembic")
+    alembic_cfg.set_main_option("script_location", str(Path(Path(__file__).parent.absolute(), "alembic")))
 
     # Check if Alembic has already stamped the DB
     if not db_exists:
