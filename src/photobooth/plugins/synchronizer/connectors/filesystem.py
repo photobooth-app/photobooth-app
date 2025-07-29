@@ -12,7 +12,7 @@ class FilesystemConnector(AbstractConnector):
     def __init__(self, config: FilesystemConnectorConfig):
         super().__init__(config)
 
-        self._target_dir: Path | None = config.target_dir
+        self._target_dir: Path = config.target_dir
 
     def __str__(self):
         return f"{self.__class__.__name__} ({self._target_dir})"
