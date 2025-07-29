@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 import requests
 from nc_py_api import NextcloudException
-from pydantic import SecretStr
+from pydantic import HttpUrl, SecretStr
 
 from photobooth.plugins.synchronizer.connectors.nextcloud import NextcloudConnector, NextcloudConnectorConfig
 
@@ -25,7 +25,7 @@ except Exception:
 def nextcloud_backend():
     nextcloud_backend = NextcloudConnector(
         NextcloudConnectorConfig(
-            url=TEST_URL,
+            url=HttpUrl(TEST_URL),
             username="testuser",
             password=SecretStr("testpass"),
             target_dir=str(uuid4()),

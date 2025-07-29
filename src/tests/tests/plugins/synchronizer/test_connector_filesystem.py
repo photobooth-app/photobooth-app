@@ -39,12 +39,6 @@ def test_connect_creates_target_dir(fs_backend: FilesystemConnector):
     assert testfolder.is_dir()
 
 
-def test_connect_check_for_valid_target_dir(fs_backend: FilesystemConnector):
-    fs_backend._target_dir = None
-    with pytest.raises(ValueError):
-        fs_backend.connect()
-
-
 def test_connect_check_for_existing_file_target_dir(fs_backend: FilesystemConnector):
     assert fs_backend._target_dir
     file_target = Path(fs_backend._target_dir, "filename")

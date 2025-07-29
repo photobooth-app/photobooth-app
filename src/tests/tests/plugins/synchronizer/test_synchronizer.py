@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import HttpUrl
 
 from photobooth.plugins.synchronizer.config import (
     Backend,
@@ -26,7 +27,7 @@ def synchronizer(tmp_path: Path):
                 enabled=True,
                 backend_config=FilesystemBackendConfig(
                     connector=FilesystemConnectorConfig(target_dir=tmp_path),
-                    share=FilesystemShareConfig(media_url="http://test.dummy.local/remote/"),
+                    share=FilesystemShareConfig(media_url=HttpUrl("http://test.dummy.local/remote/")),
                 ),
             ),
         ],

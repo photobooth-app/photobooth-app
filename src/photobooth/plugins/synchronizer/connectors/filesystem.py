@@ -18,8 +18,7 @@ class FilesystemConnector(AbstractConnector):
         return f"{self.__class__.__name__} ({self._target_dir})"
 
     def connect(self):
-        if not self._target_dir:
-            raise ValueError("no target directory given!")
+        assert isinstance(self._target_dir, Path), "no target directory given!"
 
         if self._target_dir.exists() and not self._target_dir.is_dir():
             raise ValueError(f"target_dir {self._target_dir} exists but is not a directory. The target needs to be a directory.")

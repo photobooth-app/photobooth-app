@@ -13,7 +13,7 @@ class NextcloudConnector(AbstractConnector):
     def __init__(self, config: NextcloudConnectorConfig):
         super().__init__(config)
 
-        self._url: str = config.url
+        self._url: str = str(config.url)
         self._username: str = config.username
         self._password: str = config.password.get_secret_value()
 
