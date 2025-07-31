@@ -1,9 +1,10 @@
 import logging
-import os
+import subprocess
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 
+from ...appconfig import appconfig
 from ...container import container
 
 logger = logging.getLogger(__name__)
@@ -14,10 +15,15 @@ router = APIRouter(prefix="/system", tags=["system"])
 def api_cmd_host(param: Literal["reboot", "shutdown"]):
     logger.info(f"api_cmd_host param={param}")
 
-    if param == "reboot":
-        os.system("reboot")
-    elif param == "shutdown":
-        os.system("shutdown now")
+    try:
+        if param == "reboot":
+            cmd = appconfig.misc.cmd_reboot
+        elif param == "shutdown":
+            cmd = appconfig.misc.cmd_shutdown
+
+        subprocess.run(args=[cmd], timeout=10, check=True)
+    except Exception as exc:
+        logger.error(f"could not {param}, error: {exc}")
 
     return "OK"
 

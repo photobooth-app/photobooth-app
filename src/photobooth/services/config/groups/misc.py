@@ -19,3 +19,13 @@ class GroupMisc(BaseModel):
         max_length=64,
         description="Secret to encrypt authentication data. If changed, login authorization is invalidated.",
     )
+
+    cmd_shutdown: str = Field(
+        default="shutdown now",
+        description="Command to shutdown when requested by the app. Change it if you have custom UPS solutions that need to poweroff properly.",
+    )
+
+    cmd_reboot: str = Field(
+        default="reboot",
+        description="Command to reboot when requested by the app. Change it if you have custom UPS solutions that need to poweroff properly.",
+    )

@@ -42,7 +42,7 @@ def system_nonexistant_endpoint(request):
     yield request.param
 
 
-@patch("os.system")
+@patch("subprocess.run")
 def test_system_host_endpoints(mock_system: MagicMock, client: TestClient, system_host_endpoint):
     response = client.get(system_host_endpoint)
     assert response.status_code == 200
