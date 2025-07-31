@@ -46,7 +46,7 @@ class ShareProcessing(BaseModel):
 
     share_command: str = Field(
         default="echo {filename}",
-        description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed.",
+        description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed. Also available: {media_type}=[image,collage,video,animation] and {action_config_name} which is the action name defined in the config.",
     )
     ask_user_for_parameter_input: bool = Field(
         default=False,
@@ -117,7 +117,7 @@ class GroupShare(BaseModel):
                 name="Printing",
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="echo {filename} {copies}",
+                    share_command="echo {filename} media_type={media_type} action_config_name={action_config_name} copies={copies}",
                     ask_user_for_parameter_input=False,
                     share_blocked_time=3,
                     parameters=[ShareProcessingParameters()],
@@ -132,7 +132,7 @@ class GroupShare(BaseModel):
                 name="Printing copies",
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="echo {filename} {copies}",
+                    share_command="echo {filename} media_type={media_type} action_config_name={action_config_name} copies={copies}",
                     ask_user_for_parameter_input=True,
                     parameters_dialog_caption="How many copies?",
                     share_blocked_time=3,
@@ -148,7 +148,7 @@ class GroupShare(BaseModel):
                 name="Mailing action",
                 handles_images_only=False,
                 processing=ShareProcessing(
-                    share_command="echo {filename} to mail {mail}",
+                    share_command="echo {filename} media_type={media_type} action_config_name={action_config_name} to mail {mail}",
                     ask_user_for_parameter_input=True,
                     parameters_dialog_caption="E-Mail your image...",
                     parameters_dialog_action_icon="mail",

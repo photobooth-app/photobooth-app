@@ -86,6 +86,8 @@ class ShareService(BaseService):
 
         # filename absolute to print, use in printing command
         filename = mediaitem.processed.absolute()
+        media_type = mediaitem.media_type
+        action_config_name = action_config.name
 
         # print command
         logger.info(f"share/print {filename=}")
@@ -100,7 +102,12 @@ class ShareService(BaseService):
         share_parameters.pop("filename", None)  # if filename is configured by user, remove it, because the app sets it.
 
         try:
-            formatted_command = str(action_config.processing.share_command).format(filename=filename, **share_parameters)
+            formatted_command = str(action_config.processing.share_command).format(
+                filename=filename,
+                media_type=media_type.value,
+                action_config_name=action_config_name,
+                **share_parameters,
+            )
         except KeyError as exc:
             raise RuntimeError(f"Error in configuration! Parameter {exc} is defined in command but was not configured as parameter!") from exc
         except TypeError as exc:
