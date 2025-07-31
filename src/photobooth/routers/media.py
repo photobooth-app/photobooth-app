@@ -40,4 +40,5 @@ def api_getitems_get(mediaitem_id: UUID, dimension: DimensionTypes):
 
 @media_router.head("/{dimension}/{mediaitem_id}")
 def api_getitems_head(mediaitem_id: UUID, dimension: DimensionTypes):
+    """head used for download portal to check if the file is available without downloading it."""
     return _serve_media_item(mediaitem_id, dimension)

@@ -40,3 +40,12 @@ def test_get_item_variants(client: TestClient):
     assert response.is_success
     assert response.headers.get("content-type", None) is not None
     assert len(response.content) > 512  # check result is more than 512b which is true always
+
+
+def test_head_item(client: TestClient):
+    mediaitem = container.mediacollection_service.get_item_latest()
+
+    response = client.head(f"../media/full/{mediaitem.id}")
+    assert response.is_success
+    assert response.headers.get("content-type", None) is not None
+    assert len(response.content) == 0

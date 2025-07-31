@@ -5,6 +5,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from photobooth.services.information import InformationService
+from photobooth.services.sse.sse_ import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
 
 logger = logging.getLogger(name=None)
 
@@ -35,3 +36,15 @@ def test_get_stats_reset_all_error(client_authenticated: TestClient):
     with patch.object(InformationService, "stats_counter_reset_all", error_mock):
         response = client_authenticated.get("/admin/information/cntr/reset/")
         assert response.status_code == 500
+
+
+def test_get_stats_onetime(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/information/stts/onetime")
+    assert response.is_success
+    assert SseEventOnetimeInformationRecord(**response.json())
+
+
+def test_get_stats_interval(client_authenticated: TestClient):
+    response = client_authenticated.get("/admin/information/stts/interval")
+    assert response.is_success
+    assert SseEventIntervalInformationRecord(**response.json())
