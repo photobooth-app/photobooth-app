@@ -248,4 +248,4 @@ class InformationService(BaseService):
         return temperatures
 
     def _gather_plugins(self) -> list[GenericStats]:
-        return pluggy_pm.hook.get_stats()
+        return [stat for stat in pluggy_pm.hook.get_stats() if stat is not None]

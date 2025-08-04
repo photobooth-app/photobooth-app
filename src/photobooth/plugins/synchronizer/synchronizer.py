@@ -80,7 +80,11 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             sync_queue.put_to_queue(priorized_task)
 
     @hookimpl
-    def get_stats(self) -> GenericStats:
+    def get_stats(self) -> GenericStats | None:
+        if self._config.common.enabled is False:
+            # avoids display of an empty stats object in the admin dashboard
+            return None
+
         out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
 
         for sync_queue in self._sync_queue:
