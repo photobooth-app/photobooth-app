@@ -940,7 +940,7 @@ name = "linuxpy"
 version = "0.21.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12' and sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/36/86/42feb1cceab4a5245df00fbd9620fda14f2c281f7ab60d954918a37677bc/linuxpy-0.21.0.tar.gz", hash = "sha256:d774d6c9333516fc803cd510e28df24d01e1edecf1cac54c88497e78b0e41c6a", size = 448261, upload-time = "2025-05-07T05:04:26.497Z" }
 wheels = [
@@ -1287,7 +1287,7 @@ wheels = [
 
 [[package]]
 name = "photobooth-app"
-version = "8.0.0rc2"
+version = "8.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
