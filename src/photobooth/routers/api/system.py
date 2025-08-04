@@ -1,4 +1,5 @@
 import logging
+import shlex
 import subprocess
 from typing import Literal
 
@@ -21,7 +22,8 @@ def api_cmd_host(param: Literal["reboot", "shutdown"]):
         elif param == "shutdown":
             cmd = appconfig.misc.cmd_shutdown
 
-        subprocess.run(args=[cmd], timeout=10, check=True)
+        args = shlex.split(cmd)
+        subprocess.run(args, timeout=10, check=True)
     except Exception as exc:
         logger.error(f"could not {param}, error: {exc}")
 
