@@ -99,6 +99,9 @@ class FtpConnector(AbstractConnector):
 
         logger.info("FTP-Server Msg: " + "; ".join(ret))
 
+        if not self._supports_mlsd():
+            raise RuntimeError("Your FTP server does not support MLSD command and does not work with this app.")
+
     def _disconnect(self):
         if self._ftp:
             try:
@@ -127,6 +130,16 @@ class FtpConnector(AbstractConnector):
             self._connect()
 
         self._idle_monitor_last_used = time.monotonic()
+
+    def _supports_mlsd(self) -> bool:
+        """Check if the server supports MLSD (MLST support usually implies MLSD but MLSD might not be advertised)."""
+        assert self._ftp
+
+        try:
+            features = self._ftp.sendcmd("FEAT").splitlines()
+            return any("MLST" in feat or "MLSD" in feat for feat in features)
+        except Exception:
+            return False
 
     def _get_folder_list(self, remote_path: Path):
         assert self._ftp
