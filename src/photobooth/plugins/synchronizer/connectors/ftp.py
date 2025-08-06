@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def _get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, str]]:
     # print(folder)
     # out = {x[0]: int(x[1].get("size", 0)) for x in _ftp.mlsd(str(folder), ["size","type"])}
-    out = {entry[0]: entry[1] for entry in _ftp.mlsd(str(folder), ["size", "type"])}
+    out = {entry[0]: entry[1] for entry in _ftp.mlsd(folder.as_posix(), ["size", "type"])}
 
     return out
 
@@ -195,12 +195,12 @@ class FtpConnector(AbstractConnector):
 
             if not self._get_remote_istype(remote_path.parent, ("dir", "cdir")):
                 logger.debug(f"creating remote folder: {remote_path.parent}")
-                self._ftp.mkd(str(remote_path.parent))
+                self._ftp.mkd(remote_path.parent.as_posix())
 
             _get_folder_list_cached.cache_clear()
 
             with open(local_path, "rb") as f:
-                self._ftp.storbinary(f"STOR {remote_path}", f)
+                self._ftp.storbinary(f"STOR {remote_path.as_posix()}", f)
 
     def do_delete_remote(self, remote_path: Path):
         with self._lock:
@@ -209,4 +209,4 @@ class FtpConnector(AbstractConnector):
 
             _get_folder_list_cached.cache_clear()
 
-            self._ftp.delete(str(remote_path))
+            self._ftp.delete(remote_path.as_posix())

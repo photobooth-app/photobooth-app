@@ -54,7 +54,7 @@ class NextcloudConnector(AbstractConnector):
 
         try:
             local_size = local_path.stat().st_size
-            remote_size = self.nc.files.by_path(str(self._target_dir.joinpath(remote_path))).info.size  # type: ignore
+            remote_size = self.nc.files.by_path(self._target_dir.joinpath(remote_path).as_posix()).info.size  # type: ignore
         except Exception:
             return False
         else:
@@ -66,14 +66,14 @@ class NextcloudConnector(AbstractConnector):
 
         full_path = self._target_dir.joinpath(remote_path)
         # Ensure directory exists
-        self.nc.files.makedirs(str(full_path.parent), True)
+        self.nc.files.makedirs(full_path.parent.as_posix(), True)
 
         # Do upload
-        self.nc.files.upload_stream(str(full_path), local_path)
+        self.nc.files.upload_stream(full_path.as_posix(), local_path)
 
     def do_delete_remote(self, remote_path: Path):
         assert self.nc
 
         full_path = self._target_dir.joinpath(remote_path)
 
-        self.nc.files.delete(str(full_path))
+        self.nc.files.delete(full_path.as_posix())
