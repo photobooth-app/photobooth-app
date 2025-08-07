@@ -1,25 +1,14 @@
 import logging
 import threading
 import time
-from ftplib import FTP_TLS
-from functools import lru_cache
+from ftplib import FTP_TLS, error_perm
 from pathlib import Path
-from typing import Literal
 
 from ....utils.stoppablethread import StoppableThread
 from ..config import FtpConnectorConfig
 from .abstractconnector import AbstractConnector
 
 logger = logging.getLogger(__name__)
-
-
-@lru_cache(maxsize=16)
-def _get_folder_list_cached(_ftp: FTP_TLS, folder: Path) -> dict[str, dict[str, str]]:
-    # print(folder)
-    # out = {x[0]: int(x[1].get("size", 0)) for x in _ftp.mlsd(str(folder), ["size","type"])}
-    out = {entry[0]: entry[1] for entry in _ftp.mlsd(folder.as_posix(), ["size", "type"])}
-
-    return out
 
 
 class FtpConnector(AbstractConnector):
@@ -97,10 +86,13 @@ class FtpConnector(AbstractConnector):
 
         ret.append(self._ftp.cwd("/"))
 
+        # set binary mode for file transfers, also needed for SIZE command to work properly
+        ret.append(self._ftp.voidcmd("TYPE I"))
+
         logger.info("FTP-Server Msg: " + "; ".join(ret))
 
-        if not self._supports_mlsd():
-            raise RuntimeError("Your FTP server does not support MLSD command and does not work with this app.")
+        if not self._supports_size():
+            raise RuntimeError("Your FTP server does not support SIZE command and does not work with this app.")
 
     def _disconnect(self):
         if self._ftp:
@@ -131,53 +123,43 @@ class FtpConnector(AbstractConnector):
 
         self._idle_monitor_last_used = time.monotonic()
 
-    def _supports_mlsd(self) -> bool:
-        """Check if the server supports MLSD (MLST support usually implies MLSD but MLSD might not be advertised)."""
+    def _supports_size(self) -> bool:
         assert self._ftp
 
         try:
-            features = self._ftp.sendcmd("FEAT").splitlines()
-            return any("MLST" in feat or "MLSD" in feat for feat in features)
+            response = self._ftp.sendcmd("FEAT")
+            return "SIZE" in response.upper()
         except Exception:
             return False
-
-    def _get_folder_list(self, remote_path: Path):
-        assert self._ftp
-
-        folder_list = _get_folder_list_cached(self._ftp, remote_path)
-
-        return folder_list
-
-    def _get_remote_istype(self, filepath: Path, rtype: tuple[Literal["dir", "cdir", "pdir", "file"], ...]) -> bool:
-        assert self._ftp
-
-        folder_list = self._get_folder_list(filepath.parent)
-
-        # if file is not found in the list, return None which means the file probably needs to be uploaded.
-        try:
-            ftype = folder_list[str(filepath)]["type"]  # raise KeyError if name not in list
-        except Exception:
-            ftype = None
-
-        return ftype in rtype
 
     def _get_remote_filesize(self, filepath: Path) -> int | None:
         assert self._ftp
 
-        folder_list = self._get_folder_list(filepath.parent)
-
-        # if file is not found in the list,NextcloudBackend return None which means the file probably needs to be uploaded.
         try:
-            size = int(folder_list[filepath.name]["size"])  # raise KeyError if name/type not in list
+            # check file size, if file exists returns int(bytes), if not exists, it returns None;
+            # if another error occurs, it might raise an exception and we return None (so to force re-upload)
+            size = self._ftp.size(filepath.as_posix())
         except Exception:
             size = None
 
         return size
 
+    def _is_dir(self, path: Path) -> bool:
+        """Return True if path is a directory."""
+        assert self._ftp
+
+        current = self._ftp.pwd()
+
+        try:
+            self._ftp.cwd(path.as_posix())
+            self._ftp.cwd(current)
+            return True
+        except error_perm:
+            return False
+
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
         with self._lock:
             self._ensure_connected()
-            assert self._ftp
 
             try:
                 size_local = local_path.stat().st_size
@@ -193,11 +175,9 @@ class FtpConnector(AbstractConnector):
             self._ensure_connected()
             assert self._ftp
 
-            if not self._get_remote_istype(remote_path.parent, ("dir", "cdir")):
+            if not self._is_dir(remote_path.parent):
                 logger.debug(f"creating remote folder: {remote_path.parent}")
                 self._ftp.mkd(remote_path.parent.as_posix())
-
-            _get_folder_list_cached.cache_clear()
 
             with open(local_path, "rb") as f:
                 self._ftp.storbinary(f"STOR {remote_path.as_posix()}", f)
@@ -206,7 +186,5 @@ class FtpConnector(AbstractConnector):
         with self._lock:
             self._ensure_connected()
             assert self._ftp
-
-            _get_folder_list_cached.cache_clear()
 
             self._ftp.delete(remote_path.as_posix())
