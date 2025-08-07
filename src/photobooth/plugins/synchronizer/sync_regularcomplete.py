@@ -19,6 +19,7 @@ class Stats:
     last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
     last_duration: float | None = None
     next_check: datetime | None = None
+    files_queued_last_check: int = 0
 
 
 class SyncRegularcomplete(ResilientService):
@@ -60,6 +61,7 @@ class SyncRegularcomplete(ResilientService):
             tms = time.time()
             self._stats.last_check_started = datetime.now()
             self._stats.check_active = True
+            self._stats.files_queued_last_check = 0
 
             for local_path in Path(self._local_root_dir).glob("**/*.*"):
                 if self._stop_event.is_set():
@@ -70,6 +72,7 @@ class SyncRegularcomplete(ResilientService):
 
                 if not is_same_file:
                     self._threadedqueueprocessor.put_to_queue(PriorizedTask(Priority.LOW, SyncTaskUpload(local_path, remote_path)))
+                    self._stats.files_queued_last_check += 1
                     # logger.debug(f"added {local_path} to upload queue in {self._control_connection}")
 
             tme = time.time()

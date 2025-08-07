@@ -111,6 +111,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
                         SubStats("last_check_started", rcss.last_check_started.astimezone().strftime("%X") if rcss.last_check_started else None),
                         SubStats("last_duration", rcss.last_duration, unit="s"),
                         SubStats("next_check", rcss.next_check.astimezone().strftime("%X") if rcss.next_check else None),
+                        SubStats("files_queued_last_check", rcss.files_queued_last_check),
                     ],
                 )
             )
