@@ -52,7 +52,7 @@ class QueueProcessor(ResilientService, Generic[T]):
         self._stats: Stats = Stats()
 
     def __str__(self):
-        return f"Queue: {self._connector}"
+        return f"Queue ({self._connector})"
 
     def start(self):
         super().start()

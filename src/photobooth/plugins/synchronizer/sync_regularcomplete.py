@@ -35,7 +35,7 @@ class SyncRegularcomplete(ResilientService):
         self.start()
 
     def __str__(self):
-        return f"Regular Sync: {self._control_connection}"
+        return f"Regular Sync ({self._control_connection})"
 
     def start(self):
         super().start()

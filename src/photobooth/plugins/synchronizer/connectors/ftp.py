@@ -30,7 +30,7 @@ class FtpConnector(AbstractConnector):
         self._idle_monitor_thread.start()
 
     def __str__(self):
-        return f"{self.__class__.__name__} ({self._host})"
+        return f"FTP: {self._host}"
 
     def _monitor_idle_fun(self):
         assert self._idle_monitor_thread

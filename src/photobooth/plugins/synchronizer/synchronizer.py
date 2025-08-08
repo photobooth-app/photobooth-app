@@ -91,7 +91,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             sqs = sync_queue._stats
             out.stats.append(
                 SubList(
-                    name=f"Queue: {str(sync_queue._connector)}",
+                    name=str(sync_queue),
                     val=[
                         SubStats("remaining", sqs.remaining_files),
                         SubStats("success", sqs.success),
@@ -105,7 +105,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
             out.stats.append(
                 SubList(
-                    name=f"Regular Sync: {str(regular_complete_sync._control_connection)}",
+                    name=str(regular_complete_sync),
                     val=[
                         SubStats("check_active", rcss.check_active, display=DisplayEnum.spinner),
                         SubStats("last_check_started", rcss.last_check_started.astimezone().strftime("%X") if rcss.last_check_started else None),

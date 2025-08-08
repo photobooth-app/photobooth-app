@@ -15,7 +15,7 @@ class FilesystemConnector(AbstractConnector):
         self._target_dir: Path = config.target_dir
 
     def __str__(self):
-        return f"{self.__class__.__name__} ({self._target_dir})"
+        return f"Filesystem: {self._target_dir}"
 
     def connect(self):
         assert isinstance(self._target_dir, Path), "no target directory given!"
