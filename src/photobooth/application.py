@@ -19,6 +19,7 @@ from .routers import api, api_admin
 from .routers.media import media_router
 from .routers.static import static_router
 from .routers.userdata import userdata_router
+from .services.sse import sse_service
 
 logger = logging.getLogger(f"{__name__}")
 
@@ -33,7 +34,10 @@ async def lifespan(_: FastAPI):
 
     def terminate_now(signum: int, frame: FrameType | None = None):
         logger.info("shutting down app via signal handler")
+        sse_service.request_shutdown()
+
         container.stop()
+
         if callable(default_sigint_handler):
             default_sigint_handler(signum, frame)
 

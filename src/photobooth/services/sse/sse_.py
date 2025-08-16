@@ -252,6 +252,15 @@ class SseService:
         # keep track of client connections with each individual request and queue.
         self._clients: list[Client] = []
 
+        # on app end a shutdown is requested to stop yielding and so disconnet live sse connections.
+        # without stop yielding, uvcorn would wait infinite until all clients close the connection, which they do not do
+        self._shutdown: bool = False
+
+    def request_shutdown(self):
+        # shutdown request is one way - the app will not recover from this but needs a restart to resume
+        logger.info("sse service shutdown requested to stop yielding messages")
+        self._shutdown = True
+
     def setup_client(self, client: Client):
         self._clients.append(client)
         logger.debug(f"SSE clients connected: {[_client.request.client for _client in self._clients]}")
@@ -297,7 +306,11 @@ class SseService:
                 if await client.request.is_disconnected():
                     self.remove_client(client)
                     logger.info(f"client request disconnect, client {client.request.client}")
-                    return
+                    break
+
+                if self._shutdown:
+                    logger.info("Shutdown requested, stopping event_iterator")
+                    break
 
                 try:
                     yield await asyncio.wait_for(client.queue.get(), timeout=0.5)
@@ -311,3 +324,8 @@ class SseService:
 
             # https://stackoverflow.com/a/53724990
             raise exc
+
+        finally:
+            # Cleanup always happens
+            logger.info(f"Cleaning up stream {client.request.client}")
+            self.remove_client(client)
