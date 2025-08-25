@@ -85,6 +85,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Setup FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          version: 7.1 # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
         with:
@@ -112,6 +114,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Setup FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          version: 7.1 # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v6
         with:
