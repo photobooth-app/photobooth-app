@@ -37,6 +37,9 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         # None in variable means there is no wled service running that could process external triggers.
         self._queue: Queue[WledPreset | None] | None = None
 
+    def __str__(self):
+        return f"WLED ({self._config.wled_serial_port})"
+
     @hookimpl
     def start(self):
         """To start the resilient service"""
