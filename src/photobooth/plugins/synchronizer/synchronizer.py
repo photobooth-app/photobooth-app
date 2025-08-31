@@ -53,7 +53,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
                     )
                 )
 
-            if cfg.enable_immediate_sync:
+            if cfg.enable_immediate_sync or cfg.enable_regular_sync:
                 self._sync_queue.append(threadedqueueprocessor)
 
         for instance in self._sync_queue:
