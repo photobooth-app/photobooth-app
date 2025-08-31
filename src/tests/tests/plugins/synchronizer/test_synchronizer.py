@@ -37,13 +37,13 @@ def synchronizer(tmp_path: Path):
 
 
 def test_reset(synchronizer: Synchronizer):
-    synchronizer._sync_queue = [MagicMock()]
+    synchronizer._queue_processors = [MagicMock()]
     synchronizer._regular_complete_sync = [MagicMock()]
     synchronizer._shares = [MagicMock()]
 
     synchronizer.reset()
 
-    assert synchronizer._sync_queue == []
+    assert synchronizer._queue_processors == []
     assert synchronizer._regular_complete_sync == []
     assert synchronizer._shares == []
 
@@ -51,7 +51,7 @@ def test_reset(synchronizer: Synchronizer):
 def test_start_runs_components(synchronizer: Synchronizer):
     synchronizer.start()
 
-    assert len(synchronizer._sync_queue) == 1
+    assert len(synchronizer._queue_processors) == 1
     assert len(synchronizer._regular_complete_sync) == 1
     assert len(synchronizer._shares) == 1
 
@@ -61,7 +61,7 @@ def test_stop_calls_stop_on_all(synchronizer: Synchronizer):
     q2 = MagicMock()
     r1 = MagicMock()
     r2 = MagicMock()
-    synchronizer._sync_queue = [q1, q2]
+    synchronizer._queue_processors = [q1, q2]
     synchronizer._regular_complete_sync = [r1, r2]
 
     synchronizer.stop()
@@ -72,10 +72,10 @@ def test_stop_calls_stop_on_all(synchronizer: Synchronizer):
 
 def test_put_to_workers_queues(synchronizer: Synchronizer):
     mock_worker = MagicMock()
-    synchronizer._sync_queue = [mock_worker]
+    synchronizer._queue_processors = [mock_worker]
     task = PriorizedTask(Priority.HIGH, MagicMock())
 
-    synchronizer._put_to_workers_queues(task)
+    synchronizer._put_to_processors_queues(task)
 
     mock_worker.put_to_queue.assert_called_once_with(task)
 
@@ -98,7 +98,7 @@ def test_get_share_links_disabled(synchronizer: Synchronizer):
 
 def test_collection_files_added(synchronizer: Synchronizer):
     mock_worker = MagicMock()
-    synchronizer._sync_queue = [mock_worker]
+    synchronizer._queue_processors = [mock_worker]
     files = [Path("media/file1.txt"), Path("media/file2.txt")]
 
     synchronizer.collection_files_added(files)
@@ -113,7 +113,7 @@ def test_collection_files_added(synchronizer: Synchronizer):
 
 def test_collection_files_original_added(synchronizer: Synchronizer):
     mock_worker = MagicMock()
-    synchronizer._sync_queue = [mock_worker]
+    synchronizer._queue_processors = [mock_worker]
     files = [Path("media/file1.txt"), Path("media/file2.txt")]
 
     synchronizer.collection_original_file_added(files)
@@ -128,7 +128,7 @@ def test_collection_files_original_added(synchronizer: Synchronizer):
 
 def test_collection_files_deleted(synchronizer: Synchronizer):
     mock_worker = MagicMock()
-    synchronizer._sync_queue = [mock_worker]
+    synchronizer._queue_processors = [mock_worker]
     files = [Path("media/delete1.txt")]
 
     synchronizer.collection_files_deleted(files)

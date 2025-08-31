@@ -20,7 +20,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         super().__init__()
 
         self._config = SynchronizerConfig()
-        self._sync_queue: list[QueueProcessor] = []
+        self._queue_processors: list[QueueProcessor] = []
         self._regular_complete_sync: list[SyncRegularcomplete] = []
         self._shares: list[AbstractMediashare] = []
 
@@ -37,7 +37,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             if not cfg.enabled:
                 continue
 
-            threadedqueueprocessor = QueueProcessor(cfg.backend_config.connector)
+            queueprocessor = QueueProcessor(cfg.backend_config.connector)
 
             if cfg.enable_share_link:
                 share = share_factory(cfg.backend_config, connector_factory.connector_factory(cfg.backend_config.connector))
@@ -48,15 +48,15 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
                 self._regular_complete_sync.append(
                     SyncRegularcomplete(
                         connector_factory.connector_factory(cfg.backend_config.connector),
-                        threadedqueueprocessor,
+                        queueprocessor,
                         Path("./media/"),
                     )
                 )
 
             if cfg.enable_immediate_sync or cfg.enable_regular_sync:
-                self._sync_queue.append(threadedqueueprocessor)
+                self._queue_processors.append(queueprocessor)
 
-        for instance in self._sync_queue:
+        for instance in self._queue_processors:
             instance.start()
 
         for instance in self._regular_complete_sync:
@@ -64,20 +64,20 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
     @hookimpl
     def stop(self):
-        for instance in self._sync_queue:
+        for instance in self._queue_processors:
             instance.stop()
 
         for instance in self._regular_complete_sync:
             instance.stop()
 
     def reset(self):
-        self._sync_queue = []
+        self._queue_processors = []
         self._regular_complete_sync = []
         self._shares = []
 
-    def _put_to_workers_queues(self, priorized_task: PriorizedTask):
-        for sync_queue in self._sync_queue:
-            sync_queue.put_to_queue(priorized_task)
+    def _put_to_processors_queues(self, priorized_task: PriorizedTask):
+        for queue_processor in self._queue_processors:
+            queue_processor.put_to_queue(priorized_task)
 
     @hookimpl
     def get_stats(self) -> GenericStats | None:
@@ -87,11 +87,11 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
 
-        for sync_queue in self._sync_queue:
-            sqs = sync_queue._stats
+        for queue_processor in self._queue_processors:
+            sqs = queue_processor._stats
             out.stats.append(
                 SubList(
-                    name=str(sync_queue),
+                    name=str(queue_processor),
                     val=[
                         SubStats("remaining", sqs.remaining_files),
                         SubStats("success", sqs.success),
@@ -137,19 +137,19 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
     @hookimpl
     def collection_original_file_added(self, files: list[Path]):
         for file in files:
-            self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskUpload(file, get_remote_filepath(file))))
+            self._put_to_processors_queues(PriorizedTask(Priority.LOW, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_added(self, files: list[Path]):
         for file in files:
-            self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
+            self._put_to_processors_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_updated(self, files: list[Path]):
         for file in files:
-            self._put_to_workers_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
+            self._put_to_processors_queues(PriorizedTask(Priority.HIGH, SyncTaskUpload(file, get_remote_filepath(file))))
 
     @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         for file in files:
-            self._put_to_workers_queues(PriorizedTask(Priority.LOW, SyncTaskDelete(get_remote_filepath(file))))
+            self._put_to_processors_queues(PriorizedTask(Priority.LOW, SyncTaskDelete(get_remote_filepath(file))))
