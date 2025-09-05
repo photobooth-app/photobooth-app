@@ -2,7 +2,7 @@ import logging
 import subprocess
 import threading
 
-import requests
+import niquests
 from statemachine import Event, State
 
 from ...services.processor.machine.processingmachine import ProcessingMachine
@@ -68,7 +68,7 @@ class ThreadUrl(threading.Thread):
             req_data = self.body_params
 
         try:
-            r = requests.request(
+            r = niquests.request(
                 method=self.method,
                 url=self.url,
                 params=self.query_params,
@@ -79,16 +79,18 @@ class ThreadUrl(threading.Thread):
 
             r.raise_for_status()
 
-        except requests.exceptions.HTTPError as exc:
-            logger.error(f"http request sent but remote returned error code {exc.response.status_code}, error {exc}")
-        except requests.exceptions.RequestException as exc:  # catches .Timeout | .TooManyRedirects | .ConnectionError
+        except niquests.exceptions.HTTPError as exc:
+            logger.error(f"http request sent but remote returned error code {exc.response.status_code if exc.response else 'None'}, error {exc}")
+        except niquests.exceptions.RequestException as exc:  # catches .Timeout | .TooManyRedirects | .ConnectionError
             logger.error(f"error sending http request, error {exc}")
         except Exception as exc:
             logger.error(f"unknown error in http request, error {exc}")
         else:
+            r_text = r.text[:100] if r.text else "(None)"
+            r_text_truncated = len(r.text) > 100 if r.text else False
             logger.debug(
-                f"response code '{r.status_code}', text '{r.text[:100]}' "
-                f"{'[trunc to 100 chars for log msg]' if len(r.text) > 100 else ''}, within {round(r.elapsed.total_seconds(), 1)}s"
+                f"response code '{r.status_code}', text '{r_text}' "
+                f"{'[trunc to 100 chars for log msg]' if r_text_truncated else ''}, within {round(r.elapsed.total_seconds(), 1)}s"
             )
             logger.info(f"request to {self.url} finished successfully")
 
