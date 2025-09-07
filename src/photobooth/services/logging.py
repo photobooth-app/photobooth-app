@@ -48,7 +48,7 @@ class LoggingService(BaseService):
     def __init__(self):
         super().__init__()
 
-        ## formatter ##
+        ## formatter ## # add %(name)s temporary to find other modules names to mute below
         fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
         log_formatter = logging.Formatter(fmt=fmt)
 
@@ -131,7 +131,9 @@ class LoggingService(BaseService):
             "PIL.TiffImagePlugin",
             "multipart",
             "requests",
+            "niquests",
             "urllib3",
+            "urllib3_future",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
