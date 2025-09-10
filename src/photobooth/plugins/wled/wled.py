@@ -55,8 +55,6 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
             logger.warning("WLED plugin enabled but given serial port is empty. Define a valid port!")
             return
 
-        logger.info(f"WledService enabled and initialized, using port {self._config.wled_serial_port}")
-
         super().start()
 
     @hookimpl
@@ -169,7 +167,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         return wled_detected
 
     def run_service(self):
-        assert self._serial
+        assert self._serial, "test"
         assert self._queue
 
         self._service_ready.set()
