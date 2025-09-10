@@ -1,71 +1,113 @@
-<!-- omit in toc -->
 # Contributing to photobooth-app
 
-First off, thanks for taking the time to contribute! ❤️
+First off, thanks for taking the time to contribute! ❤️ All types of contributions are encouraged and valued. Read on for the different ways you can help and the process we follow to make reviewing and merging your work as smooth as possible.
 
-All types of contributions are encouraged and valued. See below sections for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 🎉
+---
 
-> And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
->
-> - Star the project
-> - Talk about it
-> - Refer to this project in blog articles
-> - Add your project to the show and tell section in the Github discussions.
+## Table of Contents
 
-## Ways to Contribute
+- [Help Translate the App](#help-translate-the-app)  
+- [Improve the Documentation](#improve-the-documentation)  
+- [Report Bugs & Request Features](#report-bugs--request-features)  
+- [Code Contribution](#code-contribution)  
+  - [Prerequisites](#prerequisites)  
+  - [Setting Up the Repo](#setting-up-the-repo)  
+  - [Running & Testing Locally](#running--testing-locally)  
+  - [Commercialization Code Contributions](#commercialization-code-contributions)  
+  - [Submitting a Pull Request](#submitting-a-pull-request)  
+- [Stay Connected](#stay-connected)  
 
-### Help to Translate the App
+---
 
-[![Crowdin](https://badges.crowdin.net/photobooth-app/localized.svg)](https://crowdin.com/project/photobooth-app)
+## Help Translate the App
 
-We use automated pre-translation powered by Crowdin.
-Help to improve the accuracy by proofreading the translation.
-It's very easy to translate and proofread the current translations:
+We use Crowdin’s automated pre-translation and need your help to proofread and improve it.
 
-- [Open the photobooth-app translation project in Crowdin](https://crowdin.com/project/photobooth-app/invite?h=b00f8c8abec20ed573058db633f2452c2057822).
-- Click the dropdown button next to your language to open language details.
-- Click the button "translate" or "proofread".
-- Work through the items, improve the translation and click the check mark to approve.
-- If the language is 100% translated and proofread, it will be included in the next release.
-- Leave a short notice in the discussions that you improved the translation to let us know. Thank you!
+1. Visit the photobooth-app project on Crowdin.  
+2. Select your language and click **Translate** or **Proofread**.  
+3. Tackle untranslated or machine-translated strings and approve your fixes.  
+4. Once the language reaches 100% translated and proofread, it ships in the next release.  
+5. Drop a note in our Discussions to let us know you’ve contributed so we can celebrate!  
 
-### Improving The Documentation
+---
 
-Feel free to send pull request to the [documentation repository](https://github.com/photobooth-app/photobooth-docs)
+## Improve the Documentation
 
-### Code Contribution
+Our docs live in a separate repository:
 
-> ### Legal Notice
->
-> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.
+- Fork and clone [photobooth-app/photobooth-docs](https://github.com/photobooth-app/photobooth-docs).  
+- Make your edits or additions.  
+- Submit a pull request—no contribution is too small, whether it’s fixing typos, reorganizing content, or adding new guides.  
 
-#### Prerequisites
+---
 
-- [photobooth-app installed](https://photobooth-app.org/setup/installation/)
-- VS Code
-- uv
+## Report Bugs & Request Features
 
-#### Setup the repo
+Even if you can’t code, you can help by:
 
-```sh
+- Searching existing [issues](https://github.com/photobooth-app/photobooth-app/issues) to avoid duplicates.  
+- Opening a new issue with a clear title, reproduction steps, and expected behavior.  
+- Voting on or commenting on existing issues/features to help us prioritize.  
+
+---
+
+## Code Contribution
+
+### Prerequisites
+
+- You must be the author of your contributions and grant the project license rights.  
+- Install photobooth-app following the [official setup guide](https://photobooth-app.org/setup/installation/).  
+- Have VS Code (or your favorite editor) installed.  
+- [uv](https://github.com/uv-vscode/uv) for virtual-environment management.  
+
+
+### Commercialization Code Contributions
+
+The maintainers will not add or maintain any code specifically targeting commercialization within this open-source project. However, contributors are welcome to submit pull requests that introduce commercial features or integrations under the following conditions:
+
+- The code is well-architected, follows existing style and standards, and includes necessary tests.  
+- The contribution is accompanied by clear documentation explaining its purpose, usage, and any licensing considerations.  
+- The contributor agrees to take full responsibility for ongoing maintenance, updates, and compatibility of the commercial code.  
+- Any security or license implications are clearly disclosed in the pull request description.  
+
+Commercial code that meets these criteria may be merged into the main repository. If the contributor ceases maintenance or the code becomes a burden, the maintainers reserve the right to remove or deprecate the feature.  
+
+
+### Setting Up the Repo
+
+```bash
 git clone https://github.com/photobooth-app/photobooth-app.git
 cd photobooth-app
 
-uv venv --system-site-packages # allow acces to system packages for libcamera/picamera2
-uv sync
+uv venv --system-site-packages     # allows access to libcamera/picamera2
+uv sync                            # install dependencies
 ```
 
-#### Start the App
+### Running & Testing Locally
 
-```sh
+```bash
 uv run photobooth
 ```
 
-#### Code
+- The app reloads on each run.  
+- For front-end changes, follow the [frontend setup instructions](https://github.com/photobooth-app/photobooth-frontend).  
 
-Now you should be able to code. The app needs to be restarted after code changes to get in effect.
-If you need to change the frontend also, follow the [instructions to setup frontend development](https://github.com/photobooth-app/photobooth-frontend).
+### Submitting a Pull Request
 
-#### Send a Pull Request
+1. Create a feature branch (`git checkout -b feature/my-feature`).  
+2. Commit your changes with clear, descriptive messages.  
+3. Push to your fork and open a PR against `main`.  
+4. Fill out the PR template—link to related issue(s), describe your changes, and any testing steps.  
+5. Respond to review feedback promptly to help us merge faster.  
 
-Once finished the development, you can send a pull request to the repo.
+---
+
+## Stay Connected
+
+Even if you don’t code, you can still support us:
+
+- Star ⭐ the repo  
+- Share on social media or in your blog  
+- Tell your friends and colleagues about photobooth-app  
+
+Thank you for making photobooth-app better! 🎉
