@@ -86,7 +86,8 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
                 pass
 
         if self._serial:
-            logger.info("close port to WLED module")
+            logger.info("cancel read if any and close port to WLED module")
+            self._serial.cancel_read()
             self._serial.close()
 
     def wait_until_ready(self, timeout: float = 5) -> bool:
@@ -149,7 +150,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         wled_detected = False
 
         # readline blocks for timeout seconds (set to 1sec on init), afterwards fails
-        wled_response = self._serial.readline()
+        wled_response = self._serial.readline(32)
         if wled_response == b"":  # \n is missing, which indicates a timeout
             # timeout is defined by response being empty
             logger.critical("WLED device did not respond during setup. Check device and connections!")
@@ -167,7 +168,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         return wled_detected
 
     def run_service(self):
-        assert self._serial, "test"
+        assert self._serial
         assert self._queue
 
         self._service_ready.set()
