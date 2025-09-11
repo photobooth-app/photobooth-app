@@ -44,7 +44,7 @@ def webcameras() -> list[str]:
         devices = []
         try:
             result = subprocess.run(
-                ["powershell", "Get-PnpDevice -Class Camera | Select-Object -ExpandProperty FriendlyName"],
+                ["powershell", "Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName"],
                 capture_output=True,
                 text=True,
                 check=True,
