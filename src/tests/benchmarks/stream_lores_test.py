@@ -8,7 +8,7 @@ from av import open as av_open
 from av.video.reformatter import Interpolation, VideoReformatter
 from PIL import Image
 from simplejpeg import decode_jpeg, encode_jpeg, encode_jpeg_yuv_planes
-from turbojpeg import TurboJPEG
+from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ def pyav_turbojpeg_scale():
                 continue
 
             # Decode with downscaling by a factor of 2 (image size reduced by half)
-            _ = turbojpeg.scale_with_quality(bytes(packet), quality=85, scaling_factor=(1, 2))
+            _ = turbojpeg.scale_with_quality(bytes(packet), quality=85, scaling_factor=(1, 2), flags=TJFLAG_FASTDCT)
 
 
 def pyav_simplejpeg_scale():

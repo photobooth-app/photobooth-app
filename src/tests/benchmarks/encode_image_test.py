@@ -5,7 +5,7 @@ import cv2
 import pytest
 import simplejpeg
 from PIL import Image
-from turbojpeg import TurboJPEG
+from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
@@ -18,7 +18,7 @@ inplace_buffer = None
 def turbojpeg_encode(frame_from_camera):
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
-    bytes = turbojpeg.encode(frame_from_camera, quality=85)
+    bytes = turbojpeg.encode(frame_from_camera, quality=85, flags=TJFLAG_FASTDCT)
 
     return bytes
 
@@ -35,7 +35,7 @@ def turbojpeg_inplace_encode(frame_from_camera):
     # in-place encoding with default settings.
     # buffer_size = turbojpeg.buffer_size(frame_from_camera)
     # dest_buf = bytearray(buffer_size)
-    result, n_byte = turbojpeg.encode(frame_from_camera, dst=inplace_buffer)
+    result, n_byte = turbojpeg.encode(frame_from_camera, dst=inplace_buffer, flags=TJFLAG_FASTDCT)  # pyright: ignore[reportGeneralTypeIssues]
 
     # return value is the dest_buf argument value
     assert id(result) == id(inplace_buffer)
@@ -76,7 +76,7 @@ def simplejpeg_encode(frame_from_camera):
 
 
 def turbojpeg_yuv420_encode(frame_from_camera, rH, rW):
-    jpeg_bytes = turbojpeg.encode_from_yuv(frame_from_camera, rH, rW, quality=85)
+    jpeg_bytes = turbojpeg.encode_from_yuv(frame_from_camera, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
     # im = Image.open(io.BytesIO(jpeg_bytes))
     # im.save("test_yuv420_turbojpeg.jpg")
     # quit()

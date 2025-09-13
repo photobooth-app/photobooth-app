@@ -8,7 +8,7 @@ import numpy
 import pytest
 from PIL import Image
 from simplejpeg import decode_jpeg, encode_jpeg
-from turbojpeg import TurboJPEG
+from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
 
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
@@ -51,7 +51,7 @@ def simplejpeg_scale(jpeg_bytes, tmp_path):
 def turbojpeg_scale(jpeg_bytes, tmp_path):
     # encoding BGR array to output.jpg with default settings.
     # 85=default quality
-    bytes = turbojpeg.scale_with_quality(jpeg_bytes, quality=85, scaling_factor=(1, 2))
+    bytes = turbojpeg.scale_with_quality(jpeg_bytes, quality=85, scaling_factor=(1, 2), flags=TJFLAG_FASTDCT)
 
     with open(tmp_path / "scaled.jpg", "wb") as file:
         file.write(bytes)
