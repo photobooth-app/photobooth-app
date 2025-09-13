@@ -13,13 +13,14 @@ import av
 from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
-from simplejpeg import encode_jpeg_yuv_planes
+from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
+turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 # determine the input device based on platform
@@ -145,6 +146,7 @@ class WebcamPyavBackend(AbstractBackend):
             logger.info(f"input_stream codec: {input_stream.codec}")
             logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
             logger.info(f"pyav packet received: {next(input_device.demux())}")
+            logger.info(f"livestream resolution: {rW}x{rH}")
             for frame in input_device.decode(input_stream):
                 logger.info(f"pyav frame received: {frame}")
                 logger.info(f"frame format: {frame.format}")
@@ -188,33 +190,9 @@ class WebcamPyavBackend(AbstractBackend):
                         out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
                     else:
                         out_frame = frame.to_ndarray()
-                # from turbojpeg import TJFLAG_FASTDCT, TJSAMP_420, TurboJPEG
 
-                # # initialize once
-                # jpeg = TurboJPEG()
-
-                # # convert numpy array to raw bytes
-                # raw_yuv = out_frame.tobytes()
-
-                # # compress raw YUV to JPEG
-                # jpeg_bytes = jpeg.encode_from_yuv(
-                #     buffer=raw_yuv,
-                #     width=rW,
-                #     pitch=rW,
-                #     height=rH,
-                #     # pixel_format=TJPF_YUV420P,
-                #     jpeg_subsample=TJSAMP_420,
-                #     jpeg_quality=85,
-                #     flags=TJFLAG_FASTDCT,
-                # )
-
-                jpeg_bytes = encode_jpeg_yuv_planes(
-                    Y=out_frame[:rH],
-                    U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
-                    V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
-                    quality=85,
-                    fastdct=True,
-                )
+                # compress raw YUV420p to JPEG
+                jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
 
                 with self._lores_data.condition:
                     self._lores_data.data = jpeg_bytes

@@ -36,7 +36,6 @@ dependencies = [
   "fastapi>=0.106.0",
   "opencv-python-headless>=4.10.0.84",
   "numpy>=2.0.0",
-  "simplejpeg>=1.8.2",
   "pillow>=10.0.0",
   "psutil>=7.0.0",
   "pydantic>=2.11.2",
@@ -142,7 +141,7 @@ dev = [
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
 ]
-benchmarks = ["pytest-benchmark[histogram]>=5.1.0"]
+benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "simplejpeg>=1.8.2"]
 
 [tool.uv]
 default-groups = [

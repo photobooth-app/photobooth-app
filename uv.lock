@@ -1383,7 +1383,6 @@ dependencies = [
     { name = "python-multipart" },
     { name = "python-statemachine" },
     { name = "pyturbojpeg" },
-    { name = "simplejpeg" },
     { name = "sqlalchemy" },
     { name = "sse-starlette" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1393,6 +1392,7 @@ dependencies = [
 [package.dev-dependencies]
 benchmarks = [
     { name = "pytest-benchmark", extra = ["histogram"] },
+    { name = "simplejpeg" },
 ]
 dev = [
     { name = "coverage", extra = ["toml"] },
@@ -1437,7 +1437,6 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.6" },
     { name = "python-statemachine", specifier = ">=2.4.0" },
     { name = "pyturbojpeg", specifier = ">=1.7.0" },
-    { name = "simplejpeg", specifier = ">=1.8.2" },
     { name = "sqlalchemy", specifier = ">=2.0.37" },
     { name = "sse-starlette", specifier = ">=2.2.0,<4.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24" },
@@ -1445,7 +1444,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-benchmarks = [{ name = "pytest-benchmark", extras = ["histogram"], specifier = ">=5.1.0" }]
+benchmarks = [
+    { name = "pytest-benchmark", extras = ["histogram"], specifier = ">=5.1.0" },
+    { name = "simplejpeg", specifier = ">=1.8.2" },
+]
 dev = [
     { name = "coverage", extras = ["toml"] },
     { name = "httpx" },
