@@ -138,28 +138,17 @@ class FtpConnector(AbstractConnector):
         try:
             # check file size, if file exists returns int(bytes), if not exists, it returns None;
             # if another error occurs, it might raise an exception and we return None (so to force re-upload)
+            self._ftp.cwd("/")
             size = self._ftp.size(filepath.as_posix())
         except Exception:
             size = None
 
         return size
 
-    def _is_dir(self, path: Path) -> bool:
-        """Return True if path is a directory."""
-        assert self._ftp
-
-        current = self._ftp.pwd()
-
-        try:
-            self._ftp.cwd(path.as_posix())
-            self._ftp.cwd(current)
-            return True
-        except error_perm:
-            return False
-
     def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
         with self._lock:
             self._ensure_connected()
+            assert self._ftp
 
             try:
                 size_local = local_path.stat().st_size
@@ -175,11 +164,15 @@ class FtpConnector(AbstractConnector):
             self._ensure_connected()
             assert self._ftp
 
-            if not self._is_dir(remote_path.parent):
+            try:
+                self._ftp.cwd("/" + remote_path.parent.as_posix())
+            except error_perm:
+                # 550 → directory doesn’t exist (or no access)
                 logger.debug(f"creating remote folder: {remote_path.parent}")
-                self._ftp.mkd(remote_path.parent.as_posix())
+                self._ftp.mkd("/" + remote_path.parent.as_posix())
 
             with open(local_path, "rb") as f:
+                self._ftp.cwd("/")
                 self._ftp.storbinary(f"STOR {remote_path.as_posix()}", f)
 
     def do_delete_remote(self, remote_path: Path):
@@ -187,4 +180,5 @@ class FtpConnector(AbstractConnector):
             self._ensure_connected()
             assert self._ftp
 
+            self._ftp.cwd("/")
             self._ftp.delete(remote_path.as_posix())
