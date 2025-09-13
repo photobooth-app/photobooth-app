@@ -3,7 +3,6 @@ import logging
 from subprocess import PIPE, Popen
 
 import pytest
-import pyvips
 from PIL import Image, ImageSequence
 from turbojpeg import TurboJPEG
 
@@ -70,18 +69,6 @@ def ffmpeg_stdin_scale(gif_bytes, tmp_path):
         raise AssertionError("process fail")
 
 
-def pyvips_scale(gif_bytes, tmp_path):
-    # mute some other logger, by raising their debug level to INFO
-    lgr = logging.getLogger(name="pyvips")
-    lgr.setLevel(logging.WARNING)
-    lgr.propagate = True
-
-    out = pyvips.Image.thumbnail_buffer(gif_bytes, 500, option_string="n=-1")  # type: ignore
-    bytes = out.gifsave_buffer()  # type: ignore
-
-    return bytes
-
-
 def pil_scale(gif_bytes, tmp_path):
     gif_image = Image.open(io.BytesIO(gif_bytes), formats=["gif"])
 
@@ -124,7 +111,6 @@ def pil_scale(gif_bytes, tmp_path):
 
 @pytest.fixture(
     params=[
-        "pyvips_scale",
         "pil_scale",
         "ffmpeg_stdin_scale",
         "ffmpeg_hq_optimizedquality_scale",

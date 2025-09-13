@@ -6,7 +6,6 @@ from subprocess import PIPE, Popen
 import cv2
 import numpy
 import pytest
-import pyvips
 from PIL import Image
 from simplejpeg import decode_jpeg, encode_jpeg
 from turbojpeg import TurboJPEG
@@ -36,39 +35,6 @@ def ffmpeg_scale(jpeg_bytes, tmp_path):
     code = ffmpeg_subprocess.wait()
     if code != 0:
         raise AssertionError("process fail")
-
-
-def pyvips_scale(jpeg_bytes, tmp_path):
-    # mute some other logger, by raising their debug level to INFO
-    lgr = logging.getLogger(name="pyvips")
-    lgr.setLevel(logging.WARNING)
-    lgr.propagate = True
-
-    image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
-
-    out: pyvips.Image = image.thumbnail_image(  # type: ignore
-        int(image.width / 2),  # width # type: ignore
-    )
-    bytes = out.jpegsave_buffer(Q=85)  # type: ignore
-
-    with open(tmp_path / "scaled.jpg", "wb") as file:
-        file.write(bytes)  # type: ignore
-
-
-def pyvips_resize_scale(jpeg_bytes, tmp_path):
-    # mute some other logger, by raising their debug level to INFO
-    lgr = logging.getLogger(name="pyvips")
-    lgr.setLevel(logging.WARNING)
-    lgr.propagate = True
-
-    image = pyvips.Image.new_from_buffer(jpeg_bytes, "")
-    out: pyvips.Image = image.resize(0.5)  # type: ignore
-    bytes = out.jpegsave_buffer(Q=85)  # type: ignore
-    # im = Image.open(io.BytesIO(bytes))
-    # im.show()
-
-    with open(tmp_path / "scaled.jpg", "wb") as file:
-        file.write(bytes)  # type: ignore
 
 
 def simplejpeg_scale(jpeg_bytes, tmp_path):
@@ -141,8 +107,6 @@ def cv2_scale(jpeg_bytes, tmp_path):
         "simplejpeg_scale",
         "pillow_scale",
         "cv2_scale",
-        "pyvips_scale",
-        "pyvips_resize_scale",
         "ffmpeg_scale",
     ]
 )

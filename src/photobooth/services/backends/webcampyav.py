@@ -188,6 +188,25 @@ class WebcamPyavBackend(AbstractBackend):
                         out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
                     else:
                         out_frame = frame.to_ndarray()
+                # from turbojpeg import TJFLAG_FASTDCT, TJSAMP_420, TurboJPEG
+
+                # # initialize once
+                # jpeg = TurboJPEG()
+
+                # # convert numpy array to raw bytes
+                # raw_yuv = out_frame.tobytes()
+
+                # # compress raw YUV to JPEG
+                # jpeg_bytes = jpeg.encode_from_yuv(
+                #     buffer=raw_yuv,
+                #     width=rW,
+                #     pitch=rW,
+                #     height=rH,
+                #     # pixel_format=TJPF_YUV420P,
+                #     jpeg_subsample=TJSAMP_420,
+                #     jpeg_quality=85,
+                #     flags=TJFLAG_FASTDCT,
+                # )
 
                 jpeg_bytes = encode_jpeg_yuv_planes(
                     Y=out_frame[:rH],

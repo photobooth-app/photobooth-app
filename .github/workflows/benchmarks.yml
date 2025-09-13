@@ -26,7 +26,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
-          sudo apt -y install libvips-dev --no-install-recommends
           sudo apt -y install ffmpeg
       - name: install the project
         run: |
