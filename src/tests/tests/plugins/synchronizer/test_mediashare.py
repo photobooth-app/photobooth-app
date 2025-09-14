@@ -126,8 +126,8 @@ def test_downloadportal_url_autoupload_enabled(mock_connector):
     # downloadportal_url is ignored in case autoupload.
 
 
-def test_update_downloadportal_upload_triggered(mock_connector):
-    mock_connector.get_remote_samefile.return_value = False
+def test_downloadportal_autoupload_on(mock_connector):
+    mock_connector.do_check_issame.return_value = False
 
     cfg = FilesystemBackendConfig(
         share=FilesystemShareConfig(
@@ -139,13 +139,31 @@ def test_update_downloadportal_upload_triggered(mock_connector):
         ),
     )
     share = FilesystemMediashare(cfg, mock_connector)
-    share.update_downloadportal()
 
-    mock_connector.do_upload.assert_called_once()
+    dl_portal_file = share.downloadportal_file()
+    assert isinstance(dl_portal_file, Path)
+
+
+def test_downloadportal_autoupload_off(mock_connector):
+    mock_connector.do_check_issame.return_value = False
+
+    cfg = FilesystemBackendConfig(
+        share=FilesystemShareConfig(
+            media_url=HttpUrl("http://example.com"),
+            downloadportal_autoupload=False,
+        ),
+        connector=FilesystemConnectorConfig(
+            target_dir=Path("./tmp/"),
+        ),
+    )
+    share = FilesystemMediashare(cfg, mock_connector)
+
+    dl_portal_file = share.downloadportal_file()
+    assert dl_portal_file is None
 
 
 def test_update_downloadportal_skipped_when_same(mock_connector):
-    mock_connector.get_remote_samefile.return_value = True
+    mock_connector.do_check_issame.return_value = True
 
     cfg = FilesystemBackendConfig(
         share=FilesystemShareConfig(
@@ -157,7 +175,7 @@ def test_update_downloadportal_skipped_when_same(mock_connector):
         ),
     )
     share = FilesystemMediashare(cfg, mock_connector)
-    share.update_downloadportal()
+    share.downloadportal_file()
 
     mock_connector.do_upload.assert_not_called()
 

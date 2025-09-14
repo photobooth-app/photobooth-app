@@ -49,7 +49,7 @@ class NextcloudConnector(AbstractConnector):
         else:
             return True
 
-    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
+    def do_check_issame(self, local_path: Path, remote_path: Path) -> bool:
         assert self.nc
 
         try:
@@ -70,6 +70,10 @@ class NextcloudConnector(AbstractConnector):
 
         # Do upload
         self.nc.files.upload_stream(full_path.as_posix(), local_path)
+
+    def do_update(self, local_path: Path, remote_path: Path):
+        if not self.do_check_issame(local_path, remote_path):  # false if not same OR not exists
+            self.do_upload(local_path, remote_path)
 
     def do_delete_remote(self, remote_path: Path):
         assert self.nc

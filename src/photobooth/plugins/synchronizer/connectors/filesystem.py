@@ -38,7 +38,7 @@ class FilesystemConnector(AbstractConnector):
 
         return self._target_dir.is_dir()
 
-    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
+    def do_check_issame(self, local_path: Path, remote_path: Path) -> bool:
         assert self._target_dir
 
         try:
@@ -62,6 +62,10 @@ class FilesystemConnector(AbstractConnector):
             remote_path_parent_folder_joined_target.mkdir(parents=True, exist_ok=True)
 
         shutil.copy2(local_path, remote_path_joined_target)
+
+    def do_update(self, local_path: Path, remote_path: Path):
+        if not self.do_check_issame(local_path, remote_path):  # false if not same OR not exists
+            self.do_upload(local_path, remote_path)
 
     def do_delete_remote(self, remote_path: Path):
         assert self._target_dir

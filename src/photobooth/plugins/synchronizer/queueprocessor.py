@@ -9,7 +9,7 @@ from ...utils.resilientservice import ResilientService
 from .config import ConnectorConfig
 from .connectors.abstractconnector import AbstractConnector
 from .connectors.connector_factory import connector_factory
-from .types import PriorizedTask, SyncTaskDelete, SyncTaskUpload, taskSyncType
+from .types import PriorizedTask, SyncTaskDelete, SyncTaskUpdate, SyncTaskUpload, taskSyncType
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class QueueProcessor(ResilientService, Generic[T]):
 
     def put_to_queue(self, task: PriorizedTask):
         if self._stop_event.is_set():
-            logger.info(f"{self} shutting down, ignored request to queue task {task}!")
+            # logger.info(f"{self} shutting down, ignored request to queue task {task}!") # don't log this on shutdown because its too much
             return
 
         self._queue.put_nowait(task)
@@ -100,14 +100,17 @@ class QueueProcessor(ResilientService, Generic[T]):
                 assert isinstance(task, taskSyncType)
 
                 try:
-                    if isinstance(task, SyncTaskUpload):
+                    if type(task) is SyncTaskUpload:
                         self._connector.do_upload(task.filepath_local, task.filepath_remote)
-                    elif isinstance(task, SyncTaskDelete):
+                    elif type(task) is SyncTaskUpdate:
+                        self._connector.do_update(task.filepath_local, task.filepath_remote)
+                    elif type(task) is SyncTaskDelete:
                         self._connector.do_delete_remote(task.filepath_remote)
                     # else never as per typing
 
                 except Exception as exc:
                     self._stats.increment_fail()
+                    logger.exception(exc)
                     logger.error(f"failed processing task {priorizedTask}, error {exc}")
                     # TODO: what if task failed? reinsert to sync queue?
                 else:

@@ -9,7 +9,7 @@ from .connectors import connector_factory
 from .mediashare import AbstractMediashare, share_factory
 from .queueprocessor import QueueProcessor
 from .sync_regularcomplete import SyncRegularcomplete
-from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
+from .types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpdate, SyncTaskUpload
 from .utils import get_remote_filepath
 
 logger = logging.getLogger(__name__)
@@ -41,8 +41,16 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
             if cfg.enable_share_link:
                 share = share_factory(cfg.backend_config, connector_factory.connector_factory(cfg.backend_config.connector))
-                share.update_downloadportal()
                 self._shares.append(share)
+
+                dl_portal_local = share.downloadportal_file()
+                if dl_portal_local:
+                    # add to queue for later upload.
+                    # this way if no internet the startup is not causing issues preventing the complete app from startup
+                    logger.info(f"automatic update check of downloadportal to {queueprocessor} added.")
+                    queueprocessor.put_to_queue(PriorizedTask(Priority.HIGH, SyncTaskUpdate(dl_portal_local, Path(dl_portal_local.name))))
+                # else:
+                #     logger.info(f"automatic update check of downloadportal to {queueprocessor} is disabled.")
 
             if cfg.enable_regular_sync:
                 self._regular_complete_sync.append(

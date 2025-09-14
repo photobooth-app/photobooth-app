@@ -45,7 +45,7 @@ def test_upload_delete(queue_processor: QueueProcessor, tmp_path: Path):
     assert queue_processor._stats.success == 1
     assert queue_processor._stats.fail == 0
     assert queue_processor._stats.remaining_files == 0
-    assert queue_processor._connector.get_remote_samefile(Path("src/tests/assets/input.jpg"), Path("./input.jpg"))  # ensure file exists in remote
+    assert queue_processor._connector.do_check_issame(Path("src/tests/assets/input.jpg"), Path("./input.jpg"))  # ensure file exists in remote
 
     ## UPLOAD FAILS
 

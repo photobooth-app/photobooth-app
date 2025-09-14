@@ -5,6 +5,8 @@ from pathlib import Path
 
 @dataclass
 class SyncTaskUpload:
+    """Upload without prior check if it exists or is outdated"""
+
     filepath_local: Path
     filepath_remote: Path
 
@@ -13,14 +15,23 @@ class SyncTaskUpload:
 
 
 @dataclass
+class SyncTaskUpdate(SyncTaskUpload):
+    """Update if not existing or file size different only. Prior upload checking if is same."""
+
+    pass
+
+
+@dataclass
 class SyncTaskDelete:
+    """Delete from remote"""
+
     filepath_remote: Path
 
     def __str__(self):
         return self.filepath_remote.name
 
 
-taskSyncType = SyncTaskUpload | SyncTaskDelete
+taskSyncType = SyncTaskUpload | SyncTaskUpdate | SyncTaskDelete
 
 
 class Priority(IntEnum):

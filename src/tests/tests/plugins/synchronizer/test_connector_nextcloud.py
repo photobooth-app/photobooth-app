@@ -81,15 +81,15 @@ def test_upload_compare(nextcloud_backend: NextcloudConnector):
     assert nextcloud_backend.nc.files.by_path(str(nextcloud_backend._target_dir.joinpath("subdir1/input_lores_uploaded.jpg"))) is not None
 
     # step2:  compare
-    assert nextcloud_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+    assert nextcloud_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
 
 
 def test_compare_exceptions(nextcloud_backend: NextcloudConnector):
     nextcloud_backend.connect()
     assert nextcloud_backend.is_connected()
 
-    assert nextcloud_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("input_lores_nonexistent.jpg")) is False
-    assert nextcloud_backend.get_remote_samefile(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
+    assert nextcloud_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("input_lores_nonexistent.jpg")) is False
+    assert nextcloud_backend.do_check_issame(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
 
 
 def test_upload_delete(nextcloud_backend: NextcloudConnector):

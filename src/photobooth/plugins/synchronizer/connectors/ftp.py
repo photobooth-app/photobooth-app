@@ -1,7 +1,7 @@
 import logging
 import threading
 import time
-from ftplib import FTP_TLS, error_perm
+from ftplib import FTP_TLS, error_perm, error_reply
 from pathlib import Path
 
 from ....utils.stoppablethread import StoppableThread
@@ -39,7 +39,7 @@ class FtpConnector(AbstractConnector):
             time.sleep(1)
 
             with self._lock:
-                if self._ftp and (time.monotonic() - self._idle_monitor_last_used) > self._idle_timeout:
+                if self._ftp and self._idle_monitor_last_used != 0 and (time.monotonic() - self._idle_monitor_last_used) > self._idle_timeout:
                     logger.debug(f"Ftp connection idle for {self._idle_timeout}s. Disconnecting from server...")
                     try:
                         self._ftp.quit()
@@ -72,7 +72,7 @@ class FtpConnector(AbstractConnector):
             raise ValueError("no host given!")
 
         # FTP_TLS-Verbindung aufbauen
-        self._ftp = FTP_TLS(timeout=5)
+        self._ftp = FTP_TLS(timeout=6)
 
         ret.append(self._ftp.connect(self._host, self._port))
 
@@ -102,7 +102,7 @@ class FtpConnector(AbstractConnector):
                 logger.debug("FTP-Server Msg: " + ret)
             except Exception as exc:
                 # error during disconnecting is not reraised because that means probably we are disconnected...
-                logger.error(f"error disconnting: {exc}")
+                logger.error(f"error disconnecting: {exc}")
 
     def _is_connected(self) -> bool:
         """internally used to check connection. no lock protection, because other functions check for it"""
@@ -145,40 +145,68 @@ class FtpConnector(AbstractConnector):
 
         return size
 
-    def get_remote_samefile(self, local_path: Path, remote_path: Path) -> bool:
+    def _issame(self, local_path: Path, remote_path: Path) -> bool:
+        assert self._ftp
+
+        try:
+            size_local = local_path.stat().st_size
+            size_remote = self._get_remote_filesize(remote_path)
+        except Exception:
+            return False
+        else:
+            # compare size which should work on all platforms to detect equality
+            return size_local == size_remote
+
+    def _upload(self, local_path: Path, remote_path: Path):
+        assert self._ftp
+
+        try:
+            self._ftp.cwd("/" + remote_path.parent.as_posix())
+        except error_perm:
+            # 550 → directory doesn’t exist (or no access)
+            logger.debug(f"creating remote folder: {remote_path.parent}")
+            self._ftp.mkd("/" + remote_path.parent.as_posix())
+
+            self._ftp.cwd("/" + remote_path.parent.as_posix())
+
+        try:
+            with open(local_path, "rb") as f:
+                self._ftp.storbinary(f"STOR {remote_path.name}", f)
+        except (TimeoutError, error_reply) as err:
+            logger.warning(f"error uploading the file, closing connection to start over. Error {err}")
+
+            # close without quit to ensure for the next command the connection will be reestablished
+            self._ftp.close()
+
+            raise
+
+    def _delete(self, remote_path: Path):
+        assert self._ftp
+
+        self._ftp.cwd("/")
+        self._ftp.delete(remote_path.as_posix())
+
+    def do_check_issame(self, local_path: Path, remote_path: Path) -> bool:
         with self._lock:
             self._ensure_connected()
-            assert self._ftp
 
-            try:
-                size_local = local_path.stat().st_size
-                size_remote = self._get_remote_filesize(remote_path)
-            except Exception:
-                return False
-            else:
-                # compare size which should work on all platforms to detect equality
-                return size_local == size_remote
+            return self._issame(local_path, remote_path)
 
     def do_upload(self, local_path: Path, remote_path: Path):
         with self._lock:
             self._ensure_connected()
-            assert self._ftp
 
-            try:
-                self._ftp.cwd("/" + remote_path.parent.as_posix())
-            except error_perm:
-                # 550 → directory doesn’t exist (or no access)
-                logger.debug(f"creating remote folder: {remote_path.parent}")
-                self._ftp.mkd("/" + remote_path.parent.as_posix())
+            self._upload(local_path, remote_path)
 
-            with open(local_path, "rb") as f:
-                self._ftp.cwd("/")
-                self._ftp.storbinary(f"STOR {remote_path.as_posix()}", f)
+    def do_update(self, local_path: Path, remote_path: Path):
+        with self._lock:
+            self._ensure_connected()
+
+            if not self._issame(local_path, remote_path):  # false if not same OR not exists
+                self._upload(local_path, remote_path)
 
     def do_delete_remote(self, remote_path: Path):
         with self._lock:
             self._ensure_connected()
-            assert self._ftp
 
-            self._ftp.cwd("/")
-            self._ftp.delete(remote_path.as_posix())
+            self._delete(remote_path)

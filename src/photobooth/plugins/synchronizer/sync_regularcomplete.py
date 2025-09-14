@@ -68,7 +68,7 @@ class SyncRegularcomplete(ResilientService):
                     return
 
                 remote_path = get_remote_filepath(local_path)
-                is_same_file = self._control_connection.get_remote_samefile(local_path, remote_path)
+                is_same_file = self._control_connection.do_check_issame(local_path, remote_path)
 
                 if not is_same_file:
                     self._threadedqueueprocessor.put_to_queue(PriorizedTask(Priority.LOW, SyncTaskUpload(local_path, remote_path)))

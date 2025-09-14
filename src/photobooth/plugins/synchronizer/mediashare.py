@@ -70,17 +70,14 @@ class AbstractMediashare(ABC, Generic[T]):
 
         return out
 
-    def update_downloadportal(self):
+    def downloadportal_file(self) -> Path | None:
         if isinstance(self._config.share, FtpShareConfig | FilesystemShareConfig) and self._config.share.downloadportal_autoupload:
             dlportal_source_path = Path(str(resources.files("web").joinpath("download/index.html")))
-            dlportal_remote_path = Path(dlportal_source_path.name)
             assert dlportal_source_path.is_file()
 
-            if not self._connector.get_remote_samefile(dlportal_source_path, dlportal_remote_path):
-                logger.info("downloadportal autoupload is enabled and remote file outdated. Trying to upload the file now.")
-                self._connector.do_upload(dlportal_source_path, dlportal_remote_path)
-            else:
-                logger.info("downloadportal autoupload is enabled but remote file up to date. Nothing to do.")
+            return dlportal_source_path
+        else:
+            return None
 
 
 class FilesystemMediashare(AbstractMediashare[FilesystemBackendConfig]):

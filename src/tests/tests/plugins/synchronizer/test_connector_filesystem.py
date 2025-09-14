@@ -73,7 +73,7 @@ def test_upload_compare(fs_backend: FilesystemConnector):
     assert Path(fs_backend._target_dir, "subdir1/input_lores_uploaded.jpg").is_file()
 
     # step2:  compare
-    assert fs_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+    assert fs_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
 
 
 def test_upload_delete(fs_backend: FilesystemConnector):
@@ -95,5 +95,5 @@ def test_compare_exceptions(fs_backend: FilesystemConnector):
     assert fs_backend.is_connected()
     assert fs_backend._target_dir
 
-    assert fs_backend.get_remote_samefile(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
-    assert fs_backend.get_remote_samefile(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
+    assert fs_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
+    assert fs_backend.do_check_issame(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
