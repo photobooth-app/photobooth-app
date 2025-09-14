@@ -13,14 +13,14 @@ jobs:
           - 2121:21 # host 2121, container 21
           - 21000-21010:21000-21010
         env:
-          USERS: "testuser|testpass"
+          USERS: "testuser|test123pass123"
           ADDRESS: localhost
         options: >-
           --health-cmd="service vsftp status || exit 1"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
-        # --health-cmd "curl --ftp-ssl --insecure --user testuser:testpass ftp://localhost:2121/ || exit 1"
+        # --health-cmd "curl --ftp-ssl --insecure --user testuser:test123pass123 ftp://localhost:2121/ || exit 1"
     
     steps:
       - name: 📥 Checkout code
@@ -29,5 +29,5 @@ jobs:
       - name: 🧪 Run FTPS Test
         run: |
           curl --ftp-ssl --insecure \
-            --user testuser:testpass \
+            --user testuser:test123pass123 \
             ftp://localhost:2121/ || echo "Test failed"
