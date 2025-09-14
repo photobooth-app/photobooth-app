@@ -10,13 +10,13 @@ jobs:
       ftp:
         image: delfer/alpine-ftp-server
         ports:
-          - 21:21
+          - 2121:21 # host 2121, container 21
           - 21000-21010:21000-21010
         env:
           USERS: "testuser|testpass"
           ADDRESS: localhost
         options: >-
-          --health-cmd "curl --ftp-ssl --insecure ftp://localhost:21/ --user testuser:testpass || exit 1"
+          --health-cmd "curl --ftp-ssl --insecure ftp://localhost:2121/ --user testuser:testpass || exit 1"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 5
@@ -29,4 +29,4 @@ jobs:
         run: |
           curl --ftp-ssl --insecure \
             --user testuser:testpass \
-            ftp://localhost:21/ || echo "Test failed"
+            ftp://localhost:2121/ || echo "Test failed"
