@@ -13,7 +13,7 @@ jobs:
           - 2121:21 # host 2121, container 21
           - 21000-21010:21000-21010
         env:
-          USERS: "testuser|test123pass123"
+          USERS: "testuser|testpass"
           ADDRESS: localhost
         # options: >-
         #   --health-cmd "curl --ftp-ssl --insecure --user alpineftp:alpineftp ftp://localhost:2121/ || exit 1"
@@ -28,5 +28,5 @@ jobs:
       - name: 🧪 Run FTPS Test
         run: |
           curl --ftp-ssl --insecure \
-            --user testuser:test123pass123 \
+            --user testuser:testpass \
             ftp://localhost:2121/ || echo "Test failed"
