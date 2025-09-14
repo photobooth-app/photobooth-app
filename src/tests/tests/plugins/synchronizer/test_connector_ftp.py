@@ -9,6 +9,9 @@ from photobooth.plugins.synchronizer.connectors.ftp import FtpConnector, FtpConn
 
 logger = logging.getLogger(name=None)
 
+host = "127.0.0.1"
+port = 2121
+server_home_dir = "/run/ftp_docker/ftp/testuser/"
 
 try:
     ftp = FTP()
@@ -42,7 +45,7 @@ def test_get_str(ftp_backend: FtpConnector):
     assert ftp_backend.__str__()
 
 
-def test_ftp_login(ftp_server):
+def test_ftp_login():
     # just test the server itself is working fine...
     ftp = FTP()
     ftp.connect("127.0.0.1", 2121)
@@ -51,7 +54,7 @@ def test_ftp_login(ftp_server):
     ftp.quit()
 
 
-def test_connect_check_no_empty_host(ftp_server, ftp_backend: FtpConnector):
+def test_connect_check_no_empty_host(ftp_backend: FtpConnector):
     ftp_backend._host = ""
     with pytest.raises(ValueError):
         ftp_backend.connect()
@@ -59,31 +62,31 @@ def test_connect_check_no_empty_host(ftp_server, ftp_backend: FtpConnector):
     assert ftp_backend.is_connected() is False
 
 
-def test_noconnect_ensureconnected(ftp_server, ftp_backend: FtpConnector):
+def test_noconnect_ensureconnected(ftp_backend: FtpConnector):
     ftp_backend._ensure_connected()
     assert ftp_backend.is_connected()
 
 
-def test_connect_disconnect(ftp_server, ftp_backend: FtpConnector):
+def test_connect_disconnect(ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
     ftp_backend.disconnect()
     assert ftp_backend.is_connected() is False
 
 
-def test_connect_force_secure(ftp_server, ftp_backend: FtpConnector):
+def test_connect_force_secure(ftp_backend: FtpConnector):
     ftp_backend._secure = True
     ftp_backend.connect()
     assert ftp_backend.is_connected()
 
 
-def test_connect_force_nosecure(ftp_server, ftp_backend: FtpConnector):
+def test_connect_force_nosecure(ftp_backend: FtpConnector):
     ftp_backend._secure = False
     ftp_backend.connect()
     assert ftp_backend.is_connected()
 
 
-def test_disconnect_already_disconnected_raises_nothing(ftp_server, ftp_backend: FtpConnector):
+def test_disconnect_already_disconnected_raises_nothing(ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
     assert ftp_backend._ftp
@@ -92,17 +95,9 @@ def test_disconnect_already_disconnected_raises_nothing(ftp_server, ftp_backend:
     assert ftp_backend.is_connected() is False
 
 
-def test_connect_check_host_down(ftp_server, ftp_backend: FtpConnector):
+def test_upload_compare(ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
-    ftp_server.close_all()
-    assert ftp_backend.is_connected() is False
-
-
-def test_upload_compare(ftp_server, ftp_backend: FtpConnector):
-    ftp_backend.connect()
-    assert ftp_backend.is_connected()
-    server_home_dir = ftp_server.handler.authorizer.get_home_dir("testuser")
 
     # step1: upload
     ftp_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
@@ -112,7 +107,7 @@ def test_upload_compare(ftp_server, ftp_backend: FtpConnector):
     assert ftp_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
 
 
-def test_compare_exceptions(ftp_server, ftp_backend: FtpConnector):
+def test_compare_exceptions(ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
 
@@ -120,10 +115,9 @@ def test_compare_exceptions(ftp_server, ftp_backend: FtpConnector):
     assert ftp_backend.do_check_issame(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
 
 
-def test_upload_delete(ftp_server, ftp_backend: FtpConnector):
+def test_upload_delete(ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
-    server_home_dir = ftp_server.handler.authorizer.get_home_dir("testuser")
 
     # step1: upload
     ftp_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
