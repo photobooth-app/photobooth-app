@@ -1,45 +1,22 @@
 import logging
-import os
-import threading
-import time
 from ftplib import FTP
 from pathlib import Path
 
-import pyftpdlib
 import pytest
 from pydantic import SecretStr
-from pyftpdlib.authorizers import DummyAuthorizer
-from pyftpdlib.handlers import TLS_FTPHandler
-from pyftpdlib.servers import ThreadedFTPServer
 
 from photobooth.plugins.synchronizer.connectors.ftp import FtpConnector, FtpConnectorConfig
 
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture()
-def ftp_server(tmp_path):
-    # add demo-tls security for testing, ref https://pyftpdlib.readthedocs.io/en/latest/tutorial.html#ftps-ftp-over-tls-ssl-server
-    CERTFILE = os.path.abspath(os.path.join(str(pyftpdlib.__path__[0]), "test", "keycert.pem"))
+try:
+    ftp = FTP()
+    ftp.connect("127.0.0.1", 2121)
+    ftp.quit()
 
-    # Setup: configure and start the FTP server in a thread
-    authorizer = DummyAuthorizer()
-    authorizer.add_user("testuser", "testpass", homedir=tmp_path, perm="elradfmwT")
-
-    handler = TLS_FTPHandler
-    handler.certfile = CERTFILE  # type: ignore
-    handler.authorizer = authorizer
-
-    server = ThreadedFTPServer(("127.0.0.1", 2121), handler)
-
-    thread = threading.Thread(target=server.serve_forever, kwargs={"handle_exit": False}, daemon=True)
-    thread.start()
-    time.sleep(0.1)  # Allow server to start
-
-    yield server  # Run the test
-
-    # Teardown
-    server.close_all()
+except Exception:
+    pytest.skip("no ftp service found, skipping tests", allow_module_level=True)
 
 
 @pytest.fixture()

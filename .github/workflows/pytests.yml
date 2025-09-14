@@ -24,6 +24,21 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     
     services:
+      ftp:
+        image: delfer/alpine-ftp-server
+        ports:
+          - 2121:21 # host 2121, container 21
+          - 21000-21010:21000-21010
+        env:
+          USERS: "testuser|testpass"
+          ADDRESS: localhost
+        # not sure why the health-cmd doesn't work, always fails...
+        # options: >- 
+        #   --health-cmd "curl --ftp-ssl --insecure --user alpineftp:alpineftp ftp://localhost:2121/ || exit 1"
+        #   --health-interval 5s
+        #   --health-timeout 3s
+        #   --health-retries 5
+    
       nextcloud:
         image: nextcloud
         ports:

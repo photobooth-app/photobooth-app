@@ -137,8 +137,6 @@ dev = [
   "pydot",
   "pre-commit",
   "pyright",
-  "pyftpdlib",
-  "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
 ]
 benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "simplejpeg>=1.8.2"]
