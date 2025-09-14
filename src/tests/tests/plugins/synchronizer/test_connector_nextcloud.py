@@ -2,8 +2,8 @@ import logging
 from pathlib import Path
 from uuid import uuid4
 
+import niquests
 import pytest
-import requests
 from nc_py_api import NextcloudException
 from pydantic import HttpUrl, SecretStr
 
@@ -15,7 +15,7 @@ TEST_URL = "http://127.0.0.1:8083"
 
 
 try:
-    r = requests.get(TEST_URL, allow_redirects=False)
+    r = niquests.get(TEST_URL, allow_redirects=False)
     r.raise_for_status()
 except Exception:
     pytest.skip("no nextcloud service found, skipping tests", allow_module_level=True)
