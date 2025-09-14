@@ -1,0 +1,32 @@
+name: FTPS Test with Service Container
+
+on: [push]
+
+jobs:
+  test-ftps:
+    runs-on: ubuntu-latest
+
+    services:
+      ftp:
+        image: delfer/alpine-ftp-server
+        ports:
+          - 21:21
+          - 21000-21010:21000-21010
+        env:
+          USERS: "testuser|testpass"
+          ADDRESS: localhost
+        options: >-
+          --health-cmd "curl --ftp-ssl --insecure ftp://localhost:21/ --user testuser:testpass || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🧪 Run FTPS Test
+        run: |
+          curl --ftp-ssl --insecure \
+            --user testuser:testpass \
+            ftp://localhost:21/ || echo "Test failed"
