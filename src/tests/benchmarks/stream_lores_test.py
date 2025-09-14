@@ -14,7 +14,7 @@ turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 
-def pyav_lores_scale():
+def pyav_scale_simplejpeg_encode():
     input_device = av_open("src/tests/assets/video4k.mjpg")
 
     reformatter = VideoReformatter()
@@ -38,6 +38,31 @@ def pyav_lores_scale():
                 quality=85,
                 fastdct=True,
             )
+
+
+def pyav_scale_cv2_encode():
+    input_device = av_open("src/tests/assets/video4k.mjpg")
+
+    reformatter = VideoReformatter()
+
+    with input_device:
+        input_stream = input_device.streams.video[0]
+        # shall speed up processing, ... lets keep an eye on this one...
+        input_stream.thread_type = "AUTO"
+        input_stream.thread_count = 0
+
+        # lores stream width/height
+        rW = input_stream.width // 2
+        rH = input_stream.height // 2
+
+        for frame in input_device.decode(input_stream):
+            resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
+
+            # and encode to jpeg again
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            result, encimg = cv2.imencode(".jpg", resized_frame, encode_param)
+
+            encimg.tobytes()
 
 
 def pyav_turbojpeg_scale():
@@ -136,8 +161,13 @@ def pyav_cv2_scale():
 
 
 @pytest.mark.benchmark(group="scale_stream_lores")
-def test_pyav_lores_scale(benchmark):
-    benchmark(pyav_lores_scale)
+def test_pyav_scale_simplejpeg_encode(benchmark):
+    benchmark(pyav_scale_simplejpeg_encode)
+
+
+@pytest.mark.benchmark(group="scale_stream_lores")
+def test_pyav_scale_cv2_encode(benchmark):
+    benchmark(pyav_scale_cv2_encode)
 
 
 @pytest.mark.benchmark(group="scale_stream_lores")
