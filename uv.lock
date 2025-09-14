@@ -1401,6 +1401,8 @@ dev = [
     { name = "poethepoet" },
     { name = "pre-commit" },
     { name = "pydot" },
+    { name = "pyftpdlib" },
+    { name = "pyopenssl" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1453,6 +1455,8 @@ dev = [
     { name = "poethepoet" },
     { name = "pre-commit" },
     { name = "pydot" },
+    { name = "pyftpdlib" },
+    { name = "pyopenssl" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1636,6 +1640,27 @@ wheels = [
 ]
 
 [[package]]
+name = "pyasynchat"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyasyncore", marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8a/fd/aacc6309abcc5a388c66915829cd8175daccac583828fde40a1eea5768e4/pyasynchat-1.0.4.tar.gz", hash = "sha256:3f5333df649e46c56d48c57e6a4b7163fd07f626bfd884e22ef373ab3c3a4670", size = 9747, upload-time = "2024-02-28T08:55:35.794Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/4f/b4a7aa2a35858d40f970bdb63ab3e9deda35d0d2116b9175f929f37d764d/pyasynchat-1.0.4-py3-none-any.whl", hash = "sha256:167feb25d635a01b61338e17e9ab1e3372cd9274005af4083dcda52d51f64a76", size = 7753, upload-time = "2024-02-28T08:55:34.638Z" },
+]
+
+[[package]]
+name = "pyasyncore"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/25/6e/956e2bc9b47e3310cd524036f506b779a77788c2a1eb732e544240ad346f/pyasyncore-1.0.4.tar.gz", hash = "sha256:2c7a8b9b750ba6260f1e5a061456d61320a80579c6a43d42183417da89c7d5d6", size = 15339, upload-time = "2024-02-28T08:49:47.234Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/46/aaa0999302d7a584a033ec23b6ca21a452cf9c7f6d8dce8d174ac407eb3f/pyasyncore-1.0.4-py3-none-any.whl", hash = "sha256:9e5f6dc9dc057c56370b7a5cdb4c4670fd4b0556de2913ed1f428cd6a5366895", size = 10032, upload-time = "2024-02-28T08:49:45.696Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "2.23"
 source = { registry = "https://pypi.org/simple" }
@@ -1786,6 +1811,16 @@ wheels = [
 ]
 
 [[package]]
+name = "pyftpdlib"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyasynchat", marker = "python_full_version >= '3.12'" },
+    { name = "pyasyncore", marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b4/0c/32bf0a7c88efe147bc3bc6586216d92269d196c59f149b05efa973834946/pyftpdlib-2.0.1.tar.gz", hash = "sha256:ef0d172a82bfae10e2dec222e87533514609d41bf4b0fd0f07e29d4380fb96bf", size = 202285, upload-time = "2024-10-22T13:43:35.378Z" }
+
+[[package]]
 name = "pygal"
 version = "3.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1827,6 +1862,19 @@ wheels = [
 [package.optional-dependencies]
 crypto = [
     { name = "cryptography" },
+]
+
+[[package]]
+name = "pyopenssl"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/8c/cd89ad05804f8e3c17dea8f178c3f40eeab5694c30e0c9f5bcd49f576fc3/pyopenssl-25.1.0.tar.gz", hash = "sha256:8d031884482e0c67ee92bf9a4d8cceb08d92aba7136432ffb0703c5280fc205b", size = 179937, upload-time = "2025-05-17T16:28:31.31Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/28/2659c02301b9500751f8d42f9a6632e1508aa5120de5e43042b8b30f8d5d/pyopenssl-25.1.0-py3-none-any.whl", hash = "sha256:2b11f239acc47ac2e5aca04fd7fa829800aeee22a2eb30d744572a157bd8a1ab", size = 56771, upload-time = "2025-05-17T16:28:29.197Z" },
 ]
 
 [[package]]
