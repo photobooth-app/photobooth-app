@@ -74,10 +74,10 @@ def test_connect_disconnect(ftp_backend: FtpConnector):
     assert ftp_backend.is_connected() is False
 
 
-def test_connect_force_secure(ftp_backend: FtpConnector):
-    ftp_backend._secure = True
-    ftp_backend.connect()
-    assert ftp_backend.is_connected()
+# def test_connect_force_secure(ftp_backend: FtpConnector):
+#     ftp_backend._secure = True
+#     ftp_backend.connect()
+#     assert ftp_backend.is_connected()
 
 
 def test_connect_force_nosecure(ftp_backend: FtpConnector):

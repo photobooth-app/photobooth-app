@@ -30,7 +30,7 @@ jobs:
           - 2121:21 # host 2121, container 21
           - 21000-21010:21000-21010
         env:
-          USERS: "testuser|testpass"
+          USERS: "testuser|testpass|/ftp/testuser"
           ADDRESS: localhost
         volumes:
           - /run/ftp_docker:/run/ftp_docker
