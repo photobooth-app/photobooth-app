@@ -42,6 +42,7 @@ def ftp_server(tmp_path):
     # Teardown
     server.close_all()
 
+    # ftplibd issue: https://github.com/giampaolo/pyftpdlib/pull/661
     os.chdir(cwd_orig)
 
 
@@ -131,7 +132,7 @@ def test_upload_compare(ftp_server, ftp_backend: FtpConnector):
     server_home_dir = ftp_server.handler.authorizer.get_home_dir("testuser")
 
     # step1: upload
-    ftp_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+    ftp_backend.do_upload(Path(__file__).parent.joinpath("../../../assets/input_lores.jpg").resolve(), Path("subdir1/input_lores_uploaded.jpg"))
     assert Path(server_home_dir, "subdir1/input_lores_uploaded.jpg").is_file()
 
     # step2:  compare
@@ -142,7 +143,10 @@ def test_compare_exceptions(ftp_server, ftp_backend: FtpConnector):
     ftp_backend.connect()
     assert ftp_backend.is_connected()
 
-    assert ftp_backend.do_check_issame(Path("src/tests/assets/input_lores.jpg"), Path("input_lores_nonexistent.jpg")) is False
+    assert (
+        ftp_backend.do_check_issame(Path(__file__).parent.joinpath("../../../assets/input_lores.jpg").resolve(), Path("input_lores_nonexistent.jpg"))
+        is False
+    )
     assert ftp_backend.do_check_issame(Path("src/tests/assets/input_nonexistent.jpg"), Path("subdir1/input_lores_nonexistent.jpg")) is False
 
 
@@ -152,7 +156,7 @@ def test_upload_delete(ftp_server, ftp_backend: FtpConnector):
     server_home_dir = ftp_server.handler.authorizer.get_home_dir("testuser")
 
     # step1: upload
-    ftp_backend.do_upload(Path("src/tests/assets/input_lores.jpg"), Path("subdir1/input_lores_uploaded.jpg"))
+    ftp_backend.do_upload(Path(__file__).parent.joinpath("../../../assets/input_lores.jpg").resolve(), Path("subdir1/input_lores_uploaded.jpg"))
     assert Path(server_home_dir, "subdir1/input_lores_uploaded.jpg").is_file()
 
     # step2:  delete
