@@ -14,14 +14,12 @@ from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
-from turbojpeg import TurboJPEG
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
-turbojpeg = TurboJPEG()
 logger = logging.getLogger(__name__)
 
 # determine the input device based on platform
