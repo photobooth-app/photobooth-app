@@ -56,6 +56,7 @@ dependencies = [
   "wigglecam",
   "piexif>=1.1.3",
   "SQLAlchemy>=2.0.37",
+  "simplejpeg>=1.8.2",
   "pyturbojpeg>=1.7.0",
   "pluggy>=1.5.0",
   "av>=14.0.1",
@@ -141,7 +142,7 @@ dev = [
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
 ]
-benchmarks = ["pytest-benchmark[histogram]>=5.1.0", "simplejpeg>=1.8.2"]
+benchmarks = ["pytest-benchmark[histogram]>=5.1.0"]
 
 [tool.uv]
 default-groups = [

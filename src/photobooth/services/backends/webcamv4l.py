@@ -229,13 +229,7 @@ class WebcamV4lBackend(AbstractBackend):
 
                         logger.info(f"skipped {skip_counter} frames before capture high resolution image")
 
-                        with NamedTemporaryFile(
-                            mode="wb",
-                            delete=False,
-                            dir="tmp",
-                            prefix=f"{filename_str_time()}_v4l2hires_",
-                            suffix=".jpg",
-                        ) as f:
+                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2hires_", suffix=".jpg") as f:
                             f.write(self._frame_to_jpeg(frame))
 
                         self._hires_data.filepath = Path(f.name)

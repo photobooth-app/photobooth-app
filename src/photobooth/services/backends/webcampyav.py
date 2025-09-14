@@ -13,7 +13,8 @@ import av
 from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
 from av.video.reformatter import Interpolation, VideoReformatter
-from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
+from simplejpeg import encode_jpeg_yuv_planes
+from turbojpeg import TurboJPEG
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
@@ -192,7 +193,15 @@ class WebcamPyavBackend(AbstractBackend):
                         out_frame = frame.to_ndarray()
 
                 # compress raw YUV420p to JPEG
-                jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
+                jpeg_bytes = encode_jpeg_yuv_planes(
+                    Y=out_frame[:rH],
+                    U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                    V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                    quality=85,
+                    fastdct=True,
+                )
+                # Alternative approach using turbojpeg. speed is actually the same but simplejpeg comes with turbojpeg libs bundled for windows
+                # jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
 
                 with self._lores_data.condition:
                     self._lores_data.data = jpeg_bytes
