@@ -15,12 +15,12 @@ jobs:
         env:
           USERS: "testuser|testpass"
           ADDRESS: localhost
-        # options: >-
-        #   --health-cmd "curl ftp://localhost:2121/ --user testuser:testpass || exit 1"
-        #   --health-interval 5s
-        #   --health-timeout 3s
-        #   --health-retries 5
-#--health-cmd "curl --ftp-ssl --insecure ftp://localhost:2121/ --user testuser:testpass || exit 1"
+        options: >-
+          --health-cmd "curl --ftp-ssl --insecure --user testuser:testpass ftp://localhost:2121/ || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+#
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
