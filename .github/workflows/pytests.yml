@@ -24,23 +24,23 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     
     services:
-      ftp:
-        image: delfer/alpine-ftp-server
-        ports:
-          - 2121:21 # host 2121, container 21
-          - 21000-21010:21000-21010
-        env:
-          USERS: "testuser|testpass|/ftp/testuser/./" # jail to the dir using /./
-          ADDRESS: localhost
-        volumes:
-          - /run/ftp_docker:/run/ftp_docker
-          - /ftp/testuser:/ftp/testuser
-        # not sure why the health-cmd doesn't work, always fails...
-        # options: >- 
-        #   --health-cmd "curl --ftp-ssl --insecure --user alpineftp:alpineftp ftp://localhost:2121/ || exit 1"
-        #   --health-interval 5s
-        #   --health-timeout 3s
-        #   --health-retries 5
+      # ftp:
+      #   image: delfer/alpine-ftp-server
+      #   ports:
+      #     - 2121:21 # host 2121, container 21
+      #     - 21000-21010:21000-21010
+      #   env:
+      #     USERS: "testuser|testpass|/ftp/testuser/./" # jail to the dir using /./
+      #     ADDRESS: localhost
+      #   volumes:
+      #     - /run/ftp_docker:/run/ftp_docker
+      #     - /ftp/testuser:/ftp/testuser
+      #   # not sure why the health-cmd doesn't work, always fails...
+      #   # options: >- 
+      #   #   --health-cmd "curl --ftp-ssl --insecure --user alpineftp:alpineftp ftp://localhost:2121/ || exit 1"
+      #   #   --health-interval 5s
+      #   #   --health-timeout 3s
+      #   #   --health-retries 5
     
       nextcloud:
         image: nextcloud
