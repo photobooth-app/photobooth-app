@@ -146,11 +146,14 @@ class WebcamPyavBackend(AbstractBackend):
             logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
             logger.info(f"pyav packet received: {next(input_device.demux())}")
             logger.info(f"livestream resolution: {rW}x{rH}")
-            for frame in input_device.decode(input_stream):
+
+            try:
+                frame = next(input_device.decode(input_stream))
                 logger.info(f"pyav frame received: {frame}")
                 logger.info(f"frame format: {frame.format}")
-
-                break
+            except Exception as exc:
+                logger.exception(exc)
+                raise RuntimeError("error decoding camera frame! please ensure the settings are correct (device name, fps, resolution, ...)") from exc
 
             for frame in input_device.decode(input_stream):
                 # hires
