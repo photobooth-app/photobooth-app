@@ -43,8 +43,16 @@ def webcameras() -> list[str]:
     def _webcameras_windows() -> list[str]:
         devices = []
         try:
+            # PowerShell command to fetch usb webcams (1st line) as well as internal cameras (2nd line)
+            cmd = """
+            $pnpdevs = Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName
+            $cimdevs = Get-CimInstance Win32_PnPEntity | Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } | Select-Object -ExpandProperty Name
+            $allcams = $pnpdevs + $cimdevs | Sort-Object -Unique
+            $allcams
+            """
+
             result = subprocess.run(
-                ["powershell", "Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName"],
+                ["powershell", "-Command", cmd],
                 capture_output=True,
                 text=True,
                 check=True,
