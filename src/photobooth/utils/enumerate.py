@@ -44,15 +44,20 @@ def webcameras() -> list[str]:
         devices = []
         try:
             # PowerShell command to fetch usb webcams (1st line) as well as internal cameras (2nd line)
-            cmd = """
+            pwsh = r"""
             $pnpdevs = Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName
-            $cimdevs = Get-CimInstance Win32_PnPEntity | Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } | Select-Object -ExpandProperty Name
-            $allcams = $pnpdevs + $cimdevs | Sort-Object -Unique
-            $allcams
+            $cimdevs = Get-CimInstance Win32_PnPEntity |
+                Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } |
+                Select-Object -ExpandProperty Name
+
+            # Combine first, then sort, then stream each element as its own line
+            ($pnpdevs + $cimdevs) |
+                Sort-Object -Unique |
+                Out-String -Stream
             """
 
             result = subprocess.run(
-                ["powershell", "-Command", cmd],
+                ["powershell", "-NoProfile", "-Command", pwsh],
                 capture_output=True,
                 text=True,
                 check=True,
