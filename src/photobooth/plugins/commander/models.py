@@ -1,8 +1,11 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-eventHooks = Literal["init", "start", "stop", "counting", "capture", "record", "captured", "finished"]
+eventHooksService = Literal["init", "start", "stop"]
+eventHooksStatemachine = Literal["counting", "capture", "captured", "finished"]
+eventHooksAquisition = Literal["capture_still", "capture_multicam", "capture_video"]
+eventHooks = Literal[eventHooksService, eventHooksStatemachine, eventHooksAquisition]
 requestMethods = Literal["get", "post", "patch", "put", "delete"]
 locationOfAdditionalParameters = Literal["query", "body"]
 
@@ -34,6 +37,11 @@ class TaskBase(BaseModel):
         description="Task is run for every selected event.",
         default=["finished"],
     )
+
+    @field_validator("event", mode="before")
+    def _map_deprecated_record(cls, v):
+        return ["capture_video" if x == "record" else x for x in v]
+
     wait_until_completed: bool = Field(
         description="Suspend the process calling the event until the task completed or failed. "
         "Usually not recommended to avoid slowing down the apps responsiveness.",

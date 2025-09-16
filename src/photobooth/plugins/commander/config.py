@@ -24,7 +24,7 @@ class CommanderConfig(BaseConfig):
         default=[
             TaskHttpRequest(
                 name="demo http request to index page",
-                url=HttpUrl("http://127.0.0.1/"),
+                url=HttpUrl("http://127.0.0.1:8000/"),
                 parameter=[
                     HttpRequestParameters(key="event_key", value="{event}"),
                     HttpRequestParameters(key="demoparameter", value="demovalue"),

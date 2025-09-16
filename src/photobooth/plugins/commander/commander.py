@@ -101,6 +101,7 @@ class Commander(BasePlugin[CommanderConfig]):
 
         self._config: CommanderConfig = CommanderConfig()
 
+    ## service hooks
     @hookimpl
     def init(self):
         self.run_task("init")
@@ -113,6 +114,7 @@ class Commander(BasePlugin[CommanderConfig]):
     def stop(self):
         self.run_task("stop")
 
+    ## state machine processing hooks
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
         if target == ProcessingMachine.counting:
@@ -126,6 +128,19 @@ class Commander(BasePlugin[CommanderConfig]):
     def sm_on_exit_state(self, source: State, target: State, event: Event):
         if source == ProcessingMachine.capture:
             self.run_task("captured")
+
+    ## acquisition service hooks
+    @hookimpl
+    def acq_before_get_still(self):
+        self.run_task("capture_still")
+
+    @hookimpl
+    def acq_before_get_multicam(self):
+        self.run_task("capture_multicam")
+
+    @hookimpl
+    def acq_before_get_video(self):
+        self.run_task("capture_video")
 
     def invoke_command(self, task_to_run: TaskCommand, event: eventHooks):
         t = ThreadCommand(task_to_run, event)

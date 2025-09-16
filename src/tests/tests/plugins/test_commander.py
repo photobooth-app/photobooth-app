@@ -98,6 +98,24 @@ def test_run_task(commander_plugin: Commander):
             assert mock_invoke_httprequest.call_count == len([req for req in commander_plugin._config.tasks_httprequests if req.enabled is True])
 
 
+def test_acq_before_get_still(commander_plugin: Commander):
+    with patch.object(commander_plugin, "run_task") as mock_run_task:
+        commander_plugin.acq_before_get_still()
+        mock_run_task.assert_called_once_with("capture_still")
+
+
+def test_acq_before_get_multicam(commander_plugin: Commander):
+    with patch.object(commander_plugin, "run_task") as mock_run_task:
+        commander_plugin.acq_before_get_multicam()
+        mock_run_task.assert_called_once_with("capture_multicam")
+
+
+def test_acq_before_get_video(commander_plugin: Commander):
+    with patch.object(commander_plugin, "run_task") as mock_run_task:
+        commander_plugin.acq_before_get_video()
+        mock_run_task.assert_called_once_with("capture_video")
+
+
 def test_invoke_command(commander_plugin: Commander):
     with patch.object(subprocess, "run") as mock_subprocess_run:
         for cmd in commander_plugin._config.tasks_commands:
