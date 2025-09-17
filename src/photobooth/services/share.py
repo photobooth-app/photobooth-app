@@ -5,9 +5,12 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from photobooth.database.types import MediaitemTypes
+
 from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
+from ..utils.exceptions import WrongMediaTypeError
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventTranslateableFrontendNotification
@@ -49,6 +52,18 @@ class ShareService(BaseService):
         except Exception as exc:
             logger.critical(f"could not find action configuration with index {config_index}, error {exc}")
             raise exc
+
+        # check for handlesOnlyImages and abort if media_type is not an image
+        if action_config.handles_images_only and mediaitem.media_type not in (MediaitemTypes.image, MediaitemTypes.collage):
+            # this action handles images only, so ensure it is an image, otherwise send SSE notification.
+            sse_service.dispatch_event(
+                SseEventTranslateableFrontendNotification(
+                    color="negative",
+                    message_key="share.wrong_media_type",
+                    context_data={"action_name": action_config.name},
+                )
+            )
+            raise WrongMediaTypeError(f"The action can handle only images but {mediaitem.media_type} was provided.")
 
         # check counter limit
 

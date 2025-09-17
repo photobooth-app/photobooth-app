@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from ...container import container
 from ...database.models import Mediaitem
 from ...plugins import pm as pluggy_pm
+from ...utils.exceptions import WrongMediaTypeError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/share", tags=["share"])
@@ -14,12 +15,8 @@ router = APIRouter(prefix="/share", tags=["share"])
 def _share(mediaitem: Mediaitem, index: int, parameters: dict[str, str] | None):
     try:
         container.share_service.share(mediaitem, index, parameters)
-    except BlockingIOError:
+    except (BlockingIOError, ConnectionRefusedError, WrongMediaTypeError):
         pass  # informed by sepearate sse event
-    except ConnectionRefusedError:
-        pass  # informed by sepearate sse event
-    except RuntimeError as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Something went wrong, Exception: {exc}") from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Something went wrong, Exception: {exc}") from exc
