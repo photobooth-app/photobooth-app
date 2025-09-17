@@ -1354,7 +1354,7 @@ wheels = [
 
 [[package]]
 name = "photobooth-app"
-version = "8.0.5"
+version = "8.0.6"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
