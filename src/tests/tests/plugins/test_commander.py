@@ -46,6 +46,7 @@ def commander_plugin():
         tasks_commands=[
             TaskCommand(command="echo this echoed on event {event}!"),
             TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True),
+            TaskCommand(command="echo this echoed on event {event}!", filter_mediaitem_types=[MediaitemTypes.video]),
         ],
     )
 
@@ -97,6 +98,27 @@ def test_run_task(commander_plugin: Commander):
 
             assert mock_invoke_command.call_count == len([cmd for cmd in commander_plugin._config.tasks_commands if cmd.enabled is True])
             assert mock_invoke_httprequest.call_count == len([req for req in commander_plugin._config.tasks_httprequests if req.enabled is True])
+
+
+def test_run_task_filtered(commander_plugin: Commander):
+    with patch.object(commander_plugin, "invoke_command") as mock_invoke_command:
+        with patch.object(commander_plugin, "invoke_httprequest") as mock_invoke_httprequest:
+            commander_plugin.run_task("finished", MediaitemTypes.video)
+
+            assert mock_invoke_command.call_count == len(
+                [
+                    cmd
+                    for cmd in commander_plugin._config.tasks_commands
+                    if cmd.enabled is True and (not cmd.filter_mediaitem_types or MediaitemTypes.video in cmd.filter_mediaitem_types)
+                ]
+            )
+            assert mock_invoke_httprequest.call_count == len(
+                [
+                    req
+                    for req in commander_plugin._config.tasks_httprequests
+                    if req.enabled is True and (not req.filter_mediaitem_types or MediaitemTypes.video in req.filter_mediaitem_types)
+                ]
+            )
 
 
 def test_acq_before_get_still(commander_plugin: Commander):
