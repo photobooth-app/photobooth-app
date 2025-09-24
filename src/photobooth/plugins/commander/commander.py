@@ -1,10 +1,12 @@
 import logging
 import subprocess
 import threading
+import time
 
 import niquests
 from statemachine import Event, State
 
+from ...database.models import MediaitemTypes
 from ...services.processor.machine.processingmachine import ProcessingMachine
 from .. import hookimpl
 from ..base_plugin import BasePlugin
@@ -15,13 +17,18 @@ logger = logging.getLogger(__name__)
 
 
 class ThreadCommand(threading.Thread):
-    def __init__(self, task: TaskCommand, event: eventHooks):
+    def __init__(self, task: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None):
         super().__init__(daemon=True)
-        self.command = str(task.command).format(event=event)
+        fmt = {"event": event, "mediaitem_type": mediaitem_type.value if mediaitem_type else None}
+        self.command = str(task.command).format(**fmt)
+        self.delay_before = task.delay_before
         self.timeout = task.timeout
 
     def run(self):
-        logger.info(f"run command '{self.command}'")
+        logger.info(f"run command '{self.command}' with {self.delay_before}s delay")
+
+        time.sleep(self.delay_before)
+
         try:
             completed_process = subprocess.run(
                 args=self.command,
@@ -44,22 +51,22 @@ class ThreadCommand(threading.Thread):
 
 
 class ThreadUrl(threading.Thread):
-    def __init__(self, task: TaskHttpRequest, event: eventHooks):
+    def __init__(self, task: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None):
         super().__init__(daemon=True)
         self.url = str(task.url)
+        self.delay_before = task.delay_before
         self.timeout = task.timeout
         self.body_parameters_as_json = task.body_parameters_as_json
-        self.query_params: dict[str, str] = {
-            parameter.key: str(parameter.value).format(event=event) for parameter in task.parameter if parameter.where == "query"
-        }
-        self.body_params: dict[str, str] = {
-            parameter.key: str(parameter.value).format(event=event) for parameter in task.parameter if parameter.where == "body"
-        }
+        fmt = {"event": event, "mediaitem_type": mediaitem_type.value if mediaitem_type else None}
+        self.query_params: dict[str, str] = {param.key: str(param.value).format(**fmt) for param in task.parameter if param.where == "query"}
+        self.body_params: dict[str, str] = {param.key: str(param.value).format(**fmt) for param in task.parameter if param.where == "body"}
         self.method: requestMethods = task.method
         self.event = event
 
     def run(self):
-        logger.info(f"run http request '{self.url}'")
+        logger.info(f"run http request '{self.url}' with {self.delay_before}s delay")
+
+        time.sleep(self.delay_before)
 
         req_data = req_json = None
         if self.body_parameters_as_json is True:
@@ -116,18 +123,18 @@ class Commander(BasePlugin[CommanderConfig]):
 
     ## state machine processing hooks
     @hookimpl
-    def sm_on_enter_state(self, source: State, target: State, event: Event):
+    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes):
         if target == ProcessingMachine.counting:
-            self.run_task("counting")
+            self.run_task("counting", mediaitem_type)
         elif target == ProcessingMachine.finished:
-            self.run_task("finished")
+            self.run_task("finished", mediaitem_type)
         elif target == ProcessingMachine.capture:
-            self.run_task("capture")
+            self.run_task("capture", mediaitem_type)
 
     @hookimpl
-    def sm_on_exit_state(self, source: State, target: State, event: Event):
+    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes):
         if source == ProcessingMachine.capture:
-            self.run_task("captured")
+            self.run_task("captured", mediaitem_type)
 
     ## acquisition service hooks
     @hookimpl
@@ -142,32 +149,36 @@ class Commander(BasePlugin[CommanderConfig]):
     def acq_before_get_video(self):
         self.run_task("capture_video")
 
-    def invoke_command(self, task_to_run: TaskCommand, event: eventHooks):
-        t = ThreadCommand(task_to_run, event)
+    def invoke_command(self, task_to_run: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None):
+        t = ThreadCommand(task_to_run, event, mediaitem_type)
         t.start()
 
         if task_to_run.wait_until_completed:
             t.join()
 
-    def invoke_httprequest(self, task_to_run: TaskHttpRequest, event: eventHooks):
-        t = ThreadUrl(task_to_run, event)
+    def invoke_httprequest(self, task_to_run: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None):
+        t = ThreadUrl(task_to_run, event, mediaitem_type)
         t.start()
 
         if task_to_run.wait_until_completed:
             t.join()
 
-    def run_task(self, event: eventHooks):
+    def run_task(self, event: eventHooks, mediaitem_type: MediaitemTypes | None = None):
         if not self._config.enable_tasks_processing:
             # ignore any request if not enabled overall processing...
             return
 
         tasks_to_run = [task for task in (self._config.tasks_commands + self._config.tasks_httprequests) if (event in task.event and task.enabled)]
 
-        logger.info(f"{len(tasks_to_run)} tasks to run for {event}: {tasks_to_run}")
+        # filter out some tasks if mediaitem_type is given for states
+        if mediaitem_type is not None:
+            tasks_to_run = [task for task in tasks_to_run if (not task.filter_mediaitem_types or mediaitem_type in task.filter_mediaitem_types)]
+
+        logger.info(f"{len(tasks_to_run)} tasks to run for {event=}: {tasks_to_run}")
 
         for task_to_run in tasks_to_run:
             if isinstance(task_to_run, TaskCommand):
-                self.invoke_command(task_to_run, event)
+                self.invoke_command(task_to_run, event, mediaitem_type)
             elif isinstance(task_to_run, TaskHttpRequest):
-                self.invoke_httprequest(task_to_run, event)
+                self.invoke_httprequest(task_to_run, event, mediaitem_type)
             # else cannot happen because of pydantic validation before...

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping
 from queue import Empty, Full, Queue
 from threading import Event as threadingEvent
 from threading import Thread
@@ -29,6 +30,14 @@ logger = logging.getLogger(__name__)
 
 
 ActionType = Literal["image", "collage", "animation", "video", "multicamera"]
+JobModelType = JobModelImage | JobModelCollage | JobModelAnimation | JobModelVideo | JobModelMulticamera
+ACTION_TO_MODEL: Mapping[ActionType, type[JobModelType]] = {
+    "image": JobModelImage,
+    "collage": JobModelCollage,
+    "animation": JobModelAnimation,
+    "video": JobModelVideo,
+    "multicamera": JobModelMulticamera,
+}
 
 
 class DbListenter:
@@ -49,20 +58,20 @@ class PluginEventHooks:
         # https://python-statemachine.readthedocs.io/en/latest/actions.html#ordering
         pass
 
-    def before_transition(self, source: State, target: State, event: Event):
-        pluggy_pm.hook.sm_before_transition(source=source, target=target, event=event)
+    def before_transition(self, source: State, target: State, event: Event, model: JobModelBase):
+        pluggy_pm.hook.sm_before_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
 
-    def on_exit_state(self, source: State, target: State, event: Event):
-        pluggy_pm.hook.sm_on_exit_state(source=source, target=target, event=event)
+    def on_exit_state(self, source: State, target: State, event: Event, model: JobModelBase):
+        pluggy_pm.hook.sm_on_exit_state(source=source, target=target, event=event, mediaitem_type=model._media_type)
 
-    def on_transition(self, source: State, target: State, event: Event):
-        pluggy_pm.hook.sm_on_transition(source=source, target=target, event=event)
+    def on_transition(self, source: State, target: State, event: Event, model: JobModelBase):
+        pluggy_pm.hook.sm_on_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
 
-    def on_enter_state(self, source: State, target: State, event: Event):
-        pluggy_pm.hook.sm_on_enter_state(source=source, target=target, event=event)
+    def on_enter_state(self, source: State, target: State, event: Event, model: JobModelBase):
+        pluggy_pm.hook.sm_on_enter_state(source=source, target=target, event=event, mediaitem_type=model._media_type)
 
-    def after_transition(self, source: State, target: State, event: Event):
-        pluggy_pm.hook.sm_after_transition(source=source, target=target, event=event)
+    def after_transition(self, source: State, target: State, event: Event, model: JobModelBase):
+        pluggy_pm.hook.sm_after_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
 
 
 class FrontendNotifierEventHooks:
@@ -93,7 +102,7 @@ class ProcessingService(BaseService):
         self._information_service: InformationService = information_service
 
         # objects
-        self._workflow_jobmodel: JobModelImage | JobModelCollage | JobModelAnimation | JobModelVideo | JobModelMulticamera | None = None
+        self._workflow_jobmodel: JobModelType | None = None
         self._process_thread: Thread | None = None
 
         # external commands (next/reject/abort) can be sent from frontend api endpoints or gpio.
@@ -185,12 +194,27 @@ class ProcessingService(BaseService):
 
         logger.debug("_process_fun left")
 
-    def _start_job(self, job_model: JobModelImage | JobModelCollage | JobModelAnimation | JobModelVideo | JobModelMulticamera):
+    def initial_emit(self):
+        # on init if never a job ran, model could not be avail.
+        # if a job is currently running and during that a client connects, if will receive the self.model
+        if self._workflow_jobmodel:
+            source = self._workflow_jobmodel._status_sm.current_state
+            target = self._workflow_jobmodel._status_sm.current_state
+            sse_service.dispatch_event(SseEventProcessStateinfo(source, target, self._workflow_jobmodel))
+
+    def trigger_action(self, action_type: ActionType, action_index: int = 0):
+        logger.info(f"trigger {action_type=}, {action_index=}")
+
         ## preflight checks
         self._check_occupied()
 
-        logger.info(f"starting job model: {job_model=}")
-        self._workflow_jobmodel = job_model
+        jobmodel = ACTION_TO_MODEL[action_type](
+            configuration_set=getattr(appconfig.actions, action_type)[action_index],
+            aquisition_service=self._aquisition_service,
+        )
+
+        logger.info(f"starting job model: {jobmodel=}")
+        self._workflow_jobmodel = jobmodel
 
         # add listener to the job
         self._workflow_jobmodel._status_sm.add_listener(FrontendNotifierEventHooks())  # 1st listener executed,
@@ -201,36 +225,6 @@ class ProcessingService(BaseService):
         logger.debug("starting _process_thread")
         self._process_thread = Thread(name="_processingservice_thread", target=self._process_fun, args=(), daemon=True)
         self._process_thread.start()
-
-    # ##
-    def initial_emit(self):
-        # on init if never a job ran, model could not be avail.
-        # if a job is currently running and during that a client connects, if will receive the self.model
-        if self._workflow_jobmodel:
-            source = self._workflow_jobmodel._status_sm.current_state
-            target = self._workflow_jobmodel._status_sm.current_state
-            sse_service.dispatch_event(SseEventProcessStateinfo(source, target, self._workflow_jobmodel))
-
-    def _get_config_by_index(self, configurationset, index: int):
-        try:
-            return configurationset[index]
-        except Exception as exc:
-            logger.critical(f"could not find action configuration with index {index} in {configurationset}, error {exc}")
-            raise exc
-
-    def trigger_action(self, action_type: ActionType, action_index: int = 0):
-        logger.info(f"trigger {action_type=}, {action_index=}")
-
-        if action_type == "image":
-            self._start_job(JobModelImage(self._get_config_by_index(appconfig.actions.image, action_index), self._aquisition_service))
-        elif action_type == "collage":
-            self._start_job(JobModelCollage(self._get_config_by_index(appconfig.actions.collage, action_index), self._aquisition_service))
-        elif action_type == "animation":
-            self._start_job(JobModelAnimation(self._get_config_by_index(appconfig.actions.animation, action_index), self._aquisition_service))
-        elif action_type == "video":
-            self._start_job(JobModelVideo(self._get_config_by_index(appconfig.actions.video, action_index), self._aquisition_service))
-        elif action_type == "multicamera":
-            self._start_job(JobModelMulticamera(self._get_config_by_index(appconfig.actions.multicamera, action_index), self._aquisition_service))
 
         self._information_service.stats_counter_increment(action_type)
 

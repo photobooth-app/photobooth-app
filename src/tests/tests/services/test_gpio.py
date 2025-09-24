@@ -131,7 +131,7 @@ def test_button_reboot(mock_check_call, _container: Container):
 
 def test_button_action_buttons(_container: Container):
     for action_type in get_args(ActionType):
-        with patch.object(_container.processing_service, "_start_job") as mock:
+        with patch.object(_container.processing_service, "trigger_action") as mock:
             for config in getattr(appconfig.actions, action_type):
                 ph = PinHandler(config.trigger.gpio_trigger.pin)
                 if ph:
