@@ -67,6 +67,8 @@ dependencies = [
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
+photobooth-app = "photobooth.__main__:main"
+photobooth-ctrl = "photobooth.cli_ctrl:main"
 
 [project.entry-points.photobooth11]
 commander = 'photobooth.plugins.commander.commander'
