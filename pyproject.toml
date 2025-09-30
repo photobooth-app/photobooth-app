@@ -142,7 +142,10 @@ dev = [
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
 ]
-benchmarks = ["pytest-benchmark[histogram]>=5.1.0"]
+benchmarks = [
+  "pytest-benchmark[histogram]>=5.1.0",
+  "rembg[cpu]"
+  ]
 
 [tool.uv]
 default-groups = [

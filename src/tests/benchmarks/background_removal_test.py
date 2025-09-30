@@ -3,13 +3,26 @@ import logging
 import cv2
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, ImageFile
+from rembg import new_session, remove
+from rembg.sessions.base import BaseSession
 
 logger = logging.getLogger(name=None)
 
 
 GREEN_RANGE_MIN_HSV = (45, 50, 50)
 GREEN_RANGE_MAX_HSV = (65, 255, 255)
+
+
+def rembg_remove(session: BaseSession, image: ImageFile.ImageFile):
+    return remove(
+        image,
+        session=session,
+        alpha_matting=True,
+        alpha_matting_foreground_threshold=270,
+        alpha_matting_background_threshold=20,
+        alpha_matting_erode_size=11,
+    )
 
 
 def opencv_chromakey(pil_image: Image.Image):
@@ -109,18 +122,27 @@ def library(request):
     # os.remove(request.param)
 
 
+@pytest.fixture(params=["u2net", "u2netp", "u2net_human_seg"])
+def rembg_session(request):
+    yield new_session(model_name=request.param)
+
+
 @pytest.fixture()
 def image():
-    yield Image.open("src/tests/assets/greenscreen.jpg")
+    img = Image.open("src/tests/assets/greenscreen.jpg")
+    img.load()
+    yield img
 
 
-# needs pip install pytest-benchmark
-@pytest.mark.benchmark(
-    group="chromakey",
-)
-def test_libraries_chromakey(library, image, benchmark):
-    pil_image_chromakeyed = benchmark(eval(library), pil_image=image)
-    # pil_image_chromakeyed = opencv_chromakey(pil_image=image_lores)
-    pil_image_chromakeyed.convert("RGB")
+@pytest.mark.benchmark(group="background_removal_chromakey")
+def test_opencv_greenscreen(library, image, benchmark):
+    benchmark(eval(library), pil_image=image)
+
+    assert True
+
+
+@pytest.mark.benchmark(group="background_removal_ai")
+def test_rembg(rembg_session, image, benchmark):
+    benchmark(rembg_remove, rembg_session, image)
 
     assert True
