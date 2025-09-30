@@ -13,6 +13,8 @@ permissions:
 
 jobs:
   tests:
+    env:
+      NUMBA_DEBUG: "0"
     runs-on: ubuntu-latest
     continue-on-error: false
     steps:
@@ -41,6 +43,7 @@ jobs:
       # use system python to allow for picamera2 to import
       UV_PYTHON: 3.11
       UV_PYTHON_PREFERENCE: only-system
+      NUMBA_DEBUG: "0"
 
     runs-on: [self-hosted, rpi]
     if: ${{ github.repository_owner == 'photobooth-app' }}
