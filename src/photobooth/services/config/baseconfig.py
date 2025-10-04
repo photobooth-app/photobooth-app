@@ -9,50 +9,13 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import jsonref
-from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, JsonConfigSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
 SchemaTypes = Literal["default", "dereferenced"]
 logger = logging.getLogger(__name__)
-
-
-class JsonConfigSettingsSource(PydanticBaseSettingsSource):
-    """
-    A simple settings source class that loads variables from a JSON file
-    at the project's root.
-
-    Here we happen to choose to use the `env_file_encoding` from Config
-    when reading `config.json`
-    """
-
-    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
-        field_value = None
-        try:
-            file_content_json = json.loads(Path(str(self.config.get("json_file"))).read_text(self.config.get("env_file_encoding")))
-            field_value = file_content_json.get(field_name)
-        except FileNotFoundError:
-            # ignore file not found, because it could have been deleted or not yet initialized
-            # using defaults
-            pass
-
-        return field_value, field_name, False
-
-    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
-        return value
-
-    def __call__(self) -> dict[str, Any]:
-        d: dict[str, Any] = {}
-
-        for field_name, field in self.settings_cls.model_fields.items():
-            field_value, field_key, value_is_complex = self.get_field_value(field, field_name)
-            field_value = self.prepare_field_value(field_name, field, field_value, value_is_complex)
-            if field_value is not None:
-                d[field_key] = field_value
-
-        return d
 
 
 class BaseConfig(BaseSettings):
