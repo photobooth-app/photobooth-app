@@ -1709,7 +1709,7 @@ dev = [
     { name = "poethepoet" },
     { name = "pre-commit" },
     { name = "pydot" },
-    { name = "pyftpdlib" },
+    { name = "pyftpdlib", specifier = "~=2.0.0" },
     { name = "pyopenssl" },
     { name = "pyright" },
     { name = "pytest" },
@@ -2095,13 +2095,13 @@ wheels = [
 
 [[package]]
 name = "pyftpdlib"
-version = "2.1.0"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyasynchat", marker = "python_full_version >= '3.12'" },
     { name = "pyasyncore", marker = "python_full_version >= '3.12'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/67/3299ce20585601d21e05153eb9275cb799ae408fe15ab93e48e4582ea9fe/pyftpdlib-2.1.0.tar.gz", hash = "sha256:5e92e7ba37c3e458ec458e5c201e2deb992cb6011c963e6a8512a634d8d80116", size = 205767, upload-time = "2025-09-25T13:03:19.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/0c/32bf0a7c88efe147bc3bc6586216d92269d196c59f149b05efa973834946/pyftpdlib-2.0.1.tar.gz", hash = "sha256:ef0d172a82bfae10e2dec222e87533514609d41bf4b0fd0f07e29d4380fb96bf", size = 202285, upload-time = "2024-10-22T13:43:35.378Z" }
 
 [[package]]
 name = "pygal"
