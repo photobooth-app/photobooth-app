@@ -45,7 +45,7 @@ def webcameras() -> list[str]:
         try:
             # PowerShell command to fetch usb webcams (1st line) as well as internal cameras (2nd line)
             pwsh = r"""
-            $pnpdevs = Get-PnpDevice -Class Camera -Status OK | Select-Object -ExpandProperty FriendlyName
+            $pnpdevs = Get-PnpDevice -Status OK | Where-Object { $_.Class -in @("Camera","Image") } | Select-Object -ExpandProperty FriendlyName
             $cimdevs = Get-CimInstance Win32_PnPEntity |
                 Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } |
                 Select-Object -ExpandProperty Name
