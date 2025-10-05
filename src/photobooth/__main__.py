@@ -23,6 +23,8 @@ logger = logging.getLogger(f"{__name__}")
 def main(args=None, run_server: bool = True):
     args = parser.parse_args(args)  # parse here, not above because pytest system exit 2
 
+    print("Booting app, this can take some time depending on installed extras...")
+
     # create all db before anything else...
     create_db_and_tables()
 

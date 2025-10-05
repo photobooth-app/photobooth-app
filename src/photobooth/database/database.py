@@ -29,13 +29,13 @@ def create_db_and_tables():
 
     # Check if Alembic has already stamped the DB
     if not db_exists:
-        print("setup new sqlite database now")
+        print("Setup new sqlite database now")
         command.upgrade(alembic_cfg, "head")
     elif not inspector.has_table("alembic_version"):
-        print("existing database found that was not stamped yet. stamp it to initial database schema, then run migrations.")
+        print("Existing database found that was not stamped yet. Stamp it to initial database schema and run migrations.")
         # we can stamp because there has been only 1 database out in production until today.
         command.stamp(alembic_cfg, "7e0d6dfb1b1d")
         command.upgrade(alembic_cfg, "head")
     else:
-        print("existing stamped database found. running migrations if needed.")
+        print("Existing stamped database found. running migrations if needed.")
         command.upgrade(alembic_cfg, "head")
