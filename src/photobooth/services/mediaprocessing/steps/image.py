@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from enum import Enum
 from itertools import chain
@@ -11,8 +12,15 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
+try:
+    import rembg  # type: ignore
+except ImportError:
+    rembg = None
+
+
 from ....plugins import pm
 from ....utils.exceptions import PipelineError
+from ...config.groups.mediaprocessing import RembgModelType
 from ...config.models import models
 from ..context import ImageContext
 from ..pipeline import NextStep, PipelineStep
@@ -56,9 +64,6 @@ class PluginFilterStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class FillBackgroundStep(PipelineStep):
     def __init__(self, color: Color | str) -> None:
@@ -78,9 +83,6 @@ class FillBackgroundStep(PipelineStep):
         bg_filled_img = None
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class ImageMountStep(PipelineStep):
@@ -121,9 +123,6 @@ class ImageMountStep(PipelineStep):
             context.image = background_img_adjusted
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class ImageFrameStep(PipelineStep):
@@ -180,9 +179,6 @@ class ImageFrameStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class TextStep(PipelineStep):
     def __init__(self, textstageconfig: list[models.TextsConfig]) -> None:
@@ -223,9 +219,6 @@ class TextStep(PipelineStep):
         updated_image = None
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class RemoveChromakeyStep(PipelineStep):
@@ -295,8 +288,51 @@ class RemoveChromakeyStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
+
+class RemovebgStep(PipelineStep):
+    def __init__(self, model_name: RembgModelType) -> None:
+        # constants
+        self.alpha_matting = True
+        self.foreground_threshold = 250
+        self.background_threshold = 20
+        self.erode_size = 10
+        self.model_name = model_name
+
+    def __call__(self, context: ImageContext, next_step: NextStep) -> None:
+        if not rembg:
+            raise PipelineError("Background removal using AI is an optional package! You need to install the extra [rembg] to use it.")
+
+        try:
+            tms = time.monotonic()
+
+            # maybe in future we can reuse a session and predownload models, but as of now we start a session only on first use
+            session = rembg.new_session(model_name=self.model_name)
+
+            cutout_image = rembg.remove(
+                context.image,
+                session=session,
+                alpha_matting=self.alpha_matting,
+                alpha_matting_foreground_threshold=self.foreground_threshold,
+                alpha_matting_background_threshold=self.background_threshold,
+                alpha_matting_erode_size=self.erode_size,
+                post_process_mask=False,  # False, because enabling seems to interfere with alpha matting
+                only_mask=False,  # slight speed up, check if needed later based on further media processing
+                # bgcolor=(0, 50, 50, 200),  # only for testing, keep None usually
+            )
+            tme = time.monotonic()
+            assert type(cutout_image) is Image.Image
+            assert cutout_image is not context.image
+
+            context.image = cutout_image
+            cutout_image = None  # only if assert abotve is correct.
+
+            logger.info(f"remove background using AI duration took {tme - tms:0.3}s")
+
+        except Exception as exc:
+            logger.error(f"could not remove background, error {exc}")
+            # log the err, but continue anyways...
+
+        next_step(context)
 
 
 def draw_rotated_text(image: Image.Image, angle: int, xy: tuple[int, int], text: str, fill, *args, **kwargs):

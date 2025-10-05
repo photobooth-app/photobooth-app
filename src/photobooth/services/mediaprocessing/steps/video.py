@@ -79,6 +79,3 @@ class BoomerangStep(PipelineStep):
         context.video_processed = mp4_output_filepath
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__

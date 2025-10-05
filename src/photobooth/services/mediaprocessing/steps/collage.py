@@ -31,9 +31,6 @@ class MergeCollageStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
     @staticmethod
     def rotate(image: Image.Image, angle: int = 0, expand: bool = True) -> tuple[Image.Image, int, int]:
         if angle == 0:

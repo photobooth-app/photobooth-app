@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
+from photobooth.database.types import MediaitemTypes
+
 eventHooksService = Literal["init", "start", "stop"]
 eventHooksStatemachine = Literal["counting", "capture", "captured", "finished"]
 eventHooksAquisition = Literal["capture_still", "capture_multicam", "capture_video"]
@@ -37,10 +39,22 @@ class TaskBase(BaseModel):
         description="Task is run for every selected event.",
         default=["finished"],
     )
+    filter_mediaitem_types: list[MediaitemTypes] = Field(
+        description="During job-related events (counting, capture, captured, finished), the task execution can be filtered by types. "
+        "If nothing is selected, the task is executed for all types, otherwise only for the chosen ones.",
+        default=[],
+    )
 
     @field_validator("event", mode="before")
     def _map_deprecated_record(cls, v):
         return ["capture_video" if x == "record" else x for x in v]
+
+    delay_before: float = Field(
+        description="Seconds to delay the execution of the task after the event occured. Please note, that the delay is not cancellable.",
+        default=0,
+        ge=0,
+        le=10,
+    )
 
     wait_until_completed: bool = Field(
         description="Suspend the process calling the event until the task completed or failed. "

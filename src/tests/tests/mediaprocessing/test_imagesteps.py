@@ -20,6 +20,7 @@ from photobooth.services.mediaprocessing.steps.image import (
     ImageMountStep,
     PluginFilters,
     PluginFilterStep,
+    RemovebgStep,
     RemoveChromakeyStep,
     TextStep,
     get_plugin_avail_filters,
@@ -170,7 +171,21 @@ def test_removechromakey_stage(pil_image: Image.Image):
 
     assert stage_output.mode == "RGBA"  # after process always RGBA
     assert pil_image is not stage_output  # original copied here, so not equal
-    assert is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
+
+
+def test_rembg_ai_stage(pil_image: Image.Image):
+    ai_model = AppConfig().mediaprocessing.removebackground_ai_model
+
+    assert pil_image.mode == "RGB"  # before process it's RGB
+
+    context = ImageContext(pil_image)
+    steps = [RemovebgStep(ai_model)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
+
+    assert stage_output.mode == "RGBA"  # after process always RGBA
+    assert pil_image is not stage_output  # original copied here, so not equal
 
 
 def test_fill_background_stage(pil_image: Image.Image):

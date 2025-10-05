@@ -8,6 +8,7 @@ import pytest
 from pydantic import HttpUrl
 from statemachine import Event, State
 
+from photobooth.database.types import MediaitemTypes
 from photobooth.plugins.commander.commander import Commander
 from photobooth.plugins.commander.config import CommanderConfig
 from photobooth.plugins.commander.models import HttpRequestParameters, TaskCommand, TaskHttpRequest
@@ -45,6 +46,7 @@ def commander_plugin():
         tasks_commands=[
             TaskCommand(command="echo this echoed on event {event}!"),
             TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True),
+            TaskCommand(command="echo this echoed on event {event}!", filter_mediaitem_types=[MediaitemTypes.video]),
         ],
     )
 
@@ -71,22 +73,22 @@ def test_stop(commander_plugin: Commander):
 
 def test_sm_on_enter_state(commander_plugin: Commander):
     with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.counting, Event())
-        mock_run_task.assert_called_once_with("counting")
+        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.counting, Event(), MediaitemTypes.image)
+        mock_run_task.assert_called_once_with("counting", MediaitemTypes.image)
 
     with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.finished, Event())
-        mock_run_task.assert_called_once_with("finished")
+        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.finished, Event(), MediaitemTypes.image)
+        mock_run_task.assert_called_once_with("finished", MediaitemTypes.image)
 
     with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.capture, Event())
-        mock_run_task.assert_called_once_with("capture")
+        commander_plugin.sm_on_enter_state(State(), ProcessingMachine.capture, Event(), MediaitemTypes.image)
+        mock_run_task.assert_called_once_with("capture", MediaitemTypes.image)
 
 
 def test_sm_on_exit_state(commander_plugin: Commander):
     with patch.object(commander_plugin, "run_task") as mock_run_task:
-        commander_plugin.sm_on_exit_state(ProcessingMachine.capture, State(), Event())
-        mock_run_task.assert_called_once_with("captured")
+        commander_plugin.sm_on_exit_state(ProcessingMachine.capture, State(), Event(), MediaitemTypes.image)
+        mock_run_task.assert_called_once_with("captured", MediaitemTypes.image)
 
 
 def test_run_task(commander_plugin: Commander):
@@ -96,6 +98,27 @@ def test_run_task(commander_plugin: Commander):
 
             assert mock_invoke_command.call_count == len([cmd for cmd in commander_plugin._config.tasks_commands if cmd.enabled is True])
             assert mock_invoke_httprequest.call_count == len([req for req in commander_plugin._config.tasks_httprequests if req.enabled is True])
+
+
+def test_run_task_filtered(commander_plugin: Commander):
+    with patch.object(commander_plugin, "invoke_command") as mock_invoke_command:
+        with patch.object(commander_plugin, "invoke_httprequest") as mock_invoke_httprequest:
+            commander_plugin.run_task("finished", MediaitemTypes.video)
+
+            assert mock_invoke_command.call_count == len(
+                [
+                    cmd
+                    for cmd in commander_plugin._config.tasks_commands
+                    if cmd.enabled is True and (not cmd.filter_mediaitem_types or MediaitemTypes.video in cmd.filter_mediaitem_types)
+                ]
+            )
+            assert mock_invoke_httprequest.call_count == len(
+                [
+                    req
+                    for req in commander_plugin._config.tasks_httprequests
+                    if req.enabled is True and (not req.filter_mediaitem_types or MediaitemTypes.video in req.filter_mediaitem_types)
+                ]
+            )
 
 
 def test_acq_before_get_still(commander_plugin: Commander):
@@ -119,7 +142,7 @@ def test_acq_before_get_video(commander_plugin: Commander):
 def test_invoke_command(commander_plugin: Commander):
     with patch.object(subprocess, "run") as mock_subprocess_run:
         for cmd in commander_plugin._config.tasks_commands:
-            commander_plugin.invoke_command(cmd, "finished")
+            commander_plugin.invoke_command(cmd, "finished", None)
 
         time.sleep(0.4)  # wait until thread has finished actually even on not waiting to make mock count
 
@@ -128,22 +151,22 @@ def test_invoke_command(commander_plugin: Commander):
 
 def test_invoke_command_error(commander_plugin: Commander):
     with patch.object(subprocess, "run", side_effect=RuntimeError("mocked,swallowed")) as mock_subprocess_run:
-        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished")
+        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished", None)
         mock_subprocess_run.assert_called()
 
     with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired("mocked,swallowed", 6)) as mock_subprocess_run:
-        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished")
+        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished", None)
         mock_subprocess_run.assert_called()
 
     with patch.object(subprocess, "run", side_effect=subprocess.CalledProcessError(1, "mocked,swallowed")) as mock_subprocess_run:
-        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished")
+        commander_plugin.invoke_command(TaskCommand(command="echo this echoed on event {event}!", wait_until_completed=True), "finished", None)
         mock_subprocess_run.assert_called()
 
 
 def test_invoke_http(commander_plugin: Commander):
     with patch.object(niquests, "request") as mock_requests_request:
         for req in commander_plugin._config.tasks_httprequests:
-            commander_plugin.invoke_httprequest(req, "finished")
+            commander_plugin.invoke_httprequest(req, "finished", None)
 
         time.sleep(0.4)  # wait until thread has finished actually even on not waiting to make mock count
 
@@ -152,15 +175,15 @@ def test_invoke_http(commander_plugin: Commander):
 
 def test_invoke_http_error(commander_plugin: Commander):
     with patch.object(niquests, "request", side_effect=RuntimeError("mocked,swallowed")) as mock_req:
-        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished")
+        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()
 
     fake_response = niquests.Response()
     fake_response.status_code = 500
     with patch.object(niquests, "request", side_effect=niquests.exceptions.HTTPError(response=fake_response)) as mock_req:
-        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished")
+        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()
 
     with patch.object(niquests, "request", side_effect=niquests.exceptions.RequestException()) as mock_req:
-        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished")
+        commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()

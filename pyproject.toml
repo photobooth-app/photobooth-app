@@ -1,6 +1,6 @@
 [project]
 name = "photobooth-app"
-version = "v8.0.6"
+version = "v8.1.0b1"
 requires-python = ">=3.10,<3.14"
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
@@ -40,7 +40,7 @@ dependencies = [
   "psutil>=7.0.0",
   "pydantic>=2.11.2",
   "pydantic-extra-types>=2.3.0",
-  "pydantic-settings>=2.1.0",
+  "pydantic-settings~=2.11.0",
   "sse-starlette>=2.2.0,<4.0.0",
   "uvicorn[standard]>=0.24",                                                        # adds websockets and uvloop
   "python-dotenv>=1.0.0",
@@ -59,11 +59,14 @@ dependencies = [
   "simplejpeg>=1.8.2",
   "pyturbojpeg>=1.7.0",
   "pluggy>=1.5.0",
-  "av>=14.0.1",
+  "av~=15.0.0",
   "alembic>=1.15.2",
-  "niquests>=3.15.0", #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
+  "niquests>=3.15.0",                                                               #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
   "nc-py-api>=0.20.1",
 ]
+
+[project.optional-dependencies]
+rembg = ["rembg[cpu]"]
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
@@ -138,7 +141,7 @@ dev = [
   "pydot",
   "pre-commit",
   "pyright",
-  "pyftpdlib",
+  "pyftpdlib~=2.0.0",  # limit to 2.0.x, since key.pem is not shipped in later versions
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
 ]

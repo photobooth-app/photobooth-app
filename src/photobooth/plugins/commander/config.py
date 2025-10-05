@@ -27,6 +27,7 @@ class CommanderConfig(BaseConfig):
                 url=HttpUrl("http://127.0.0.1:8000/"),
                 parameter=[
                     HttpRequestParameters(key="event_key", value="{event}"),
+                    HttpRequestParameters(key="mediaitem_type", value="{mediaitem_type}"),
                     HttpRequestParameters(key="demoparameter", value="demovalue"),
                 ],
             ),
@@ -38,7 +39,7 @@ class CommanderConfig(BaseConfig):
             TaskCommand(
                 enabled=True,
                 name="demo command",
-                command="echo this echoed on event {event}!",
+                command="echo this echoed on event {event} for mediaitem_type {mediaitem_type}!",
             )
         ],
     )

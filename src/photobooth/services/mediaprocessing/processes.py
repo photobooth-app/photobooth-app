@@ -16,7 +16,7 @@ from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemoveChromakeyStep, TextStep
+from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, RemoveChromakeyStep, TextStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -27,6 +27,8 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     Unified handling of images that are just one single capture: 1pictaken (singleimages) and stills that are used in collages or animation
     Since config is different and also can depend on the current number of the image in the capture sequence,
     the config has to be determined externally.
+
+    Preview is true if we need a quick generation of a preview for filter selection. Used to save CPU
     """
 
     image = Image.open(file_in)
@@ -36,11 +38,11 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     steps = []
 
     # assemble pipeline
-    if appconfig.mediaprocessing.removechromakey_enable:
+    if appconfig.mediaprocessing.removechromakey_enable and not preview:
         steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
 
-    if config.image_filter:
-        steps.append(PluginFilterStep(config.image_filter))
+    if appconfig.mediaprocessing.removebackground_ai_enable and not preview:
+        steps.append(RemovebgStep(model_name=appconfig.mediaprocessing.removebackground_ai_model))
 
     if config.img_background_enable:
         if not config.img_background_file:
@@ -49,6 +51,9 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
 
     if config.fill_background_enable:
         steps.append(FillBackgroundStep(config.fill_background_color))
+
+    if config.image_filter:
+        steps.append(PluginFilterStep(config.image_filter))
 
     if config.img_frame_enable:
         if not config.img_frame_file:

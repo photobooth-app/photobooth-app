@@ -166,7 +166,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: uv venv --system-site-packages
-      - run: uv sync # install in-project env
+      - run: uv sync --all-extras --dev # install in-project env
       - name: Test with pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
