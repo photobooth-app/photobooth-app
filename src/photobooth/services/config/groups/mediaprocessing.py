@@ -3,7 +3,11 @@ AppConfig class providing central config
 
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
+
+RembgModelType = Literal["u2net", "u2netp", "u2net_human_seg"]
 
 
 class GroupMediaprocessing(BaseModel):
@@ -65,4 +69,13 @@ class GroupMediaprocessing(BaseModel):
         ge=1,
         le=50,
         description="Tolerance for color (H) on chromakey color removal.",
+    )
+
+    removebackground_ai_enable: bool = Field(
+        default=False,
+        description="Remove the background using AI (danielgatis/rembg project).",
+    )
+    removebackground_ai_model: RembgModelType = Field(
+        default="u2netp",
+        description="Select from predefined models, the model is downloaded on first use. After first use, the model is cached to it works without internet connection. u2netp is a reduced model that is faster, the other models might give a bit better results at the cost of computation time.",
     )
