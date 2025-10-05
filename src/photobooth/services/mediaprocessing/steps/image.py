@@ -290,7 +290,7 @@ class RemoveChromakeyStep(PipelineStep):
 
 
 class RemovebgStep(PipelineStep):
-    def __init__(self, model_name: RembgModelType = "u2net") -> None:
+    def __init__(self, model_name: RembgModelType) -> None:
         # constants
         self.alpha_matting = True
         self.foreground_threshold = 250
