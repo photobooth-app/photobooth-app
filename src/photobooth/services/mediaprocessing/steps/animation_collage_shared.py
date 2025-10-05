@@ -24,9 +24,6 @@ class AddPredefinedImagesStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class PostPredefinedImagesStep(PipelineStep):
     """
@@ -58,6 +55,3 @@ class PostPredefinedImagesStep(PipelineStep):
                 context.images[idx] = sub_context.image
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__

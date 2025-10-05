@@ -64,9 +64,6 @@ class PluginFilterStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class FillBackgroundStep(PipelineStep):
     def __init__(self, color: Color | str) -> None:
@@ -86,9 +83,6 @@ class FillBackgroundStep(PipelineStep):
         bg_filled_img = None
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class ImageMountStep(PipelineStep):
@@ -129,9 +123,6 @@ class ImageMountStep(PipelineStep):
             context.image = background_img_adjusted
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class ImageFrameStep(PipelineStep):
@@ -188,9 +179,6 @@ class ImageFrameStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class TextStep(PipelineStep):
     def __init__(self, textstageconfig: list[models.TextsConfig]) -> None:
@@ -231,9 +219,6 @@ class TextStep(PipelineStep):
         updated_image = None
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 class RemoveChromakeyStep(PipelineStep):
@@ -303,9 +288,6 @@ class RemoveChromakeyStep(PipelineStep):
 
         next_step(context)
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__
-
 
 class RemovebgStep(PipelineStep):
     def __init__(self, model_name: RembgModelType = "u2net") -> None:
@@ -351,9 +333,6 @@ class RemovebgStep(PipelineStep):
             # log the err, but continue anyways...
 
         next_step(context)
-
-    def __repr__(self) -> str:
-        return self.__class__.__name__
 
 
 def draw_rotated_text(image: Image.Image, angle: int, xy: tuple[int, int], text: str, fill, *args, **kwargs):
