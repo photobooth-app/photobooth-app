@@ -67,7 +67,7 @@ jobs:
           sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php
           nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -106,7 +106,7 @@ jobs:
         with:
           version: 7.1 # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -135,7 +135,7 @@ jobs:
         with: # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
           version: 71 # for mac specify without .
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
