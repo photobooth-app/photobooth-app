@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-RembgModelType = Literal["u2net", "u2netp", "u2net_human_seg"]
+RembgModelType = Literal["u2netp", "modnet"]
 
 
 class GroupMediaprocessing(BaseModel):
@@ -54,26 +54,9 @@ class GroupMediaprocessing(BaseModel):
         description="Enable for improved video compatibility on iOS devices and Firefox. Might reduce resulting quality slightly.",
     )
 
-    removechromakey_enable: bool = Field(
-        default=False,
-        description="Apply chromakey greenscreen removal from captured images",
-    )
-    removechromakey_keycolor: int = Field(
-        default=110,
-        ge=0,
-        le=360,
-        description="Color (H) in HSV colorspace to remove on 360° scale.",
-    )
-    removechromakey_tolerance: int = Field(
-        default=10,
-        ge=1,
-        le=50,
-        description="Tolerance for color (H) on chromakey color removal.",
-    )
-
     removebackground_ai_enable: bool = Field(
         default=False,
-        description="Remove the background using AI (danielgatis/rembg project).",
+        description="Remove the background using AI.",
     )
     removebackground_ai_model: RembgModelType = Field(
         default="u2netp",

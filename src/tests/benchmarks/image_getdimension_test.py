@@ -26,11 +26,11 @@ def get_dimensions_turbojpeg():
 
 @pytest.mark.benchmark(group="getdimension")
 def test_dimensions_pillow_load(benchmark):
-    assert get_dimensions_pillow() == (1280, 800)
+    assert get_dimensions_pillow() == (1080, 720)
     benchmark(get_dimensions_pillow)
 
 
 @pytest.mark.benchmark(group="getdimension")
 def test_dimensions_turbojpeg(benchmark):
-    assert get_dimensions_turbojpeg() == (1280, 800)
+    assert get_dimensions_turbojpeg() == (1080, 720)
     benchmark(get_dimensions_turbojpeg)

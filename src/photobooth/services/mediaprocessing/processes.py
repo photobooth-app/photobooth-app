@@ -16,7 +16,7 @@ from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, RemoveChromakeyStep, TextStep
+from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, TextStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -38,9 +38,6 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     steps = []
 
     # assemble pipeline
-    if appconfig.mediaprocessing.removechromakey_enable and not preview:
-        steps.append(RemoveChromakeyStep(appconfig.mediaprocessing.removechromakey_keycolor, appconfig.mediaprocessing.removechromakey_tolerance))
-
     if appconfig.mediaprocessing.removebackground_ai_enable and not preview:
         steps.append(RemovebgStep(model_name=appconfig.mediaprocessing.removebackground_ai_model))
 
