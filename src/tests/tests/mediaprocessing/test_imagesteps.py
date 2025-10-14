@@ -267,7 +267,7 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
 
 
 def test_img_background_stage_reverse(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
         # Create an RGBA image with a solid background
         img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
 
@@ -290,7 +290,7 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
 
 def test_img_frame_stage(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
         # Create an RGBA image with a solid background
         img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
 
@@ -310,7 +310,7 @@ def test_img_frame_stage(pil_image: Image.Image):
 
 
 def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
         img_solid = Image.new("RGBA", (512, 512), "red")
         img_solid.save(tmp_img_file.name)
 
@@ -323,7 +323,7 @@ def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
 
 
 def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(suffix=".jpg") as tmp_img_file:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as tmp_img_file:
         img_solid = Image.new("RGB", (512, 512), "red")
         img_solid.save(tmp_img_file.name)
 
