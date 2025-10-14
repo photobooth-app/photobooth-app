@@ -6,9 +6,10 @@ import logging
 import time
 from pathlib import Path
 from threading import Lock
+from typing import cast
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
@@ -58,7 +59,7 @@ class Database:
     def clear_all(self) -> int:
         with Session(engine) as session:
             statement = delete(Mediaitem)
-            result = session.execute(statement)
+            result = cast(CursorResult, session.execute(statement))
             session.commit()
 
             return result.rowcount

@@ -4,11 +4,11 @@ import sys
 from datetime import datetime
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import psutil
 from psutil._common import sbattery
-from sqlalchemy import delete, func, select
+from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.orm import Session
 
 from .. import CACHE_PATH, MEDIA_PATH, RECYCLE_PATH, TMP_PATH
@@ -67,7 +67,7 @@ class InformationService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(UsageStats).where(UsageStats.action == field)
-                result = session.execute(statement)
+                result = cast(CursorResult, session.execute(statement))
                 session.commit()
 
                 logger.info(f"deleted {result.rowcount} entries from UsageStats")
@@ -79,9 +79,9 @@ class InformationService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(UsageStats)
-                results = session.execute(statement)
+                result = cast(CursorResult, session.execute(statement))
                 session.commit()
-                logger.info(f"deleted {results.rowcount} entries from UsageStats")
+                logger.info(f"deleted {result.rowcount} entries from UsageStats")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset statscounter, error: {exc}") from exc
