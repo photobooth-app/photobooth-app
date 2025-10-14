@@ -14,12 +14,15 @@ from ....plugins import pm
 from ....utils.exceptions import PipelineError
 from ....utils.rembg.rembg import remove
 from ....utils.rembg.session_factory import new_session
+from ....utils.rembg.sessions.base import BaseSession
 from ...config.groups.mediaprocessing import RembgModelType
 from ...config.models import models
 from ..context import ImageContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
+
+rembg_session: BaseSession | None = None
 
 
 def get_plugin_avail_filters():
@@ -225,12 +228,17 @@ class RemovebgStep(PipelineStep):
         self.model_name = model_name
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
+        global rembg_session
+
         try:
             tms = time.monotonic()
 
             # maybe in future we can reuse a session and predownload models, but as of now we start a session only on first use
-            session = new_session(model_name=self.model_name)
-            cutout_image = remove(img=context.image, session=session)
+            if not rembg_session or rembg_session.name() != self.model_name:
+                logger.info(f"ai background removal model {self.model_name} session initialized")
+                rembg_session = new_session(model_name=self.model_name)
+
+            cutout_image = remove(img=context.image, session=rembg_session)
 
             tme = time.monotonic()
             assert type(cutout_image) is Image.Image
