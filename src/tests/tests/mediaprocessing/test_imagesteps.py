@@ -3,11 +3,12 @@ Testing mediaprocessing singleimages pipeline
 """
 
 import logging
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 from pydantic_extra_types.color import Color
 
 from photobooth.appconfig import AppConfig
@@ -283,11 +284,19 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
 
 
 def test_img_background_stage_reverse(pil_image: Image.Image):
+    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+        # Create an RGBA image with a solid background
+        img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+
+        # Draw a transparent rectangle directly
+        ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 255))
+        img.save(tmp_img_file.name)
+
     pil_image = pil_image.convert("RGBA")
     assert pil_image.mode == "RGBA"  # before process it's RGBA
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./src/tests/assets/frames/polaroid-6125402_1pic-transparency.png", reverse=True)]
+        steps = [ImageMountStep(tmp_img_file.name, reverse=True)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -298,8 +307,16 @@ def test_img_background_stage_reverse(pil_image: Image.Image):
 
 
 def test_img_frame_stage(pil_image: Image.Image):
+    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+        # Create an RGBA image with a solid background
+        img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+
+        # Draw a transparent rectangle directly
+        ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 0))
+        img.save(tmp_img_file.name)
+
     context = ImageContext(pil_image)
-    steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic-transparency.png")]
+        steps = [ImageFrameStep(tmp_img_file.name)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -310,18 +327,26 @@ def test_img_frame_stage(pil_image: Image.Image):
 
 
 def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
+    with tempfile.NamedTemporaryFile(suffix=".png") as tmp_img_file:
+        img_solid = Image.new("RGBA", (512, 512), "red")
+        img_solid.save(tmp_img_file.name)
+
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic-notransparency.png")]
+            steps = [ImageFrameStep(tmp_img_file.name)]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
         _ = context.image
 
 
 def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
+    with tempfile.NamedTemporaryFile(suffix=".jpg") as tmp_img_file:
+        img_solid = Image.new("RGB", (512, 512), "red")
+        img_solid.save(tmp_img_file.name)
+
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageFrameStep("./src/tests/assets/frames/polaroid-6125402_1pic.jpg")]
+            steps = [ImageFrameStep(tmp_img_file.name)]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
         _ = context.image
