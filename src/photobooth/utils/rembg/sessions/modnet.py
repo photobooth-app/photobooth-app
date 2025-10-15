@@ -35,10 +35,10 @@ class ModnetSession(BaseSession):
         return mask
 
     @classmethod
-    def download_models(cls, *args, **kwargs):
-        fname = f"{cls.name(*args, **kwargs)}.onnx"
-        return os.path.join(cls.u2net_home(*args, **kwargs), fname)
+    def download_models(cls):
+        fname = f"{cls.name()}.onnx"
+        return os.path.join(cls.models_included_home(), fname)
 
     @classmethod
-    def name(cls, *args, **kwargs):
+    def name(cls):
         return "modnet"

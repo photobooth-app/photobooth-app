@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-RembgModelType = Literal["u2netp", "modnet"]
+RembgModelType = Literal["modnet", "u2netp", "u2net"]
 
 
 class GroupMediaprocessing(BaseModel):
@@ -59,6 +59,6 @@ class GroupMediaprocessing(BaseModel):
         description="Remove the background using AI.",
     )
     removebackground_ai_model: RembgModelType = Field(
-        default="u2netp",
-        description="Select from predefined models, the model is downloaded on first use. After first use, the model is cached to it works without internet connection. u2netp is a reduced model that is faster, the other models might give a bit better results at the cost of computation time.",
+        default="modnet",
+        description="Select from predefined models. Modnet and u2netp are packaged with the app, other models will be downloaded on demand and cached, so on first use of other models, the app needs internet access. u2netp is a reduced model that is fastest, modnet usually only slightly slower but provides good results.",
     )

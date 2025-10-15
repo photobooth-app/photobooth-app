@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-import niquests
 import numpy as np
 from PIL import Image
 from PIL.Image import Image as PILImage
@@ -38,21 +37,18 @@ class U2netSession(BaseSession):
         return mask
 
     @classmethod
-    def download_models(cls, *args, **kwargs):
-        fname = f"{cls.name(*args, **kwargs)}.onnx"
-        fpath = Path(cls.u2net_home(*args, **kwargs), fname)
+    def download_models(cls):
+        fname = f"{cls.name()}.onnx"
+        fpath = Path(cls.models_download_home(), fname)
 
         # url = "https://github.com/photobooth-app/photobooth-app/releases/download/untagged-dd4eac6e113053f0f7fa/u2net.onnx"
         url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
+        hash_valid = "60024c5c889badc19c04ad937298a77b"
 
-        with niquests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(fpath, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+        cls.retrieve_model(fpath, hash_valid, url)
 
         return str(fpath.absolute())
 
     @classmethod
-    def name(cls, *args, **kwargs):
+    def name(cls):
         return "u2net"

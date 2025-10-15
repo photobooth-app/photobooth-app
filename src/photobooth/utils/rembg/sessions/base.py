@@ -1,9 +1,14 @@
+import hashlib
+import logging
 from pathlib import Path
 
+import niquests
 import numpy as np
 import onnxruntime as ort
 from PIL import Image
 from PIL.Image import Image as PILImage
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSession:
@@ -79,15 +84,44 @@ class BaseSession:
 
         return (im_rw, im_rh)
 
-    @classmethod
-    def u2net_home(cls, *args, **kwargs):
-        return Path(__file__).parent.parent / "models"
-        # return os.path.expanduser(os.getenv("U2NET_HOME", os.path.join(os.getenv("XDG_DATA_HOME", "~"), ".u2net")))
+    @staticmethod
+    def retrieve_model(fpath: Path, hash_valid: str, url: str):
+        hash = None
+
+        # check md5 to validate file is correct
+        if fpath.is_file():
+            try:
+                with open(fpath, "rb") as f:
+                    hash = hashlib.file_digest(f, "md5").hexdigest()  # avail since python 3.11
+            except Exception as exc:
+                logger.warning(f"could not calc hash {exc}")
+
+        if not hash or hash != hash_valid:
+            print("downloading model")
+
+            with niquests.get(url, stream=True) as r:
+                r.raise_for_status()
+                with open(fpath, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+            print("download finished")
 
     @classmethod
-    def download_models(cls, *args, **kwargs) -> str:
+    def models_included_home(cls) -> Path:
+        return Path(__file__).parent.parent / "models"
+
+    @classmethod
+    def models_download_home(cls) -> Path:
+        fpath = Path.home() / ".photobooth-data" / "models"
+        fpath.mkdir(parents=True, exist_ok=True)
+
+        return fpath
+
+    @classmethod
+    def download_models(cls) -> str:
         raise NotImplementedError
 
     @classmethod
-    def name(cls, *args, **kwargs) -> str:
+    def name(cls) -> str:
         raise NotImplementedError
