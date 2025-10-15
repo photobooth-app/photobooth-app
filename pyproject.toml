@@ -36,7 +36,7 @@ dependencies = [
   "fastapi>=0.106.0",
   "opencv-python-headless>=4.10.0.84",
   "numpy>=2.0.0",
-  "pillow>=10.0.0",
+  "pillow>=11.0.0",
   "psutil>=7.0.0",
   "pydantic>=2.11.2",
   "pydantic-extra-types>=2.3.0",
@@ -65,9 +65,6 @@ dependencies = [
   "niquests>=3.15.0",                                                               #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
   "nc-py-api>=0.20.1",
 ]
-
-[project.optional-dependencies]
-#rembg = ["onnxruntime"]
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
