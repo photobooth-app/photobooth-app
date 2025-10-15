@@ -54,11 +54,7 @@ class GroupMediaprocessing(BaseModel):
         description="Enable for improved video compatibility on iOS devices and Firefox. Might reduce resulting quality slightly.",
     )
 
-    removebackground_ai_enable: bool = Field(
-        default=False,
-        description="Remove the background using AI.",
-    )
-    removebackground_ai_model: RembgModelType = Field(
+    remove_background_model: RembgModelType = Field(
         default="modnet",
         description="Select from predefined models. Modnet and u2netp are packaged with the app, other models will be downloaded on demand and cached, so on first use of other models, the app needs internet access. u2netp is a reduced model that is fastest, modnet usually only slightly slower but provides good results.",
     )

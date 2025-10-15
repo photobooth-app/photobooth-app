@@ -38,8 +38,8 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     steps = []
 
     # assemble pipeline
-    if appconfig.mediaprocessing.removebackground_ai_enable and not preview:
-        steps.append(RemovebgStep(model_name=appconfig.mediaprocessing.removebackground_ai_model))
+    if config.remove_background and not preview:
+        steps.append(RemovebgStep(model_name=appconfig.mediaprocessing.remove_background_model))
 
     if config.img_background_enable:
         if not config.img_background_file:

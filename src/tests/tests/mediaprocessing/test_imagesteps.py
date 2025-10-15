@@ -157,7 +157,7 @@ def test_text_stage_empty_emptytext_skips(pil_image: Image.Image):
 
 
 def test_rembg_ai_stage(pil_image: Image.Image):
-    ai_model = AppConfig().mediaprocessing.removebackground_ai_model
+    ai_model = AppConfig().mediaprocessing.remove_background_model
 
     assert pil_image.mode == "RGB"  # before process it's RGB
 
@@ -230,7 +230,7 @@ def test_img_background_stage(pil_image: Image.Image):
     pil_image.putalpha(100)
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/background.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -245,7 +245,7 @@ def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
     assert pil_image.mode == "RGB"  # before process it's RGB
 
     context = ImageContext(pil_image)
-    steps = [ImageMountStep("./userdata/demoassets/backgrounds/pink-7761356_1920.jpg")]
+    steps = [ImageMountStep("./userdata/demoassets/backgrounds/background.jpg")]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image

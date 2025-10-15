@@ -220,11 +220,6 @@ class TextStep(PipelineStep):
 
 class RemovebgStep(PipelineStep):
     def __init__(self, model_name: RembgModelType) -> None:
-        # constants
-        # self.alpha_matting = True
-        # self.foreground_threshold = 250
-        # self.background_threshold = 20
-        # self.erode_size = 10
         self.model_name = model_name
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:

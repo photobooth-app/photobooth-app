@@ -93,7 +93,7 @@ class BaseSession:
                 logger.warning(f"could not calc hash {exc}")
 
         if not hash or hash != hash_valid:
-            print("downloading model")
+            logger.info(f"downloading model {fpath.name}, depending on the internet connection and model size this may take some time!")
 
             with niquests.get(url, stream=True) as r:
                 r.raise_for_status()
@@ -101,7 +101,7 @@ class BaseSession:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
 
-            print("download finished")
+            logger.info(f"finished download model {fpath.name}")
 
     @classmethod
     def models_included_home(cls) -> Path:
