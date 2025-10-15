@@ -1,8 +1,8 @@
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
-from photobooth import CONFIG_PATH
-from photobooth.services.config.baseconfig import BaseConfig
+from ... import CONFIG_PATH
+from ...services.config.baseconfig import BaseConfig
 
 
 class WledConfig(BaseConfig):

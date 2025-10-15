@@ -6,11 +6,10 @@ from typing import cast
 from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.orm import Session
 
-from photobooth.database.types import MediaitemTypes
-
 from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
+from ..database.types import MediaitemTypes
 from ..utils.exceptions import WrongMediaTypeError
 from .base import BaseService
 from .sse import sse_service

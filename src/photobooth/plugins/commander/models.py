@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from photobooth.database.types import MediaitemTypes
+from ...database.types import MediaitemTypes
 
 eventHooksService = Literal["init", "start", "stop"]
 eventHooksStatemachine = Literal["counting", "capture", "captured", "finished"]

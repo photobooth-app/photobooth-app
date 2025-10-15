@@ -7,10 +7,9 @@ from pathlib import Path
 import psutil
 from psutil import _common
 
-from photobooth.utils.stoppablethread import StoppableThread
-
 from .. import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ..appconfig import appconfig
+from ..utils.stoppablethread import StoppableThread
 from .base import BaseService
 
 logger = logging.getLogger(__name__)

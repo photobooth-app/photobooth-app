@@ -1,7 +1,7 @@
 import logging
 from typing import Generic, TypeVar
 
-from photobooth.services.config.baseconfig import BaseConfig
+from ..services.config.baseconfig import BaseConfig
 
 logger = logging.getLogger(__name__)
 

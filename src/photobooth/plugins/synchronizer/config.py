@@ -4,9 +4,9 @@ from typing import Literal
 from pydantic import BaseModel, DirectoryPath, Field, HttpUrl, SecretStr, SerializationInfo, field_serializer
 from pydantic_settings import SettingsConfigDict
 
-from photobooth import CONFIG_PATH
-from photobooth.services.config.baseconfig import BaseConfig
-from photobooth.services.config.serializer import contextual_serializer_password
+from ... import CONFIG_PATH
+from ...services.config.baseconfig import BaseConfig
+from ...services.config.serializer import contextual_serializer_password
 
 
 class Common(BaseModel):
