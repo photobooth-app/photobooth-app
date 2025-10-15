@@ -3,7 +3,6 @@ Testing mediaprocessing singleimages pipeline
 """
 
 import logging
-import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
@@ -266,70 +265,71 @@ def test_img_background_stage_nonexistentfile(pil_image: Image.Image):
         pipeline(context)
 
 
-def test_img_background_stage_reverse(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
-        # Create an RGBA image with a solid background
-        img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+def test_img_background_stage_reverse(pil_image: Image.Image, tmp_path: Path):
+    temp_file = tmp_path / "test_image.png"
+    # Create an RGBA image with a solid background
+    img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
 
-        # Draw a transparent rectangle directly
-        ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 255))
-        img.save(tmp_img_file.name)
+    # Draw a transparent rectangle directly
+    ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 255))
+    img.save(temp_file)
 
-        pil_image = pil_image.convert("RGBA")
-        assert pil_image.mode == "RGBA"  # before process it's RGBA
+    pil_image = pil_image.convert("RGBA")
+    assert pil_image.mode == "RGBA"  # before process it's RGBA
 
+    context = ImageContext(pil_image)
+    steps = [ImageMountStep(temp_file, reverse=True)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
+
+    assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
+    assert pil_image is not stage_output  # original is not changed
+    assert not is_same(pil_image, stage_output)  # pixel are diff because background shines through
+
+
+def test_img_frame_stage(pil_image: Image.Image, tmp_path: Path):
+    temp_file = tmp_path / "test_image.png"
+
+    # Create an RGBA image with a solid background
+    img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+
+    # Draw a transparent rectangle directly
+    ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 0))
+    img.save(temp_file)
+
+    context = ImageContext(pil_image)
+    steps = [ImageFrameStep(temp_file)]
+    pipeline = Pipeline[ImageContext](*steps)
+    pipeline(context)
+    stage_output = context.image
+
+    assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
+    assert pil_image is not stage_output  # original is not changed
+    assert not is_same(pil_image, stage_output)  # pixel are diff because capture is mounted
+
+
+def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image, tmp_path: Path):
+    temp_file = tmp_path / "test_image.png"
+    img_solid = Image.new("RGBA", (512, 512), "red")
+    img_solid.save(temp_file)
+
+    with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageMountStep(tmp_img_file.name, reverse=True)]
+        steps = [ImageFrameStep(temp_file)]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
-        stage_output = context.image
-
-        assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
-        assert pil_image is not stage_output  # original is not changed
-        assert not is_same(pil_image, stage_output)  # pixel are diff because background shines through
+        _ = context.image
 
 
-def test_img_frame_stage(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
-        # Create an RGBA image with a solid background
-        img = Image.new("RGBA", (512, 512), (255, 0, 0, 255))
+def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image, tmp_path: Path):
+    temp_file = tmp_path / "test_image.jpg"
+    img_solid = Image.new("RGB", (512, 512), "red")
+    img_solid.save(temp_file)
 
-        # Draw a transparent rectangle directly
-        ImageDraw.Draw(img).rectangle((80, 60, 320, 240), fill=(0, 0, 0, 0))
-        img.save(tmp_img_file.name)
-
+    with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [ImageFrameStep(tmp_img_file.name)]
+        steps = [ImageFrameStep(temp_file)]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
-        stage_output = context.image
-
-        assert stage_output.mode == "RGBA"  # ensure it keeps RGBA
-        assert pil_image is not stage_output  # original is not changed
-        assert not is_same(pil_image, stage_output)  # pixel are diff because capture is mounted
-
-
-def test_img_frame_stage_notransparency_rgbamode(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png") as tmp_img_file:
-        img_solid = Image.new("RGBA", (512, 512), "red")
-        img_solid.save(tmp_img_file.name)
-
-        with pytest.raises(PipelineError):
-            context = ImageContext(pil_image)
-            steps = [ImageFrameStep(tmp_img_file.name)]
-            pipeline = Pipeline[ImageContext](*steps)
-            pipeline(context)
-            _ = context.image
-
-
-def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image):
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg") as tmp_img_file:
-        img_solid = Image.new("RGB", (512, 512), "red")
-        img_solid.save(tmp_img_file.name)
-
-        with pytest.raises(PipelineError):
-            context = ImageContext(pil_image)
-            steps = [ImageFrameStep(tmp_img_file.name)]
-            pipeline = Pipeline[ImageContext](*steps)
-            pipeline(context)
-            _ = context.image
+        _ = context.image
