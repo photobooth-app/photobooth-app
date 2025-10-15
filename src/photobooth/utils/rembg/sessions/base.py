@@ -29,14 +29,10 @@ class BaseSession:
             else:
                 providers = ["CPUExecutionProvider"]
 
-        self.inner_session = ort.InferenceSession(
-            str(self.__class__.download_models(*args, **kwargs)),
-            sess_options=sess_opts,
-            providers=providers,
-        )
+        self.inner_session = ort.InferenceSession(self.__class__.download_models(), sess_options=sess_opts, providers=providers)
 
     def normalize_imagenet(
-        self, img: PILImage, mean: tuple[float, float, float], std: tuple[float, float, float], size: tuple[int, int], *args, **kwargs
+        self, img: PILImage, mean: tuple[float, float, float], std: tuple[float, float, float], size: tuple[int, int]
     ) -> dict[str, np.ndarray]:
         im = img.convert("RGB").resize(size, Image.Resampling.LANCZOS)
 
@@ -52,7 +48,7 @@ class BaseSession:
 
         return {self.inner_session.get_inputs()[0].name: np.expand_dims(tmpImg, 0).astype(np.float32)}
 
-    def normalize_2(self, img: PILImage, size: tuple[int, int], *args, **kwargs) -> dict[str, np.ndarray]:
+    def normalize_2(self, img: PILImage, size: tuple[int, int]) -> dict[str, np.ndarray]:
         im = img.convert("RGB").resize(size, Image.Resampling.LANCZOS)
 
         # Convert to numpy array (H height, W width, C channels), dtype float32
@@ -64,7 +60,7 @@ class BaseSession:
 
         return {self.inner_session.get_inputs()[0].name: np.expand_dims(im_ary, 0).astype(np.float32)}  # add batch dimension (1,C,H,W)
 
-    def predict(self, img: PILImage, *args, **kwargs) -> PILImage:
+    def predict(self, img: PILImage) -> PILImage:
         raise NotImplementedError
 
     @staticmethod
@@ -119,7 +115,7 @@ class BaseSession:
         return fpath
 
     @classmethod
-    def download_models(cls) -> str:
+    def download_models(cls) -> Path:
         raise NotImplementedError
 
     @classmethod

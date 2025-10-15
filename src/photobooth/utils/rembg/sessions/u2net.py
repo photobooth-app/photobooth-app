@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from pathlib import Path
 
 import numpy as np
 from PIL import Image
@@ -38,16 +37,13 @@ class U2netSession(BaseSession):
 
     @classmethod
     def download_models(cls):
-        fname = f"{cls.name()}.onnx"
-        fpath = Path(cls.models_download_home(), fname)
+        fpath = cls.models_download_home() / f"{cls.name()}.onnx"
 
-        # url = "https://github.com/photobooth-app/photobooth-app/releases/download/untagged-dd4eac6e113053f0f7fa/u2net.onnx"
-        url = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx"
+        url = "https://github.com/photobooth-app/photobooth-app/releases/download/models/u2net.onnx"
         hash_valid = "60024c5c889badc19c04ad937298a77b"
-
         cls.retrieve_model(fpath, hash_valid, url)
 
-        return str(fpath.absolute())
+        return fpath
 
     @classmethod
     def name(cls):

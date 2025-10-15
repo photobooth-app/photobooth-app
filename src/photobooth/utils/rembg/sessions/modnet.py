@@ -1,4 +1,3 @@
-import os
 from collections.abc import Sequence
 
 import numpy as np
@@ -36,8 +35,7 @@ class ModnetSession(BaseSession):
 
     @classmethod
     def download_models(cls):
-        fname = f"{cls.name()}.onnx"
-        return os.path.join(cls.models_included_home(), fname)
+        return cls.models_included_home() / f"{cls.name()}.onnx"
 
     @classmethod
     def name(cls):
