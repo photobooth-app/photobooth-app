@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 version = "v8.1.0b1"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgineer85.de" }]
@@ -11,10 +11,10 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Multimedia :: Graphics",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
