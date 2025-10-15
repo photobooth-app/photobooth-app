@@ -1,3 +1,8 @@
+"""
+The util is very much inspired by https://github.com/danielgatis/rembg
+Thank you!
+"""
+
 from typing import Any
 
 from PIL import Image, ImageOps
