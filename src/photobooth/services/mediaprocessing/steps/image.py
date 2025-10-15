@@ -7,25 +7,22 @@ from enum import Enum
 from itertools import chain
 from pathlib import Path
 
-import cv2
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
 
-try:
-    import rembg  # type: ignore
-except ImportError:
-    rembg = None
-
-
 from ....plugins import pm
 from ....utils.exceptions import PipelineError
+from ....utils.rembg.rembg import remove
+from ....utils.rembg.session_factory import new_session
+from ....utils.rembg.sessions.base import BaseSession
 from ...config.groups.mediaprocessing import RembgModelType
 from ...config.models import models
 from ..context import ImageContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
+
+rembg_session: BaseSession | None = None
 
 
 def get_plugin_avail_filters():
@@ -221,104 +218,23 @@ class TextStep(PipelineStep):
         next_step(context)
 
 
-class RemoveChromakeyStep(PipelineStep):
-    """
-    References:
-        choose hsv parameters: https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html
-        https://stackoverflow.com/questions/10948589/choosing-the-correct-upper-and-lower-hsv-boundaries-for-color-detection-withcv/48367205#48367205
-        https://stackoverflow.com/questions/48109650/how-to-detect-two-different-colors-using-cv2-inrange-in-python-opencv
-        https://www.geeksforgeeks.org/opencv-invert-mask/
-        https://stackoverflow.com/questions/51719472/remove-green-background-screen-from-image-using-opencv-python
-        https://docs.opencv.org/3.4/d9/d61/tutorial_py_morphological_ops.html
-
-    Args:
-        pil_image (Image): _description_
-
-    Returns:
-        Image: _description_
-    """
-
-    def __init__(self, keycolor: int, tolerance: int) -> None:
-        self.keycolor = keycolor
-        self.tolerance = tolerance
-
-    def __call__(self, context: ImageContext, next_step: NextStep) -> None:
-        # constants derived from parameters
-        dilate_pixel = 4
-        blur_pixel = 2
-        keycolor_range_min_hsv = ((self.keycolor) / 2 - self.tolerance, 50, 50)
-        keycolor_range_max_hsv = ((self.keycolor) / 2 + self.tolerance, 255, 255)
-
-        def convert_from_cv2_to_image(img: np.ndarray) -> Image.Image:
-            return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
-
-        def convert_from_image_to_cv2(img: Image.Image) -> np.ndarray:
-            return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
-        frame = convert_from_image_to_cv2(context.image)
-        ## convert to hsv
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-
-        # mask of green
-        mask = cv2.inRange(hsv, np.array(keycolor_range_min_hsv), np.array(keycolor_range_max_hsv))
-        # remove noise/false positives within people area
-        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((dilate_pixel, dilate_pixel), np.uint8))
-        # dilate mask a bit to remove bit more when blurred
-        mask = cv2.dilate(mask, np.ones((dilate_pixel, dilate_pixel), np.uint8), iterations=1)
-
-        # Inverting the mask
-        mask_inverted = cv2.bitwise_not(mask)
-
-        # enhance edges by blur# blur threshold image
-        blur = cv2.GaussianBlur(mask_inverted, (0, 0), sigmaX=blur_pixel, sigmaY=blur_pixel, borderType=cv2.BORDER_DEFAULT)
-
-        # actually remove the background (so if transparency is ignored later in processing,
-        # the removed parts are black instead just return)
-        result = cv2.bitwise_and(frame, frame, mask=blur)
-        # create result with transparent channel
-        result = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
-        result[:, :, 3] = blur  # add mask to image as alpha channel
-
-        context.image = convert_from_cv2_to_image(result)
-        frame = None
-        mask = None
-        mask_inverted = None
-        blur = None
-        result = None
-
-        next_step(context)
-
-
 class RemovebgStep(PipelineStep):
     def __init__(self, model_name: RembgModelType) -> None:
-        # constants
-        self.alpha_matting = True
-        self.foreground_threshold = 250
-        self.background_threshold = 20
-        self.erode_size = 10
         self.model_name = model_name
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
-        if not rembg:
-            raise PipelineError("Background removal using AI is an optional package! You need to install the extra [rembg] to use it.")
+        global rembg_session
 
         try:
             tms = time.monotonic()
 
             # maybe in future we can reuse a session and predownload models, but as of now we start a session only on first use
-            session = rembg.new_session(model_name=self.model_name)
+            if not rembg_session or rembg_session.name() != self.model_name:
+                logger.info(f"ai background removal model {self.model_name} session initialized")
+                rembg_session = new_session(model_name=self.model_name)
 
-            cutout_image = rembg.remove(
-                context.image,
-                session=session,
-                alpha_matting=self.alpha_matting,
-                alpha_matting_foreground_threshold=self.foreground_threshold,
-                alpha_matting_background_threshold=self.background_threshold,
-                alpha_matting_erode_size=self.erode_size,
-                post_process_mask=False,  # False, because enabling seems to interfere with alpha matting
-                only_mask=False,  # slight speed up, check if needed later based on further media processing
-                # bgcolor=(0, 50, 50, 200),  # only for testing, keep None usually
-            )
+            cutout_image = remove(img=context.image, session=rembg_session)
+
             tme = time.monotonic()
             assert type(cutout_image) is Image.Image
             assert cutout_image is not context.image

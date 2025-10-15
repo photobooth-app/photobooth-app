@@ -1,7 +1,7 @@
 [project]
 name = "photobooth-app"
 version = "v8.1.0b1"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11"
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
 maintainers = [{ name = "Michael G", email = "me@mgineer85.de" }]
@@ -11,10 +11,10 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Multimedia :: Graphics",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
@@ -59,14 +59,15 @@ dependencies = [
   "simplejpeg>=1.8.2",
   "pyturbojpeg>=1.7.0",
   "pluggy>=1.5.0",
-  "av~=15.0.0",
+  "av~=16.0.0",
   "alembic>=1.15.2",
+  "onnxruntime",
   "niquests>=3.15.0",                                                               #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
   "nc-py-api>=0.20.1",
 ]
 
 [project.optional-dependencies]
-rembg = ["rembg[cpu]"]
+#rembg = ["onnxruntime"]
 
 [project.scripts]
 photobooth = "photobooth.__main__:main"
@@ -180,7 +181,7 @@ benchmark = [
 # only-include = ["./src/photobooth", "./src/web"]
 
 [build-system]
-requires = ["uv_build>=0.8.3,<0.9.0"]
+requires = ["uv_build>=0.8.3,<0.10.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]

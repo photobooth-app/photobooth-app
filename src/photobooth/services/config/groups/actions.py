@@ -96,7 +96,10 @@ class SingleImageProcessing(BaseModel):
 
     model_config = ConfigDict(title="Single captures processing after capture")
 
-    image_filter: PluginFilters = Field(default=PluginFilters("original"))
+    remove_background: bool = Field(
+        default=False,
+        description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
+    )
 
     fill_background_enable: bool = Field(
         default=False,
@@ -115,6 +118,9 @@ class SingleImageProcessing(BaseModel):
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
+
+    image_filter: PluginFilters = Field(default=PluginFilters("original"))
+
     img_frame_enable: bool = Field(
         default=False,
         description="Mount captured image to frame.",
@@ -140,6 +146,11 @@ class CollageProcessing(BaseModel):
     model_config = ConfigDict(title="Collage processing")
 
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
+
+    capture_remove_background: bool = Field(
+        default=False,
+        description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
+    )
 
     capture_fill_background_enable: bool = Field(
         default=False,
@@ -335,8 +346,9 @@ class GroupActions(BaseModel):
             SingleImageConfigurationSet(
                 jobcontrol=SingleImageJobControl(),
                 processing=SingleImageProcessing(
+                    remove_background=True,
                     img_background_enable=True,
-                    img_background_file=Path("userdata/demoassets/backgrounds/pink-7761356_1920.jpg"),
+                    img_background_file=Path("userdata/demoassets/backgrounds/background.jpg"),
                     img_frame_enable=True,
                     img_frame_file=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
                     texts_enable=True,
@@ -369,6 +381,9 @@ class GroupActions(BaseModel):
                     show_individual_captures_in_gallery=True,
                 ),
                 processing=CollageProcessing(
+                    capture_remove_background=True,
+                    capture_fill_background_enable=True,
+                    capture_fill_background_color=Color("white"),
                     canvas_width=1920,
                     canvas_height=1280,
                     merge_definition=[

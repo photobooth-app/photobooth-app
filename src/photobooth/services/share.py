@@ -1,8 +1,9 @@
 import logging
 import subprocess
 from datetime import datetime
+from typing import cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.orm import Session
 
 from photobooth.database.types import MediaitemTypes
@@ -178,7 +179,7 @@ class ShareService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(ShareLimits).where(ShareLimits.action == field)
-                result = session.execute(statement)
+                result = cast(CursorResult, session.execute(statement))
                 session.commit()
 
                 logger.info(f"deleted {result.rowcount} items from ShareLimits")
@@ -190,9 +191,9 @@ class ShareService(BaseService):
         try:
             with Session(engine) as session:
                 statement = delete(ShareLimits)
-                results = session.execute(statement)
+                result = cast(CursorResult, session.execute(statement))
                 session.commit()
-                logger.info(f"deleted {results.rowcount} entries from ShareLimits")
+                logger.info(f"deleted {result.rowcount} entries from ShareLimits")
 
         except Exception as exc:
             raise RuntimeError(f"failed to reset ShareLimits, error: {exc}") from exc

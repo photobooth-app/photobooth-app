@@ -71,6 +71,7 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
             logger.info(f"postprocessing capture: {capture_to_process=}")
 
             _config = SingleImageProcessing(
+                remove_background=self._configuration_set.processing.capture_remove_background,
                 fill_background_enable=self._configuration_set.processing.capture_fill_background_enable,
                 fill_background_color=self._configuration_set.processing.capture_fill_background_color,
                 img_background_enable=self._configuration_set.processing.capture_img_background_enable,
