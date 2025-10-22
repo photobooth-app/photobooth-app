@@ -1,16 +1,13 @@
 import logging
-import time
+import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
-import requests
-from wigglecam.connector import CameraNode, CameraPool
-from wigglecam.connector.dto import ConnectorJobRequest
-from wigglecam.connector.models import ConfigCameraPool
+import pynng
+from wigglecam.dto import ImageMessage
 
 from ...utils.helper import filename_str_time
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
@@ -19,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 class WigglecamBackend(AbstractBackend):
     def __init__(self, config: GroupCameraWigglecam):
-        self._config: GroupCameraWigglecam = config
         super().__init__()
-
-        self._camera_pool: CameraPool | None = None
+        self._config = config
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._worker_thread: StoppableThread | None = None
+        self._pub_trigger: pynng.Pub0 | None = None
+        self._sub_lores: pynng.Sub0 | None = None
+        self._sub_hires: pynng.Sub0 | None = None
 
     def start(self):
         super().start()
@@ -33,60 +30,119 @@ class WigglecamBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
-    def _wait_for_multicam_files(self) -> list[Path]:
-        assert self._camera_pool
-        camerapooljobrequest = ConnectorJobRequest(number_captures=1)
+    def setup_resource(self):
+        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
+        if max_index > len(self._config.nodes) - 1:
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
 
-        try:
-            connectorjobitem = self._camera_pool.setup_and_trigger_pool(camerapooljobrequest=camerapooljobrequest)
-            self._camera_pool.wait_until_all_finished_ok(connectorjobitem)
+        # host also subscribes to the hires replies
+        self._pub_trigger = pynng.Pub0()
+        for addr in self._config.nodes:
+            self._pub_trigger.dial(f"tcp://{addr}:5555", block=False)
 
-            downloadresult = self._camera_pool.download_all(connectorjobitem)
-            logger.info(downloadresult)
-            logger.info(f"this is from node[0], first item: {downloadresult.node_mediaitems[0].mediaitems[0].filepath}")
+        # Listen for lores streams
+        self._sub_lores = pynng.Sub0()
+        self._sub_lores.subscribe(b"")
+        self._sub_lores.recv_timeout = 1000
+        for addr in self._config.nodes:
+            self._sub_lores.dial(f"tcp://{addr}:5556", block=False)
 
-        except Exception as exc:
-            logger.error(f"Error processing: {exc}")
-            logger.info(self._camera_pool.get_nodes_status_formatted())
-            raise exc
-        else:
-            # currently only number_captures=1 supported, so we just take the first index from result
-            out = [x.mediaitems[0].filepath for x in downloadresult.node_mediaitems]
+        # Setup surveyor for hires
+        self._sub_hires = pynng.Sub0()
+        self._sub_hires.subscribe(b"")
+        self._sub_hires.recv_timeout = 1000
+        for addr in self._config.nodes:
+            self._sub_hires.dial(f"tcp://{addr}:5557", block=False)
 
-            return out
+        logger.info("pynng sockets connected")
 
-    def _wait_for_still_file(self) -> Path:
-        if not self._camera_pool:
-            time.sleep(0.2)  # add short delay because otherwise it's requested another still immediately.
-            raise RuntimeError("backend is not started yet, so it cannot deliver stills.")
+    def teardown_resource(self):
+        if self._pub_trigger:
+            self._pub_trigger.close()
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_wigglecam_", suffix=".jpg") as f:
-            f.write(self._camera_pool._nodes[self._config.index_cam_stills].camera_still())
+        if self._sub_lores:
+            self._sub_lores.close()
 
-            return Path(f.name)
+        if self._sub_hires:
+            self._sub_hires.close()
 
-    def _wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-
-        # alternative could be some kind of streaming proxy, but I did not find out yet how to prevent server from
-        # stalling if a request is still open to the stream...
-        # @router.get("/stream_proxy.mjpg")
-        # def video_stream_proxy():
-        #     async def iterfile():
-        #         async with httpx.AsyncClient() as client:
-        #             async with client.stream("GET", "http://wigglecam-dev3:8010/api/camera/stream.mjpg") as r:
-        #                 async for chunk in r.aiter_bytes():
-        #                     yield chunk
-
-        #     return StreamingResponse(iterfile(), media_type="multipart/x-mixed-replace; boundary=frame")
-
+    def _wait_for_lores_image(self) -> bytes:
+        """Return the latest lores JPEG frame."""
         self.pause_wait_for_lores_while_hires_capture()
-
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
-
             return self._lores_data.data
+
+    def _wait_for_still_file(self) -> Path:
+        # TODO: get highres from the one camera selected.
+        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_still-wigglecam_", suffix=".jpg") as f:
+            f.write(self._wait_for_lores_image())
+
+            return Path(f.name)
+
+    def _wait_for_multicam_files(self) -> list[Path]:
+        """Trigger a survey and collect hi-res images from all cameras."""
+        assert self._pub_trigger
+        assert self._sub_hires
+
+        print("Job start")
+
+        # Eindeutige ID für diese Umfrage
+        job_uuid = uuid.uuid4()
+        self._pub_trigger.send(job_uuid.bytes)
+
+        job_folder = Path("tmp", f"job_{job_uuid}")
+        job_folder.mkdir(exist_ok=True)
+
+        results: list[Path] = []
+
+        while True:
+            try:
+                data = self._sub_hires.recv()
+                msg = ImageMessage.from_bytes(data)
+
+                if msg.job_id != job_uuid:
+                    # Antwort gehört zu alter Umfrage -> ignorieren
+                    print("warning, old job id result received, ignored!")
+                    continue
+
+                fname = f"cam{msg.device_id}.jpg"
+                fpath = Path(job_folder, fname)
+                with open(fpath, "wb") as f:
+                    f.write(msg.jpg_bytes)
+
+                results.append(fpath)
+
+            except pynng.exceptions.Timeout:
+                print(f"job finished after 1s no more data, got {len(results)} result!")
+                break
+
+        return results
+
+    def run_service(self):
+        """Background loop to receive lores frames."""
+        assert self._sub_lores
+        while not self._stop_event.is_set():
+            try:
+                data = self._sub_lores.recv()
+                msg = ImageMessage.from_bytes(data)
+
+                if msg.device_id != self._config.index_cam_video:
+                    continue  # drop messages from the not-selected nodes
+
+                # store raw JPEG
+                with self._lores_data.condition:
+                    self._lores_data.data = msg.jpg_bytes
+                    self._lores_data.condition.notify_all()
+                self._frame_tick()
+            except pynng.Timeout:
+                continue
+            except Exception as exc:
+                logger.error(f"error receiving lores frame: {exc}")
+                continue
+
+        logger.info("run_service loop exited")
 
     def _on_configure_optimized_for_idle(self):
         pass
@@ -99,59 +155,3 @@ class WigglecamBackend(AbstractBackend):
 
     def _on_configure_optimized_for_livestream_paused(self):
         pass
-
-    def setup_resource(self):
-        # quick sanity check.
-        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
-        if max_index > len(self._config.nodes) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
-
-        nodes = []
-        for config_node in self._config.nodes:
-            node = CameraNode(config=config_node)
-            nodes.append(node)
-
-        self._config_camera_pool = ConfigCameraPool(**self._config.model_dump())  # extract the campoolconfig from wiggle element
-        self._camera_pool = CameraPool(ConfigCameraPool, nodes=nodes)
-
-        logger.info(self._camera_pool.get_nodes_status())
-        logger.info(f"pool healthy: {self._camera_pool.is_healthy()}")
-
-    def teardown_resource(self):
-        pass
-
-    def run_service(self):
-        while not self._stop_event.is_set():
-            if self.livestream_requested:
-                try:
-                    r = requests.get(
-                        f"{self._config.nodes[self._config.index_cam_video].base_url}/api/camera/stream.mjpg", stream=True, timeout=(2, 5)
-                    )
-                    r.raise_for_status()
-                except Exception as exc:
-                    time.sleep(1)
-                    logger.error(f"error requesting stream, keep trying. error: {exc}")
-                    continue
-
-                bytes = b""
-                for chunk in r.iter_content(chunk_size=1024):
-                    bytes += chunk
-                    a = bytes.find(b"\xff\xd8")
-                    b = bytes.find(b"\xff\xd9")
-                    if a != -1 and b != -1:
-                        jpeg_bytes = bytes[a : b + 2]
-                        bytes = bytes[b + 2 :]
-
-                        # notify about jpg
-                        with self._lores_data.condition:
-                            self._lores_data.data = jpeg_bytes
-                            self._lores_data.condition.notify_all()
-
-                        self._frame_tick()
-
-                    if self._stop_event.is_set():
-                        break
-            else:
-                time.sleep(0.1)
-
-        logger.info("_worker_fun left")

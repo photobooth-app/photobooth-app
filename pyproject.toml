@@ -42,7 +42,7 @@ dependencies = [
   "pydantic-extra-types>=2.3.0",
   "pydantic-settings~=2.11.0",
   "sse-starlette>=2.2.0,<4.0.0",
-  "uvicorn[standard]>=0.24",                                                        # adds websockets and uvloop
+  "uvicorn[standard]>=0.24", # adds websockets and uvloop
   "python-dotenv>=1.0.0",
   "pyserial~=3.5",
   "jsonref>=1.1.0",
@@ -62,8 +62,9 @@ dependencies = [
   "av~=16.0.0",
   "alembic>=1.15.2",
   "onnxruntime",
-  "niquests>=3.15.0",                                                               #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
+  "niquests>=3.15.0", #niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
   "nc-py-api>=0.20.1",
+  "pynng",
 ]
 
 [project.scripts]
@@ -183,3 +184,6 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = ["photobooth", "web"]
+
+[tool.uv.sources]
+wigglecam = { path = "../photobooth-wigglecam", editable = true }
