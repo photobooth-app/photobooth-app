@@ -280,7 +280,7 @@ class GroupCameraWigglecam(BaseModelCamera):
         description="Index of one backend below to capture live preview and video.",
     )
 
-    nodes: list[WigglecamNodes] = Field(
+    devices: list[WigglecamNodes] = Field(
         default=[WigglecamNodes()],
     )
 
