@@ -249,6 +249,23 @@ class GroupCameraDigicamcontrol(BaseModelCamera):
     )
 
 
+class WigglecamNodes(BaseModel):
+    model_config = ConfigDict(title="Each camera is hooked to a node.")
+
+    # enable: bool = Field(
+    #     default=True,
+    #     description="Enable node. Calibration might be invalid if chaning the nodes.",
+    # )
+    address: str = Field(
+        default="0.0.0.0",
+        description="IP address to connect to the node.",
+    )
+    base_port: int = Field(
+        default=5550,
+        description="Base port to connect to the node.",
+    )
+
+
 class GroupCameraWigglecam(BaseModelCamera):
     model_config = ConfigDict(title="Wigglecam")
 
@@ -263,8 +280,8 @@ class GroupCameraWigglecam(BaseModelCamera):
         description="Index of one backend below to capture live preview and video.",
     )
 
-    nodes: list[str] = Field(
-        default=["0.0.0.0"],
+    nodes: list[WigglecamNodes] = Field(
+        default=[WigglecamNodes()],
     )
 
 

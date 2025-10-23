@@ -37,22 +37,22 @@ class WigglecamBackend(AbstractBackend):
 
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
-        for addr in self._config.nodes:
-            self._pub_trigger.dial(f"tcp://{addr}:5555", block=False)
+        for node in self._config.nodes:
+            self._pub_trigger.dial(f"tcp://{node.address}:{node.base_port + 0}", block=False)
 
         # Listen for lores streams
         self._sub_lores = pynng.Sub0()
         self._sub_lores.subscribe(b"")
         self._sub_lores.recv_timeout = 1000
-        for addr in self._config.nodes:
-            self._sub_lores.dial(f"tcp://{addr}:5556", block=False)
+        for node in self._config.nodes:
+            self._sub_lores.dial(f"tcp://{node.address}:{node.base_port + 1}", block=False)
 
-        # Setup surveyor for hires
+        # Setup Sub for hires
         self._sub_hires = pynng.Sub0()
         self._sub_hires.subscribe(b"")
         self._sub_hires.recv_timeout = 1000
-        for addr in self._config.nodes:
-            self._sub_hires.dial(f"tcp://{addr}:5557", block=False)
+        for node in self._config.nodes:
+            self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
         logger.info("pynng sockets connected")
 
@@ -82,7 +82,7 @@ class WigglecamBackend(AbstractBackend):
             return Path(f.name)
 
     def _wait_for_multicam_files(self) -> list[Path]:
-        """Trigger a survey and collect hi-res images from all cameras."""
+        """Trigger a capture request and collect hi-res images from all cameras."""
         assert self._pub_trigger
         assert self._sub_hires
 
@@ -114,9 +114,13 @@ class WigglecamBackend(AbstractBackend):
 
                 results.append(fpath)
 
-            except pynng.exceptions.Timeout:
+                if len(results) == len(self._config.nodes):
+                    print("got all results, job completed!")
+                    break
+
+            except pynng.exceptions.Timeout as exc:
                 print(f"job finished after 1s no more data, got {len(results)} result!")
-                break
+                raise TimeoutError("timeout receiving frames") from exc
 
         return results
 
