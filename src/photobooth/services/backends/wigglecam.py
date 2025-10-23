@@ -1,17 +1,41 @@
 import logging
+import struct
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
 import pynng
-from wigglecam.dto import ImageMessage
 
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ImageMessage:
+    """This is packaged in the wigglecam nodes and needs to decode here:
+    TODO: Maybe in future reuse the definition from the wigglecam module, once everything stabilizes.
+    For now keep it as is, since this one is the only item depends on wigglecam as import.
+
+    """
+
+    device_id: int
+    jpg_bytes: bytes
+    job_id: uuid.UUID | None = None
+
+    _header_fmt = "iI16s"  # device_id, jpg_len, uuid (16 Bytes)
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "ImageMessage":
+        header_size = struct.calcsize(cls._header_fmt)
+        device_id, jpg_len, uuid_bytes = struct.unpack(cls._header_fmt, data[:header_size])
+        jpg_bytes = data[header_size : header_size + jpg_len]
+        job_id = None if uuid_bytes == b"\x00" * 16 else uuid.UUID(bytes=uuid_bytes)
+        return cls(device_id, jpg_bytes, job_id)
 
 
 class WigglecamBackend(AbstractBackend):
