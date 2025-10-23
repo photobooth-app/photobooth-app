@@ -7,7 +7,6 @@ import sys
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from wigglecam.connector.models import ConfigCameraNode, ConfigCameraPool
 
 Orientation = Literal["1: 0°", "2: 0° mirrored", "3: 180°", "4: 180° mirrored", "5: 90°", "6: 90° mirrored", "7: 270°", "8: 270° mirrored"]
 
@@ -250,8 +249,25 @@ class GroupCameraDigicamcontrol(BaseModelCamera):
     )
 
 
-class GroupCameraWigglecam(ConfigCameraPool):
-    model_config = ConfigDict(title="Wigglecam Connector")
+class WigglecamNodes(BaseModel):
+    model_config = ConfigDict(title="Each camera is hooked to a node.")
+
+    # enable: bool = Field(
+    #     default=True,
+    #     description="Enable node. Calibration might be invalid if chaning the nodes.",
+    # )
+    address: str = Field(
+        default="0.0.0.0",
+        description="IP address to connect to the node.",
+    )
+    base_port: int = Field(
+        default=5550,
+        description="Base port to connect to the node.",
+    )
+
+
+class GroupCameraWigglecam(BaseModelCamera):
+    model_config = ConfigDict(title="Wigglecam")
 
     backend_type: Literal["Wigglecam"] = "Wigglecam"
 
@@ -264,9 +280,9 @@ class GroupCameraWigglecam(ConfigCameraPool):
         description="Index of one backend below to capture live preview and video.",
     )
 
-    nodes: list[ConfigCameraNode] = [
-        ConfigCameraNode(description="TestNode"),
-    ]
+    devices: list[WigglecamNodes] = Field(
+        default=[WigglecamNodes()],
+    )
 
 
 BackendsBase = GroupCameraVirtual | GroupCameraPyav | GroupCameraWigglecam

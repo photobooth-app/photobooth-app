@@ -16,7 +16,7 @@ import threading
 # otherwise:
 #
 # def funct():
-#     while not current_thread().stopped():
+#     while not cast(StoppableThread,current_thread()).stopped():
 #         time.sleep(1)
 #         print("Hello")
 

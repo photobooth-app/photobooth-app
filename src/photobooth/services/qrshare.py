@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
-import requests
+import niquests
 
 from ..appconfig import appconfig
 from ..utils.stoppablethread import StoppableThread
@@ -89,7 +89,7 @@ class QrShareService(BaseService):
                 "apikey": appconfig.qrshare.shareservice_apikey,
             }
             try:
-                r = requests.post(
+                r = niquests.post(
                     self.shareservice_dl_php_url,
                     data=payload,
                     stream=True,
@@ -102,7 +102,7 @@ class QrShareService(BaseService):
                 else:
                     raise RuntimeError(f"error connecting to shareservice dl.php, error {r.status_code} {r.text}")
 
-            except requests.exceptions.ReadTimeout as exc:
+            except niquests.exceptions.ReadTimeout as exc:
                 logger.warning(f"error connecting to service: {exc}")
                 time.sleep(5)
                 continue  # try again after wait time
@@ -160,9 +160,9 @@ class QrShareService(BaseService):
                         start_time = time.time()
 
                         try:
-                            r = requests.post(
+                            r = niquests.post(
                                 self.shareservice_dl_php_url,
-                                files=request_upload_file,
+                                files=request_upload_file,  # type: ignore
                                 data={
                                     "action": "upload",
                                     "apikey": appconfig.qrshare.shareservice_apikey,

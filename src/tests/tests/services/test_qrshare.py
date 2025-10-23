@@ -3,8 +3,8 @@ import logging
 from collections.abc import Generator
 from uuid import uuid4
 
+import niquests
 import pytest
-import requests
 from PIL import Image
 
 from photobooth.appconfig import appconfig
@@ -13,7 +13,7 @@ from photobooth.database.models import Mediaitem
 
 logger = logging.getLogger(name=None)
 
-r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "info"}, allow_redirects=False)
+r = niquests.get(appconfig.qrshare.shareservice_url, params={"action": "info"}, allow_redirects=False)
 is_valid_service = False
 try:
     is_valid_service = "version" in list(r.json().keys())
@@ -44,7 +44,7 @@ def _mediaitem(request, _container: Container) -> Generator[Mediaitem, None, Non
 
 def test_shareservice_landingpage_valid():
     # ensure that the landingpage is available - this is a default configured address and helps the user during setup of a booth
-    r = requests.get("https://photobooth-app.org/extras/shareservice-landing/")
+    r = niquests.get("https://photobooth-app.org/extras/shareservice-landing/")
     assert r.ok
 
 
@@ -52,21 +52,21 @@ def test_shareservice_urls_valid():
     """test some common actions on url"""
 
     # /
-    r = requests.get(appconfig.qrshare.shareservice_url)
+    r = niquests.get(appconfig.qrshare.shareservice_url)
     assert r.status_code == 406
 
     # info action
-    r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "info"})
+    r = niquests.get(appconfig.qrshare.shareservice_url, params={"action": "info"})
     logger.info(f"{r.text=}")
     assert r.status_code == 200
 
     # invalid action
-    r = requests.get(appconfig.qrshare.shareservice_url, params={"action": "nonexistentaction"})
+    r = niquests.get(appconfig.qrshare.shareservice_url, params={"action": "nonexistentaction"})
     logger.info(f"{r.text=}")
     assert r.status_code == 406
 
     # invalid apikey
-    r = requests.post(
+    r = niquests.post(
         appconfig.qrshare.shareservice_url,
         files=None,
         data={
@@ -83,7 +83,7 @@ def test_shareservice_download_all_mediaitem_types(_mediaitem: Mediaitem):
     """start service and try to download an image"""
 
     logger.info(f"check to download {_mediaitem.id=}, {_mediaitem.media_type=}")
-    r = requests.get(
+    r = niquests.get(
         appconfig.qrshare.shareservice_url,
         params={"action": "download", "id": str(_mediaitem.id)},
     )
@@ -92,19 +92,21 @@ def test_shareservice_download_all_mediaitem_types(_mediaitem: Mediaitem):
     assert r.status_code == 200
 
     # check we received something
+    assert r.content
     assert len(r.content) > 0
 
 
 def test_shareservice_download_nonexistant_image(_container: Container):
     """start service and try to download an image that does not exist"""
 
-    r = requests.get(
+    r = niquests.get(
         appconfig.qrshare.shareservice_url,
         params={"action": "download", "id": uuid4().hex},
     )
 
     # valid status code is 500 because image not existing.
     assert r.status_code == 500
+    assert r.content
     # despite error, there needs to be delivered an image on this action endpoint,
     # so it can be displayed instead the requested image instead
     try:
