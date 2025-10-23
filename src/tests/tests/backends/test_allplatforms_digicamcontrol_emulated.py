@@ -4,8 +4,8 @@ import shutil
 from pathlib import Path
 from random import randrange
 
+import niquests as requests
 import pytest
-import requests
 from PIL import Image
 from pytest_httpserver import HTTPServer
 from werkzeug.wrappers import Request, Response

@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
-import requests
+import niquests as requests
 
 from ..appconfig import appconfig
 from ..utils.stoppablethread import StoppableThread
@@ -162,7 +162,7 @@ class QrShareService(BaseService):
                         try:
                             r = requests.post(
                                 self.shareservice_dl_php_url,
-                                files=request_upload_file,
+                                files=request_upload_file,  # type: ignore
                                 data={
                                     "action": "upload",
                                     "apikey": appconfig.qrshare.shareservice_apikey,

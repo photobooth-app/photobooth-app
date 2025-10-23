@@ -5,7 +5,7 @@ import urllib.parse
 from pathlib import Path
 from threading import Condition
 
-import requests
+import niquests as requests
 
 from ..config.groups.cameras import GroupCameraDigicamcontrol
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -177,6 +177,7 @@ class DigicamcontrolBackend(AbstractBackend):
                                 raise RuntimeError(f"error retrieving capture, status_code {r.status_code}, text: {error_translation[r.text]}")
                             else:
                                 # at this point it's assumed that r.text holds the filename:
+                                assert r.text
                                 captured_filepath = Path(tmp_dir, r.text)
                                 break  # no else below, its fine, proceed deliver image
 
@@ -237,6 +238,7 @@ class DigicamcontrolBackend(AbstractBackend):
                         preview_failcounter = 0
 
                     with self._lores_data.condition:
+                        assert r.content
                         self._lores_data.data = r.content
                         self._lores_data.condition.notify_all()
 

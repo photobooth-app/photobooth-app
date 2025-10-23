@@ -3,8 +3,8 @@ import logging
 from collections.abc import Generator
 from uuid import uuid4
 
+import niquests as requests
 import pytest
-import requests
 from PIL import Image
 
 from photobooth.appconfig import appconfig
