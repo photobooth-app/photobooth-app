@@ -5,7 +5,7 @@ import urllib.parse
 from pathlib import Path
 from threading import Condition
 
-import niquests as requests
+import niquests
 
 from ..config.groups.cameras import GroupCameraDigicamcontrol
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -113,7 +113,7 @@ class DigicamcontrolBackend(AbstractBackend):
     def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
         try:
-            session = requests.Session()
+            session = niquests.Session()
             r = session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Show")
             r.raise_for_status()
             r = session.get(f"{self._config.base_url}/?CMD=All_Minimize")
@@ -132,7 +132,7 @@ class DigicamcontrolBackend(AbstractBackend):
     def teardown_resource(self):
         # when stopping the backend also stop the livestream by following command.
         # if livestream is stopped, the camera is available to other processes again.
-        session = requests.Session()
+        session = niquests.Session()
         session.get(f"{self._config.base_url}/?CMD=LiveViewWnd_Hide")
         # not raise_for_status, because we ignore and want to continue stopping the backend
 
@@ -140,7 +140,7 @@ class DigicamcontrolBackend(AbstractBackend):
         # start in preview mode
         self._on_configure_optimized_for_idle()
 
-        session = requests.Session()
+        session = niquests.Session()
         preview_failcounter = 0
 
         while not self._stop_event.is_set():  # repeat until stopped

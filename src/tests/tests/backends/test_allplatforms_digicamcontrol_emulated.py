@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 from random import randrange
 
-import niquests as requests
+import niquests
 import pytest
 from PIL import Image
 from pytest_httpserver import HTTPServer
@@ -86,7 +86,7 @@ def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digi
     get_images(backend_digicamcontrol_emulated)
 
     # disable live view
-    session = requests.Session()
+    session = niquests.Session()
     r = session.get(f"{backend_digicamcontrol_emulated._config.base_url}/?CMD=LiveViewWnd_Hide")
     assert r.status_code == 200
     if not r.ok:
