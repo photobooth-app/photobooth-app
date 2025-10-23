@@ -56,26 +56,26 @@ class WigglecamBackend(AbstractBackend):
 
     def setup_resource(self):
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
-        if max_index > len(self._config.nodes) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.nodes) - 1}")
+        if max_index > len(self._config.devices) - 1:
+            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
 
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
-        for node in self._config.nodes:
+        for node in self._config.devices:
             self._pub_trigger.dial(f"tcp://{node.address}:{node.base_port + 0}", block=False)
 
         # Listen for lores streams
         self._sub_lores = pynng.Sub0()
         self._sub_lores.subscribe(b"")
         self._sub_lores.recv_timeout = 1000
-        for node in self._config.nodes:
+        for node in self._config.devices:
             self._sub_lores.dial(f"tcp://{node.address}:{node.base_port + 1}", block=False)
 
         # Setup Sub for hires
         self._sub_hires = pynng.Sub0()
         self._sub_hires.subscribe(b"")
         self._sub_hires.recv_timeout = 1000
-        for node in self._config.nodes:
+        for node in self._config.devices:
             self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
         logger.info("pynng sockets connected")
@@ -138,7 +138,7 @@ class WigglecamBackend(AbstractBackend):
 
                 results.append(fpath)
 
-                if len(results) == len(self._config.nodes):
+                if len(results) == len(self._config.devices):
                     print("got all results, job completed!")
                     break
 
