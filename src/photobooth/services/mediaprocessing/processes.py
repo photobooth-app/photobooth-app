@@ -10,13 +10,14 @@ from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
 from ...database.models import Mediaitem
-from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
+from ..config.groups.actions import AnimationProcessing, CollageProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
 from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, TextStep
+from .steps.multicamera import AutoPivotPointStep, CropCommonAreaStep, OffsetPerOpticalFlowStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -209,19 +210,24 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
 
 def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = MulticameraProcessing(**mediaitem.pipeline_config)
+    # config = MulticameraProcessing(**mediaitem.pipeline_config)
 
     ## prepare: create canvas
-    canvas_size = (config.canvas_width, config.canvas_height)
+    # canvas_size = (config.canvas_width, config.canvas_height)
 
     ## stage: merge captured images and predefined to one image with transparency
     multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = MulticameraContext(multicamera_images)
     steps = []
-    steps.append(AlignSizesStep(canvas_size))
+    steps.append(AutoPivotPointStep())
+    steps.append(OffsetPerOpticalFlowStep())
+    steps.append(CropCommonAreaStep())
+
     pipeline = Pipeline[MulticameraContext](*steps)
     pipeline(context)
+
+    logger.info(context)
 
     # sequence like 1-2-3-4-3-2-restart
     sequence_images = context.images

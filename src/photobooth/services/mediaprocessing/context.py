@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image
@@ -30,3 +30,6 @@ class VideoContext:
 @dataclass
 class MulticameraContext:
     images: list[Image.Image]
+    base_img_pt_0: tuple[int, int] | None = None
+
+    relative_offsets: list[tuple[int, int]] = field(default_factory=list)
