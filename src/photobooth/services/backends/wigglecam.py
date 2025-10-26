@@ -74,7 +74,7 @@ class WigglecamBackend(AbstractBackend):
         # Setup Sub for hires
         self._sub_hires = pynng.Sub0()
         self._sub_hires.subscribe(b"")
-        self._sub_hires.recv_timeout = 1000
+        self._sub_hires.recv_timeout = 3000
         for node in self._config.devices:
             self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
