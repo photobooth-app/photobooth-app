@@ -17,16 +17,108 @@ class AutoPivotPointStep(PipelineStep):
     def __init__(self) -> None: ...
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
+        import cv2
+
+        def find_good_features(img: Image.Image, roi_center: tuple[int, int], roi_size: int = 100, max_corners: int = 20) -> np.ndarray:
+            """
+            Find good Shi-Tomasi corners in a ROI centered at roi_center.
+            Returns an array of shape (N,1,2) with float32 coordinates,
+            ready to be passed into cv2.calcOpticalFlowPyrLK.
+            """
+            img_arr = np.array(img)
+            h, w = img_arr.shape[:2]
+            cx, cy = roi_center
+
+            # define ROI bounds (clamped to image size)
+            x1, y1 = max(cx - roi_size, 0), max(cy - roi_size, 0)
+            x2, y2 = min(cx + roi_size, w - 1), min(cy + roi_size, h - 1)
+
+            roi = img_arr[y1:y2, x1:x2]
+            gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+            corners = cv2.goodFeaturesToTrack(gray_roi, maxCorners=max_corners, qualityLevel=0.01, minDistance=5)
+
+            if corners is None:
+                # fallback: just return the ROI center
+                return np.array([[[cx, cy]]], dtype=np.float32)
+
+            # shift ROI coords back to full image
+            corners[:, 0, 0] += x1
+            corners[:, 0, 1] += y1
+
+            # --- Debug visualization ---
+            debug_img = img_arr.copy()
+            # draw ROI rectangle
+            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 255, 0), 1)
+            # draw all corners
+            for c in corners:
+                x, y = c.ravel()
+                cv2.circle(debug_img, (int(x), int(y)), 4, (0, 255, 0), 1)
+            # mark ROI center
+            cv2.drawMarker(debug_img, (cx, cy), (255, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=10, thickness=1)
+
+            cv2.imwrite("tmp/corners.jpg", debug_img)
+            # ----------------------------
+
+            return corners.astype(np.float32)
+
+        def find_stable_point(img, roi_center: tuple[int, int], roi_size: int = 100) -> tuple[int, int]:
+            # https://docs.opencv.org/4.x/d4/d8c/tutorial_py_shi_tomasi.html
+            img = np.array(img)
+            h, w = img.shape[:2]
+            cx, cy = roi_center
+
+            # define ROI bounds (clamped to image size)
+            x1, y1 = max(cx - roi_size, 0), max(cy - roi_size, 0)
+            x2, y2 = min(cx + roi_size, w - 1), min(cy + roi_size, h - 1)
+
+            roi = img[y1:y2, x1:x2]
+            gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+
+            corners = cv2.goodFeaturesToTrack(gray_roi, maxCorners=20, qualityLevel=0.01, minDistance=5)
+
+            if corners is None:
+                return (cx, cy)  # fallback: ROI center
+
+            # shift ROI coords back to full image
+            corners[:, 0, 0] += x1
+            corners[:, 0, 1] += y1
+
+            # just pick the first corner (already strongest)
+            best = corners[0].ravel()
+            best_pt = (int(best[0]), int(best[1]))
+
+            # --- Debug visualization ---
+            debug_img = img.copy()
+            # draw ROI rectangle
+            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 255, 0), 1)
+            # draw all corners
+            for c in corners:
+                x, y = c.ravel()
+                cv2.circle(debug_img, (int(x), int(y)), 4, (0, 255, 0), 1)
+            # highlight best corner
+            cv2.circle(debug_img, best_pt, 6, (0, 0, 255), 2)
+            # mark ROI center
+            cv2.drawMarker(debug_img, (cx, cy), (255, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=10, thickness=1)
+
+            cv2.imwrite("tmp/corners.jpg", debug_img)
+            # ----------------------------
+
+            return best_pt
+
         def center_of_image(img: Image.Image) -> tuple[int, int]:
             w, h = img.size
 
             return (w // 2, h // 2)
 
-        # def ... todoOTHERMETHOD
-        # https://docs.opencv.org/4.x/d4/d8c/tutorial_py_shi_tomasi.html
+        def upper_third_of_image(img: Image.Image) -> tuple[int, int]:
+            w, h = img.size
+
+            return (w // 2, int(h // 2.5))
 
         # update result in context.
-        context.base_img_pt_0 = center_of_image(context.images[0])
+        # context.base_img_pt_0 = find_stable_point(context.images[0], upper_third_of_image(context.images[0]))
+        context.base_img_pt_0 = find_good_features(context.images[0], upper_third_of_image(context.images[0]))
 
         logger.info(f"{context.base_img_pt_0=}")
 
@@ -34,33 +126,34 @@ class AutoPivotPointStep(PipelineStep):
 
 
 class OffsetPerOpticalFlowStep(PipelineStep):
-    """Align next_img to prev_img using optical flow of pivot point."""
+    """Align next_img to prev_img using optical flow of multiple pivot points."""
 
     def __init__(self) -> None: ...
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
-        # aligned_images: list[Image.Image] = []
         relative_offsets: list[tuple[int, int]] = []
-        assert context.base_img_pt_0
+        assert context.base_img_pt_0 is not None
 
         base_img = context.images[0]
         gray_base_arr = self.preprocess(base_img)
 
-        pt_base = context.base_img_pt_0
-        pt_base_arr = np.array([[pt_base]], dtype=np.float32)
+        # base points: np.ndarray of shape (N,1,2), float32
+        pt_base_arr: np.ndarray = context.base_img_pt_0.astype(np.float32)
 
-        visL = gray_base_arr.copy()
-        cv2.drawMarker(visL, (int(pt_base[0]), int(pt_base[1])), (0, 255, 0), cv2.MARKER_TILTED_CROSS, 20, 2)
+        # visualize base points
+        visL = cv2.cvtColor(gray_base_arr, cv2.COLOR_GRAY2BGR)
+        for p in pt_base_arr:
+            x, y = p.ravel()
+            cv2.drawMarker(visL, (int(x), int(y)), (0, 255, 0), cv2.MARKER_TILTED_CROSS, 20, 2)
         cv2.imwrite("tmp/markers_0.png", visL)
 
-        # Chain-align each subsequent image to the ref img one
-        relative_offsets.append((0, 0))  # base has no offset to apply later
-        # base_img.save(f"tmp/recentered_img_{i}.jpg")  # actually no offset on base.
+        # base has no offset
+        relative_offsets.append((0, 0))
 
+        # track across subsequent images
         for idx, next_img in enumerate(context.images[1:], start=1):
             gray_next_arr = self.preprocess(next_img)
 
-            # p1 is in absolute units
             p1, st, err = cv2.calcOpticalFlowPyrLK(
                 gray_base_arr,
                 gray_next_arr,
@@ -71,31 +164,39 @@ class OffsetPerOpticalFlowStep(PipelineStep):
                 criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01),
             )
 
-            if st[0][0] != 1:
-                logger.warning("Korrespondenz konnte nicht gefunden werden, using image center as fallback")
-                pt_next = pt_base
+            # filter valid points
+            good_new = p1[st == 1]
+            good_old = pt_base_arr[st == 1]
+
+            if len(good_new) == 0:
+                logger.warning("No correspondences found, using image center as fallback")
+                h, w = gray_next_arr.shape[:2]
+                pt_next_mean = (w // 2, h // 2)
+                pt_base_mean = (w // 2, h // 2)
             else:
-                pt_next = tuple(p1[0, 0])
+                # average positions for stability
+                pt_next_mean = tuple(np.mean(good_new, axis=0))
+                pt_base_mean = tuple(np.mean(good_old, axis=0))
 
-            offset = (int(pt_next[0] - pt_base[0]), int(pt_next[1] - pt_base[1]))
-
+            offset = (int(pt_next_mean[0] - pt_base_mean[0]), int(pt_next_mean[1] - pt_base_mean[1]))
             relative_offsets.append(offset)
 
-            # Marker einzeichnen
-            visR = gray_next_arr.copy()
-            cv2.drawMarker(visR, (int(pt_next[0]), int(pt_next[1])), (0, 255, 0), cv2.MARKER_TILTED_CROSS, 20, 2)
+            # visualize tracked points
+            visR = cv2.cvtColor(gray_next_arr, cv2.COLOR_GRAY2BGR)
+            for p in good_new:
+                x, y = p.ravel()
+                cv2.circle(visR, (int(x), int(y)), 3, (0, 255, 0), 1)
+            cv2.drawMarker(visR, (int(pt_next_mean[0]), int(pt_next_mean[1])), (0, 0, 255), cv2.MARKER_TILTED_CROSS, 20, 2)
             cv2.imwrite(f"tmp/markers_{idx}.png", visR)
 
         context.relative_offsets = relative_offsets
-
         next_step(context)
 
     @staticmethod
     def preprocess(img: Image.Image) -> MatLike:
         img_arr = np.array(img)
         gray = cv2.cvtColor(img_arr, cv2.COLOR_RGB2GRAY)
-        # eq = cv2.equalizeHist(gray)
-        eq = gray
+        eq = gray  # or cv2.equalizeHist(gray)
         blur = cv2.GaussianBlur(eq, (5, 5), 0)
         return blur
 
