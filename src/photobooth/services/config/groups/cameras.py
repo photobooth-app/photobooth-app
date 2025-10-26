@@ -256,6 +256,10 @@ class WigglecamNodes(BaseModel):
     #     default=True,
     #     description="Enable node. Calibration might be invalid if chaning the nodes.",
     # )
+    description: str = Field(
+        default="",
+        description="Description just for you to distinguish the devices.",
+    )
     address: str = Field(
         default="0.0.0.0",
         description="IP address to connect to the node.",
@@ -281,7 +285,7 @@ class GroupCameraWigglecam(BaseModelCamera):
     )
 
     devices: list[WigglecamNodes] = Field(
-        default=[WigglecamNodes()],
+        default=[WigglecamNodes(description="default host1")],
     )
 
 
