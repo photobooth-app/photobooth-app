@@ -18,6 +18,8 @@ def dummy_image(size: tuple[int, int] = (400, 250), offset_x: int = 0, offset_y:
     mask = Image.new("L", size, 0)
     draw = ImageDraw.Draw(mask)
     draw.rectangle((0, 0, elli_rad, elli_rad), fill=255)
+    draw.rectangle((10, 10, 10 + elli_rad, 10 + elli_rad), fill=255)
+    draw.rectangle((10, 20, 10 + elli_rad, 20 + elli_rad), fill=255)
 
     canvas = Image.new("RGB", size, "green")
 

@@ -4,6 +4,7 @@ import logging
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 from cv2.typing import MatLike
 from PIL import Image, ImageDraw
 
@@ -19,7 +20,7 @@ class AutoPivotPointStep(PipelineStep):
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
         import cv2
 
-        def find_good_features(img: Image.Image, roi_center: tuple[int, int], roi_size: int = 100, max_corners: int = 20) -> np.ndarray:
+        def find_good_features(img: Image.Image, roi_center: tuple[int, int], roi_size: int = 100, max_corners: int = 20) -> npt.NDArray[np.float32]:
             """
             Find good Shi-Tomasi corners in a ROI centered at roi_center.
             Returns an array of shape (N,1,2) with float32 coordinates,
@@ -62,65 +63,15 @@ class AutoPivotPointStep(PipelineStep):
 
             return corners.astype(np.float32)
 
-        def find_stable_point(img, roi_center: tuple[int, int], roi_size: int = 100) -> tuple[int, int]:
-            # https://docs.opencv.org/4.x/d4/d8c/tutorial_py_shi_tomasi.html
-            img = np.array(img)
-            h, w = img.shape[:2]
-            cx, cy = roi_center
-
-            # define ROI bounds (clamped to image size)
-            x1, y1 = max(cx - roi_size, 0), max(cy - roi_size, 0)
-            x2, y2 = min(cx + roi_size, w - 1), min(cy + roi_size, h - 1)
-
-            roi = img[y1:y2, x1:x2]
-            gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-
-            corners = cv2.goodFeaturesToTrack(gray_roi, maxCorners=20, qualityLevel=0.01, minDistance=5)
-
-            if corners is None:
-                return (cx, cy)  # fallback: ROI center
-
-            # shift ROI coords back to full image
-            corners[:, 0, 0] += x1
-            corners[:, 0, 1] += y1
-
-            # just pick the first corner (already strongest)
-            best = corners[0].ravel()
-            best_pt = (int(best[0]), int(best[1]))
-
-            # --- Debug visualization ---
-            debug_img = img.copy()
-            # draw ROI rectangle
-            cv2.rectangle(debug_img, (x1, y1), (x2, y2), (255, 255, 0), 1)
-            # draw all corners
-            for c in corners:
-                x, y = c.ravel()
-                cv2.circle(debug_img, (int(x), int(y)), 4, (0, 255, 0), 1)
-            # highlight best corner
-            cv2.circle(debug_img, best_pt, 6, (0, 0, 255), 2)
-            # mark ROI center
-            cv2.drawMarker(debug_img, (cx, cy), (255, 0, 0), markerType=cv2.MARKER_CROSS, markerSize=10, thickness=1)
-
-            cv2.imwrite("tmp/corners.jpg", debug_img)
-            # ----------------------------
-
-            return best_pt
-
-        def center_of_image(img: Image.Image) -> tuple[int, int]:
-            w, h = img.size
-
-            return (w // 2, h // 2)
-
         def upper_third_of_image(img: Image.Image) -> tuple[int, int]:
             w, h = img.size
 
             return (w // 2, int(h // 2.5))
 
         # update result in context.
-        # context.base_img_pt_0 = find_stable_point(context.images[0], upper_third_of_image(context.images[0]))
-        context.base_img_pt_0 = find_good_features(context.images[0], upper_third_of_image(context.images[0]))
+        context.good_features_to_track = find_good_features(context.images[0], upper_third_of_image(context.images[0]))
 
-        logger.info(f"{context.base_img_pt_0=}")
+        logger.info(f"{context.good_features_to_track=}")
 
         next_step(context)
 
@@ -132,19 +83,16 @@ class OffsetPerOpticalFlowStep(PipelineStep):
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
         relative_offsets: list[tuple[int, int]] = []
-        assert context.base_img_pt_0 is not None
+        assert context.good_features_to_track is not None
 
-        base_img = context.images[0]
-        gray_base_arr = self.preprocess(base_img)
-
-        # base points: np.ndarray of shape (N,1,2), float32
-        pt_base_arr: np.ndarray = context.base_img_pt_0.astype(np.float32)
+        gray_base_arr = self.preprocess(context.images[0])
+        base_pts = context.good_features_to_track
 
         # visualize base points
         visL = cv2.cvtColor(gray_base_arr, cv2.COLOR_GRAY2BGR)
-        for p in pt_base_arr:
+        for p in base_pts:
             x, y = p.ravel()
-            cv2.drawMarker(visL, (int(x), int(y)), (0, 255, 0), cv2.MARKER_TILTED_CROSS, 20, 2)
+            cv2.circle(visL, (int(x), int(y)), 3, (0, 255, 0), 1)
         cv2.imwrite("tmp/markers_0.png", visL)
 
         # base has no offset
@@ -154,10 +102,10 @@ class OffsetPerOpticalFlowStep(PipelineStep):
         for idx, next_img in enumerate(context.images[1:], start=1):
             gray_next_arr = self.preprocess(next_img)
 
-            p1, st, err = cv2.calcOpticalFlowPyrLK(
+            next_pts, st, err = cv2.calcOpticalFlowPyrLK(
                 gray_base_arr,
                 gray_next_arr,
-                pt_base_arr,
+                base_pts,  # always refer to the first image
                 None,  # type: ignore[arg-type]
                 winSize=(21, 21),
                 maxLevel=3,
@@ -165,8 +113,8 @@ class OffsetPerOpticalFlowStep(PipelineStep):
             )
 
             # filter valid points
-            good_new = p1[st == 1]
-            good_old = pt_base_arr[st == 1]
+            good_new = next_pts[st == 1]
+            good_old = base_pts[st == 1]
 
             if len(good_new) == 0:
                 logger.warning("No correspondences found, using image center as fallback")
