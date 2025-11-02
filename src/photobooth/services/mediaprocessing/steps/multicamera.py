@@ -71,7 +71,7 @@ class AutoPivotPointStep(PipelineStep):
         # update result in context.
         context.good_features_to_track = find_good_features(context.images[0], upper_third_of_image(context.images[0]))
 
-        logger.info(f"{context.good_features_to_track=}")
+        # logger.info(f"{context.good_features_to_track=}")
 
         next_step(context)
 

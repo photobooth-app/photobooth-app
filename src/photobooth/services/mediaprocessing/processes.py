@@ -227,7 +227,7 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     pipeline = Pipeline[MulticameraContext](*steps)
     pipeline(context)
 
-    logger.info(context)
+    # logger.info(context)
 
     # sequence like 1-2-3-4-3-2-restart
     sequence_images = context.images
