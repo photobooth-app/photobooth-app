@@ -107,46 +107,59 @@ class WigglecamBackend(AbstractBackend):
 
     def _wait_for_multicam_files(self) -> list[Path]:
         """Trigger a capture request and collect hi-res images from all cameras."""
+        expected_device_ids = [d.device_id for d in self._config.devices]
         assert self._pub_trigger
         assert self._sub_hires
+        assert len(expected_device_ids) == len(set(expected_device_ids)), "configuration error: device ids must be set for all devices and unique!"
 
-        print("Job start")
-
-        # Eindeutige ID für diese Umfrage
         job_uuid = uuid.uuid4()
         self._pub_trigger.send(job_uuid.bytes)
 
         job_folder = Path("tmp", f"job_{job_uuid}")
         job_folder.mkdir(exist_ok=True)
 
-        results: list[Path] = []
+        logger.info(f"triggered multicam still capture, waiting for results... (job id: {job_uuid})")
 
-        while True:
+        # Collect results keyed by device_id
+        results: dict[int, Path] = {}
+
+        while len(results) < len(expected_device_ids):
             try:
                 data = self._sub_hires.recv()
                 msg = ImageMessage.from_bytes(data)
 
                 if msg.job_id != job_uuid:
-                    # Antwort gehört zu alter Umfrage -> ignorieren
-                    print("warning, old job id result received, ignored!")
+                    logger.warning("warning, old job id result received, ignored!")
                     continue
 
-                fname = f"cam{msg.device_id}.jpg"
-                fpath = Path(job_folder, fname)
+                if msg.device_id in results:
+                    logger.warning("warning, duplicate device id result received, ignored!")
+                    continue
+
+                fname = f"wigglenode_device_id-{msg.device_id}.jpg"
+                fpath = job_folder / fname
                 with open(fpath, "wb") as f:
                     f.write(msg.jpg_bytes)
 
-                results.append(fpath)
-
-                if len(results) == len(self._config.devices):
-                    print("got all results, job completed!")
-                    break
+                results[msg.device_id] = fpath
+                logger.info(f"got result from device id '{msg.device_id}', saved to {fpath}")
 
             except pynng.exceptions.Timeout as exc:
-                print(f"job finished after 1s no more data, got {len(results)} result!")
-                raise TimeoutError("timeout receiving frames") from exc
+                if results:
+                    missing = set(device.device_id for device in self._config.devices) - results.keys()
+                    logger.info(f"got partial results from device_ids {set(results)}, missing from device_ids {missing}!")
+                else:
+                    logger.error("timeout waiting for hires stills, no results received!")
+                raise TimeoutError("timeout receiving stills from nodes") from exc
 
-        return results
+        logger.info("got all results, job completed!")
+
+        # Build ordered list according to config.devices
+        files_out = [results[d.device_id] for d in self._config.devices if d.device_id in results]
+        if len(files_out) != len(expected_device_ids):
+            raise RuntimeError("error collecting all files, mismatch in number of devices vs collected files")
+
+        return files_out
 
     def run_service(self):
         """Background loop to receive lores frames."""

@@ -256,6 +256,10 @@ class WigglecamNodes(BaseModel):
     #     default=True,
     #     description="Enable node. Calibration might be invalid if chaning the nodes.",
     # )
+    device_id: int = Field(
+        default=0,
+        description="Unique ID of this node/device. Must match the device id configured in the wigglecam node.",
+    )
     description: str = Field(
         default="",
         description="Description just for you to distinguish the devices.",
