@@ -215,6 +215,9 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     ## prepare: create canvas
     # canvas_size = (config.canvas_width, config.canvas_height)
 
+    # copy for debugging purposes
+    [shutil.copy2(image_in, f"./tmp/input_{idx}.jpg") for idx, image_in in enumerate(files_in)]
+
     ## stage: merge captured images and predefined to one image with transparency
     multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
