@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from collections.abc import AsyncGenerator, Generator
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, WebSocket, status
@@ -9,6 +10,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from ...appconfig import appconfig
 from ...container import container
+from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/aquisition", tags=["aquisition"])
@@ -85,6 +87,21 @@ def api_still_get():
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
+
+
+@router.get("/multicam")
+def api_multicam_get() -> list[Path]:
+    try:
+        return container.aquisition_service.wait_for_multicam_files()
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
+
+
+@router.get("/multicam/{file_path:path}")
+def api_multicam_loadfile_get(file_path: Path):
+    filepath_sanitized = filenames_sanitize(file_path)
+    return FileResponse(filepath_sanitized, filename=filepath_sanitized.name)  # cannot catch exceptions here since async internally.
 
 
 @router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
