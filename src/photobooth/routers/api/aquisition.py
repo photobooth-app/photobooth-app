@@ -19,7 +19,6 @@ async def wrap_iter(iterable: Generator[bytes, Any, None]) -> AsyncGenerator[byt
     convert sync function in async generator
     https://stackoverflow.com/questions/57835872/send-data-via-websocket-from-synchronous-iterator-in-starlette
     """
-    loop = asyncio.get_event_loop()
 
     def get_next_item():
         # Get the next item synchronously.  We cannot call next(it) directly because StopIteration cannot be transferred
@@ -32,7 +31,7 @@ async def wrap_iter(iterable: Generator[bytes, Any, None]) -> AsyncGenerator[byt
     while True:
         # Submit execution of next(it) to another thread and resume when it's done. await will suspend the coroutine and
         # allow other tasks to execute while waiting.
-        next_item = await loop.run_in_executor(None, get_next_item)
+        next_item = await asyncio.to_thread(get_next_item)
         if next_item is None:
             break
 
