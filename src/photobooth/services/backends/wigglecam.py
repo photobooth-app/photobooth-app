@@ -59,13 +59,18 @@ class WigglecamBackend(AbstractBackend):
         if max_index > len(self._config.devices) - 1:
             raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
 
+        def cb_connected(pipe: pynng.Pipe):
+            logger.info(f"pynng connected to wigglecam node: {pipe.url}")
+
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
+        self._pub_trigger.add_post_pipe_connect_cb(cb_connected)
         for node in self._config.devices:
             self._pub_trigger.dial(f"tcp://{node.address}:{node.base_port + 0}", block=False)
 
         # Listen for lores streams
         self._sub_lores = pynng.Sub0()
+        self._sub_lores.add_post_pipe_connect_cb(cb_connected)
         self._sub_lores.subscribe(b"")
         self._sub_lores.recv_timeout = 1000
         for node in self._config.devices:
@@ -73,6 +78,7 @@ class WigglecamBackend(AbstractBackend):
 
         # Setup Sub for hires
         self._sub_hires = pynng.Sub0()
+        self._sub_hires.add_post_pipe_connect_cb(cb_connected)
         self._sub_hires.subscribe(b"")
         self._sub_hires.recv_timeout = 3000
         for node in self._config.devices:
