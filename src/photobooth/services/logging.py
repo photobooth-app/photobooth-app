@@ -134,7 +134,7 @@ class LoggingService(BaseService):
             "niquests",
             "urllib3",
             "urllib3_future",
-            "nng",
+            "pynng",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
