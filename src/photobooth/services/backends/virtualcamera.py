@@ -68,6 +68,10 @@ class VirtualCameraBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
+    def expected_device_ids(self) -> list[int]:
+        """Return the expected device ids for multicam calibration validation."""
+        return list(range(self._config.emulate_multicam_capture_devices))
+
     def setup_resource(self):
         pass
 

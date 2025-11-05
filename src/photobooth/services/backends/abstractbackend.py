@@ -170,6 +170,10 @@ class AbstractBackend(ResilientService, ABC):
 
                 self._on_configure_optimized_for_livestream_paused()
 
+    def expected_device_ids(self) -> list[int]:
+        """Return the expected device ids for multicam calibration validation."""
+        raise NotImplementedError("backend does not support multicam device ids")
+
     @abstractmethod
     def start(self):
         """To start the backend to serve"""

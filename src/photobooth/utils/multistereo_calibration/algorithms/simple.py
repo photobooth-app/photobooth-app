@@ -53,16 +53,21 @@ class SimpleCalibrationUtil(CalibrationBase):
         assert self._caldataalign, "No calibration data loaded. You need to load the data first or calibrate."
         files_out: list[Path] = []
 
+        # sanity check input images match calibration data
+        input_image_size = Image.open(files_in[0]).size
+        caldataalign = self._caldataalign.get(0)
+
+        if input_image_size != (caldataalign.img_width, caldataalign.img_height):
+            logger.warning(
+                f"Image size {input_image_size[0]}x{input_image_size[1]} does not match calibration size {caldataalign.img_width}x{caldataalign.img_height}"
+            )
+            return files_in  # return unmodified files
+
         for cam_idx, img_file in enumerate(files_in):
             caldataalign = self._caldataalign.get(cam_idx)
             assert caldataalign is not None, f"Calibration data for camera {cam_idx} not found. Is the data loaded?"
 
             proc_img = cv2.imread(str(img_file))
-            h, w = proc_img.shape[:2]
-
-            if (w, h) != (caldataalign.img_width, caldataalign.img_height):
-                raise ValueError(f"Image size {w}x{h} does not match calibration size {caldataalign.img_width}x{caldataalign.img_height}")
-
             proc_img = self.__align_to_reference(caldataalign.H, proc_img)
 
             # cv2.imwrite(f"tmp/aligned_{cam_idx}.jpg", proc_img)
