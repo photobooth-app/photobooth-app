@@ -3,12 +3,11 @@ import struct
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from threading import Condition
 
 import pynng
 
-from ...utils.helper import filename_str_time
+from ... import TMP_PATH
 from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
@@ -20,7 +19,6 @@ class ImageMessage:
     """This is packaged in the wigglecam nodes and needs to decode here:
     TODO: Maybe in future reuse the definition from the wigglecam module, once everything stabilizes.
     For now keep it as is, since this one is the only item depends on wigglecam as import.
-
     """
 
     device_id: int
@@ -53,6 +51,9 @@ class WigglecamBackend(AbstractBackend):
 
     def stop(self):
         super().stop()
+
+    def expected_device_ids(self) -> list[int]:
+        return [d.device_id for d in self._config.devices]
 
     def setup_resource(self):
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
@@ -105,23 +106,25 @@ class WigglecamBackend(AbstractBackend):
             return self._lores_data.data
 
     def _wait_for_still_file(self) -> Path:
-        # TODO: get highres from the one camera selected.
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_still-wigglecam_", suffix=".jpg") as f:
-            f.write(self._wait_for_lores_image())
-
-            return Path(f.name)
+        # TODO: get highres from the one camera selected, for now get all and return the selected one
+        captured_filepaths = self.__request_multicam_files()
+        return captured_filepaths[self._config.index_cam_stills]
 
     def _wait_for_multicam_files(self) -> list[Path]:
+        captured_filepaths = self.__request_multicam_files()
+        return captured_filepaths
+
+    def __request_multicam_files(self) -> list[Path]:
         """Trigger a capture request and collect hi-res images from all cameras."""
-        expected_device_ids = [d.device_id for d in self._config.devices]
         assert self._pub_trigger
         assert self._sub_hires
+        expected_device_ids = self.expected_device_ids()
         assert len(expected_device_ids) == len(set(expected_device_ids)), "configuration error: device ids must be set for all devices and unique!"
 
         job_uuid = uuid.uuid4()
         self._pub_trigger.send(job_uuid.bytes)
 
-        job_folder = Path("tmp", f"job_{job_uuid}")
+        job_folder = Path(TMP_PATH, f"multicam_job_{job_uuid}")
         job_folder.mkdir(exist_ok=True)
 
         logger.info(f"triggered multicam still capture, waiting for results... (job id: {job_uuid})")

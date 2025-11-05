@@ -1,13 +1,16 @@
 import logging
 from pathlib import Path
+from typing import cast
 from uuid import uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED
+from ... import DATABASE_PATH, PATH_PROCESSED, PATH_UNPROCESSED, TMP_PATH
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
+from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
 from ..aquisition import AquisitionService
+from ..backends.wigglecam import WigglecamBackend
 from ..config.groups.actions import MulticameraConfigurationSet, SingleImageProcessing
 from ..mediaprocessing.processes import process_and_generate_wigglegram
 from .base import Capture, CaptureSet, JobModelBase
@@ -19,7 +22,26 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
     def __init__(self, configuration_set: MulticameraConfigurationSet, aquisition_service: AquisitionService):
         super().__init__(configuration_set, MediaitemTypes.multicamera, aquisition_service=aquisition_service)
 
-        # self._validate_job()
+        self.__cal_util = SimpleCalibrationUtil()
+        self.__calibration_data_path = Path(DATABASE_PATH, "multicam_calibration_data")
+        self.__calibration_is_valid: bool = False
+
+        logger.info("setup calibration util to smooth multicam captures")
+
+        try:
+            self.__cal_util.load_calibration_data(self.__calibration_data_path)
+            logger.info("calibration data loaded successfully")
+        except ValueError as exc:
+            logger.warning(f"no valid multicam calibration data found: {exc}, the results may suffer!")
+
+        # validate that all device ids are still present in the current backend configuration and match with calibration data
+        multicam_backend = cast(WigglecamBackend, self._aquisition_service._get_multicam_backend())
+        expected_device_ids = multicam_backend.expected_device_ids()
+        self.__calibration_is_valid = self.__cal_util.is_calibration_data_valid(expected_device_ids)
+        if self.__calibration_is_valid:
+            logger.info("found valid calibration data for all configured devices")
+        else:
+            logger.warning("calibration data is incomplete or invalid for the configured devices, the results may suffer!")
 
     @property
     def total_captures_to_take(self) -> int:
@@ -55,20 +77,33 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
 
     def on_enter_completed(self):
         super().on_enter_completed()
+        capture_set = self._capture_sets[0]  # for now only 1 set supported...
+        files_to_process = [capture.filepath for capture in capture_set.captures]
+
+        ## PHASE 0: for multicamera jobs, we need to see if a calibration is to apply before continue any processing.
+        # calibration is used to improve the smoothness and align different camera views better.
+
+        if self.__calibration_is_valid:
+            logger.info("start multicamera calibration phase")
+            files_preprocessed = self.__cal_util.align_all(files_to_process, Path(TMP_PATH), crop=True)
+            logger.info("multicamera calibration phase completed")
+        else:
+            logger.warning("no valid calibration data found, skipping prealignment phase, results may suffer. Please run multicamera calibration.")
+            files_preprocessed = files_to_process
 
         ## PHASE 1:
         # postprocess each capture individually
         # list only captured_images from merge_definition (excludes predefined)
         phase1_mediaitems: list[Mediaitem] = []
 
-        for capture_to_process in self._capture_sets[0].captures:  # for now only 1 set supported...
-            logger.info(f"postprocessing capture: {capture_to_process=}")
+        for file_to_process in files_preprocessed:
+            logger.info(f"postprocessing capture: {file_to_process=}")
 
             # until now just a very basic filter avail applied over all images
             _config = SingleImageProcessing(image_filter=self._configuration_set.processing.image_filter)
 
             mediaitem = self.complete_phase1image(
-                capture_to_process.filepath,
+                file_to_process,
                 self._configuration_set.jobcontrol.show_individual_captures_in_gallery,
                 _config,
             )

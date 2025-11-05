@@ -17,7 +17,6 @@ from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
 from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, TextStep
-from .steps.multicamera import AutoPivotPointStep, CropCommonAreaStep, OffsetPerOpticalFlowStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -212,20 +211,14 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     # config = MulticameraProcessing(**mediaitem.pipeline_config)
 
-    ## prepare: create canvas
-    # canvas_size = (config.canvas_width, config.canvas_height)
-
-    # copy for debugging purposes
-    [shutil.copy2(image_in, f"./tmp/input_{idx}.jpg") for idx, image_in in enumerate(files_in)]
-
     ## stage: merge captured images and predefined to one image with transparency
     multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = MulticameraContext(multicamera_images)
     steps = []
-    steps.append(AutoPivotPointStep())
-    steps.append(OffsetPerOpticalFlowStep())
-    steps.append(CropCommonAreaStep())
+    # steps.append(AutoPivotPointStep())
+    # steps.append(OffsetPerOpticalFlowStep())
+    # steps.append(CropCommonAreaStep())
 
     pipeline = Pipeline[MulticameraContext](*steps)
     pipeline(context)
