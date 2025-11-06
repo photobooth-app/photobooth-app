@@ -1,6 +1,7 @@
 import logging
 import os
 import pickle
+import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Generic, TypeVar
@@ -39,6 +40,10 @@ class CalibrationBase(Generic[T]):
     def _filename(self, cam_idx: int | str) -> str:
         """Return the filename for a given camera index."""
         return f"{self.FILE_PREFIX}_{cam_idx}{self.FILE_SUFFIX}"
+
+    def delete_calibration_data(self, dir: Path) -> None:
+        """Save all calibration data to disk."""
+        shutil.rmtree(dir)
 
     def reset_calibration_data(self) -> None:
         self._caldataalign = {}
