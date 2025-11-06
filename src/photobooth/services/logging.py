@@ -17,6 +17,9 @@ from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventLogRecord
 
+## formatter ## # add %(name)s temporary to find other modules names to mute below
+fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+
 
 class EventstreamLogHandler(logging.Handler):
     """
@@ -40,6 +43,28 @@ class EventstreamLogHandler(logging.Handler):
         sse_service.dispatch_event(sse_logrecord)
 
 
+class ConsoleColorFormatter(logging.Formatter):
+    grey = "\x1b[90m"  # bright black / grey
+    white = "\x1b[37m"  # standard white
+    yellow = "\x1b[33m"  # yellow
+    red = "\x1b[31m"  # red
+    bold_red = "\x1b[1;31m"  # bold red
+    reset = "\x1b[0m"  # reset to default
+
+    FORMATS = {
+        logging.DEBUG: grey + fmt + reset,
+        logging.INFO: white + fmt + reset,
+        logging.WARNING: yellow + fmt + reset,
+        logging.ERROR: red + fmt + reset,
+        logging.CRITICAL: bold_red + fmt + reset,
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 class LoggingService(BaseService):
     """_summary_"""
 
@@ -48,8 +73,6 @@ class LoggingService(BaseService):
     def __init__(self):
         super().__init__()
 
-        ## formatter ## # add %(name)s temporary to find other modules names to mute below
-        fmt = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
         log_formatter = logging.Formatter(fmt=fmt)
 
         # filename per day to log to
@@ -73,6 +96,13 @@ class LoggingService(BaseService):
         root_logger.setLevel(self.logging_level)
 
         ## handler
+        # colorize console output.
+        stream_handler = None
+        for handler in root_logger.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                stream_handler = handler
+                stream_handler.setFormatter(ConsoleColorFormatter())
+                break
 
         self.file_handler = FileHandler(filename=logfile, mode="a", encoding="utf-8", delay=True)
         self.file_handler.setFormatter(log_formatter)
