@@ -101,7 +101,8 @@ def api_multicam_get() -> list[Path]:
 @router.post("/multicam/postprocess")
 def api_postprocess_multicam_set(files_in: list[Path]) -> list[Path]:
     try:
-        return container.aquisition_service.postprocess_multicam_set(files_in, Path("./tmp"))
+        sanitized_input = [filenames_sanitize(file_in) for file_in in files_in]
+        return container.aquisition_service.postprocess_multicam_set(sanitized_input, Path("./tmp"))
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
