@@ -3,6 +3,7 @@ Handle all media collection related functions
 """
 
 import logging
+import shutil
 import time
 from pathlib import Path
 from threading import Lock
@@ -126,8 +127,11 @@ class Files:
                 file.unlink()
             for file in Path(f"{PATH_CAMERA_ORIGINAL}").glob("*.*"):
                 file.unlink()
-            for file in Path(f"{TMP_PATH}").glob("*.*"):
-                file.unlink()
+            for item in Path(f"{TMP_PATH}").glob("*"):
+                if item.is_file() or item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
 
         except Exception as exc:
             logger.exception(exc)
