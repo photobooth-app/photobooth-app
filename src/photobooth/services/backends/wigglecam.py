@@ -61,7 +61,7 @@ class WigglecamBackend(AbstractBackend):
             raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
 
         def cb_connected(pipe: pynng.Pipe):
-            logger.info(f"pynng connected to wigglecam node: {pipe.url}")
+            logger.debug(f"pynng connected to wigglecam node: {pipe.url}")
 
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
@@ -151,17 +151,16 @@ class WigglecamBackend(AbstractBackend):
                     f.write(msg.jpg_bytes)
 
                 results[msg.device_id] = fpath
-                logger.info(f"got result from device id '{msg.device_id}', saved to {fpath}")
 
             except pynng.exceptions.Timeout as exc:
                 if results:
                     missing = set(device.device_id for device in self._config.devices) - results.keys()
-                    logger.info(f"got partial results from device_ids {set(results)}, missing from device_ids {missing}!")
+                    logger.error(f"got partial results from device-ids {set(results)}, missing from device_ids {missing}!")
                 else:
                     logger.error("timeout waiting for hires stills, no results received!")
                 raise TimeoutError("timeout receiving stills from nodes") from exc
 
-        logger.info("got all results, job completed!")
+        logger.info(f"Finished receiving images. Results from device-ids '{set(results)}' saved to {job_folder}")
 
         # Build ordered list according to config.devices
         files_out = [results[d.device_id] for d in self._config.devices if d.device_id in results]
@@ -192,7 +191,7 @@ class WigglecamBackend(AbstractBackend):
                 logger.error(f"error receiving lores frame: {exc}")
                 continue
 
-        logger.info("run_service loop exited")
+        logger.debug("run_service loop exited")
 
     def _on_configure_optimized_for_idle(self):
         pass

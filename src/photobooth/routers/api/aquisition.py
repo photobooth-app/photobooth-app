@@ -48,7 +48,7 @@ async def websocket_endpoint(websocket: WebSocket):
         try:
             await websocket.send_bytes(frame)
         except WebSocketDisconnect as exc:
-            logger.info(f"client disconnected code: {exc.code}, reason: {exc.reason}")
+            logger.debug(f"client disconnected code: {exc.code}, reason: {exc.reason}")
             break
         except Exception as exc:
             logger.info(f"error sending data: {exc}")

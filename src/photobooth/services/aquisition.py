@@ -118,7 +118,7 @@ class AquisitionService(BaseService):
 
         try:
             backend_to_stream_from = self._get_video_backend()
-            logger.info(f"livestream starting on backend {backend_to_stream_from=}")
+            logger.debug(f"livestream starting on backend {backend_to_stream_from=}")
         except Exception as exc:
             logger.critical(f"camera error: {exc}")
             yield __class__._substitute_image(

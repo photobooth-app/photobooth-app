@@ -33,7 +33,7 @@ async def lifespan(_: FastAPI):
     default_sigint_handler = signal.getsignal(signal.SIGINT)
 
     def terminate_now(signum: int, frame: FrameType | None = None):
-        logger.info("shutting down app via signal handler")
+        logger.debug("shutting down app via signal handler")
         sse_service.request_shutdown()
 
         container.stop()
@@ -45,9 +45,9 @@ async def lifespan(_: FastAPI):
         # https://github.com/encode/uvicorn/pull/871
         # Signals can only be listened to from the main thread.
         # usually only during testing, but no need in testing for this.
-        logger.info("lifecycle hook not installing signal, because current_thread not main_thread")
+        logger.debug("lifecycle hook not installing signal, because current_thread not main_thread")
     else:
-        logger.info("lifecycle hook installing signal to handle app shutdown")
+        logger.debug("lifecycle hook installing signal to handle app shutdown")
         signal.signal(signal.SIGINT, terminate_now)  # invoked when CTRL-C
         signal.signal(signal.SIGTERM, terminate_now)  # sent by systemd on stop
 

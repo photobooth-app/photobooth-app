@@ -55,7 +55,7 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
     factor_list = [item[0] / item[1] for item in turbojpeg.scaling_factors]
     (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
 
-    logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
+    # logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
     if factor > 1:
         logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
 
@@ -170,7 +170,7 @@ def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: i
 
     suffix = filepath_in.suffix
 
-    logger.debug(f"resize {filepath_in} to length {scaled_min_length}, save in {filepath_out}")
+    # logger.debug(f"resize {filepath_in} to length {scaled_min_length}, save in {filepath_out}")
 
     if suffix.lower() in (".jpg", ".jpeg"):
         resize_jpeg(filepath_in, filepath_out, scaled_min_length)

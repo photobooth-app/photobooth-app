@@ -180,7 +180,7 @@ class Cache:
                     session.add(cacheditem_new)
                     session.commit()
 
-                    logger.debug(f"-- finished processing in {round((time.time() - tms), 2)}s for {cacheditem_new}: ")
+                    logger.debug(f"processing {dimension.value} in {round((time.time() - tms), 2)}s for {cacheditem_new.filepath}")
 
                     return cacheditem_new
 

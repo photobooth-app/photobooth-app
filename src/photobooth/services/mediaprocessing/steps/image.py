@@ -139,7 +139,6 @@ class ImageFrameStep(PipelineStep):
             # convert to rgba because there could be paletted PNGs in mode P but still with alpha in info.transparency.
             # converting to RGBA moves info.transparency to actual channel and handling is easy
             image_frame = Image.open(frame_path).convert("RGBA")
-            logger.info(f"loaded {frame_path=}")
         except FileNotFoundError as exc:
             raise PipelineError(f"file {str(self.frame_file)} not found!") from exc
 
@@ -158,12 +157,6 @@ class ImageFrameStep(PipelineStep):
 
         # create a fitted version of input image (captured) that will cover-fit the transparent area
         image_fitted = ImageOps.fit(context.image, transparent_size, method=Image.Resampling.LANCZOS)
-
-        # some debug output - may help user to improve aspect ratio of capture and transparent area to avoid loose too much information
-        ratio_original = float(context.image.size[1]) / context.image.size[0]
-        ratio_fitted = float(image_fitted.size[1]) / image_fitted.size[0]
-        logger.info(f"captured image fitted to {image_fitted.size=}, original capture was {context.image.size=}")
-        logger.debug(f"{ratio_original=}, {ratio_fitted=}")
 
         # create new image
         result_image = Image.new("RGBA", image_frame.size)  # with alpha channel of same size as frame image
@@ -185,7 +178,7 @@ class TextStep(PipelineStep):
         updated_image = context.image.copy()
 
         for textconfig in self.textstageconfig:
-            logger.debug(f"apply text: {textconfig=}")
+            logger.debug(f"apply text: {textconfig.text}")
 
             if not textconfig.text:
                 # skip this one because empty.
@@ -230,7 +223,7 @@ class RemovebgStep(PipelineStep):
 
             # maybe in future we can reuse a session and predownload models, but as of now we start a session only on first use
             if not rembg_session or rembg_session.name() != self.model_name:
-                logger.info(f"ai background removal model {self.model_name} session initialized")
+                logger.debug(f"ai background removal model {self.model_name} session initialized")
                 rembg_session = new_session(model_name=self.model_name)
 
             cutout_image = remove(img=context.image, session=rembg_session)

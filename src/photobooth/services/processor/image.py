@@ -39,7 +39,7 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
         self._capture_sets.append(captureset)
 
-        logger.info(f"captureset {captureset} successful")
+        # logger.info(f"captureset {captureset} successful") # not helpful to output normally.
 
     def on_exit_capture(self): ...
 
@@ -59,7 +59,7 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         # out to db/ui
         self.set_results(mediaitem, mediaitem.id)
 
-        logger.info(f"capture {mediaitem=} successful")
+        logger.info(f"capture {mediaitem.processed} processed")
 
     def on_exit_completed(self): ...
 

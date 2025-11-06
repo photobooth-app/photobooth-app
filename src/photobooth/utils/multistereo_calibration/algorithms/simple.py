@@ -63,7 +63,8 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
 
         if input_image_size != (caldataalign.img_width, caldataalign.img_height):
             logger.warning(
-                f"Image size {input_image_size[0]}x{input_image_size[1]} does not match calibration size {caldataalign.img_width}x{caldataalign.img_height}"
+                f"Image size {input_image_size[0]}x{input_image_size[1]} does not match calibration "
+                "size {caldataalign.img_width}x{caldataalign.img_height}"
             )
             return files_in  # return unmodified files
 

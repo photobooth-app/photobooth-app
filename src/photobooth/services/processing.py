@@ -79,12 +79,12 @@ class FrontendNotifierEventHooks:
 
     def before_transition(self, source: State, target: State, model):
         if target in self.emit_before_transition_to_target:
-            logger.info(f"send frontend notification {source=} {target=}")
+            # logger.info(f"send frontend notification {source=} {target=}") # might uncomment during debugging only
             sse_service.dispatch_event(SseEventProcessStateinfo(source=source, target=target, jobmodel=model))
 
     def after_transition(self, source: State, target: State, model):
         if target not in self.emit_before_transition_to_target:
-            logger.info(f"send frontend notification {source=} {target=}")
+            # logger.info(f"send frontend notification {source=} {target=}") # might uncomment during debugging only
             sse_service.dispatch_event(SseEventProcessStateinfo(source=source, target=target, jobmodel=model))
 
 
@@ -161,8 +161,6 @@ class ProcessingService(BaseService):
         assert self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.initial_state
 
         try:
-            logger.info("starting job")
-
             while not self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.finished:
                 if self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.approval:
                     assert isinstance(self._workflow_jobmodel._configuration_set.jobcontrol, MultiImageJobControl)
@@ -179,7 +177,6 @@ class ProcessingService(BaseService):
                 else:
                     self._workflow_jobmodel._status_sm.send("next")
 
-            logger.debug("job finished")
         except Exception as exc:
             logger.exception(exc)
             logger.error(f"the job failed, error: {exc}")
@@ -192,8 +189,6 @@ class ProcessingService(BaseService):
             self._workflow_jobmodel = None
             # send empty response to ui so it knows it's in idle again.
 
-        logger.debug("_process_fun left")
-
     def initial_emit(self):
         # on init if never a job ran, model could not be avail.
         # if a job is currently running and during that a client connects, if will receive the self.model
@@ -203,8 +198,6 @@ class ProcessingService(BaseService):
             sse_service.dispatch_event(SseEventProcessStateinfo(source, target, self._workflow_jobmodel))
 
     def trigger_action(self, action_type: ActionType, action_index: int = 0):
-        logger.info(f"trigger {action_type=}, {action_index=}")
-
         ## preflight checks
         self._check_occupied()
 
@@ -213,7 +206,7 @@ class ProcessingService(BaseService):
             aquisition_service=self._aquisition_service,
         )
 
-        logger.info(f"starting job model: {jobmodel=}")
+        logger.info(f"trigger {action_type=}, {action_index=}, starting job model: {jobmodel=}")
         self._workflow_jobmodel = jobmodel
 
         # add listener to the job
@@ -222,7 +215,6 @@ class ProcessingService(BaseService):
         self._workflow_jobmodel._status_sm.add_listener(DbListenter(self._mediacollection_service))  # 4rd, then machine, then model.
 
         ## run in separate thread
-        logger.debug("starting _process_thread")
         self._process_thread = Thread(name="_processingservice_thread", target=self._process_fun, args=(), daemon=True)
         self._process_thread.start()
 
