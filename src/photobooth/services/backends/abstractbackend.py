@@ -170,10 +170,6 @@ class AbstractBackend(ResilientService, ABC):
 
                 self._on_configure_optimized_for_livestream_paused()
 
-    def expected_device_ids(self) -> list[int]:
-        """Return the expected device ids for multicam calibration validation."""
-        raise NotImplementedError("backend does not support multicam device ids")
-
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
@@ -256,6 +252,9 @@ class AbstractBackend(ResilientService, ABC):
             logger.critical(f"finally failed after {retries} attempts to capture image!")
 
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
+
+    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
+        raise NotImplementedError("backend does not support multicam device ids")
 
     def wait_for_still_file(self, retries: int = 3) -> Path:
         """
