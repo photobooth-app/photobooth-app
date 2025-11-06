@@ -19,16 +19,19 @@ class CalDataAlign(PersistableDataclass):
     H: cv2.typing.MatLike
 
 
-class SimpleCalibrationUtil(CalibrationBase):
+class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
     """Specialized calibration manager."""
 
     FILE_PREFIX = "simple"  # override if desired
 
     def __init__(self):
-        super().__init__(CalDataAlign)
+        super().__init__()
 
-        # self._caldataalign: dict[int, CalDataAlign] = {}
         self.__crop_area: tuple[int, int, int, int] | None = None  # x, y, w, h, computed on first use and then cached
+
+    def load_calibration_data(self, dir: Path) -> None:
+        """Load all calibration data from disk."""
+        super()._load_calibration_data(dir, CalDataAlign)
 
     def calibrate_all(self, cameras: dict[int, list[Path]], ref_idx: int, detector: cv2.aruco.CharucoDetector):
         """Calibrate all cameras against the reference camera."""
@@ -56,6 +59,7 @@ class SimpleCalibrationUtil(CalibrationBase):
         # sanity check input images match calibration data
         input_image_size = Image.open(files_in[0]).size
         caldataalign = self._caldataalign.get(0)
+        assert caldataalign
 
         if input_image_size != (caldataalign.img_width, caldataalign.img_height):
             logger.warning(

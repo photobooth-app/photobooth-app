@@ -33,9 +33,8 @@ class CalibrationBase(Generic[T]):
     FILE_PREFIX = "calib"  # configurable in subclasses
     FILE_SUFFIX = ".pkl"
 
-    def __init__(self, caldata_cls: type[T]):
+    def __init__(self):
         self._caldataalign: dict[int, T] = {}
-        self._caldata_cls = caldata_cls
 
     def _filename(self, cam_idx: int | str) -> str:
         """Return the filename for a given camera index."""
@@ -55,12 +54,12 @@ class CalibrationBase(Generic[T]):
 
         logger.info("Saved calibration data for cameras: %s", ", ".join(map(str, self._caldataalign.keys())))
 
-    def load_calibration_data(self, dir: Path) -> None:
-        """Load all calibration data from disk."""
+    def _load_calibration_data(self, dir: Path, caldata_cls: type[T]) -> None:
+        """Load all calibration data from disk, to be invoked from inheriting class providing the correct dataclass"""
         pattern = self._filename("*")
         files = sorted(dir.glob(pattern))
 
-        self._caldataalign = {int(f.stem.split("_")[1]): self._caldata_cls.from_file(f) for f in files}
+        self._caldataalign = {int(f.stem.split("_")[1]): caldata_cls.from_file(f) for f in files}
 
         if not self._caldataalign:
             raise ValueError(f"No calibration data found in {dir}")
