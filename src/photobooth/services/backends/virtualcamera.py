@@ -68,10 +68,6 @@ class VirtualCameraBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
-    def expected_device_ids(self) -> list[int]:
-        """Return the expected device ids for multicam calibration validation."""
-        return list(range(self._config.emulate_multicam_capture_devices))
-
     def setup_resource(self):
         pass
 
@@ -96,6 +92,9 @@ class VirtualCameraBackend(AbstractBackend):
             self._frame_tick()
 
         logger.info("virtualcamera thread finished")
+
+    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
+        return files_in
 
     def _wait_for_multicam_files(self) -> list[Path]:
         files: list[Path] = []
