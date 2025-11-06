@@ -7,11 +7,13 @@ from threading import Condition
 
 import pynng
 
-from ... import TMP_PATH
+from ... import DATABASE_PATH, TMP_PATH
+from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
 from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
+CALIBRATION_DATA_PATH = Path(DATABASE_PATH, "multicam_calibration_data")
 
 
 @dataclass
@@ -45,6 +47,26 @@ class WigglecamBackend(AbstractBackend):
         self._pub_trigger: pynng.Pub0 | None = None
         self._sub_lores: pynng.Sub0 | None = None
         self._sub_hires: pynng.Sub0 | None = None
+
+        self.__cal_util = SimpleCalibrationUtil()
+        self.__calibration_data_path = CALIBRATION_DATA_PATH
+        self.__calibration_is_valid: bool = False
+
+        logger.info("setup calibration util to smooth multicam captures")
+
+        try:
+            self.__cal_util.load_calibration_data(self.__calibration_data_path)
+            logger.info("calibration data loaded successfully")
+        except ValueError as exc:
+            logger.warning(f"no valid multicam calibration data found: {exc}, the results may suffer!")
+
+        # validate that all device ids are still present in the current backend configuration and match with calibration data
+        expected_device_ids = self.expected_device_ids()
+        self.__calibration_is_valid = self.__cal_util.is_calibration_data_valid(expected_device_ids)
+        if self.__calibration_is_valid:
+            logger.info("found valid calibration data for all configured devices")
+        else:
+            logger.warning("calibration data is incomplete or invalid for the configured devices, the results may suffer!")
 
     def start(self):
         super().start()
@@ -113,6 +135,16 @@ class WigglecamBackend(AbstractBackend):
     def _wait_for_multicam_files(self) -> list[Path]:
         captured_filepaths = self.__request_multicam_files()
         return captured_filepaths
+
+    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
+        if self.__calibration_is_valid:
+            files_preprocessed = self.__cal_util.align_all(files_in, out_dir=out_dir, crop=True)
+            logger.debug("post_process_multicam_set completed")
+        else:
+            logger.warning("no valid calibration data found, skipping prealignment phase, results may suffer. Please run multicamera calibration.")
+            files_preprocessed = files_in
+
+        return files_preprocessed
 
     def __request_multicam_files(self) -> list[Path]:
         """Trigger a capture request and collect hi-res images from all cameras."""
