@@ -266,7 +266,7 @@ class WigglecamNodes(BaseModel):
     )
     address: str = Field(
         default="0.0.0.0",
-        description="IP address to connect to the node.",
+        description="Host or IP address to connect to the node.",
     )
     base_port: int = Field(
         default=5550,
@@ -289,7 +289,12 @@ class GroupCameraWigglecam(BaseModelCamera):
     )
 
     devices: list[WigglecamNodes] = Field(
-        default=[WigglecamNodes(description="default host1")],
+        default=[
+            WigglecamNodes(description="wiggle1-device0", device_id=0, address="wiggle1"),
+            WigglecamNodes(description="wiggle2-device1", device_id=1, address="wiggle2"),
+            WigglecamNodes(description="wiggle3-device2", device_id=2, address="wiggle3"),
+            WigglecamNodes(description="wiggle4-device3", device_id=3, address="wiggle4"),
+        ],
     )
 
 
