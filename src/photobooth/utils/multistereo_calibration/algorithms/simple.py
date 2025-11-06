@@ -33,22 +33,25 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         """Load all calibration data from disk."""
         super()._load_calibration_data(dir, CalDataAlign)
 
-    def calibrate_all(self, cameras: dict[int, list[Path]], ref_idx: int, detector: cv2.aruco.CharucoDetector):
-        """Calibrate all cameras against the reference camera."""
-        _caldataalign: dict[int, CalDataAlign] = {}
+    def calibrate_all(self, cameras: list[list[Path]], ref_idx: int, detector: cv2.aruco.CharucoDetector):
+        """Calibrate all cameras against the reference camera.
+        cameras[0] is all images for camera 0 listed.
+        """
+        __caldataalign: list[CalDataAlign] = []
 
         calibration_datetime = datetime.now().astimezone().strftime("%x-%X")
         w, h = Image.open(cameras[0][0]).size  # assume all images same size, this is only very basic sanity check
 
-        for cam_idx, img_files in cameras.items():
+        for cam_idx, img_files in enumerate(cameras):
             H = self.__calibrate_pair(cameras[ref_idx], img_files, ref_idx, cam_idx, detector)
 
-            _caldataalign[cam_idx] = CalDataAlign(H=H, calibration_datetime=calibration_datetime, img_width=w, img_height=h)
+            __caldataalign.append(CalDataAlign(H=H, calibration_datetime=calibration_datetime, img_width=w, img_height=h))
 
             logger.info(f"Calculated homography for camera {cam_idx} relative to {ref_idx}")
 
         # when completed, save to instance variable
-        self._caldataalign = _caldataalign
+        assert len(__caldataalign) == len(cameras)
+        self._caldataalign = __caldataalign
 
     def align_all(self, files_in: list[Path], out_dir: Path, crop: bool = True) -> list[Path]:
         """align all images, while 1 image per camera, sorted by the index"""
@@ -58,7 +61,7 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
 
         # sanity check input images match calibration data
         input_image_size = Image.open(files_in[0]).size
-        caldataalign = self._caldataalign.get(0)
+        caldataalign = self._caldataalign[0]
         assert caldataalign
 
         if input_image_size != (caldataalign.img_width, caldataalign.img_height):
@@ -69,8 +72,10 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
             return files_in  # return unmodified files
 
         for cam_idx, img_file in enumerate(files_in):
-            caldataalign = self._caldataalign.get(cam_idx)
-            assert caldataalign is not None, f"Calibration data for camera {cam_idx} not found. Is the data loaded?"
+            try:
+                caldataalign = self._caldataalign[cam_idx]
+            except IndexError as exc:
+                raise RuntimeError(f"Calibration data for camera {cam_idx} not found. Is the data loaded?") from exc
 
             proc_img = cv2.imread(str(img_file))
             proc_img = self.__align_to_reference(caldataalign.H, proc_img)
@@ -173,7 +178,7 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         Returns (x1, y1, x2, y2) in reference frame coordinates.
         """
         # Assume all images same size
-        w, h = next(iter(self._caldataalign.values())).img_width, next(iter(self._caldataalign.values())).img_height
+        w, h = self._caldataalign[0].img_width, self._caldataalign[0].img_height
 
         # Define corners of the image (top-left, top-right, bottom-right, bottom-left)
         img_corners = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32).reshape(-1, 1, 2)
@@ -181,7 +186,7 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         # Initialize intersection bounds with the reference image itself
         x_min, y_min, x_max, y_max = 0, 0, w, h
 
-        for _, cal in self._caldataalign.items():
+        for cal in self._caldataalign:
             H = cal.H
             warped = cv2.perspectiveTransform(img_corners, H).reshape(-1, 2)
 

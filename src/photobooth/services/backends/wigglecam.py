@@ -52,21 +52,20 @@ class WigglecamBackend(AbstractBackend):
         self.__calibration_data_path = CALIBRATION_DATA_PATH
         self.__calibration_is_valid: bool = False
 
-        logger.info("setup calibration util to smooth multicam captures")
-
         try:
             self.__cal_util.load_calibration_data(self.__calibration_data_path)
-            logger.info("calibration data loaded successfully")
+            logger.info("Calibration data loaded successfully")
         except ValueError as exc:
-            logger.warning(f"no valid multicam calibration data found: {exc}, the results may suffer!")
-
-        # validate that all device ids are still present in the current backend configuration and match with calibration data
-        expected_device_ids = self.expected_device_ids()
-        self.__calibration_is_valid = self.__cal_util.is_calibration_data_valid(expected_device_ids)
-        if self.__calibration_is_valid:
-            logger.info("found valid calibration data for all configured devices")
+            logger.warning(f"No valid multicam calibration loaded, the results may suffer. Error: {exc}")
         else:
-            logger.warning("calibration data is incomplete or invalid for the configured devices, the results may suffer!")
+            # validate that all device ids are still present in the current backend configuration and match with calibration data
+            expected_device_ids = self.expected_device_ids()
+            self.__calibration_is_valid = self.__cal_util.is_calibration_data_valid(expected_device_ids)
+            if self.__calibration_is_valid:
+                # we just check the number of devices, though. there is no check for the exact camera.
+                logger.info("Found valid calibration data for all configured devices.")
+            else:
+                logger.warning("Calibration data is incomplete or invalid for the configured devices, the results may suffer!")
 
     def start(self):
         super().start()
@@ -74,16 +73,16 @@ class WigglecamBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
-    def expected_device_ids(self) -> list[int]:
-        return [d.device_id for d in self._config.devices]
+    def expected_device_ids(self) -> tuple[int, ...]:  # The tuple[int, ...] syntax means a tuple containing any number of integers.
+        return tuple(range(len(self._config.devices)))
 
     def setup_resource(self):
         max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
         if max_index > len(self._config.devices) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
+            raise RuntimeError(f"Configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
 
         def cb_connected(pipe: pynng.Pipe):
-            logger.debug(f"pynng connected to wigglecam node: {pipe.url}")
+            logger.debug(f"Connected to wigglecam node: {pipe.url}")
 
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
@@ -151,7 +150,6 @@ class WigglecamBackend(AbstractBackend):
         assert self._pub_trigger
         assert self._sub_hires
         expected_device_ids = self.expected_device_ids()
-        assert len(expected_device_ids) == len(set(expected_device_ids)), "configuration error: device ids must be set for all devices and unique!"
 
         job_uuid = uuid.uuid4()
         self._pub_trigger.send(job_uuid.bytes)
@@ -186,7 +184,7 @@ class WigglecamBackend(AbstractBackend):
 
             except pynng.exceptions.Timeout as exc:
                 if results:
-                    missing = set(device.device_id for device in self._config.devices) - results.keys()
+                    missing = set(expected_device_ids) - results.keys()
                     logger.error(f"got partial results from device-ids {set(results)}, missing from device_ids {missing}!")
                 else:
                     logger.error("timeout waiting for hires stills, no results received!")
@@ -195,7 +193,8 @@ class WigglecamBackend(AbstractBackend):
         logger.info(f"Finished receiving images. Results from device-ids '{set(results)}' saved to {job_folder}")
 
         # Build ordered list according to config.devices
-        files_out = [results[d.device_id] for d in self._config.devices if d.device_id in results]
+        files_out = [results[i] for i in range(len(self._config.devices)) if i in results]
+
         if len(files_out) != len(expected_device_ids):
             raise RuntimeError("error collecting all files, mismatch in number of devices vs collected files")
 

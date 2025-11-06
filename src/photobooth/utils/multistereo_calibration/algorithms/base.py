@@ -35,7 +35,7 @@ class CalibrationBase(Generic[T]):
     FILE_SUFFIX = ".pkl"
 
     def __init__(self):
-        self._caldataalign: dict[int, T] = {}
+        self._caldataalign: list[T] = []
 
     def _filename(self, cam_idx: int | str) -> str:
         """Return the filename for a given camera index."""
@@ -43,10 +43,11 @@ class CalibrationBase(Generic[T]):
 
     def delete_calibration_data(self, dir: Path) -> None:
         """Save all calibration data to disk."""
-        shutil.rmtree(dir)
+        if dir.exists():
+            shutil.rmtree(dir)
 
     def reset_calibration_data(self) -> None:
-        self._caldataalign = {}
+        self._caldataalign = []
 
     def save_calibration_data(self, dir: Path) -> None:
         """Save all calibration data to disk."""
@@ -54,22 +55,22 @@ class CalibrationBase(Generic[T]):
         # ensure dir exists
         dir.mkdir(parents=True, exist_ok=True)
 
-        for cam_idx, calib_data in self._caldataalign.items():
+        for cam_idx, calib_data in enumerate(self._caldataalign):
             calib_data.to_file(dir / self._filename(cam_idx))
 
-        logger.info("Saved calibration data for cameras: %s", ", ".join(map(str, self._caldataalign.keys())))
+        logger.info("Saved calibration data for cameras: %s", ", ".join(map(str, range(len(self._caldataalign)))))
 
     def _load_calibration_data(self, dir: Path, caldata_cls: type[T]) -> None:
         """Load all calibration data from disk, to be invoked from inheriting class providing the correct dataclass"""
         pattern = self._filename("*")
         files = sorted(dir.glob(pattern))
 
-        self._caldataalign = {int(f.stem.split("_")[1]): caldata_cls.from_file(f) for f in files}
+        self._caldataalign = [caldata_cls.from_file(f) for f in files]
 
         if not self._caldataalign:
             raise ValueError(f"No calibration data found in {dir}")
 
-        logger.info("Loaded calibration data for cameras: %s", ", ".join(map(str, self._caldataalign.keys())))
+        logger.info("Loaded calibration data for cameras: %s", ", ".join(map(str, range(len(self._caldataalign)))))
 
-    def is_calibration_data_valid(self, expected_device_ids: list[int]) -> bool:
-        return bool(self._caldataalign) and set(expected_device_ids).issubset(self._caldataalign.keys())
+    def is_calibration_data_valid(self, expected_device_ids: tuple[int, ...]) -> bool:
+        return bool(self._caldataalign) and set(expected_device_ids).issubset(range(len(self._caldataalign)))
