@@ -22,7 +22,7 @@ def dummy_charuco_images(tmp_path: Path):
 
     board = cv2.aruco.CharucoBoard((squares_x, squares_y), square_length, marker_length, dictionary)
 
-    image_paths = {}
+    image_paths = []
     for cam_id in range(4):
         board_img = board.generateImage((800, 600), marginSize=10, borderBits=1)
 
@@ -45,7 +45,7 @@ def dummy_charuco_images(tmp_path: Path):
 
         image_path = tmp_path / f"charuco_cam{cam_id}.jpg"
         cv2.imwrite(str(image_path), warped)
-        image_paths[cam_id] = [image_path]
+        image_paths.append([image_path])
 
     return image_paths
 
@@ -59,8 +59,8 @@ def test_calibration_util_calibrate(tmp_path: Path, dummy_charuco_images):
     calibrator.reset_calibration_data()
 
     calibrator.load_calibration_data(tmp_path)
-    calibrator.align_all([item[0] for item in cameras.values()], tmp_path)
+    calibrator.align_all([item[0] for item in cameras], tmp_path)
 
     calibrator2 = SimpleCalibrationUtil()
     calibrator2.load_calibration_data(tmp_path)
-    calibrator2.align_all([item[0] for item in cameras.values()], tmp_path)
+    calibrator2.align_all([item[0] for item in cameras], tmp_path)
