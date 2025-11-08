@@ -13,6 +13,8 @@ from .base import CalibrationBase, PersistableDataclass
 
 logger = logging.getLogger(__name__)
 
+DEBUG_TMP = True
+
 
 @dataclass
 class CalDataAlign(PersistableDataclass):
@@ -36,8 +38,12 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
     def calibrate_all(self, cameras: list[list[Path]], ref_idx: int, detector: cv2.aruco.CharucoDetector):
         """Calibrate all cameras against the reference camera.
         cameras[0] is all images for camera 0 listed.
+
+        WARNING: The images are not allowed to be flipped or the marker recognition fails!
+        # https://stackoverflow.com/questions/71126639/aruco-markers-are-not-detected
+
         """
-        __caldataalign: list[CalDataAlign] = []
+        caldataalign: list[CalDataAlign] = []
 
         calibration_datetime = datetime.now().astimezone().strftime("%x-%X")
         w, h = Image.open(cameras[0][0]).size  # assume all images same size, this is only very basic sanity check
@@ -45,13 +51,13 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         for cam_idx, img_files in enumerate(cameras):
             H = self.__calibrate_pair(cameras[ref_idx], img_files, ref_idx, cam_idx, detector)
 
-            __caldataalign.append(CalDataAlign(H=H, calibration_datetime=calibration_datetime, img_width=w, img_height=h))
+            caldataalign.append(CalDataAlign(H=H, calibration_datetime=calibration_datetime, img_width=w, img_height=h))
 
             logger.info(f"Calculated homography for camera {cam_idx} relative to {ref_idx}")
 
         # when completed, save to instance variable
-        assert len(__caldataalign) == len(cameras)
-        self._caldataalign = __caldataalign
+        assert len(caldataalign) == len(cameras)
+        self._caldataalign = caldataalign
 
     def align_all(self, files_in: list[Path], out_dir: Path, crop: bool = True) -> list[Path]:
         """align all images, while 1 image per camera, sorted by the index"""
@@ -80,20 +86,23 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
             proc_img = cv2.imread(str(img_file))
             proc_img = self.__align_to_reference(caldataalign.H, proc_img)
 
-            # cv2.imwrite(f"tmp/aligned_{cam_idx}.jpg", proc_img)
+            if DEBUG_TMP:
+                cv2.imwrite(f"tmp/aligned_{cam_idx}.jpg", proc_img)
             if crop:
                 if not self.__crop_area:
                     self.__crop_area = self.__compute_common_crop()
 
                 proc_img = self.__crop_to_common_intersect(proc_img, self.__crop_area)
-                # cv2.imwrite(f"tmp/cropped_{cam_idx}.jpg", proc_img)
+
+                if DEBUG_TMP:
+                    cv2.imwrite(f"tmp/cropped_{cam_idx}.jpg", proc_img)
 
             out_filepath = Path(
                 NamedTemporaryFile(
                     mode="wb",
                     delete=False,
                     dir=out_dir,
-                    prefix=f"{filename_str_time()}_multicam_processed_",
+                    prefix=f"{filename_str_time()}_multicam_aligned_",
                     suffix=".jpg",
                 ).name
             )
@@ -118,16 +127,32 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         Returns stacked corners and IDs.
         """
         all_corners, all_ids = [], []
-        for fname in image_files:
-            img = cv2.imread(str(fname), 0)
+        for i, fname in enumerate(image_files):
+            img = cv2.imread(str(fname), cv2.IMREAD_GRAYSCALE)
 
             if img is None:
                 raise ValueError(f"Failed to read image {fname}")
 
+            # some preprocessing for charuco detection improved.
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            img = clahe.apply(img)
+
+            if DEBUG_TMP:
+                out_path = f"tmp/{fname.stem}_{i}_detector_in.png"
+                cv2.imwrite(str(out_path), img)
+
             corners, ids, _, _ = detector.detectBoard(img)
+
             if ids is not None and corners is not None:
                 all_corners.append(corners)
                 all_ids.append(ids)
+
+                # --- Debug visualization using OpenCV helper ---
+                if DEBUG_TMP:
+                    debug_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                    cv2.aruco.drawDetectedCornersCharuco(debug_img, corners, ids)
+                    out_path = f"tmp/{fname.stem}_{i}_detected.png"
+                    cv2.imwrite(str(out_path), debug_img)
 
         if not all_ids:
             raise ValueError("No ChArUco corners detected in any image.")
@@ -212,15 +237,8 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         h, w = img.shape[:2]
 
         # seems the pi cameras have bit different distortion charachteristics, maybe intrinsics cali can help in preprocessing?
-        # return cv2.warpAffine(img, caldataalign.H[:2, :], (img.shape[1], img.shape[0]))
+        # return cv2.warpAffine(img, H[:2, :], (img.shape[1], img.shape[0]))
         return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_CUBIC)  # dsize in (w,h) order
-
-    # @staticmethod
-    # def __crop_to_common_intersect(img: np.ndarray, crop: tuple[int, int, int, int]) -> np.ndarray:
-    #     x, y, w, h = crop  # (x, y) is top-left corner, w=width, h=height
-    #     cropped_img = img[y : y + h, x : x + w]
-    #     return cropped_img
-    # import numpy as np
 
     @staticmethod
     def __crop_to_common_intersect(img: np.ndarray, crop: tuple[int, int, int, int]) -> np.ndarray:
@@ -235,5 +253,16 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         Returns:
             Cropped image as np.ndarray.
         """
+
         x1, y1, x2, y2 = crop
+
+        # Enusre to crop to even numbers so post processing is easier and
+        # less compute intense because video codes to encoding in later steps
+        # may require even numbers.
+
+        if (x2 - x1) % 2 != 0:
+            x2 -= 1
+        if (y2 - y1) % 2 != 0:
+            y2 -= 1
+
         return img[y1:y2, x1:x2]

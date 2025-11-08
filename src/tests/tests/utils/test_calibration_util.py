@@ -6,25 +6,18 @@ import numpy as np
 import pytest
 
 from photobooth.utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
-from photobooth.utils.multistereo_calibration.detector import get_detector
+from photobooth.utils.multistereo_calibration.charuco_board import generate_board, get_detector
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
 def dummy_charuco_images(tmp_path: Path):
-    # Define ChArUco board parameters
-    squares_x = 5
-    squares_y = 7
-    square_length = 40
-    marker_length = 20
-    dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    ref_board_img = generate_board((7, 5))
 
-    board = cv2.aruco.CharucoBoard((squares_x, squares_y), square_length, marker_length, dictionary)
-
-    image_paths = []
+    image_paths: list[list[Path]] = []
     for cam_id in range(4):
-        board_img = board.generateImage((800, 600), marginSize=10, borderBits=1)
+        board_img = ref_board_img.copy()
 
         # --- Apply random offset + rotation ---
         h, w = board_img.shape[:2]
@@ -41,7 +34,10 @@ def dummy_charuco_images(tmp_path: Path):
         M[0, 2] += tx
         M[1, 2] += ty
 
-        warped = cv2.warpAffine(board_img, M, (w, h))
+        if cam_id != 0:
+            warped = cv2.warpAffine(board_img, M, (w, h))
+        else:
+            warped = board_img
 
         image_path = tmp_path / f"charuco_cam{cam_id}.jpg"
         cv2.imwrite(str(image_path), warped)
@@ -50,9 +46,31 @@ def dummy_charuco_images(tmp_path: Path):
     return image_paths
 
 
+def test_generate_board_even(tmp_path: Path):
+    board = generate_board((8, 10))
+
+    cv2.imwrite(f"{tmp_path}/charuco_board_generated.jpg", board)
+
+    detector = get_detector((8, 10), square_length=40, marker_length=20)
+    corners, ids, _, _ = detector.detectBoard(board)
+    assert len(corners) == (8 - 1) * (10 - 1)
+    assert len(ids) == (8 - 1) * (10 - 1)
+
+
+def test_generate_board_odd(tmp_path: Path):
+    board = generate_board((15, 9))
+
+    cv2.imwrite(f"{tmp_path}/charuco_board_generated.jpg", board)
+
+    detector = get_detector((15, 9), square_length=40, marker_length=20)
+    corners, ids, _, _ = detector.detectBoard(board)
+    assert len(corners) == (15 - 1) * (9 - 1)
+    assert len(ids) == (15 - 1) * (9 - 1)
+
+
 def test_calibration_util_calibrate(tmp_path: Path, dummy_charuco_images):
     cameras = dummy_charuco_images
-    detector = get_detector((5, 7), square_length=40, marker_length=20)
+    detector = get_detector((7, 5), square_length=40, marker_length=20)
     calibrator = SimpleCalibrationUtil()
     calibrator.calibrate_all(cameras, 0, detector)
     calibrator.save_calibration_data(tmp_path)

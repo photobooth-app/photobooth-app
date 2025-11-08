@@ -7,7 +7,7 @@ from ...container import container
 from ...services.backends.wigglecam import CALIBRATION_DATA_PATH
 from ...utils.helper import filenames_sanitize
 from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
-from ...utils.multistereo_calibration.detector import get_detector
+from ...utils.multistereo_calibration.charuco_board import get_detector
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/multicamera", tags=["admin", "multicamera"])
