@@ -12,7 +12,7 @@ from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
 from ...database.models import Mediaitem
-from ..config.groups.actions import AnimationProcessing, CollageProcessing, SingleImageProcessing, VideoProcessing
+from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
@@ -210,7 +210,7 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
 
 
 def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
-    def __create_gif(images: list[Image.Image]):
+    def __create_gif(images: list[Image.Image], frame_duration: int):
         # sequence like 1-2-3-4-3-2-restart
         sequence_images = images
         sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
@@ -223,53 +223,50 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
             append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
             optimize=True,
             # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-            duration=125,
+            duration=frame_duration,
             loop=0,  # loop forever
         )
 
-    def __create_mp4(images):
-        repeat = 1
-        frame_dur = 0.125
-        # Define sequence as indices
+    def __create_mp4(images: list[Image.Image], frame_duration: int):
+        # ref https://github.com/PyAV-Org/PyAV/blob/main/examples/numpy/generate_video_with_pts.py
+        fps = round(1.0 / (frame_duration / 1000.0))  # frame_duration is in [ms], normize to [s] for pyav
+
         n = len(images)
         cycle = [*range(n), *range(n - 2, 0, -1)]
+        repeat = 1
         sequence = cycle * repeat
 
-        print(sequence)
-        print(images)
-        fps = round(1 / frame_dur)
+        in_img_w = images[0].width  # it is safe to assume all images have same dimensions
+        in_img_h = images[0].height
+
+        even_w = in_img_w if in_img_w % 2 == 0 else in_img_w - 1
+        even_h = in_img_h if in_img_h % 2 == 0 else in_img_h - 1
+        # set flag to crop. crop using PIL is more efficient than using reformatter to rescale by 1px.
+        need_crop = (even_w, even_h) != (in_img_w, in_img_h)
+
+        if need_crop:
+            for i, image in enumerate(images):
+                images[i] = image.crop(box=(0, 0, even_w, even_h))
 
         container = av.open(mediaitem.unprocessed, mode="w")
-
-        stream = container.add_stream("h264", rate=fps, options={"crf": "30", "preset": "veryfast"})  # crf lower is better quality
-        w = images[0].width
-        h = images[0].height
-
-        # enforce even dimensions
-        stream.width = w if w % 2 == 0 else w - 1
-        stream.height = h if h % 2 == 0 else h - 1
-        stream.pix_fmt = "yuv420p"  # high compat.
-        print(images[0].size)
-
+        stream = container.add_stream("h264", rate=fps, options={"crf": "28", "preset": "veryfast"})  # crf lower is better quality
         stream.codec_context.time_base = Fraction(1, fps)
-        my_pts = 0  # [seconds]
+        stream.width = even_w
+        stream.height = even_h
+        # high compat. # TODO: does this automatically reformat if the input is different or just states it should be yuv420?
+        stream.pix_fmt = "yuv420p"
 
+        my_pts = 0  # [seconds]
         for idx in sequence:
             frame = av.VideoFrame.from_image(images[idx])
-            frame = frame.reformat(w & ~1, h & ~1)
-            # frame = frame.reformat(640, 480, format="yuv420p")
+            # frame = frame.reformat(format="yuv420p")# TODO: needed?
             frame.pts = my_pts
             my_pts += 1.0
+
             for packet in stream.encode(frame):
                 container.mux(packet)
 
-        # Add one extra copy of the last frame to enforce its duration
-        last = av.VideoFrame.from_image(images[-1])
-        # last = last.reformat(640, 480, format="yuv420p")
-        last = last.reformat(w & ~1, h & ~1)
-        last.pts = my_pts
-        for packet in stream.encode(last):
-            container.mux(packet)
+        # last frame duplication seems not needed here, it plays correctly without
 
         # Flush stream
         for packet in stream.encode():
@@ -279,7 +276,7 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
         container.close()
 
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    # config = MulticameraProcessing(**mediaitem.pipeline_config)
+    config = MulticameraProcessing(**mediaitem.pipeline_config)
 
     ## stage: merge captured images and predefined to one image with transparency
     multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
@@ -296,9 +293,9 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # logger.info(context)
 
     if mediaitem.unprocessed.suffix == ".gif":
-        __create_gif(context.images)
+        __create_gif(context.images, frame_duration=config.duration)
     elif mediaitem.unprocessed.suffix == ".mp4":
-        __create_mp4(context.images)
+        __create_mp4(context.images, frame_duration=config.duration)
     else:
         raise RuntimeError("unsupported format requested")
 
