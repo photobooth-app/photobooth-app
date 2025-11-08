@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, FilePath, NonNegativeInt
 from pydantic_extra_types.color import Color
@@ -88,6 +88,11 @@ class MulticameraJobControl(BaseModel):
     show_individual_captures_in_gallery: bool = Field(
         default=False,
         description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
+    )
+
+    output_fileformat: Literal["gif", "mp4"] = Field(
+        default="gif",
+        description="Choose the file format of the wigglegram. GIF is usually lower quality (max 256 colors) but good compatibility. MP4 offers better quality per file size but might not replay on old devices.",
     )
 
 

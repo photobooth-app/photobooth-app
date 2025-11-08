@@ -11,8 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
+    _media_type = MediaitemTypes.image
+
     def __init__(self, configuration_set: SingleImageConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, MediaitemTypes.image, aquisition_service=aquisition_service)
+        super().__init__(configuration_set, aquisition_service=aquisition_service)
 
         # self._validate_job()
 

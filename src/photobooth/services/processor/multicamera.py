@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
+    _media_type = MediaitemTypes.multicamera
+
     def __init__(self, configuration_set: MulticameraConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, MediaitemTypes.multicamera, aquisition_service=aquisition_service)
+        super().__init__(configuration_set, aquisition_service=aquisition_service)
 
     @property
     def total_captures_to_take(self) -> int:
@@ -84,8 +86,8 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         ## PHASE 2:
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
-
-        original_filenamepath = Path(filename_str_time()).with_suffix(".gif")
+        fileending = self._configuration_set.jobcontrol.output_fileformat
+        original_filenamepath = Path(filename_str_time()).with_suffix(f".{fileending}".lower())
         phase2_mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,

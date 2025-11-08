@@ -16,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobModelVideo(JobModelBase[VideoConfigurationSet]):
+    _media_type = MediaitemTypes.video
+
     def __init__(self, configuration_set: VideoConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, MediaitemTypes.video, aquisition_service=aquisition_service)
+        super().__init__(configuration_set, aquisition_service=aquisition_service)
 
         # self._validate_job()
 

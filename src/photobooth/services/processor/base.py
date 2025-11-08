@@ -45,13 +45,13 @@ class CaptureSet:
 
 class JobModelBase(ABC, Generic[T]):
     # state = None
+    _media_type: MediaitemTypes
 
-    def __init__(self, configuration_set: T, media_type: MediaitemTypes, aquisition_service: AquisitionService):
+    def __init__(self, configuration_set: T, aquisition_service: AquisitionService):
         self._status_sm = ProcessingMachine(self, state_field="state")
         self._status_sm.bind_events_to(self)
 
         self._configuration_set: T = configuration_set
-        self._media_type: MediaitemTypes = media_type
         self._aquisition_service: AquisitionService = aquisition_service
 
         self._job_identifier: UUID = uuid4()

@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobModelCollage(JobModelBase[CollageConfigurationSet]):
+    _media_type = MediaitemTypes.collage
+
     def __init__(self, configuration_set: CollageConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, MediaitemTypes.collage, aquisition_service=aquisition_service)
+        super().__init__(configuration_set, aquisition_service=aquisition_service)
 
         # self._validate_job()
 

@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
+    _media_type = MediaitemTypes.animation
+
     def __init__(self, configuration_set: AnimationConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, MediaitemTypes.animation, aquisition_service=aquisition_service)
+        super().__init__(configuration_set, aquisition_service=aquisition_service)
 
         # self._validate_job()
 

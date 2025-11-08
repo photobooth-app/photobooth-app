@@ -4,8 +4,10 @@ import logging
 import shutil
 import time
 import traceback
+from fractions import Fraction
 from pathlib import Path
 
+import av
 from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
@@ -208,6 +210,74 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
 
 
 def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
+    def __create_gif(images: list[Image.Image]):
+        # sequence like 1-2-3-4-3-2-restart
+        sequence_images = images
+        sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
+
+        ## create mediaitem
+        sequence_images[0].save(
+            mediaitem.unprocessed,
+            format="gif",
+            save_all=True,
+            append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
+            optimize=True,
+            # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
+            duration=125,
+            loop=0,  # loop forever
+        )
+
+    def __create_mp4(images):
+        repeat = 1
+        frame_dur = 0.125
+        # Define sequence as indices
+        n = len(images)
+        cycle = [*range(n), *range(n - 2, 0, -1)]
+        sequence = cycle * repeat
+
+        print(sequence)
+        print(images)
+        fps = round(1 / frame_dur)
+
+        container = av.open(mediaitem.unprocessed, mode="w")
+
+        stream = container.add_stream("h264", rate=fps, options={"crf": "30", "preset": "veryfast"})  # crf lower is better quality
+        w = images[0].width
+        h = images[0].height
+
+        # enforce even dimensions
+        stream.width = w if w % 2 == 0 else w - 1
+        stream.height = h if h % 2 == 0 else h - 1
+        stream.pix_fmt = "yuv420p"  # high compat.
+        print(images[0].size)
+
+        stream.codec_context.time_base = Fraction(1, fps)
+        my_pts = 0  # [seconds]
+
+        for idx in sequence:
+            frame = av.VideoFrame.from_image(images[idx])
+            frame = frame.reformat(w & ~1, h & ~1)
+            # frame = frame.reformat(640, 480, format="yuv420p")
+            frame.pts = my_pts
+            my_pts += 1.0
+            for packet in stream.encode(frame):
+                container.mux(packet)
+
+        # Add one extra copy of the last frame to enforce its duration
+        last = av.VideoFrame.from_image(images[-1])
+        # last = last.reformat(640, 480, format="yuv420p")
+        last = last.reformat(w & ~1, h & ~1)
+        last.pts = my_pts
+        for packet in stream.encode(last):
+            container.mux(packet)
+
+        # Flush stream
+        for packet in stream.encode():
+            container.mux(packet)
+
+        # Close the file
+        container.close()
+
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     # config = MulticameraProcessing(**mediaitem.pipeline_config)
 
@@ -225,21 +295,12 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
 
     # logger.info(context)
 
-    # sequence like 1-2-3-4-3-2-restart
-    sequence_images = context.images
-    sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
-
-    ## create mediaitem
-    sequence_images[0].save(
-        mediaitem.unprocessed,
-        format="gif",
-        save_all=True,
-        append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
-        optimize=True,
-        # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-        duration=125,
-        loop=0,  # loop forever
-    )
+    if mediaitem.unprocessed.suffix == ".gif":
+        __create_gif(context.images)
+    elif mediaitem.unprocessed.suffix == ".mp4":
+        __create_mp4(context.images)
+    else:
+        raise RuntimeError("unsupported format requested")
 
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
