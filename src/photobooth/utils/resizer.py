@@ -57,9 +57,10 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
 
     # logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
     if factor > 1:
-        logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink")
-
-    buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=list(turbojpeg.scaling_factors)[index], quality=85)
+        logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink, resizing skipped")
+        buffer_out = jpeg_bytes_in
+    else:
+        buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=list(turbojpeg.scaling_factors)[index], quality=85)
 
     with open(filepath_out, "wb") as file_out:
         file_out.write(buffer_out)
