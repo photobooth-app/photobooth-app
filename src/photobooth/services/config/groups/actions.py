@@ -277,16 +277,10 @@ class MulticameraProcessing(BaseModel):
 
     model_config = ConfigDict(title="Wigglegram-multicamera processing")
 
-    canvas_width: int = Field(
-        default=1500,
-        description="Width (X) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
-    )
-    canvas_height: int = Field(
-        default=900,
-        description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
-    )
     duration: NonNegativeInt = Field(
         default=125,
+        ge=100,
+        le=500,
         description="Duration of each frame in milliseconds. Wigglegrams look good usually between 100-200ms duration.",
     )
     image_filter: PluginFilters = Field(
