@@ -3,8 +3,11 @@ from pathlib import Path
 
 import cv2
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import FileResponse
+from PIL import Image
 from pydantic import BaseModel
 
+from ... import TMP_PATH
 from ...container import container
 from ...services.backends.wigglecam import CALIBRATION_DATA_PATH
 from ...utils.helper import filenames_sanitize
@@ -66,18 +69,10 @@ def api_post_calibrate_all(filess_in: list[list[Path]]):
     ]
     """
 
-    # print(filess_in)
     try:
         sanitized_input = [[filenames_sanitize(file_in) for file_in in files_in] for files_in in filess_in]
-        # print(sanitized_input)
-        detector = get_detector()
 
-        # sanitized_input = [
-        #     [Path("./tmp/calib_test_in/input_0.jpg")],  # camera 0
-        #     [Path("./tmp/calib_test_in/input_1.jpg")],  # camera 1
-        #     [Path("./tmp/calib_test_in/input_2.jpg")],  # ...
-        #     [Path("./tmp/calib_test_in/input_3.jpg")],
-        # ]
+        detector = get_detector()
 
         cu = SimpleCalibrationUtil()
         cu.calibrate_all(cameras=sanitized_input, ref_idx=0, detector=detector)
@@ -88,3 +83,31 @@ def api_post_calibrate_all(filess_in: list[list[Path]]):
     else:
         container.reload()
         return {"ok": True}
+
+
+@router.get("/result")
+def api_get_result():
+    file_out = Path(TMP_PATH, "wiggledemo.gif")
+    try:
+        files_to_process = container.aquisition_service.wait_for_multicam_files()
+        files_backend_postprocessed = container.aquisition_service.postprocess_multicam_set(files_in=files_to_process, out_dir=Path(TMP_PATH))
+
+        multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_backend_postprocessed]
+        for img in multicamera_images:
+            img.thumbnail((500, 500))
+
+        multicamera_images = multicamera_images + list(reversed(multicamera_images[1 : len(multicamera_images) - 1]))
+        multicamera_images[0].save(
+            file_out,
+            format="gif",
+            save_all=True,
+            append_images=multicamera_images[1:] if len(multicamera_images) > 1 else [],
+            optimize=True,
+            duration=125,
+            loop=0,  # loop forever
+        )
+
+        return FileResponse(path=file_out, media_type="image/gif", content_disposition_type="inline")
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
