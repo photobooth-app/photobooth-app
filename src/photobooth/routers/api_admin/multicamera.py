@@ -1,21 +1,47 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, status
+import cv2
+from fastapi import APIRouter, HTTPException, Response, status
+from pydantic import BaseModel
 
 from ...container import container
 from ...services.backends.wigglecam import CALIBRATION_DATA_PATH
 from ...utils.helper import filenames_sanitize
 from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
-from ...utils.multistereo_calibration.charuco_board import get_detector
+from ...utils.multistereo_calibration.charuco_board import generate_board, get_detector
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/multicamera", tags=["admin", "multicamera"])
 
 
+class CharucoRequest(BaseModel):
+    squares_x: int = 14
+    squares_y: int = 9
+    square_length_mm: float = 20
+    marker_length_mm: float = 15
+
+
 @router.get("/calibration")
 def api_get_calibration_stats():
     raise NotImplementedError
+
+
+@router.post("/calibration/charuco")
+def api_get_calibration_generate_charucoboard(req: CharucoRequest):
+    try:
+        board_arr = generate_board((req.squares_x, req.squares_y), square_length_mm=req.square_length_mm, marker_length_mm=req.marker_length_mm)
+
+        # Encode as PNG in memory
+        success, png_bytes = cv2.imencode(".png", board_arr)
+        if not success:
+            raise RuntimeError("Failed to encode board image")
+
+        # Return as HTTP response
+        return Response(content=png_bytes.tobytes(), media_type="image/png")
+
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate board: {exc}") from exc
 
 
 @router.delete("/calibration")

@@ -22,7 +22,7 @@ def get_detector(size: tuple[int, int] = (14, 9), square_length: float = 20.0, m
 
 def generate_board(size: tuple[int, int] = (14, 9), square_length_mm: float = 20.0, marker_length_mm: float = 15.0) -> np.ndarray:
     """Size: (SquaresX/Cols, SquaresY/Rows), while X is left-right and Y is top-bottom"""
-    dpi: int = 150
+    dpi: int = 200
     squares_x_cols = size[0]
     squares_y_rows = size[1]
 
