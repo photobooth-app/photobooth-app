@@ -62,14 +62,14 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @router.get("/stream.mjpg")
-def video_stream():
+def video_stream(index_subdevice: int = 0):
     headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
 
     if not appconfig.backends.enable_livestream:
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
 
     def gen_multipart():
-        for jpeg_bytes in container.aquisition_service.gen_stream():
+        for jpeg_bytes in container.aquisition_service.gen_stream(index_subdevice):
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n\r\n")
 
     try:

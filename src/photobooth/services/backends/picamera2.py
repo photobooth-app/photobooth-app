@@ -141,8 +141,9 @@ class Picamera2Backend(AbstractBackend):
 
         return round(value, digits)
 
-    def _wait_for_lores_image(self) -> bytes:
-        """for other threads to receive a lores JPEG image"""
+    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
+        if index_subdevice > 0:
+            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
 
         assert self._lores_data
 

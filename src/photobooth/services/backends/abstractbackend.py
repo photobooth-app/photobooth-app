@@ -285,7 +285,7 @@ class AbstractBackend(ResilientService, ABC):
 
             time.sleep(0.2)
 
-    def wait_for_lores_image(self, retries: int = 10) -> bytes:
+    def wait_for_lores_image(self, retries: int = 10, index_subdevice: int = 0) -> bytes:
         """Function called externally to receivea low resolution image.
         Also used to stream. Tries to recover up to retries times before giving up.
 
@@ -304,7 +304,7 @@ class AbstractBackend(ResilientService, ABC):
             self._last_requested_timestamp = time.monotonic()
 
             try:
-                img_bytes = self._wait_for_lores_image()  # blocks 0.5s usually. 10 retries default wait time=5s
+                img_bytes = self._wait_for_lores_image(index_subdevice=index_subdevice)  # blocks 0.5s usually. 10 retries default wait time=5s
                 img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
                 return img
             except TimeoutError as exc:
@@ -481,7 +481,7 @@ class AbstractBackend(ResilientService, ABC):
         """
 
     @abstractmethod
-    def _wait_for_lores_image(self) -> bytes:
+    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
         """
         function blocks until frame is available for preview stream
         """

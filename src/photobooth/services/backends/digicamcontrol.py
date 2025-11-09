@@ -88,10 +88,11 @@ class DigicamcontrolBackend(AbstractBackend):
     # INTERNAL FUNCTIONS
     #
 
-    def _wait_for_lores_image(self):
-        """for other threads to receive a lores JPEG image"""
-        self.pause_wait_for_lores_while_hires_capture()
+    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
+        if index_subdevice > 0:
+            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
 
+        self.pause_wait_for_lores_while_hires_capture()
         with self._lores_data.condition:
             if not self._lores_data.condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")

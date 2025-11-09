@@ -43,7 +43,7 @@ class WigglecamBackend(AbstractBackend):
         super().__init__()
         self._config = config
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._lores_data: list[GeneralBytesResult] | None = None
         self._pub_trigger: pynng.Pub0 | None = None
         self._sub_lores: pynng.Sub0 | None = None
         self._sub_hires: pynng.Sub0 | None = None
@@ -52,6 +52,7 @@ class WigglecamBackend(AbstractBackend):
         self.__calibration_data_path = CALIBRATION_DATA_PATH
         self.__calibration_is_valid: bool = False
 
+    def __load_calibration(self):
         try:
             self.__cal_util.load_calibration_data(self.__calibration_data_path)
             logger.info("Calibration data loaded successfully")
@@ -77,9 +78,12 @@ class WigglecamBackend(AbstractBackend):
         return tuple(range(len(self._config.devices)))
 
     def setup_resource(self):
-        max_index = max(self._config.index_cam_stills, self._config.index_cam_video)
-        if max_index > len(self._config.devices) - 1:
-            raise RuntimeError(f"Configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._config.devices) - 1}")
+        expected_device_ids = self.expected_device_ids()
+
+        if self._config.index_cam_stills not in expected_device_ids:
+            raise RuntimeError(f"Configuration error: The device foreseen for stills on index {self._config.index_cam_stills} is not available!")
+        if self._config.index_cam_video not in expected_device_ids:
+            raise RuntimeError(f"Configuration error: The device foreseen for video on index {self._config.index_cam_video} is not available!")
 
         def cb_connected(pipe: pynng.Pipe):
             logger.debug(f"Connected to wigglecam node: {pipe.url}")
@@ -106,6 +110,12 @@ class WigglecamBackend(AbstractBackend):
         for node in self._config.devices:
             self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
+        self._lores_data = [GeneralBytesResult(data=b"", condition=Condition()) for _ in expected_device_ids]
+        # Sanity check: ensure distinct objects were created
+        assert all(a is not b for i, a in enumerate(self._lores_data) for j, b in enumerate(self._lores_data) if i != j)
+
+        self.__load_calibration()
+
         logger.info("pynng sockets connected")
 
     def teardown_resource(self):
@@ -118,13 +128,14 @@ class WigglecamBackend(AbstractBackend):
         if self._sub_hires:
             self._sub_hires.close()
 
-    def _wait_for_lores_image(self) -> bytes:
-        """Return the latest lores JPEG frame."""
+    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
+        assert self._lores_data
+
         self.pause_wait_for_lores_while_hires_capture()
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
+        with self._lores_data[index_subdevice].condition:
+            if not self._lores_data[index_subdevice].condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
-            return self._lores_data.data
+            return self._lores_data[index_subdevice].data
 
     def _wait_for_still_file(self) -> Path:
         # TODO: get highres from the one camera selected, for now get all and return the selected one
@@ -203,18 +214,20 @@ class WigglecamBackend(AbstractBackend):
     def run_service(self):
         """Background loop to receive lores frames."""
         assert self._sub_lores
+        assert self._lores_data
+
         while not self._stop_event.is_set():
             try:
                 data = self._sub_lores.recv()
                 msg = ImageMessage.from_bytes(data)
 
-                if msg.device_id != self._config.index_cam_video:
-                    continue  # drop messages from the not-selected nodes
+                # if msg.device_id != self._config.index_cam_video:
+                #     continue  # drop messages from the not-selected nodes
 
-                # store raw JPEG
-                with self._lores_data.condition:
-                    self._lores_data.data = msg.jpg_bytes
-                    self._lores_data.condition.notify_all()
+                # store raw JPEG of all devices. TODO: might need to limit to only one device if it gets overwhelming for low end SBC
+                with self._lores_data[msg.device_id].condition:
+                    self._lores_data[msg.device_id].data = msg.jpg_bytes
+                    self._lores_data[msg.device_id].condition.notify_all()
                 self._frame_tick()
             except pynng.Timeout:
                 continue

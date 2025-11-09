@@ -106,7 +106,7 @@ class AquisitionService(BaseService):
         except IndexError as exc:
             raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
 
-    def gen_stream(self):
+    def gen_stream(self, index_subdevice: int = 0):
         """
         yield jpeg images to stream to client (if not created otherwise)
         this function may be overriden by backends, but this is the default one
@@ -118,7 +118,7 @@ class AquisitionService(BaseService):
 
         try:
             backend_to_stream_from = self._get_video_backend()
-            logger.debug(f"livestream starting on backend {backend_to_stream_from=}")
+            logger.debug(f"start livestream on backend {backend_to_stream_from} subdevice index {index_subdevice}")
         except Exception as exc:
             logger.critical(f"camera error: {exc}")
             yield __class__._substitute_image(
@@ -131,7 +131,7 @@ class AquisitionService(BaseService):
 
         while self.is_running():
             try:
-                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image()
+                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image(index_subdevice=index_subdevice)
             except StopIteration:
                 return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
             except Exception as exc:

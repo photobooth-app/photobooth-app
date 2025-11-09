@@ -82,8 +82,9 @@ class WebcamPyavBackend(AbstractBackend):
 
             return self._hires_data.filepath
 
-    def _wait_for_lores_image(self) -> bytes:
-        """for other threads to receive a lores JPEG image"""
+    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
+        if index_subdevice > 0:
+            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
 
         self.pause_wait_for_lores_while_hires_capture()
 
