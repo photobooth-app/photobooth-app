@@ -26,7 +26,6 @@ def _serve_media_item(mediaitem_id: UUID, dimension: DimensionTypes):
         return FileResponse(cacheditem.filepath, status_code=status.HTTP_200_OK, headers=headers)
 
     except FileNotFoundError as exc:
-        logger.warning(f"cannot find mediaitem by id {mediaitem_id}")
         raise HTTPException(status_code=404, detail=f"cannot find mediaitem by id {mediaitem_id}") from exc
     except Exception as exc:
         logger.exception(exc)

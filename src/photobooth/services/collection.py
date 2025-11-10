@@ -332,8 +332,7 @@ class MediacollectionService(BaseService):
         return self.db.list_items(offset, limit)
 
     def get_item(self, item_id: UUID, check_representing_files_raise: bool = True) -> Mediaitem:
-        if not isinstance(item_id, UUID):
-            raise ValueError("item_id is wrong type")
+        assert isinstance(item_id, UUID), "item_id must be UUID type!"
 
         item = self.db.get_item(item_id)
 
