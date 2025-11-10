@@ -21,7 +21,7 @@ from .base import BaseService
 logger = logging.getLogger(__name__)
 
 
-class AquisitionService(BaseService):
+class AcquisitionService(BaseService):
     def __init__(self):
         super().__init__()
 
@@ -78,12 +78,12 @@ class AquisitionService(BaseService):
         Returns:
             _type_: _description_
         """
-        aquisition_stats = {}
+        acquisition_stats = {}
         for backend in self._backends:
             stats = dataclasses.asdict(backend.get_stats())
-            aquisition_stats |= {str(backend): stats}
+            acquisition_stats |= {str(backend): stats}
 
-        return aquisition_stats
+        return acquisition_stats
 
     def _get_stills_backend(self) -> AbstractBackend:
         index = appconfig.backends.index_backend_stills

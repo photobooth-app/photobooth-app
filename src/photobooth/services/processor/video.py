@@ -7,7 +7,7 @@ from statemachine import Event
 from ... import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
-from ..aquisition import AquisitionService
+from ..acquisition import AcquisitionService
 from ..config.groups.actions import VideoConfigurationSet
 from ..mediaprocessing.processes import process_video
 from .base import Capture, CaptureSet, JobModelBase
@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 class JobModelVideo(JobModelBase[VideoConfigurationSet]):
     _media_type = MediaitemTypes.video
 
-    def __init__(self, configuration_set: VideoConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, aquisition_service=aquisition_service)
+    def __init__(self, configuration_set: VideoConfigurationSet, acquisition_service: AcquisitionService):
+        super().__init__(configuration_set, acquisition_service=acquisition_service)
 
         # self._validate_job()
 
@@ -28,7 +28,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         return 1
 
     def on_enter_counting(self):
-        self._aquisition_service.signalbackend_configure_optimized_for_video()
+        self._acquisition_service.signalbackend_configure_optimized_for_video()
 
         super().on_enter_counting()
 
@@ -36,7 +36,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         super().on_exit_counting()
 
     def on_enter_capture(self):
-        video_file = self._aquisition_service.start_recording(video_framerate=self._configuration_set.processing.video_framerate)
+        video_file = self._acquisition_service.start_recording(video_framerate=self._configuration_set.processing.video_framerate)
         captureset = CaptureSet([Capture(video_file)])
 
         # add to tmp collection
@@ -44,7 +44,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         self._capture_sets.append(captureset)
 
     def on_exit_capture(self):
-        self._aquisition_service.stop_recording()  # blocks until video is written...
+        self._acquisition_service.stop_recording()  # blocks until video is written...
 
         logger.info(f"captureset {self._capture_sets} successful")
 

@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from photobooth.appconfig import appconfig
-from photobooth.services.aquisition import AquisitionService
+from photobooth.services.acquisition import AcquisitionService
 
 logger = logging.getLogger(name=None)
 
@@ -36,7 +36,7 @@ def test_aquire_still_exception(client: TestClient):
     error_mock = mock.MagicMock()
     error_mock.side_effect = Exception("mock error")
 
-    with patch.object(AquisitionService, "wait_for_still_file", error_mock):
+    with patch.object(AcquisitionService, "wait_for_still_file", error_mock):
         response = client.get("/aquisition/still")
         assert response.status_code == 500
         assert "detail" in response.json()

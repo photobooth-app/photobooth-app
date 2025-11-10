@@ -215,7 +215,7 @@ class WebcamPyavBackend(AbstractBackend):
                 if self._stop_event.is_set():
                     break
 
-        logger.info("pyav_img_aquisition finished, exit")
+        logger.info("pyav_img_acquisition finished, exit")
 
     def _version_codec_info(self):
         logger.info(f"PyAv location {av.__file__}, package version {av.__version__}")

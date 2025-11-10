@@ -13,7 +13,7 @@ from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import filename_str_time
 from ...utils.resizer import generate_resized
-from ..aquisition import AquisitionService
+from ..acquisition import AcquisitionService
 from ..config.groups.actions import (
     BaseConfigurationSet,
     MulticameraJobControl,
@@ -47,12 +47,12 @@ class JobModelBase(ABC, Generic[T]):
     # state = None
     _media_type: MediaitemTypes
 
-    def __init__(self, configuration_set: T, aquisition_service: AquisitionService):
+    def __init__(self, configuration_set: T, acquisition_service: AcquisitionService):
         self._status_sm = ProcessingMachine(self, state_field="state")
         self._status_sm.bind_events_to(self)
 
         self._configuration_set: T = configuration_set
-        self._aquisition_service: AquisitionService = aquisition_service
+        self._acquisition_service: AcquisitionService = acquisition_service
 
         self._job_identifier: UUID = uuid4()
 
@@ -148,7 +148,7 @@ class JobModelBase(ABC, Generic[T]):
     @abstractmethod
     def on_enter_completed(self):
         # when completed, signal backends to idle again
-        self._aquisition_service.signalbackend_configure_optimized_for_idle()
+        self._acquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...

@@ -3,7 +3,7 @@ import logging
 from statemachine import Event
 
 from ...database.models import MediaitemTypes
-from ..aquisition import AquisitionService
+from ..acquisition import AcquisitionService
 from ..config.groups.actions import SingleImageConfigurationSet
 from .base import Capture, CaptureSet, JobModelBase
 
@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
     _media_type = MediaitemTypes.image
 
-    def __init__(self, configuration_set: SingleImageConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, aquisition_service=aquisition_service)
+    def __init__(self, configuration_set: SingleImageConfigurationSet, acquisition_service: AcquisitionService):
+        super().__init__(configuration_set, acquisition_service=acquisition_service)
 
         # self._validate_job()
 
@@ -23,7 +23,7 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         return 1
 
     def on_enter_counting(self):
-        self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         super().on_enter_counting()
 
@@ -33,9 +33,9 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
     def on_enter_capture(self):
         logger.info(f"current capture ({self.captures_taken + 1}/{self.total_captures_to_take}, remaining {self.remaining_captures_to_take - 1})")
 
-        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+        self._acquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
-        captureset = CaptureSet([Capture(self._aquisition_service.wait_for_still_file())])
+        captureset = CaptureSet([Capture(self._acquisition_service.wait_for_still_file())])
 
         # add to tmp collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished

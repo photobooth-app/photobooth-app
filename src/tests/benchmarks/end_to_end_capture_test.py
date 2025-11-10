@@ -18,8 +18,8 @@ logger = logging.getLogger(name=None)
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
     container.start()
-    block_until_device_is_running(container.aquisition_service._get_stills_backend())
-    cast(VirtualCameraBackend, container.aquisition_service._get_stills_backend())._config.emulate_hires_static_still = True
+    block_until_device_is_running(container.acquisition_service._get_stills_backend())
+    cast(VirtualCameraBackend, container.acquisition_service._get_stills_backend())._config.emulate_hires_static_still = True
 
     yield container
     container.stop()

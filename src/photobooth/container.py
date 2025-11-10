@@ -1,7 +1,7 @@
 import logging
 from threading import Lock
 
-from .services.aquisition import AquisitionService
+from .services.acquisition import AcquisitionService
 from .services.base import BaseService
 from .services.collection import MediacollectionService
 from .services.configuration import ConfigurationService
@@ -23,10 +23,10 @@ class Container:
     logging_service = LoggingService()
     pluginmanager_service = PluginManagerService()
 
-    aquisition_service = AquisitionService()
+    acquisition_service = AcquisitionService()
     mediacollection_service = MediacollectionService()
-    information_service = InformationService(aquisition_service)
-    processing_service = ProcessingService(aquisition_service, mediacollection_service, information_service)
+    information_service = InformationService(acquisition_service)
+    processing_service = ProcessingService(acquisition_service, mediacollection_service, information_service)
     system_service = SystemService()
     share_service = ShareService()
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)

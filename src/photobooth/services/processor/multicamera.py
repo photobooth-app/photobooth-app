@@ -7,7 +7,7 @@ from statemachine import Event
 from ... import PATH_PROCESSED, PATH_UNPROCESSED, TMP_PATH
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
-from ..aquisition import AquisitionService
+from ..acquisition import AcquisitionService
 from ..config.groups.actions import MulticameraConfigurationSet, SingleImageProcessing
 from ..mediaprocessing.processes import process_and_generate_wigglegram
 from .base import Capture, CaptureSet, JobModelBase
@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
     _media_type = MediaitemTypes.multicamera
 
-    def __init__(self, configuration_set: MulticameraConfigurationSet, aquisition_service: AquisitionService):
-        super().__init__(configuration_set, aquisition_service=aquisition_service)
+    def __init__(self, configuration_set: MulticameraConfigurationSet, acquisition_service: AcquisitionService):
+        super().__init__(configuration_set, acquisition_service=acquisition_service)
 
     @property
     def total_captures_to_take(self) -> int:
         return 1
 
     def on_enter_counting(self):
-        self._aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         super().on_enter_counting()
 
@@ -36,9 +36,9 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
     def on_enter_capture(self):
         logger.info(f"current capture ({self.captures_taken + 1}/{self.total_captures_to_take}, remaining {self.remaining_captures_to_take - 1})")
 
-        self._aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+        self._acquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
-        captureset = CaptureSet([Capture(captured_file) for captured_file in self._aquisition_service.wait_for_multicam_files()])
+        captureset = CaptureSet([Capture(captured_file) for captured_file in self._acquisition_service.wait_for_multicam_files()])
 
         # add to tmp collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
@@ -60,7 +60,7 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
 
         ## PHASE 0: for multicamera jobs, we need to see if a calibration is to apply before continue any processing.
         # calibration is used to improve the smoothness and align different camera views better.
-        files_backend_postprocessed = self._aquisition_service.postprocess_multicam_set(
+        files_backend_postprocessed = self._acquisition_service.postprocess_multicam_set(
             files_in=files_to_process,
             out_dir=Path(TMP_PATH),
         )

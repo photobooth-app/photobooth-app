@@ -11,7 +11,7 @@ from statemachine import Event, State
 from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import ProcessMachineOccupiedError
-from .aquisition import AquisitionService
+from .acquisition import AcquisitionService
 from .base import BaseService
 from .collection import MediacollectionService
 from .config.groups.actions import MultiImageJobControl
@@ -91,13 +91,13 @@ class FrontendNotifierEventHooks:
 class ProcessingService(BaseService):
     def __init__(
         self,
-        aquisition_service: AquisitionService,
+        acquisition_service: AcquisitionService,
         mediacollection_service: MediacollectionService,
         information_service: InformationService,
     ):
         super().__init__()
 
-        self._aquisition_service: AquisitionService = aquisition_service
+        self._acquisition_service: AcquisitionService = acquisition_service
         self._mediacollection_service: MediacollectionService = mediacollection_service
         self._information_service: InformationService = information_service
 
@@ -203,7 +203,7 @@ class ProcessingService(BaseService):
 
         jobmodel = ACTION_TO_MODEL[action_type](
             configuration_set=getattr(appconfig.actions, action_type)[action_index],
-            aquisition_service=self._aquisition_service,
+            acquisition_service=self._acquisition_service,
         )
 
         logger.info(f"trigger {action_type=}, {action_index=}, starting job model: {jobmodel=}")

@@ -19,7 +19,7 @@ from ..models.genericstats import GenericStats
 from ..plugins import pm as pluggy_pm
 from ..utils.repeatedtimer import RepeatedTimer
 from ..utils.stoppablethread import StoppableThread
-from .aquisition import AquisitionService
+from .acquisition import AcquisitionService
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventIntervalInformationRecord, SseEventOnetimeInformationRecord
@@ -31,10 +31,10 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 class InformationService(BaseService):
     """_summary_"""
 
-    def __init__(self, aquisition_service: AquisitionService):
+    def __init__(self, acquisition_service: AcquisitionService):
         super().__init__()
 
-        self._aquisition_service = aquisition_service
+        self._acquisition_service = acquisition_service
 
         # objects
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
@@ -202,7 +202,7 @@ class InformationService(BaseService):
         return cma
 
     def _gather_backends_stats(self):
-        return self._aquisition_service.stats()
+        return self._acquisition_service.stats()
 
     def _gather_disk(self) -> dict[str, int | float]:
         return psutil.disk_usage(str(Path.cwd().absolute()))._asdict()

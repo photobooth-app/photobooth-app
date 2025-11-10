@@ -89,8 +89,8 @@ def api_post_calibrate_all(filess_in: list[list[Path]]):
 def api_get_result():
     file_out = Path(TMP_PATH, "wiggledemo.gif")
     try:
-        files_to_process = container.aquisition_service.wait_for_multicam_files()
-        files_backend_postprocessed = container.aquisition_service.postprocess_multicam_set(files_in=files_to_process, out_dir=Path(TMP_PATH))
+        files_to_process = container.acquisition_service.wait_for_multicam_files()
+        files_backend_postprocessed = container.acquisition_service.postprocess_multicam_set(files_in=files_to_process, out_dir=Path(TMP_PATH))
 
         multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_backend_postprocessed]
         for img in multicamera_images:

@@ -9,31 +9,31 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from photobooth.container import Container, container
-from photobooth.services.aquisition import AquisitionService
+from photobooth.services.acquisition import AcquisitionService
 
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="module")
-def _container() -> Generator[Container, None, None]:
-    container.start()
-    yield container
-    container.stop()
+def _acqs() -> Generator[AcquisitionService, None, None]:
+    acqs = AcquisitionService()
+    acqs.start()
+    yield acqs
+    acqs.stop()
 
 
-def test_getimage(_container: Container):
-    with Image.open(_container.aquisition_service.wait_for_still_file()) as img:
+def test_getimage(_acqs: AcquisitionService):
+    with Image.open(_acqs.wait_for_still_file()) as img:
         logger.info(img)
         img.verify()
 
 
-def test_getimages_directlyaccess_backends(_container: Container):
-    with Image.open(_container.aquisition_service._backends[0].wait_for_still_file()) as img:
+def test_getimages_directlyaccess_backends(_acqs: AcquisitionService):
+    with Image.open(_acqs._backends[0].wait_for_still_file()) as img:
         logger.info(img)
         img.verify()
 
-    with Image.open(io.BytesIO(_container.aquisition_service._backends[0].wait_for_lores_image())) as img:
+    with Image.open(io.BytesIO(_acqs._backends[0].wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
 
@@ -44,27 +44,27 @@ def test_preload_ffmpeg():
 
     with patch.object(subprocess, "run", error_mock):
         # no error is raised if load fails.
-        AquisitionService._load_ffmpeg()
+        AcquisitionService._load_ffmpeg()
 
 
-def test_get_multicam_files(_container: Container):
-    for image in _container.aquisition_service.wait_for_multicam_files():
+def test_get_multicam_files(_acqs: AcquisitionService):
+    for image in _acqs.wait_for_multicam_files():
         with Image.open(image) as img:
             logger.info(img)
             img.verify()
 
 
-def test_getvideo(_container: Container):
+def test_getvideo(_acqs: AcquisitionService):
     """get video from service"""
-    videopath = _container.aquisition_service.start_recording()
+    videopath = _acqs.start_recording()
     time.sleep(2)
-    _container.aquisition_service.stop_recording()
+    _acqs.stop_recording()
 
     logger.info(f"video stored to file {videopath}")
     assert videopath and videopath.is_file()
 
 
-def test_simulated_init_exceptions(_container: Container):
+def test_simulated_init_exceptions(_acqs: AcquisitionService):
     # test to ensure a failing backend doesnt break the whole system due to uncatched exceptions
     from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 
@@ -73,12 +73,12 @@ def test_simulated_init_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "__init__", error_mock):
         try:
-            _: AquisitionService = AquisitionService()
+            _: AcquisitionService = AcquisitionService()
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
 
 
-def test_simulated_setup_device_exceptions(_container: Container):
+def test_simulated_setup_device_exceptions(_acqs: AcquisitionService):
     # test to ensure a failing backend doesnt break the whole system due to uncatched exceptions
     from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 
@@ -87,7 +87,7 @@ def test_simulated_setup_device_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "setup_resource", error_mock):
         try:
-            aq: AquisitionService = AquisitionService()
+            aq: AcquisitionService = AcquisitionService()
             aq.start()
 
         except Exception as exc:
@@ -97,7 +97,7 @@ def test_simulated_setup_device_exceptions(_container: Container):
         aq.stop()
 
 
-def test_simulated_stop_exceptions(_container: Container):
+def test_simulated_stop_exceptions(_acqs: AcquisitionService):
     # test to ensure a failing backend doesnt break the whole system due to uncatched exceptions
     from photobooth.services.backends.virtualcamera import VirtualCameraBackend
 
@@ -106,21 +106,21 @@ def test_simulated_stop_exceptions(_container: Container):
 
     with patch.object(VirtualCameraBackend, "stop", error_mock):
         try:
-            aq: AquisitionService = AquisitionService()
+            aq: AcquisitionService = AcquisitionService()
             aq.stop()
 
         except Exception as exc:
             raise AssertionError(f"'VirtualCameraBackend' raised an exception, but it should fail in silence {exc}") from exc
 
 
-def test_get_livestream_virtualcamera(_container: Container):
+def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
     error_mock_timeout = mock.MagicMock()
     error_mock_timeout.side_effect = TimeoutError("backend time out simulated")
 
     error_mock_runtime = mock.MagicMock()
     error_mock_runtime.side_effect = RuntimeError("backend other exception simulated")
 
-    g_stream = _container.aquisition_service.gen_stream()
+    g_stream = _acqs.gen_stream()
     # stream is from second backend (live)
 
     i = 0
@@ -133,14 +133,14 @@ def test_get_livestream_virtualcamera(_container: Container):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            _container.aquisition_service._get_video_backend().restart()
+            _acqs._get_video_backend().restart()
 
         if i >= 30:
             g_stream.close()
 
 
-def test_get_substitute_image(_container: Container):
-    with Image.open(io.BytesIO(_container.aquisition_service._substitute_image("Error", "Something happened!", mirror=False))) as img:
+def test_get_substitute_image(_acqs: AcquisitionService):
+    with Image.open(io.BytesIO(_acqs._substitute_image("Error", "Something happened!", mirror=False))) as img:
         img.verify()
-    with Image.open(io.BytesIO(_container.aquisition_service._substitute_image("Error", "Something happened!", mirror=True))) as img:
+    with Image.open(io.BytesIO(_acqs._substitute_image("Error", "Something happened!", mirror=True))) as img:
         img.verify()

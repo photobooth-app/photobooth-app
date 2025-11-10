@@ -6,8 +6,8 @@ from ...database.types import MediaitemTypes
 
 eventHooksService = Literal["init", "start", "stop"]
 eventHooksStatemachine = Literal["counting", "capture", "captured", "finished"]
-eventHooksAquisition = Literal["capture_still", "capture_multicam", "capture_video"]
-eventHooks = Literal[eventHooksService, eventHooksStatemachine, eventHooksAquisition]
+eventHooksAcquisition = Literal["capture_still", "capture_multicam", "capture_video"]
+eventHooks = Literal[eventHooksService, eventHooksStatemachine, eventHooksAcquisition]
 requestMethods = Literal["get", "post", "patch", "put", "delete"]
 locationOfAdditionalParameters = Literal["query", "body"]
 

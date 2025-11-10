@@ -44,7 +44,7 @@ async def wrap_iter(iterable: Generator[bytes, Any, None]) -> AsyncGenerator[byt
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    async for frame in wrap_iter(container.aquisition_service.gen_stream()):
+    async for frame in wrap_iter(container.acquisition_service.gen_stream()):
         try:
             await websocket.send_bytes(frame)
         except WebSocketDisconnect as exc:
@@ -69,7 +69,7 @@ def video_stream(index_subdevice: int = 0):
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
 
     def gen_multipart():
-        for jpeg_bytes in container.aquisition_service.gen_stream(index_subdevice):
+        for jpeg_bytes in container.acquisition_service.gen_stream(index_subdevice):
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n\r\n")
 
     try:
@@ -82,7 +82,7 @@ def video_stream(index_subdevice: int = 0):
 @router.get("/still")
 def api_still_get():
     try:
-        file = container.aquisition_service.wait_for_still_file()
+        file = container.acquisition_service.wait_for_still_file()
         return FileResponse(file, filename=file.name)
     except Exception as exc:
         logger.exception(exc)
@@ -92,7 +92,7 @@ def api_still_get():
 @router.get("/multicam")
 def api_multicam_get() -> list[Path]:
     try:
-        return container.aquisition_service.wait_for_multicam_files()
+        return container.acquisition_service.wait_for_multicam_files()
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
@@ -102,7 +102,7 @@ def api_multicam_get() -> list[Path]:
 def api_postprocess_multicam_set(files_in: list[Path]) -> list[Path]:
     try:
         sanitized_input = [filenames_sanitize(file_in) for file_in in files_in]
-        return container.aquisition_service.postprocess_multicam_set(sanitized_input, Path("./tmp"))
+        return container.acquisition_service.postprocess_multicam_set(sanitized_input, Path("./tmp"))
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc
@@ -118,10 +118,10 @@ def api_multicam_loadfile_get(file_path: Path):
 def api_cmd_aquisition_capturemode_get(mode: Literal["preview", "capture", "video", "idle"] = "preview"):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        container.aquisition_service.signalbackend_configure_optimized_for_hq_capture()
+        container.acquisition_service.signalbackend_configure_optimized_for_hq_capture()
     elif mode == "preview":
-        container.aquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        container.acquisition_service.signalbackend_configure_optimized_for_hq_preview()
     elif mode == "video":
-        container.aquisition_service.signalbackend_configure_optimized_for_video()
+        container.acquisition_service.signalbackend_configure_optimized_for_video()
     elif mode == "idle":
-        container.aquisition_service.signalbackend_configure_optimized_for_idle()
+        container.acquisition_service.signalbackend_configure_optimized_for_idle()

@@ -260,4 +260,4 @@ class WebcamV4lBackend(AbstractBackend):
                         if self._stop_event.is_set():
                             break
 
-        logger.info("v4l_img_aquisition finished, exit")
+        logger.info("v4l_img_acquisition finished, exit")

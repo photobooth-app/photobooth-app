@@ -20,7 +20,7 @@ def _container() -> Generator[Container, None, None]:
     container.start()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
-    block_until_device_is_running(container.aquisition_service._get_video_backend())
+    block_until_device_is_running(container.acquisition_service._get_video_backend())
 
     # deliver
     yield container
@@ -180,7 +180,7 @@ def test_video_stop_early(_container: Container):
 
     # wait until actually recording
     timeout_counter = 0
-    while not _container.aquisition_service.is_recording():
+    while not _container.acquisition_service.is_recording():
         time.sleep(0.05)
         timeout_counter += 0.05
         if timeout_counter > 10:
