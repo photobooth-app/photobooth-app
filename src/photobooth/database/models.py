@@ -55,7 +55,7 @@ class Mediaitem(Base):
     show_in_gallery: Mapped[bool] = mapped_column(Boolean, default=True)
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}> id: {self.id}, media_type: {self.media_type}, unprocessed: {self.unprocessed}"
+        return f"id: {self.id}, media_type: {self.media_type.value}, {self.unprocessed}"
 
 
 class Cacheditem(Base):
