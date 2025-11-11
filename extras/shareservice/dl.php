@@ -46,6 +46,9 @@ $DB_FILENAME = "jobs.sqlite3";
 $ALLOWED_UPLOAD_TYPES = [
     'image/png' => 'png',
     'image/jpeg' => 'jpg',
+    'image/jpg' => 'jpg',
+    'image/avif' => 'avif',
+    'image/webp' => 'webp',
     'image/gif' => 'gif',
     'video/mp4' => 'mp4',
 ];
