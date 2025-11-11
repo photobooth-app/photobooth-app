@@ -121,6 +121,24 @@ def get_jpeg(dim: tuple[int, int]) -> io.BytesIO:
     return jpeg_bytes_io
 
 
+def dummy_animation(filepath: Path):
+    # Create two dummy frames (solid colors for simplicity)
+    frame1 = Image.new("RGB", (600, 400), color=(255, 0, 0))  # red
+    frame2 = Image.new("RGB", (600, 400), color=(0, 255, 0))  # green
+    frame3 = Image.new("RGB", (600, 400), color=(0, 0, 255))  # blue
+
+    # Save into a BytesIO buffer as animated WebP
+
+    frame1.save(
+        filepath,
+        format=None,
+        save_all=True,
+        append_images=[frame2, frame3],
+        duration=[200, 400, 200],  # per-frame duration in ms
+        loop=0,  # 0 = infinite loop
+    )
+
+
 def get_impl_func_for_plugin(plugin, hook):
     # FIXME: not sure yet, why patch.object(GpioLights,"sm_on_enter_state") does not assert_called() eval True but is still correctly called...
     # working around currently with this function:

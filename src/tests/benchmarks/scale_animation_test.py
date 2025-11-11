@@ -1,23 +1,26 @@
 import io
 import logging
+from pathlib import Path
 from subprocess import PIPE, Popen
 
 import pytest
 from PIL import Image, ImageSequence
 from turbojpeg import TurboJPEG
 
+from ..tests.util import dummy_animation
+
 turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
-def ffmpeg_hq_optimizedquality_scale(gif_bytes, tmp_path):
+def ffmpeg_hq_optimizedquality_scale(gif_filepath: Path, tmp_path):
     # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
     ffmpeg_subprocess = Popen(
         [
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "src/tests/assets/animation.gif",
+            str(gif_filepath),
             "-vf",
             "scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             str(tmp_path / "ffmpeg_hq_optimizedquality_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -28,14 +31,14 @@ def ffmpeg_hq_optimizedquality_scale(gif_bytes, tmp_path):
         raise AssertionError("process fail")
 
 
-def ffmpeg_hq_optimizedspeed_scale(gif_bytes, tmp_path):
+def ffmpeg_hq_optimizedspeed_scale(gif_filepath: Path, tmp_path):
     # https://engineering.giphy.com/how-to-make-gifs-with-ffmpeg/
     ffmpeg_subprocess = Popen(
         [
             "ffmpeg",
             "-y",  # overwrite with no questions
             "-i",
-            "src/tests/assets/animation.gif",
+            str(gif_filepath),
             "-vf",
             "scale=500:-1:flags=bicubic,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             str(tmp_path / "ffmpeg_hq_optimizedspeed_scale.gif"),  # https://docs.python.org/3/library/pathlib.html#operators
@@ -46,7 +49,7 @@ def ffmpeg_hq_optimizedspeed_scale(gif_bytes, tmp_path):
         raise AssertionError("process fail")
 
 
-def ffmpeg_stdin_scale(gif_bytes, tmp_path):
+def ffmpeg_stdin_scale(gif_filepath: Path, tmp_path):
     ffmpeg_subprocess = Popen(
         [
             "ffmpeg",
@@ -62,15 +65,15 @@ def ffmpeg_stdin_scale(gif_bytes, tmp_path):
         stdin=PIPE,
     )
     assert ffmpeg_subprocess.stdin
-    ffmpeg_subprocess.stdin.write(gif_bytes)
+    ffmpeg_subprocess.stdin.write(gif_filepath.read_bytes())
     ffmpeg_subprocess.stdin.close()
     code = ffmpeg_subprocess.wait()
     if code != 0:
         raise AssertionError("process fail")
 
 
-def pil_scale(gif_bytes, tmp_path):
-    gif_image = Image.open(io.BytesIO(gif_bytes), formats=["gif"])
+def pil_scale(gif_filepath: Path, tmp_path):
+    gif_image = Image.open(gif_filepath, formats=["gif"])
 
     # Wrap on-the-fly thumbnail generator
     def thumbnails(frames: ImageSequence.Iterator):
@@ -82,6 +85,7 @@ def pil_scale(gif_bytes, tmp_path):
     # to recover the original durations in scaled versions
     durations = []
     for frame in ImageSequence.Iterator(gif_image):
+        frame.load()
         duration = frame.info.get("duration", 1000)  # fallback 1sec if info not avail.
         durations.append(duration)
 
@@ -133,5 +137,7 @@ def image(file) -> bytes:
     group="scalegif",
 )
 def test_libraries_scalegif(library, benchmark, tmp_path):
-    benchmark(eval(library), gif_bytes=image("src/tests/assets/animation.gif"), tmp_path=tmp_path)
+    dummy_animation_file = tmp_path / "in_animation.gif"
+    dummy_animation(dummy_animation_file)
+    benchmark(eval(library), gif_filepath=dummy_animation_file, tmp_path=tmp_path)
     assert True

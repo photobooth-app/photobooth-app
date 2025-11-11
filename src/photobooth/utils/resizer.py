@@ -77,38 +77,40 @@ def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
         resize_jpeg_pillow(filepath_in, filepath_out, scaled_min_length)
 
 
-def resize_gif(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    """scale a gif image sequence to another buffer using PIL"""
+def resize_animation_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
+    """Scale an animated image sequence (GIF/WebP/AVIF) and preserve frame durations."""
 
-    gif_image = Image.open(filepath_in, formats=["gif"])
+    # format specific optimizations:
+    FORMAT_OPTIONS = {
+        ".gif": {"optimize": True},
+        ".webp": {"quality": 85, "method": 0, "lossless": False},
+        ".avif": {"quality": 85, "speed": 10, "lossless": False},
+    }
+    try:
+        format_params = FORMAT_OPTIONS[filepath_out.suffix.lower()]
+    except KeyError as exc:
+        raise RuntimeError(f"Unsupported format: {filepath_out.suffix.lower()}") from exc
 
-    # Wrap on-the-fly thumbnail generator
-    def thumbnails(frames: ImageSequence.Iterator, target_size: tuple[int, int]):
-        for frame in frames:
-            thumbnail = frame.copy()
-            thumbnail.thumbnail(size=target_size, resample=Image.Resampling.LANCZOS)
-            yield thumbnail
-
-    # to recover the original durations in scaled versions
+    pil_animated_img = Image.open(filepath_in)
     durations: list[int] = []
-    for frame in ImageSequence.Iterator(gif_image):
-        duration = frame.info.get("duration", 1000)  # fallback 1sec if info not avail.
-        durations.append(duration)
-
-    # Get sequence iterator
-    resized_frames = thumbnails(ImageSequence.Iterator(gif_image), (scaled_min_length, scaled_min_length))
+    resized_frames: list[Image.Image] = []
+    for frame in ImageSequence.Iterator(pil_animated_img):
+        frame.load()  # ensure metadata is parsed so for AVIF/WEBP duration is avail. GIF is different and would not need this.
+        thumb = frame.copy()
+        thumb.thumbnail((scaled_min_length, scaled_min_length), Image.Resampling.LANCZOS)
+        resized_frames.append(thumb)
+        d = frame.info.get("duration", pil_animated_img.info.get("duration", 1000))
+        durations.append(int(d))
 
     # Save output
-    om = next(resized_frames)  # Handle first frame separately
-    om.info = gif_image.info  # Copy original information (duration is only for first frame so on save handled separately)
-    om.save(
+    resized_frames[0].save(
         filepath_out,
-        format="gif",
+        format=None,
         save_all=True,
-        append_images=list(resized_frames),
+        append_images=resized_frames[1:],
         duration=durations,
-        optimize=True,
-        loop=0,  # loop forever
+        loop=0,
+        **format_params,
     )
 
 
@@ -175,8 +177,8 @@ def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: i
 
     if suffix.lower() in (".jpg", ".jpeg"):
         resize_jpeg(filepath_in, filepath_out, scaled_min_length)
-    elif suffix.lower() == ".gif":
-        resize_gif(filepath_in, filepath_out, scaled_min_length)
+    elif suffix.lower() in (".gif", ".webp", ".avif"):
+        resize_animation_pillow(filepath_in, filepath_out, scaled_min_length)
     elif suffix.lower() == ".mp4":
         resize_mp4(filepath_in, filepath_out, scaled_min_length)
     else:

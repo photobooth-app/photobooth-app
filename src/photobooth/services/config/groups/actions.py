@@ -90,9 +90,9 @@ class MulticameraJobControl(BaseModel):
         description="Show individual captures in the gallery. Hidden captures are still stored in the data folder. (Note: changing this setting will not change visibility of already captured images).",
     )
 
-    output_fileformat: Literal["gif", "mp4"] = Field(
-        default="gif",
-        description="Choose the file format of the wigglegram. GIF is usually lower quality (max 256 colors) but good compatibility. MP4 offers better quality per file size but might not replay on old devices.",
+    output_fileformat: Literal["webp", "avif", "gif"] = Field(
+        default="webp",
+        description="Choose the file format of the wigglegram. WebP is recommended nowadays. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. AVIF is a newer format, encodes fast, produces smallest files but is not yet broadly compatible. GIF is deprecated here.",
     )
 
 

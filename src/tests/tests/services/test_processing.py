@@ -140,9 +140,9 @@ def test_animation(_container: Container):
     assert _container.processing_service._workflow_jobmodel is None
 
     phase2_item = _container.mediacollection_service.get_item_latest()
-    assert phase2_item.unprocessed.suffix.lower() == ".gif"
+    assert phase2_item.unprocessed.suffix.lower() in (".gif", ".avif", ".webp")
 
-    with Image.open(phase2_item.unprocessed, formats=["GIF"]) as img:
+    with Image.open(phase2_item.unprocessed, formats=["GIF", "AVIF", "WEBP"]) as img:
         img.verify()
 
 
@@ -224,7 +224,7 @@ def test_multicamera(_container: Container):
     assert _container.mediacollection_service.count() == number_of_images_before + 5
 
     phase2_item = _container.mediacollection_service.get_item_latest()
-    assert phase2_item.unprocessed.suffix.lower() == ".gif"
+    assert phase2_item.unprocessed.suffix.lower() in (".gif", ".avif", ".webp")
 
-    with Image.open(phase2_item.unprocessed, formats=["GIF"]) as img:
+    with Image.open(phase2_item.unprocessed, formats=["GIF", "AVIF", "WEBP"]) as img:
         img.verify()

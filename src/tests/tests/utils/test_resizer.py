@@ -8,9 +8,9 @@ from PIL import Image, ImageOps
 
 from photobooth.database.types import DimensionTypes
 from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
-from photobooth.utils.resizer import generate_resized, resize_gif, resize_jpeg, resize_jpeg_pillow, resize_jpeg_turbojpeg, resize_mp4
+from photobooth.utils.resizer import generate_resized, resize_animation_pillow, resize_jpeg, resize_jpeg_pillow, resize_jpeg_turbojpeg, resize_mp4
 
-from ..util import get_exiforiented_jpeg, get_jpeg
+from ..util import dummy_animation, get_exiforiented_jpeg, get_jpeg
 
 try:
     from turbojpeg import TurboJPEG
@@ -85,10 +85,33 @@ def test_resize_jpg_force_pillow(tmp_path):
 
 
 def test_resize_gif(tmp_path):
-    input = Path("src/tests/assets/animation.gif")
+    input = tmp_path / "anim.gif"
     output = tmp_path / "animation.gif"
+    dummy_animation(input)
 
-    resize_gif(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+
+    with Image.open(output) as img:
+        img.verify()
+
+
+def test_resize_webp(tmp_path):
+    input = tmp_path / "anim.webp"
+    output = tmp_path / "animation.webp"
+    dummy_animation(input)
+
+    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+
+    with Image.open(output) as img:
+        img.verify()
+
+
+def test_resize_avif(tmp_path):
+    input = tmp_path / "anim.avif"
+    output = tmp_path / "animation.avif"
+    dummy_animation(input)
+
+    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -108,22 +131,26 @@ def test_generate_resized():
 
     with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
         generate_resized(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
-
         mock.assert_called_once()
 
     with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
         generate_resized(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
-
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_gif") as mock:
+    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
         generate_resized(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
+        mock.assert_called_once()
 
+    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
+        generate_resized(filepath_in=Path("somefile.webp"), filepath_out=Path("dontcare"), scaled_min_length=100)
+        mock.assert_called_once()
+
+    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
+        generate_resized(filepath_in=Path("somefile.avif"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
     with patch.object(photobooth.utils.resizer, "resize_mp4") as mock:
         generate_resized(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
-
         mock.assert_called_once()
 
 

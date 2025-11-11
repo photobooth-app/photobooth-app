@@ -4,10 +4,8 @@ import logging
 import shutil
 import time
 import traceback
-from fractions import Fraction
 from pathlib import Path
 
-import av
 from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
@@ -84,13 +82,37 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     return manipulated_image
 
 
+def __pil_save(images: list[Image.Image], file_out: Path, durations: int | list[int] | tuple[int, ...] | None = None):
+    FORMAT_OPTIONS = {
+        ".jpg": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "optimize": True},
+        ".gif": {"optimize": True},
+        ".webp": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "method": 0, "lossless": False},
+        ".avif": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "speed": 10, "lossless": False},
+    }
+    try:
+        format_params = FORMAT_OPTIONS[file_out.suffix.lower()]
+    except KeyError as exc:
+        raise RuntimeError(f"Unsupported format: {file_out.suffix}") from exc
+
+    sequence_params = {}
+    if len(images) > 1:
+        # webp, gif and avif have the save_all option for animations, jpeg not.
+        sequence_params = {
+            "save_all": True,
+            "append_images": images[1:] if len(images) > 1 else [],
+            "duration": durations,  # config.duration,  # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
+            "loop": 0,  # loop forever
+        }
+
+    images[0].save(file_out, format=None, **format_params, **sequence_params)
+
+
 def process_phase1images(file_in: Path, mediaitem: Mediaitem):
     manipulated_image = process_image_inner(file_in, SingleImageProcessing(**mediaitem.pipeline_config), preview=False)
 
-    # finish up creating mediafiles representants.
     ## final: save full result and create scaled versions
     # complete processed version (unprocessed and processed are different here)
-    manipulated_image.save(mediaitem.processed, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
+    __pil_save([manipulated_image], mediaitem.processed)
 
     return mediaitem
 
@@ -167,8 +189,7 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
 
     ## create mediaitem
     canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-    canvas.save(mediaitem.unprocessed, format="jpeg", quality=appconfig.mediaprocessing.HIRES_STILL_QUALITY, optimize=True)
-
+    __pil_save([canvas], mediaitem.unprocessed)
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
@@ -191,90 +212,13 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
     pipeline = Pipeline[AnimationContext](*steps)
     pipeline(context)
 
-    sequence_images = context.images
-
     ## create mediaitem
-    sequence_images[0].save(
-        mediaitem.unprocessed,
-        format="gif",
-        save_all=True,
-        append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
-        optimize=True,
-        # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-        duration=[definition.duration for definition in config.merge_definition],
-        loop=0,  # loop forever
-    )
-
+    __pil_save(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
 def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
-    def __create_gif(images: list[Image.Image], frame_duration: int):
-        # sequence like 1-2-3-4-3-2-restart
-        sequence_images = images
-        sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
-
-        ## create mediaitem
-        sequence_images[0].save(
-            mediaitem.unprocessed,
-            format="gif",
-            save_all=True,
-            append_images=sequence_images[1:] if len(sequence_images) > 1 else [],
-            optimize=True,
-            # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-            duration=frame_duration,
-            loop=0,  # loop forever
-        )
-
-    def __create_mp4(images: list[Image.Image], frame_duration: int):
-        # ref https://github.com/PyAV-Org/PyAV/blob/main/examples/numpy/generate_video_with_pts.py
-        fps = round(1.0 / (frame_duration / 1000.0))  # frame_duration is in [ms], normize to [s] for pyav
-
-        n = len(images)
-        cycle = [*range(n), *range(n - 2, 0, -1)]
-        repeat = 1
-        sequence = cycle * repeat
-
-        in_img_w = images[0].width  # it is safe to assume all images have same dimensions
-        in_img_h = images[0].height
-
-        even_w = in_img_w if in_img_w % 2 == 0 else in_img_w - 1
-        even_h = in_img_h if in_img_h % 2 == 0 else in_img_h - 1
-        # set flag to crop. crop using PIL is more efficient than using reformatter to rescale by 1px.
-        need_crop = (even_w, even_h) != (in_img_w, in_img_h)
-
-        if need_crop:
-            for i, image in enumerate(images):
-                images[i] = image.crop(box=(0, 0, even_w, even_h))
-
-        container = av.open(mediaitem.unprocessed, mode="w")
-        stream = container.add_stream("h264", rate=fps, options={"crf": "28", "preset": "veryfast"})  # crf lower is better quality
-        stream.codec_context.time_base = Fraction(1, fps)
-        stream.width = even_w
-        stream.height = even_h
-        # high compat. # TODO: does this automatically reformat if the input is different or just states it should be yuv420?
-        stream.pix_fmt = "yuv420p"
-
-        my_pts = 0  # [seconds]
-        for idx in sequence:
-            frame = av.VideoFrame.from_image(images[idx])
-            # frame = frame.reformat(format="yuv420p")# TODO: needed?
-            frame.pts = my_pts
-            my_pts += 1.0
-
-            for packet in stream.encode(frame):
-                container.mux(packet)
-
-        # last frame duplication seems not needed here, it plays correctly without
-
-        # Flush stream
-        for packet in stream.encode():
-            container.mux(packet)
-
-        # Close the file
-        container.close()
-
     # get config from mediaitem, that is passed as json dict (model_dump) along with it
     config = MulticameraProcessing(**mediaitem.pipeline_config)
 
@@ -290,14 +234,10 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     pipeline = Pipeline[MulticameraContext](*steps)
     pipeline(context)
 
-    # logger.info(context)
-
-    if mediaitem.unprocessed.suffix == ".gif":
-        __create_gif(context.images, frame_duration=config.duration)
-    elif mediaitem.unprocessed.suffix == ".mp4":
-        __create_mp4(context.images, frame_duration=config.duration)
-    else:
-        raise RuntimeError("unsupported format requested")
-
+    ## finalize, create sequence and save
+    # sequence like 1-2-3-4-3-2-restart
+    sequence_images = context.images
+    sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
+    __pil_save(sequence_images, mediaitem.unprocessed, durations=config.duration)
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
