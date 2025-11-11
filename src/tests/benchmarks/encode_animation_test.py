@@ -60,10 +60,31 @@ def pillow_encode_webp(images: list[Image.Image]):
     return bytes_full
 
 
+def pillow_encode_avif(images: list[Image.Image]):
+    byte_io = io.BytesIO()
+    ## create mediaitem
+    images[0].save(
+        byte_io,
+        format="AVIF",
+        save_all=True,
+        append_images=images[1:] if len(images) > 1 else [],
+        quality=85,
+        speed=10,
+        # lossless=False,
+        duration=125,
+        loop=0,  # loop forever
+    )
+
+    bytes_full = byte_io.getbuffer()
+    # Path("file.avif").write_bytes(bytes_full)
+    return bytes_full
+
+
 @pytest.fixture(
     params=[
         "pillow_encode_gif",
         "pillow_encode_webp",
+        "pillow_encode_avif",
     ]
 )
 def library(request):
