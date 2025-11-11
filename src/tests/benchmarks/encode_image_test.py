@@ -97,6 +97,52 @@ def simplejpeg_yuv420_encode(frame_from_camera, rH, rW):
     return jpeg_bytes
 
 
+def pillow_encode_webp(frame_from_camera):
+    img = Image.fromarray(frame_from_camera.astype("uint8"))
+    byte_io = io.BytesIO()
+    img.save(byte_io, format="WebP", quality=85, method=0, lossless=False)  # method=0..6 (Kompressionstiefe)
+
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
+def pillow_encode_webp_lossless(frame_from_camera):
+    img = Image.fromarray(frame_from_camera.astype("uint8"))
+    byte_io = io.BytesIO()
+    img.save(byte_io, format="WebP", quality=0, method=0, lossless=True)  # method=0..6 (Kompressionstiefe)
+
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
+def pillow_encode_avif(frame_from_camera):
+    img = Image.fromarray(frame_from_camera.astype("uint8"))
+    byte_io = io.BytesIO()
+    img.save(byte_io, format="AVIF", quality=85, speed=10)
+
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
+def cv2_encode_webp(frame_from_camera):
+    encode_params = [int(cv2.IMWRITE_WEBP_QUALITY), 85]  # Qualität 0–100
+    success, encimg = cv2.imencode(".webp", frame_from_camera, encode_params)
+    return encimg.tobytes()
+
+
+def pillow_encode_png(frame_from_camera):
+    img = Image.fromarray(frame_from_camera.astype("uint8"))
+    byte_io = io.BytesIO()
+    img.save(byte_io, format="PNG", compress_level=1)
+
+    bytes_full = byte_io.getbuffer()
+
+    return bytes_full
+
+
 @pytest.fixture(
     params=[
         "turbojpeg_encode",
@@ -104,6 +150,11 @@ def simplejpeg_yuv420_encode(frame_from_camera, rH, rW):
         "pillow_encode_jpg",
         "cv2_encode_jpg",
         "simplejpeg_encode",
+        "cv2_encode_webp",
+        "pillow_encode_avif",
+        "pillow_encode_webp",
+        "pillow_encode_webp_lossless",
+        "pillow_encode_png",
     ]
 )
 def library(request):
