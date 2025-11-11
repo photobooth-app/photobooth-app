@@ -157,8 +157,7 @@ class LoggingService(BaseService):
         for name in [
             "picamera2.picamera2",
             "sse_starlette.sse",
-            "PIL.PngImagePlugin",
-            "PIL.TiffImagePlugin",
+            "PIL",
             "multipart",
             "requests",
             "niquests",
