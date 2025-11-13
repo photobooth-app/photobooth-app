@@ -21,17 +21,38 @@ def wiggle_node_proc():
 
 @pytest.fixture()
 def backend_wigglecam():
-    # setup
     backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes(description="wigglenodes", address="127.0.0.1", base_port=5560)]))
 
-    # deliver
     backend.start()
     block_until_device_is_running(backend)
-
     yield backend
     backend.stop()
 
 
-# @pytest.mark.asyncio
-def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam):
+def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam: WigglecamBackend):
     get_images(backend_wigglecam)
+
+
+# def test_calibration_check(wiggle_node_proc, backend_wigglecam: WigglecamBackend):
+#     backend_wigglecam.__cal_util.identity_all(4, 100, 100)
+#     backend_wigglecam.__cal_util.save_calibration_data(CALIBRATION_DATA_PATH)
+
+
+def test_raises_illegal_indexes():  # backend_wigglecam: WigglecamBackend):
+    backend = WigglecamBackend(GroupCameraWigglecam(devices=[]))
+    with pytest.raises(RuntimeError):
+        backend.setup_resource()
+
+    backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes()]))
+    # with pytest.raises(RuntimeError):
+    backend.setup_resource()
+
+    backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes()]))
+    with pytest.raises(RuntimeError):
+        backend._config.index_cam_stills = 1
+        backend.setup_resource()
+
+    backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes()]))
+    with pytest.raises(RuntimeError):
+        backend._config.index_cam_video = 1
+        backend.setup_resource()
