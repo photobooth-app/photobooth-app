@@ -381,4 +381,8 @@ class GroupCameras(BaseModel):
         description="Index of one backend below used for multicamera images (wigglegrams).",
     )
 
-    group_backends: list[GroupBackend] = [GroupBackend(backend_config=GroupCameraVirtual())]
+    group_backends: list[GroupBackend] = Field(
+        default=[GroupBackend(description="virtual camera", backend_config=GroupCameraVirtual())],
+        description="Configure the cameras here. Typical is only one camera, but it is also possible to use a DSLR for stills and another camera for the livestream.",
+        title="List of Camera Backends",
+    )
