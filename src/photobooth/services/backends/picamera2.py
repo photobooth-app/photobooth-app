@@ -192,12 +192,9 @@ class Picamera2Backend(AbstractBackend):
         self._last_config = self._current_config
         self._current_config = self._capture_config
 
-    def _on_configure_optimized_for_hq_capture(self):
-        """switch to hq capture is done during hq preview call already because it avoids switch delay on the actual capture"""
-        pass
+    def _on_configure_optimized_for_hq_capture(self): ...
 
-    def _on_configure_optimized_for_livestream_paused(self):
-        pass
+    def _on_configure_optimized_for_livestream_paused(self): ...
 
     def _switch_mode(self):
         assert self._picamera2

@@ -22,6 +22,7 @@ from .abstractbackend import AbstractBackend, GeneralBytesResult
 
 logger = logging.getLogger(__name__)
 
+input_ffmpeg_device = None
 # determine the input device based on platform
 if sys.platform == "win32":
     # https://ffmpeg.org/ffmpeg-devices.html#dshow  https://trac.ffmpeg.org/wiki/DirectShow
@@ -32,9 +33,6 @@ elif sys.platform == "darwin":
 elif sys.platform == "linux":
     # https://ffmpeg.org/ffmpeg-devices.html#video4linux2_002c-v4l2
     input_ffmpeg_device = "v4l2"
-else:
-    # not supported platform, will raise exception during startup. no exception here to not break the overall app
-    input_ffmpeg_device = None
 
 
 class WebcamPyavBackend(AbstractBackend):
@@ -51,8 +49,8 @@ class WebcamPyavBackend(AbstractBackend):
     def start(self):
         super().start()
 
-        if not input_ffmpeg_device:
-            raise RuntimeError("platform does not support the pyav backend")
+        # not supported platform, will raise exception during startup. no exception during init to not break the overall app
+        assert input_ffmpeg_device is not None, "the platform is not supported"
 
     def stop(self):
         super().stop()
@@ -94,23 +92,17 @@ class WebcamPyavBackend(AbstractBackend):
 
             return self._lores_data.data
 
-    def _on_configure_optimized_for_idle(self):
-        pass
+    def _on_configure_optimized_for_idle(self): ...
 
-    def _on_configure_optimized_for_hq_preview(self):
-        pass
+    def _on_configure_optimized_for_hq_preview(self): ...
 
-    def _on_configure_optimized_for_hq_capture(self):
-        pass
+    def _on_configure_optimized_for_hq_capture(self): ...
 
-    def _on_configure_optimized_for_livestream_paused(self):
-        pass
+    def _on_configure_optimized_for_livestream_paused(self): ...
 
-    def setup_resource(self):
-        pass
+    def setup_resource(self): ...
 
-    def teardown_resource(self):
-        pass
+    def teardown_resource(self): ...
 
     def run_service(self):
         reformatter = VideoReformatter()

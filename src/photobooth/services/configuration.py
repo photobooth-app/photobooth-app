@@ -18,14 +18,10 @@ class ConfigurationService(BaseService):
     def start(self):
         super().start()
 
-        pass
-
         super().started()
 
     def stop(self):
         super().stop()
-
-        pass
 
         super().stopped()
 

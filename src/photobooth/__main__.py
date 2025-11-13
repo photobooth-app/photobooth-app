@@ -55,7 +55,6 @@ def main(args=None, run_server: bool = True):
             server.run()
         except KeyboardInterrupt:
             print("got ctrl-c, photobooth-app 🔚")
-            pass
 
 
 if __name__ == "__main__":

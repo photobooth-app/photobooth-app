@@ -36,8 +36,7 @@ MAP_DIMENSION_TO_PIXEL = {
 
 
 class Database:
-    def __init__(self):
-        pass
+    def __init__(self): ...
 
     def add_item(self, item: Mediaitem):
         # add to db and notify
@@ -92,8 +91,7 @@ class Database:
 
 
 class Files:
-    def __init__(self):
-        pass
+    def __init__(self): ...
 
     def check_representing_files_raise(self, item: Mediaitem):
         if not item.unprocessed.is_file():
@@ -271,7 +269,7 @@ class MediacollectionService(BaseService):
 
     def stop(self):
         super().stop()
-        pass
+
         super().stopped()
 
     def on_start_maintain(self):

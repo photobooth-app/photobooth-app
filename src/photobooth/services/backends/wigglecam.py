@@ -215,14 +215,10 @@ class WigglecamBackend(AbstractBackend):
 
         logger.debug("run_service loop exited")
 
-    def _on_configure_optimized_for_idle(self):
-        pass
+    def _on_configure_optimized_for_idle(self): ...
 
-    def _on_configure_optimized_for_hq_preview(self):
-        pass
+    def _on_configure_optimized_for_hq_preview(self): ...
 
-    def _on_configure_optimized_for_hq_capture(self):
-        pass
+    def _on_configure_optimized_for_hq_capture(self): ...
 
-    def _on_configure_optimized_for_livestream_paused(self):
-        pass
+    def _on_configure_optimized_for_livestream_paused(self): ...

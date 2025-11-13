@@ -280,6 +280,3 @@ class AcquisitionService(BaseService):
             subprocess.run(args=["ffmpeg", "-version"], timeout=10, check=True, stdout=subprocess.DEVNULL)
         except Exception as exc:
             logger.warning(f"ffmpeg could not be loaded, error: {exc}")
-        else:
-            # no error, service restart ok
-            pass

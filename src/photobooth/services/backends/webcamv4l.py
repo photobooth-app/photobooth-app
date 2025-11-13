@@ -103,17 +103,13 @@ class WebcamV4lBackend(AbstractBackend):
 
             return self._lores_data.data
 
-    def _on_configure_optimized_for_idle(self):
-        pass
+    def _on_configure_optimized_for_idle(self): ...
 
-    def _on_configure_optimized_for_hq_preview(self):
-        pass
+    def _on_configure_optimized_for_hq_preview(self): ...
 
-    def _on_configure_optimized_for_hq_capture(self):
-        pass
+    def _on_configure_optimized_for_hq_capture(self): ...
 
-    def _on_configure_optimized_for_livestream_paused(self):
-        pass
+    def _on_configure_optimized_for_livestream_paused(self): ...
 
     def _set_mode(self, capture: "linuxpy_video_device_type.VideoCapture", mode: Literal["hires", "lores"]):
         assert linuxpy_video_device
@@ -191,11 +187,9 @@ class WebcamV4lBackend(AbstractBackend):
         except ValueError:
             return linuxpy_video_device.Device(device_text)
 
-    def setup_resource(self):
-        pass
+    def setup_resource(self): ...
 
-    def teardown_resource(self):
-        pass
+    def teardown_resource(self): ...
 
     def run_service(self):
         assert linuxpy_video_device

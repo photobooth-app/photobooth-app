@@ -18,8 +18,6 @@ class SyncTaskUpload:
 class SyncTaskUpdate(SyncTaskUpload):
     """Update if not existing or file size different only. Prior upload checking if is same."""
 
-    pass
-
 
 @dataclass
 class SyncTaskDelete:

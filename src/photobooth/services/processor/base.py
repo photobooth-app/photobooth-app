@@ -154,8 +154,7 @@ class JobModelBase(ABC, Generic[T]):
     def on_exit_completed(self): ...
 
     @abstractmethod
-    def on_enter_finished(self):
-        pass
+    def on_enter_finished(self): ...
 
     @property
     @abstractmethod

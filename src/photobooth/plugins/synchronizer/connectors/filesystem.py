@@ -29,8 +29,7 @@ class FilesystemConnector(AbstractConnector):
 
         logger.info("filesystem ready to sync")
 
-    def disconnect(self):
-        pass
+    def disconnect(self): ...
 
     def is_connected(self):
         if not self._target_dir:  # None or ""

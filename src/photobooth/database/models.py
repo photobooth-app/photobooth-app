@@ -11,8 +11,7 @@ from sqlalchemy.sql import func
 from .types import DimensionTypes, MediaitemTypes, PathType
 
 
-class Base(DeclarativeBase):
-    pass
+class Base(DeclarativeBase): ...
 
 
 class UsageStats(Base):
