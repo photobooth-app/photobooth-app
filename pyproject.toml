@@ -133,10 +133,12 @@ dev = [
   "ruff",
   "pytest",
   "pytest-cov",
+  "pytest-httpserver",
+  "pytest-asyncio",
+  "pytest-benchmark[histogram]>=5.1.0",
   "coverage[toml]",
   "httpx",
   "httpx-sse",
-  "pytest-httpserver",
   "pydot",
   "pre-commit",
   "pyright",
@@ -145,7 +147,7 @@ dev = [
   "poethepoet",
   "wigglecam[node]"
 ]
-benchmarks = ["pytest-benchmark[histogram]>=5.1.0"]
+
 
 [tool.uv]
 default-groups = [
