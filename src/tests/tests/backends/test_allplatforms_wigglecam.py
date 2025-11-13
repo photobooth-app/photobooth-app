@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import sys
 
 import pytest
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture
 def wiggle_node_proc():
-    proc = subprocess.Popen(["python", "-m", "wigglecam", "--device-id", "0", "--base-port", "5560"])
+    proc = subprocess.Popen([sys.executable, "-m", "wigglecam", "--device-id", "0", "--base-port", "5560"])
     yield proc
     proc.terminate()
     proc.wait()
@@ -32,5 +33,5 @@ def backend_wigglecam():
 
 
 # @pytest.mark.asyncio
-def test_virtual_camera_capture1(wiggle_node_proc, backend_wigglecam):
+def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam):
     get_images(backend_wigglecam)
