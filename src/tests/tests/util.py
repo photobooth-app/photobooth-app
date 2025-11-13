@@ -1,6 +1,7 @@
 import io
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 import piexif
@@ -17,14 +18,9 @@ def block_until_device_is_running(backend: AbstractBackend):
     Returns:
         _type_: _description_
     """
-    attempts = 10
-    logger.info(f"waiting for device to be ready to deliver an image until {attempts=}")
-    try:
-        backend.wait_for_still_file(retries=attempts)
-    except Exception as exc:
-        raise AssertionError(f"test fails because device did not come up for testing, error: {exc}") from exc
-    else:
-        logger.debug("continue, device signaled is ready to deliver")
+    while not backend.is_running():
+        logger.debug("wait for startup")
+        time.sleep(0.1)
 
 
 def get_images(backend: AbstractBackend, multicam_is_error: bool = False):

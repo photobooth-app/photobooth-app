@@ -62,6 +62,7 @@ dependencies = [
   "alembic>=1.15.2",
   "onnxruntime",
   "nc-py-api>=0.20.1",
+  "wigglecam",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng",                                                                          # needs python3-dev package
   "niquests>=3.15.0",                                                               # niquests add to the end because it overshadows urllib3 by urllib3-future (wigglecam uses normal urllib3 for now)
 ]
@@ -142,6 +143,7 @@ dev = [
   "pyftpdlib~=2.0.0",  # limit to 2.0.x, since key.pem is not shipped in later versions
   "PyOpenSSL",         # for pyftplib to support FTPS during tests
   "poethepoet",
+  "wigglecam[node]"
 ]
 benchmarks = ["pytest-benchmark[histogram]>=5.1.0"]
 
