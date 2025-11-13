@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -31,6 +32,12 @@ def backend_wigglecam():
 
 def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam: WigglecamBackend):
     get_images(backend_wigglecam)
+
+
+def test_post_proc(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
+    files = backend_wigglecam.wait_for_multicam_files()
+
+    backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
 
 
 # def test_calibration_check(wiggle_node_proc, backend_wigglecam: WigglecamBackend):
