@@ -88,5 +88,4 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
     def on_exit_completed(self): ...
 
-    def on_enter_finished(self):
-        super().on_enter_finished()
+    def on_enter_finished(self): ...

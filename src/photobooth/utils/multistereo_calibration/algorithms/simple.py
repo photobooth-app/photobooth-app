@@ -35,6 +35,10 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         """Load all calibration data from disk."""
         super()._load_calibration_data(dir, CalDataAlign)
 
+    def identity_all(self, number_cameras: int, img_width: int, img_height: int):
+        """Set identity caldata so output will not be modified at all but useful in testing"""
+        self._caldataalign = [CalDataAlign(f"dummytime_cam_{i}", img_width, img_height, H=np.eye(3)) for i in range(number_cameras)]
+
     def calibrate_all(self, cameras: list[list[Path]], ref_idx: int, detector: cv2.aruco.CharucoDetector):
         """Calibrate all cameras against the reference camera.
         cameras[0] is all images for camera 0 listed.
