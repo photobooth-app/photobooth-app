@@ -13,6 +13,7 @@ class ResilientService(ABC):
     def __init__(self, retry_delay: int | float = 2, max_backoff: int | float = 20):
         self._lock = threading.Lock()
         self._started = False
+        self._running = False
         self._thread = None
         self._stop_event = threading.Event()
         self._retry_delay = retry_delay
@@ -48,7 +49,9 @@ class ResilientService(ABC):
 
                 try:
                     logger.info(f"{self}-resilient service start running service logic")
+                    self._running = True
                     self.run_service()
+                    self._running = False
                 except Exception as e:
                     self._report_crash(e)
 
@@ -66,6 +69,8 @@ class ResilientService(ABC):
                     self._report_crash(e)
 
             except ServiceCrashed:
+                self._running = False
+
                 if self._stop_event.is_set():
                     break
 
@@ -116,6 +121,11 @@ class ResilientService(ABC):
         self.stop()
         self.start()
 
-    def is_running(self):
+    def is_started(self):
+        # resource is only foreseen to start, Thread(run) might not have been called once yet, same for setup_resource.
         with self._lock:
             return self._started
+
+    def is_running(self):
+        # resource is setup (fully initialized) as capable to deliver, setup_resource has been called at least once.
+        return self._running

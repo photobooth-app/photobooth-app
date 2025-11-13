@@ -24,7 +24,7 @@ def queue_processor(tmp_path: Path):
 
     yield qp
 
-    if qp.is_running():
+    if qp.is_started():
         qp.stop()
 
 

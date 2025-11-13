@@ -218,7 +218,7 @@ class WigglecamBackend(AbstractBackend):
 
         while not self._stop_event.is_set():
             try:
-                data = self._sub_lores.recv()
+                data = self._sub_lores.recv()  # timeout after set time during setup
                 msg = ImageMessage.from_bytes(data)
 
                 # if msg.device_id != self._config.index_cam_video:
@@ -230,6 +230,7 @@ class WigglecamBackend(AbstractBackend):
                     self._lores_data[msg.device_id].condition.notify_all()
                 self._frame_tick()
             except pynng.Timeout:
+                # this is used to start another loop and have chance to check for a stop_event
                 continue
             except Exception as exc:
                 logger.error(f"error receiving lores frame: {exc}")

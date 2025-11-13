@@ -308,7 +308,7 @@ class AbstractBackend(ResilientService, ABC):
                 img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
                 return img
             except TimeoutError as exc:
-                if self.is_running():
+                if self.is_started():
                     continue
                 else:
                     logger.debug("device not alive any more, stopping early lores image delivery.")
