@@ -152,7 +152,6 @@ dev = [
 [tool.uv]
 default-groups = [
   "dev",
-  "benchmarks",
 ] # by default only dev is automatically installed, so here add benchmarks
 
 
