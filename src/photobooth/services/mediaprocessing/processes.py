@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import time
 import traceback
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
 from ...database.models import Mediaitem
+from ...utils.metrics_timer import MetricsTimer
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
 from .pipeline import NextStep, Pipeline, PipelineStep
@@ -71,9 +71,8 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
         raise error
 
     # execute pipeline
-    tms = time.time()
-    pipeline(context, _error_handler)
-    logger.info(f"process time: {round((time.time() - tms), 2)}s to process pipeline")
+    with MetricsTimer("process pipeline image"):
+        pipeline(context, _error_handler)
 
     # get result
     manipulated_image = context.image

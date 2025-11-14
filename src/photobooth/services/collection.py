@@ -4,7 +4,6 @@ Handle all media collection related functions
 
 import logging
 import shutil
-import time
 from pathlib import Path
 from threading import Lock
 from typing import cast
@@ -20,6 +19,7 @@ from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
 from ..plugins import pm as pluggy_pm
+from ..utils.metrics_timer import MetricsTimer
 from ..utils.resizer import generate_resized
 from .base import BaseService
 from .sse import sse_service
@@ -162,29 +162,27 @@ class Cache:
                     return cacheditem_exists
 
                 else:
-                    tms = time.time()
+                    with MetricsTimer(f"cache {dimension.value}"):
+                        id = uuid4()
+                        cacheditem_new = Cacheditem(
+                            id=id,
+                            mediaitem_id=item.id,
+                            dimension=dimension,
+                            processed=processed,
+                            filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
+                        )
 
-                    id = uuid4()
-                    cacheditem_new = Cacheditem(
-                        id=id,
-                        mediaitem_id=item.id,
-                        dimension=dimension,
-                        processed=processed,
-                        filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
-                    )
+                        generate_resized(
+                            filepath_in=item.processed if processed else item.unprocessed,
+                            filepath_out=cacheditem_new.filepath,
+                            scaled_min_length=dimension_pixel,
+                        )
 
-                    generate_resized(
-                        filepath_in=item.processed if processed else item.unprocessed,
-                        filepath_out=cacheditem_new.filepath,
-                        scaled_min_length=dimension_pixel,
-                    )
+                        session.add(cacheditem_new)
+                        session.commit()
+                        session.refresh(cacheditem_new)  # refresh so consuming function can access the attributes in cacheditem_new without session
 
-                    session.add(cacheditem_new)
-                    session.commit()
-
-                    logger.debug(f"processing {dimension.value} in {round((time.time() - tms), 2)}s for {cacheditem_new.filepath}")
-
-                    return cacheditem_new
+                        return cacheditem_new
 
     def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:
