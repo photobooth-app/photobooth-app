@@ -35,13 +35,15 @@ def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam: WigglecamBa
     get_images(backend_wigglecam)
 
 
-def test_post_proc(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
+def test_calibration_check_no_caldata(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
     files = backend_wigglecam.wait_for_multicam_files()
+
+    backend_wigglecam._cal_util.reset_calibration_data()
 
     backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
 
 
-def test_calibration_check(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
+def test_calibration_check_faked_caldata(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
     files = backend_wigglecam.wait_for_multicam_files()
 
     # fake calibration data
