@@ -37,15 +37,15 @@ class CalibrationMixin:
             logger.warning(f"No valid multicam calibration loaded, the results may suffer. Error: {exc}")
         else:
             # validate that all device ids are still present in the current backend configuration and match with calibration data
-            self.__calibration_is_valid = self._cal_util.is_calibration_data_valid(expected_device_ids)
-            if self.__calibration_is_valid:
+            self._calibration_is_valid = self._cal_util.is_calibration_data_valid(expected_device_ids)
+            if self._calibration_is_valid:
                 # we just check the number of devices, though. there is no check for the exact camera.
                 logger.info("Found valid calibration data for all configured devices.")
             else:
                 logger.warning("Calibration data is incomplete or invalid for the configured devices, the results may suffer!")
 
     def align_all(self, files_in: list[Path], out_dir: Path, crop: bool = True) -> list[Path]:
-        if self.__calibration_is_valid:
+        if self._calibration_is_valid:
             logger.debug("post_process_multicam_set completed")
 
             return self._cal_util.align_all(files_in, out_dir, crop)
