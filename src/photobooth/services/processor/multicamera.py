@@ -5,6 +5,7 @@ from uuid import uuid4
 from statemachine import Event
 
 from ... import PATH_PROCESSED, PATH_UNPROCESSED, TMP_PATH
+from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
 from ..acquisition import AcquisitionService
@@ -86,8 +87,7 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         ## PHASE 2:
         # postprocess job as whole, create collage of single images, video...
         logger.info("start postprocessing phase 2")
-        fileending = self._configuration_set.jobcontrol.output_fileformat
-        original_filenamepath = Path(filename_str_time()).with_suffix(f".{fileending}".lower())
+        original_filenamepath = Path(filename_str_time()).with_suffix(f".{appconfig.mediaprocessing.fileformat_multicamera}")
         phase2_mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,

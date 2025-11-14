@@ -58,3 +58,13 @@ class GroupMediaprocessing(BaseModel):
         default="modnet",
         description="Select from predefined models. Modnet and u2netp are packaged with the app, other models will be downloaded on demand and cached, so on first use of other models, the app needs internet access. u2netp is a reduced model that is fastest, modnet usually only slightly slower but provides good results.",
     )
+
+    fileformat_animations: Literal["webp", "avif", "gif"] = Field(
+        default="webp",
+        description="Format in which animations are stored. WebP is recommended nowadays. AVIF is a newer format, encodes fast, produces smallest files but is not yet broadly compatible. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. GIF is deprecated here.",
+    )
+
+    fileformat_multicamera: Literal["webp", "avif", "gif"] = Field(
+        default="webp",
+        description="Format in which wigglegrams are stored. WebP is recommended nowadays. AVIF is a newer format, encodes fast, produces smallest files but is not yet broadly compatible. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. GIF is deprecated here.",
+    )
