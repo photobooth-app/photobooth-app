@@ -11,6 +11,7 @@ class ServiceCrashed(Exception): ...
 
 class ResilientService(ABC):
     def __init__(self, retry_delay: int | float = 2, max_backoff: int | float = 20):
+        super().__init__()
         self._lock = threading.Lock()
         self._started = False
         self._running = False

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from photobooth.services.backends.wigglecam import GroupCameraWigglecam, WigglecamBackend
 from photobooth.services.config.groups.cameras import WigglecamNodes
@@ -40,9 +41,14 @@ def test_post_proc(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_pa
     backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
 
 
-# def test_calibration_check(wiggle_node_proc, backend_wigglecam: WigglecamBackend):
-#     backend_wigglecam.__cal_util.identity_all(4, 100, 100)
-#     backend_wigglecam.__cal_util.save_calibration_data(CALIBRATION_DATA_PATH)
+def test_calibration_check(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
+    files = backend_wigglecam.wait_for_multicam_files()
+
+    # fake calibration data
+    w, h = Image.open(files[0]).size
+    backend_wigglecam._cal_util.identity_all(number_cameras=len(files), img_width=w, img_height=h)
+
+    backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
 
 
 def test_raises_illegal_indexes():  # backend_wigglecam: WigglecamBackend):
