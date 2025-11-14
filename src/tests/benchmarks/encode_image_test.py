@@ -51,7 +51,7 @@ def turbojpeg_inplace_encode(frame_from_camera):
 def pillow_encode_jpg(frame_from_camera):
     image = Image.fromarray(frame_from_camera.astype("uint8"))
     byte_io = io.BytesIO()
-    image.save(byte_io, format="JPEG", quality=85)
+    image.save(byte_io, format="JPEG", quality=90)
     bytes_full = byte_io.getbuffer()
 
     return bytes_full
@@ -224,3 +224,24 @@ def test_yuv420_encode_hires(library_yuv420, image_hires, benchmark):
     yuv_frame = cv2.cvtColor(image_hires, cv2.COLOR_BGR2YUV_I420)
     benchmark(eval(library_yuv420), frame_from_camera=yuv_frame, rH=image_hires.shape[0], rW=image_hires.shape[1])
     assert True
+
+
+def test_libraries_outputfilesize_hires(image_hires):
+    out_bytes: dict[str, int] = {}
+    test_funcs = [
+        turbojpeg_encode,
+        pillow_encode_jpg,
+        cv2_encode_jpg,
+        simplejpeg_encode,
+        cv2_encode_webp,
+        pillow_encode_avif,
+        pillow_encode_webp,
+        pillow_encode_webp_lossless,
+        pillow_encode_png,
+    ]
+
+    for test_func in test_funcs:
+        out_bytes[test_func.__name__] = round(len(test_func(frame_from_camera=image_hires)) / 1024)
+
+    for func, size in out_bytes.items():
+        logger.info(f"{func}: {size}")
