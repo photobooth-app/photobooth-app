@@ -1,6 +1,6 @@
 [project]
 name = "photobooth-app"
-version = "v8.5.0"
+version = "v8.5.0rc1"
 requires-python = ">=3.11"
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
