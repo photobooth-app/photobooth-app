@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from statemachine import Event
 
-from ... import PATH_PROCESSED, PATH_UNPROCESSED, TMP_PATH
+from ... import PATH_PROCESSED, PATH_UNPROCESSED
 from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.helper import filename_str_time
@@ -59,19 +59,12 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         capture_set = self._capture_sets[0]  # for now only 1 set supported...
         files_to_process = [capture.filepath for capture in capture_set.captures]
 
-        ## PHASE 0: for multicamera jobs, we need to see if a calibration is to apply before continue any processing.
-        # calibration is used to improve the smoothness and align different camera views better.
-        files_backend_postprocessed = self._acquisition_service.postprocess_multicam_set(
-            files_in=files_to_process,
-            out_dir=Path(TMP_PATH),
-        )
-
         ## PHASE 1:
         # postprocess each capture individually
         # list only captured_images from merge_definition (excludes predefined)
         phase1_mediaitems: list[Mediaitem] = []
 
-        for file_to_process in files_backend_postprocessed:
+        for file_to_process in files_to_process:
             logger.info(f"postprocessing capture: {file_to_process=}")
 
             # until now just a very basic filter avail applied over all images

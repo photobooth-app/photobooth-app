@@ -162,27 +162,27 @@ class Cache:
                     return cacheditem_exists
 
                 else:
-                    with MetricsTimer(f"cache {dimension.value}"):
-                        id = uuid4()
-                        cacheditem_new = Cacheditem(
-                            id=id,
-                            mediaitem_id=item.id,
-                            dimension=dimension,
-                            processed=processed,
-                            filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
-                        )
+                    id = uuid4()
+                    cacheditem_new = Cacheditem(
+                        id=id,
+                        mediaitem_id=item.id,
+                        dimension=dimension,
+                        processed=processed,
+                        filepath=Path(CACHE_PATH, id.hex).with_suffix(item.unprocessed.suffix),
+                    )
 
+                    with MetricsTimer(f"generate resized '{dimension.value}' for {cacheditem_new.filepath}"):
                         generate_resized(
                             filepath_in=item.processed if processed else item.unprocessed,
                             filepath_out=cacheditem_new.filepath,
                             scaled_min_length=dimension_pixel,
                         )
 
-                        session.add(cacheditem_new)
-                        session.commit()
-                        session.refresh(cacheditem_new)  # refresh so consuming function can access the attributes in cacheditem_new without session
+                    session.add(cacheditem_new)
+                    session.commit()
+                    session.refresh(cacheditem_new)  # refresh so consuming function can access the attributes in cacheditem_new without session
 
-                        return cacheditem_new
+                    return cacheditem_new
 
     def _db_check_cache_valid(self, mediaitem_id: UUID, dimension: DimensionTypes, processed: bool = True):
         with Session(engine) as session:

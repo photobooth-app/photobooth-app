@@ -253,9 +253,6 @@ class AbstractBackend(ResilientService, ABC):
 
             raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
 
-    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
-        raise NotImplementedError("backend does not support multicam device ids")
-
     def wait_for_still_file(self, retries: int = 3) -> Path:
         """
         function blocks until high quality image is available

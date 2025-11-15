@@ -8,6 +8,8 @@ import numpy.typing as npt
 from cv2.typing import MatLike
 from PIL import Image, ImageDraw
 
+from ....utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
+from ...backends.wigglecam import CALIBRATION_DATA_PATH
 from ..context import MulticameraContext
 from ..pipeline import NextStep, PipelineStep
 
@@ -18,8 +20,6 @@ class AutoPivotPointStep(PipelineStep):
     def __init__(self) -> None: ...
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
-        import cv2
-
         def find_good_features(img: Image.Image, roi_center: tuple[int, int], roi_size: int = 100, max_corners: int = 20) -> npt.NDArray[np.float32]:
             """
             Find good Shi-Tomasi corners in a ROI centered at roi_center.
@@ -227,3 +227,31 @@ class CropCommonAreaStep(PipelineStep):
     # def recenter_image_chops(img, offset: tuple[int, int]):
     #     dx, dy = offset
     #     return ImageChops.offset(img, -dx, -dy)
+
+
+class AlignAsPerCalibrationStep(PipelineStep):
+    """Calibration is part of the backends and currently only for the multicam, so we can keep it here.
+    Maybe in future we can also support calibrate intrinisics of picamera to remove lens distortions and
+    improve stereo calibration
+
+    The backends only use a subset of the calibration util: load and align, so only these are exposed.
+    Calibration routine and saving is done in the multicam-tool which is actually living in the api backend endpoints."""
+
+    def __init__(self, crop: bool = True) -> None:
+        self._cal_util = SimpleCalibrationUtil()
+        self._calibration_data_path = CALIBRATION_DATA_PATH
+        self._crop = crop
+
+        try:
+            self._cal_util.load_calibration_data(self._calibration_data_path)
+            logger.info("Calibration data loaded successfully")
+        except Exception as exc:
+            logger.warning(f"No valid multicam calibration loaded, the results may suffer. Error: {exc}")
+
+    def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
+        try:
+            context.images = self._cal_util.align_all(context.images, crop=self._crop)
+        except Exception as exc:
+            logger.warning(f"Error aligning multicam images according to existing calibration. Please rerun multicamera calibration. Error: {exc}")
+
+        next_step(context)

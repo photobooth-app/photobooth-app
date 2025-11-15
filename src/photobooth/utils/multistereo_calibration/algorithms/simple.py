@@ -2,13 +2,11 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 import cv2
 import numpy as np
 from PIL import Image
 
-from ...helper import filename_str_time
 from .base import CalibrationBase, PersistableDataclass
 
 logger = logging.getLogger(__name__)
@@ -28,8 +26,6 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
 
     def __init__(self):
         super().__init__()
-
-        self.__crop_area: tuple[int, int, int, int] | None = None  # x, y, w, h, computed on first use and then cached
 
     def load_calibration_data(self, dir: Path) -> None:
         """Load all calibration data from disk."""
@@ -63,65 +59,68 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         assert len(caldataalign) == len(cameras)
         self._caldataalign = caldataalign
 
-    def align_all(self, files_in: list[Path], out_dir: Path, crop: bool = True) -> list[Path]:
+    def align_all(self, images: list[Image.Image], crop: bool) -> list[Image.Image]:
         """align all images, while 1 image per camera, sorted by the index"""
 
         assert self._caldataalign, "No calibration data loaded. You need to load the data first or calibrate."
-        files_out: list[Path] = []
+        assert len(images) >= 2, "need at least 2 images to align"
 
-        # sanity check input images match calibration data
-        input_image_size = Image.open(files_in[0]).size
-        caldataalign = self._caldataalign[0]
-        assert caldataalign
+        # all images have same dimension
+        img_size = images[0].size
+        if any(img.size != img_size for img in images[1:]):
+            logger.warning("Not all images share the same dimensions")
+            raise ValueError("Not all images share the same dimensions")
 
-        if input_image_size != (caldataalign.img_width, caldataalign.img_height):
-            logger.warning(
-                f"Image size {input_image_size[0]}x{input_image_size[1]} does not match calibration "
-                "size {caldataalign.img_width}x{caldataalign.img_height}"
-            )
-            return files_in  # return unmodified files
+        # sanity check existing calibration data is applicable to input images (need at least same aspect ratio, but could be resized)
+        try:
+            for caldataalign, image in zip(self._caldataalign, images, strict=True):
+                # Compute aspect ratios
+                img_ratio = image.width / image.height
+                cal_ratio = caldataalign.img_width / caldataalign.img_height
 
-        for cam_idx, img_file in enumerate(files_in):
-            try:
-                caldataalign = self._caldataalign[cam_idx]
-            except IndexError as exc:
-                raise RuntimeError(f"Calibration data for camera {cam_idx} not found. Is the data loaded?") from exc
+                # Allow small floating-point tolerance
+                if not np.isclose(img_ratio, cal_ratio, rtol=1e-3, atol=1e-3):
+                    raise ValueError(
+                        f"Image aspect ratio {image.width}x{image.height} "
+                        f"({img_ratio:.4f}) does not match calibration ratio "
+                        f"{caldataalign.img_width}x{caldataalign.img_height} "
+                        f"({cal_ratio:.4f})"
+                    )
+        except ValueError as exc:
+            logger.warning(f"number of images and calibration data do not align - you need to recalibrate, error {exc}")
+            raise
 
-            proc_img = cv2.imread(str(img_file))
-            proc_img = self.__align_to_reference(caldataalign.H, proc_img)
+        proc_images_out = []
+        crop_area = None
+        for cam_idx, (caldataalign, image) in enumerate(zip(self._caldataalign, images, strict=True)):
+            # print(cam_idx, caldataalign, image)
+
+            H_rescaled = self.__rescale_H(caldataalign.H, (caldataalign.img_width, caldataalign.img_height), image.size)
+            proc_img = self.__align_to_reference(H_rescaled, image)
 
             if DEBUG_TMP:
-                cv2.imwrite(f"tmp/aligned_{cam_idx}.jpg", proc_img)
-            if crop:
-                if not self.__crop_area:
-                    self.__crop_area = self.__compute_common_crop()
+                proc_img.save(f"tmp/aligned_{cam_idx}.jpg")
 
-                proc_img = self.__crop_to_common_intersect(proc_img, self.__crop_area)
+            if crop:
+                # cache once per run; assumes all images are same size though
+                if not crop_area:
+                    crop_area = self.__compute_common_crop(img_size)
+
+                proc_img = self.__crop_to_common_intersect(proc_img, crop_area)
 
                 if DEBUG_TMP:
-                    cv2.imwrite(f"tmp/cropped_{cam_idx}.jpg", proc_img)
+                    proc_img.save(f"tmp/cropped_{cam_idx}.jpg")
 
-            out_filepath = Path(
-                NamedTemporaryFile(
-                    mode="wb",
-                    delete=False,
-                    dir=out_dir,
-                    prefix=f"{filename_str_time()}_multicam_aligned_",
-                    suffix=".jpg",
-                ).name
-            )
-            cv2.imwrite(str(out_filepath), proc_img, [cv2.IMWRITE_JPEG_QUALITY, 90])
-            files_out.append(out_filepath)
+            proc_images_out.append(proc_img)
 
-        logger.info(f"Aligned {len(files_out)} files to {self.__crop_area} crop area.")
+        logger.info(f"Aligned {len(proc_images_out)} files to {crop_area} crop area.")
 
-        return files_out
+        return proc_images_out
 
     def reset_calibration_data(self):
         """Reset calibration data."""
         super().reset_calibration_data()
 
-        self.__crop_area = None
         logger.info("Reset calibration data")
 
     @staticmethod
@@ -201,13 +200,26 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
 
         return H
 
-    def __compute_common_crop(self) -> tuple[int, int, int, int]:
+    @staticmethod
+    def __rescale_H(H, orig_size, new_size):
+        w0, h0 = orig_size
+        w1, h1 = new_size
+
+        sx, sy = w1 / w0, h1 / h0
+
+        S = np.array([[sx, 0, 0], [0, sy, 0], [0, 0, 1]], dtype=float)
+        S_inv = np.array([[1 / sx, 0, 0], [0, 1 / sy, 0], [0, 0, 1]], dtype=float)
+
+        H_rescaled = S @ H @ S_inv
+        return H_rescaled
+
+    def __compute_common_crop(self, image_size: tuple[int, int]) -> tuple[int, int, int, int]:
         """
         Compute the common overlapping crop region across all cameras.
         Returns (x1, y1, x2, y2) in reference frame coordinates.
         """
         # Assume all images same size
-        w, h = self._caldataalign[0].img_width, self._caldataalign[0].img_height
+        w, h = image_size[0], image_size[1]
 
         # Define corners of the image (top-left, top-right, bottom-right, bottom-left)
         img_corners = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32).reshape(-1, 1, 2)
@@ -216,8 +228,8 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         x_min, y_min, x_max, y_max = 0, 0, w, h
 
         for cal in self._caldataalign:
-            H = cal.H
-            warped = cv2.perspectiveTransform(img_corners, H).reshape(-1, 2)
+            H_rescaled = self.__rescale_H(cal.H, (cal.img_width, cal.img_height), image_size)
+            warped = cv2.perspectiveTransform(img_corners, H_rescaled).reshape(-1, 2)
 
             # Get bounding box of this warped quadrilateral
             max_lefts = max(warped[0, 0], warped[3, 0])
@@ -237,36 +249,33 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
         return x_min, y_min, x_max, y_max
 
     @staticmethod
-    def __align_to_reference(H: np.ndarray, img: np.ndarray) -> np.ndarray:
-        h, w = img.shape[:2]
-
-        # seems the pi cameras have bit different distortion charachteristics, maybe intrinsics cali can help in preprocessing?
-        # return cv2.warpAffine(img, H[:2, :], (img.shape[1], img.shape[0]))
-        return cv2.warpPerspective(img, H, (w, h), flags=cv2.INTER_CUBIC)  # dsize in (w,h) order
+    def __align_to_reference(H: np.ndarray, image: Image.Image) -> Image.Image:
+        img_arr = np.array(image)
+        # img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR) # only geometric manipulation, can skip color conversion
+        img_arr_warped = cv2.warpPerspective(img_arr, H, image.size, flags=cv2.INTER_CUBIC)
+        # warped_rgb = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(img_arr_warped)
 
     @staticmethod
-    def __crop_to_common_intersect(img: np.ndarray, crop: tuple[int, int, int, int]) -> np.ndarray:
+    def __crop_to_common_intersect(img: Image.Image, crop: tuple[int, int, int, int]) -> Image.Image:
         """
-        Crop image to the given rectangle.
+        Crop a Pillow image to the given rectangle.
 
         Args:
-            img: Input image.
-            crop: (x1, y1, x2, y2) coordinates of the crop rectangle,
-                  where (x1, y1) is top-left and (x2, y2) is bottom-right.
+            img (Image.Image): Input PIL image.
+            crop (tuple[int, int, int, int]): (x1, y1, x2, y2) coordinates of the crop rectangle,
+                                              where (x1, y1) is top-left and (x2, y2) is bottom-right.
 
         Returns:
-            Cropped image as np.ndarray.
+            Image.Image: Cropped PIL image.
         """
-
         x1, y1, x2, y2 = crop
 
-        # Enusre to crop to even numbers so post processing is easier and
-        # less compute intense because video codes to encoding in later steps
-        # may require even numbers.
-
+        # Ensure even width/height for downstream video encoding compatibility
         if (x2 - x1) % 2 != 0:
             x2 -= 1
         if (y2 - y1) % 2 != 0:
             y2 -= 1
 
-        return img[y1:y2, x1:x2]
+        # Pillow crop uses (left, upper, right, lower)
+        return img.crop((x1, y1, x2, y2))

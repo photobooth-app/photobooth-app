@@ -222,21 +222,21 @@ class CollageProcessing(BaseModel):
 class AnimationProcessing(BaseModel):
     """Configure stages how to process collage after capture."""
 
-    model_config = ConfigDict(title="Animation (GIF) processing after capture")
+    model_config = ConfigDict(title="Process animated images processing after capture")
 
     ## phase 2 per collage settings.
 
     canvas_width: int = Field(
         default=1500,
-        description="Width (X) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+        description="Width (X) in pixel for the resulting animated image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     canvas_height: int = Field(
         default=900,
-        description="Height (Y) in pixel of animation image (GIF). The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
+        description="Height (Y) in pixel for the resulting animated image. The higher the better the quality but also longer time to process. All processes keep aspect ratio.",
     )
     merge_definition: list[AnimationMergeDefinition] = Field(
         default=[],
-        description="Sequence images in an animated GIF. Predefined image files are used instead a camera capture. File needs to be located in working directory/userdata/*",
+        description="Sequence captures and predefined images to line up in the resulting animated image. Predefined images are used instead a camera capture. File needs to be located in working directory/userdata/*",
     )
 
 
@@ -457,13 +457,13 @@ class GroupActions(BaseModel):
                     ],
                 ),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Animation", icon="gif_box"),
+                    ui_trigger=UiTrigger(title="Animation", icon="animated_images"),
                     gpio_trigger=GpioTrigger(pin="24"),
                     keyboard_trigger=KeyboardTrigger(keycode="g"),
                 ),
             ),
         ],
-        description="Capture GIF animation sequence consist of one or more still images. It's not a video but a low number of still images.",
+        description="Capture an animation consisting of one or more still images. It's not a video but a low number of still images.",
     )
 
     video: list[VideoConfigurationSet] = Field(
@@ -492,7 +492,7 @@ class GroupActions(BaseModel):
                 jobcontrol=MulticameraJobControl(),
                 processing=MulticameraProcessing(),
                 trigger=Trigger(
-                    ui_trigger=UiTrigger(title="Wigglegram", icon="burst_mode"),
+                    ui_trigger=UiTrigger(title="Wigglegram", icon="3d"),
                     gpio_trigger=GpioTrigger(pin="12"),
                     keyboard_trigger=KeyboardTrigger(keycode="w"),
                 ),

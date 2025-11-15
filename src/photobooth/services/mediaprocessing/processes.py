@@ -17,6 +17,7 @@ from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
 from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, TextStep
+from .steps.multicamera import AlignAsPerCalibrationStep
 from .steps.video import BoomerangStep
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
         raise error
 
     # execute pipeline
-    with MetricsTimer("process pipeline image"):
+    with MetricsTimer(process_image_inner.__name__):
         pipeline(context, _error_handler)
 
     # get result
@@ -128,9 +129,8 @@ def process_video(video_in: Path, mediaitem: Mediaitem):
 
     # setup pipeline.
     pipeline = Pipeline[VideoContext](*steps)
-
-    # execute pipeline
-    pipeline(context)
+    with MetricsTimer(process_video.__name__):
+        pipeline(context)
 
     # get result
     video_processed = context.video_processed if context.video_processed else context.video_in  # if pipeline was empty, use input as output
@@ -182,7 +182,8 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
         steps_phase2.append(TextStep(config.canvas_texts))
 
     pipeline = Pipeline[ImageContext](*steps_phase2)
-    pipeline(context)
+    with MetricsTimer(process_and_generate_collage.__name__):
+        pipeline(context)
 
     canvas = context.image
 
@@ -208,8 +209,10 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
     steps.append(AddPredefinedImagesStep(config.merge_definition))
     steps.append(PostPredefinedImagesStep(config.merge_definition))
     steps.append(AlignSizesStep(canvas_size))
+
     pipeline = Pipeline[AnimationContext](*steps)
-    pipeline(context)
+    with MetricsTimer(process_and_generate_animation.__name__):
+        pipeline(context)
 
     ## create mediaitem
     __pil_save(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
@@ -217,26 +220,35 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
 
-def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
-    # get config from mediaitem, that is passed as json dict (model_dump) along with it
-    config = MulticameraProcessing(**mediaitem.pipeline_config)
-
+def process_wigglegram_inner(files_in: list[Path], config: MulticameraProcessing, preview: bool) -> list[Image.Image]:
     ## stage: merge captured images and predefined to one image with transparency
     multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = MulticameraContext(multicamera_images)
     steps = []
+    steps.append(AlignAsPerCalibrationStep())
     # steps.append(AutoPivotPointStep())
     # steps.append(OffsetPerOpticalFlowStep())
     # steps.append(CropCommonAreaStep())
 
     pipeline = Pipeline[MulticameraContext](*steps)
-    pipeline(context)
+    with MetricsTimer(process_and_generate_wigglegram.__name__):
+        pipeline(context)
+
+    return context.images
+
+
+def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
+    # get config from mediaitem, that is passed as json dict (model_dump) along with it
+    config = MulticameraProcessing(**mediaitem.pipeline_config)
+    manipulated_image = process_wigglegram_inner(files_in, config, preview=False)
 
     ## finalize, create sequence and save
     # sequence like 1-2-3-4-3-2-restart
-    sequence_images = context.images
+    sequence_images = manipulated_image
     sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
     __pil_save(sequence_images, mediaitem.unprocessed, durations=config.duration)
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
+
+    return mediaitem

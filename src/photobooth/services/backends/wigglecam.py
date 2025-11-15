@@ -7,7 +7,6 @@ import pynng
 from wigglecam.dto import ImageMessage
 
 from ... import DATABASE_PATH, TMP_PATH
-from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
 from ..config.groups.cameras import GroupCameraWigglecam
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
@@ -15,47 +14,7 @@ logger = logging.getLogger(__name__)
 CALIBRATION_DATA_PATH = Path(DATABASE_PATH, "multicam_calibration_data")
 
 
-class CalibrationMixin:
-    """Calibration is part of the backends and currently only for the multicam, so we can keep it here.
-    Maybe in future we can also support calibrate intrinisics of picamera to remove lens distortions and
-    improve stereo calibration
-
-    The backends only use a subset of the calibration util: load and align, so only these are exposed.
-    Calibration routine and saving is done in the multicam-tool which is actually living in the api backend endpoints."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._cal_util = SimpleCalibrationUtil()
-        self._calibration_data_path = CALIBRATION_DATA_PATH
-        self._calibration_is_valid: bool = False
-
-    def load_calibration(self, expected_device_ids: tuple[int, ...]):
-        try:
-            self._cal_util.load_calibration_data(self._calibration_data_path)
-            logger.info("Calibration data loaded successfully")
-        except ValueError as exc:
-            logger.warning(f"No valid multicam calibration loaded, the results may suffer. Error: {exc}")
-        else:
-            # validate that all device ids are still present in the current backend configuration and match with calibration data
-            self._calibration_is_valid = self._cal_util.is_calibration_data_valid(expected_device_ids)
-            if self._calibration_is_valid:
-                # we just check the number of devices, though. there is no check for the exact camera.
-                logger.info("Found valid calibration data for all configured devices.")
-            else:
-                logger.warning("Calibration data is incomplete or invalid for the configured devices, the results may suffer!")
-
-    def align_all(self, files_in: list[Path], out_dir: Path, crop: bool = True) -> list[Path]:
-        if self._calibration_is_valid:
-            logger.debug("post_process_multicam_set completed")
-
-            return self._cal_util.align_all(files_in, out_dir, crop)
-        else:
-            logger.warning("no valid calibration data found, skipping prealignment phase, results may suffer. Please run multicamera calibration.")
-
-            return files_in
-
-
-class WigglecamBackend(AbstractBackend, CalibrationMixin):
+class WigglecamBackend(AbstractBackend):
     def __init__(self, config: GroupCameraWigglecam):
         super().__init__()
         self._config = config
@@ -111,10 +70,6 @@ class WigglecamBackend(AbstractBackend, CalibrationMixin):
         # Sanity check: ensure distinct objects were created
         assert all(a is not b for i, a in enumerate(self._lores_data) for j, b in enumerate(self._lores_data) if i != j)
 
-        self.load_calibration(expected_device_ids)
-
-        logger.info("pynng sockets connected")
-
     def teardown_resource(self):
         if self._pub_trigger:
             self._pub_trigger.close()
@@ -142,11 +97,6 @@ class WigglecamBackend(AbstractBackend, CalibrationMixin):
     def _wait_for_multicam_files(self) -> list[Path]:
         captured_filepaths = self.__request_multicam_files()
         return captured_filepaths
-
-    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
-        files_preprocessed = self.align_all(files_in, out_dir=out_dir, crop=True)
-
-        return files_preprocessed
 
     def __request_multicam_files(self) -> list[Path]:
         """Trigger a capture request and collect hi-res images from all cameras."""

@@ -4,12 +4,13 @@ from pathlib import Path
 import cv2
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import FileResponse
-from PIL import Image
 from pydantic import BaseModel
 
 from ... import TMP_PATH
 from ...container import container
 from ...services.backends.wigglecam import CALIBRATION_DATA_PATH
+from ...services.config.groups.actions import MulticameraProcessing
+from ...services.mediaprocessing.processes import process_wigglegram_inner
 from ...utils.helper import filenames_sanitize
 from ...utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
 from ...utils.multistereo_calibration.charuco_board import generate_board, get_detector
@@ -87,27 +88,27 @@ def api_post_calibrate_all(filess_in: list[list[Path]]):
 
 @router.get("/result")
 def api_get_result():
-    file_out = Path(TMP_PATH, "wiggledemo.gif")
+    file_out = Path(TMP_PATH, "wiggledemo.webp")
     try:
+        config = MulticameraProcessing()
         files_to_process = container.acquisition_service.wait_for_multicam_files()
-        files_backend_postprocessed = container.acquisition_service.postprocess_multicam_set(files_in=files_to_process, out_dir=Path(TMP_PATH))
+        images_processed = process_wigglegram_inner(files_in=files_to_process, config=config, preview=False)
 
-        multicamera_images: list[Image.Image] = [Image.open(image_in) for image_in in files_backend_postprocessed]
-        for img in multicamera_images:
+        for img in images_processed:
             img.thumbnail((500, 500))
 
-        multicamera_images = multicamera_images + list(reversed(multicamera_images[1 : len(multicamera_images) - 1]))
-        multicamera_images[0].save(
+        images_processed = images_processed + list(reversed(images_processed[1 : len(images_processed) - 1]))
+        images_processed[0].save(
             file_out,
-            format="gif",
+            format=None,
             save_all=True,
-            append_images=multicamera_images[1:] if len(multicamera_images) > 1 else [],
+            append_images=images_processed[1:] if len(images_processed) > 1 else [],
             optimize=True,
-            duration=125,
+            duration=config.duration,
             loop=0,  # loop forever
         )
 
-        return FileResponse(path=file_out, media_type="image/gif", content_disposition_type="inline")
+        return FileResponse(path=file_out, media_type="image/webp", content_disposition_type="inline")
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"something went wrong, Exception: {exc}") from exc

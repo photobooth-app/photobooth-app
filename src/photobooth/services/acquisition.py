@@ -179,10 +179,6 @@ class AcquisitionService(BaseService):
             # ensure even if failed, the wled is set to standby again
             pluggy_pm.hook.acq_after_shot()
 
-    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
-        multicam_backend = self._get_multicam_backend()
-        return multicam_backend.postprocess_multicam_set(files_in, out_dir)
-
     def start_recording(self, video_framerate: int = 25) -> Path:
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_video()

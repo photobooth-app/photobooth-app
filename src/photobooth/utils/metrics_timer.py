@@ -14,4 +14,5 @@ class MetricsTimer:
         assert self.start
         duration = time.perf_counter() - self.start
 
-        print(f"⏱️  {self.name} took {duration:.3f}s")
+        if duration > 0.01:
+            print(f"⏱️  {self.name} took {duration:.3f}s")
