@@ -19,11 +19,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/multicamera", tags=["admin", "multicamera"])
 
 
-class CharucoRequest(BaseModel):
+class CharucoBoardDefinition(BaseModel):
     squares_x: int = 14
     squares_y: int = 9
     square_length_mm: float = 20
     marker_length_mm: float = 15
+
+
+class CalibrationRequest(BaseModel):
+    filess_in: list[list[Path]]
+    board_definition: CharucoBoardDefinition
 
 
 @router.get("/calibration")
@@ -32,7 +37,7 @@ def api_get_calibration_stats():
 
 
 @router.post("/calibration/charuco")
-def api_get_calibration_generate_charucoboard(req: CharucoRequest):
+def api_get_calibration_generate_charucoboard(req: CharucoBoardDefinition):
     try:
         board_arr = generate_board((req.squares_x, req.squares_y), square_length_mm=req.square_length_mm, marker_length_mm=req.marker_length_mm)
 
@@ -59,7 +64,7 @@ def api_delete_calibration_delete():
 
 
 @router.post("/calibration")
-def api_post_calibrate_all(filess_in: list[list[Path]]):
+def api_post_calibrate_all(req: CalibrationRequest):
     """Post files to calculate a new calibration, save it and reload services to apply the calibration.
 
     filess_in = [
@@ -70,10 +75,16 @@ def api_post_calibrate_all(filess_in: list[list[Path]]):
     ]
     """
 
-    try:
-        sanitized_input = [[filenames_sanitize(file_in) for file_in in files_in] for files_in in filess_in]
+    logger.info(f"Trying to detect board definition {req.board_definition} in {len(req.filess_in)} images.")
 
-        detector = get_detector()
+    try:
+        sanitized_input = [[filenames_sanitize(file_in) for file_in in files_in] for files_in in req.filess_in]
+
+        detector = get_detector(
+            (req.board_definition.squares_x, req.board_definition.squares_y),
+            req.board_definition.square_length_mm,
+            req.board_definition.marker_length_mm,
+        )
 
         cu = SimpleCalibrationUtil()
         cu.calibrate_all(cameras=sanitized_input, ref_idx=0, detector=detector)
