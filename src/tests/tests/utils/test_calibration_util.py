@@ -4,6 +4,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from PIL import Image
 
 from photobooth.utils.multistereo_calibration.algorithms.simple import SimpleCalibrationUtil
 from photobooth.utils.multistereo_calibration.charuco_board import generate_board, get_detector
@@ -77,8 +78,8 @@ def test_calibration_util_calibrate(tmp_path: Path, dummy_charuco_images):
     calibrator.reset_calibration_data()
 
     calibrator.load_calibration_data(tmp_path)
-    calibrator.align_all([item[0] for item in cameras], tmp_path)
+    _ = calibrator.align_all([Image.open(item[0]) for item in cameras], True)
 
     calibrator2 = SimpleCalibrationUtil()
     calibrator2.load_calibration_data(tmp_path)
-    calibrator2.align_all([item[0] for item in cameras], tmp_path)
+    _ = calibrator2.align_all([Image.open(item[0]) for item in cameras], True)

@@ -1,13 +1,11 @@
 import logging
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
-from PIL import Image
 
-from photobooth.services.backends.wigglecam import GroupCameraWigglecam, WigglecamBackend
-from photobooth.services.config.groups.cameras import WigglecamNodes
+from photobooth.services.backends.wigglecam import WigglecamBackend
+from photobooth.services.config.groups.cameras import GroupCameraWigglecam, WigglecamNodes
 from tests.tests.util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
@@ -35,31 +33,12 @@ def test_virtual_camera_capture(wiggle_node_proc, backend_wigglecam: WigglecamBa
     get_images(backend_wigglecam)
 
 
-def test_calibration_check_no_caldata(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
-    files = backend_wigglecam.wait_for_multicam_files()
-
-    backend_wigglecam._cal_util.reset_calibration_data()
-
-    backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
-
-
-def test_calibration_check_faked_caldata(wiggle_node_proc, backend_wigglecam: WigglecamBackend, tmp_path: Path):
-    files = backend_wigglecam.wait_for_multicam_files()
-
-    # fake calibration data
-    w, h = Image.open(files[0]).size
-    backend_wigglecam._cal_util.identity_all(number_cameras=len(files), img_width=w, img_height=h)
-
-    backend_wigglecam.postprocess_multicam_set(files, out_dir=tmp_path)
-
-
 def test_raises_illegal_indexes():  # backend_wigglecam: WigglecamBackend):
     backend = WigglecamBackend(GroupCameraWigglecam(devices=[]))
     with pytest.raises(RuntimeError):
         backend.setup_resource()
 
     backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes()]))
-    # with pytest.raises(RuntimeError):
     backend.setup_resource()
 
     backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes()]))
