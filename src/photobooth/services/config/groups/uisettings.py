@@ -71,6 +71,10 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Display the livestream blurred in the background of the actual livestream covering the full screen. This might look nice if the livestream resolution does not match the screen's aspect ratio. Check cpu usage on low power devices.",
     )
+    livestream_blurredbackground_high_framerate: bool = Field(
+        default=False,
+        description="To save CPU, the blurred refreshs only every 300ms/3.3fps. If the app runs on a beefy computer, you can enable the higher framerate refreshing every 50ms/20fps.",
+    )
     enable_livestream_frameoverlay: bool = Field(
         default=True,
         description="Enable to overlay livestream_frameoverlay_image the livestream.",
