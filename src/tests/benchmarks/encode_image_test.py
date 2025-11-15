@@ -133,6 +133,18 @@ def cv2_encode_webp(frame_from_camera):
     return encimg.tobytes()
 
 
+def cv2_encode_webp_lossless(frame_from_camera):
+    encode_params = [int(cv2.IMWRITE_WEBP_QUALITY), 100]  # Qualität 0–100, 100 enables lossless
+    success, encimg = cv2.imencode(".webp", frame_from_camera, encode_params)
+    return encimg.tobytes()
+
+
+def cv2_encode_png_lossless(frame_from_camera):
+    encode_params = [cv2.IMWRITE_PNG_COMPRESSION, 0]  # 0 is lossless, 9 is max compression
+    success, encimg = cv2.imencode(".png", frame_from_camera, encode_params)
+    return encimg.tobytes()
+
+
 def pillow_encode_png(frame_from_camera):
     img = Image.fromarray(frame_from_camera.astype("uint8"))
     byte_io = io.BytesIO()
@@ -149,8 +161,10 @@ def pillow_encode_png(frame_from_camera):
         "turbojpeg_inplace_encode",
         "pillow_encode_jpg",
         "cv2_encode_jpg",
-        "simplejpeg_encode",
         "cv2_encode_webp",
+        "cv2_encode_webp_lossless",
+        "cv2_encode_png_lossless",
+        "simplejpeg_encode",
         "pillow_encode_avif",
         "pillow_encode_webp",
         "pillow_encode_webp_lossless",
@@ -231,9 +245,10 @@ def test_libraries_outputfilesize_hires(image_hires):
     test_funcs = [
         turbojpeg_encode,
         pillow_encode_jpg,
-        cv2_encode_jpg,
         simplejpeg_encode,
+        cv2_encode_jpg,
         cv2_encode_webp,
+        cv2_encode_png_lossless,
         pillow_encode_avif,
         pillow_encode_webp,
         pillow_encode_webp_lossless,

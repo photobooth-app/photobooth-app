@@ -13,7 +13,7 @@ from .base import CalibrationBase, PersistableDataclass
 
 logger = logging.getLogger(__name__)
 
-DEBUG_TMP = True
+DEBUG_TMP = False
 
 
 @dataclass
