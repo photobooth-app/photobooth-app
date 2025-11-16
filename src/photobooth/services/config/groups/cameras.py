@@ -287,10 +287,10 @@ class GroupCameraWigglecam(BaseModelCamera):
     devices: list[WigglecamNodes] = Field(
         description="List all nodes to connect to the app. The list is considered as indexed list starting at 0. So the first node should have device_id=0. For 4 cameras you end up with 4 entries in the list and need to assign them device_id's 0,1,2,3.",
         default=[
-            WigglecamNodes(description="wiggle1-device-id=0", address="wiggle1"),
-            WigglecamNodes(description="wiggle2-device-id=1", address="wiggle2"),
-            WigglecamNodes(description="wiggle3-device-id=2", address="wiggle3"),
-            WigglecamNodes(description="wiggle4-device-id=3", address="wiggle4"),
+            WigglecamNodes(description="wiggle0_device-id=0", address="wiggle0"),
+            WigglecamNodes(description="wiggle1_device-id=1", address="wiggle1"),
+            WigglecamNodes(description="wiggle2_device-id=2", address="wiggle2"),
+            WigglecamNodes(description="wiggle3_device-id=3", address="wiggle3"),
         ],
     )
 
