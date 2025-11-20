@@ -163,9 +163,6 @@ class WigglecamBackend(AbstractBackend):
                 data = self._sub_lores.recv()  # timeout after set time during setup
                 msg = ImageMessage.from_bytes(data)
 
-                # if msg.device_id != self._config.index_cam_video:
-                #     continue  # drop messages from the not-selected nodes
-
                 # store raw JPEG of all devices. TODO: might need to limit to only one device if it gets overwhelming for low end SBC
                 with self._lores_data[msg.device_id].condition:
                     self._lores_data[msg.device_id].data = msg.jpg_bytes
