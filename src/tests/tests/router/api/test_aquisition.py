@@ -77,29 +77,36 @@ def test_invalid_modechange(client: TestClient):
     assert response.status_code == 422
 
 
-# def test_mjpeg_stream(client: TestClient):
-# This test still does not work. the httpx client hands in following line on streams indefinitely.
-# Seems to be related to authentication which is not needed...
-#     with client.stream("GET", "/aquisition/stream.mjpg", auth=None) as response:
-#         assert response.status_code == 200
-#         buffer = b""
-#         jpeg_data = b""
-#         jpeg_start = b"\xff\xd8"
-#         jpeg_end = b"\xff\xd9"
+def fake_gen_stream(index_subdevice: int = 0):
+    # Minimal valid JPEG: start + padding + end
+    yield b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
 
-#         # Read bytes until one JPEG image is captured
-#         for chunk in response.iter_bytes():
-#             buffer += chunk
-#             if jpeg_start in buffer and jpeg_end in buffer:
-#                 start = buffer.find(jpeg_start)
-#                 end = buffer.find(jpeg_end, start) + 2
-#                 jpeg_data = buffer[start:end]
-#                 break
 
-#         # Now we verify the JPEG
-#         assert jpeg_data.startswith(jpeg_start)
-#         assert jpeg_data.endswith(jpeg_end)
-#         assert len(jpeg_data) > 100  # Arbitrary minimum size check
+@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+def test_mjpeg_stream(mock_gen_stream, client: TestClient):
+    response = client.get("/aquisition/stream.mjpg")
+    assert response.status_code == 200
+
+    # The response is multipart, so content will include headers + JPEG
+    body = response.content
+    # Extract JPEG markers
+    start = body.find(b"\xff\xd8")
+    end = body.find(b"\xff\xd9", start) + 2
+    frame = body[start:end]
+
+    assert frame.startswith(b"\xff\xd8")
+    assert frame.endswith(b"\xff\xd9")
+    assert len(frame) > 100
+
+
+@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+def test_websocket_stream(mock_gen_stream, client: TestClient):
+    with client.websocket_connect("ws://test/api/aquisition/stream") as websocket:
+        # Receive one frame
+        frame = websocket.receive_bytes()
+        assert frame.startswith(b"\xff\xd8")
+        assert frame.endswith(b"\xff\xd9")
+        assert len(frame) > 100
 
 
 def test_stream_exception_disabled(client: TestClient):
