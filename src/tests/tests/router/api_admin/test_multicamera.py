@@ -1,13 +1,9 @@
+import io
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 from PIL import Image
-
-# def test_calibration_stats_not_implemented(client_authenticated: TestClient):
-#     response = client_authenticated.get("/admin/multicamera/calibration")
-#     assert response.status_code == 500 or response.status_code == 501
-#     # FastAPI will wrap NotImplementedError into 500 by default
 
 
 # @patch("photobooth.utils.multistereo_calibration.charuco_board.generate_board")
@@ -87,26 +83,15 @@ def test_post_calibrate_all_failure(mock_get_detector, mock_cu, client_authentic
     assert "Failed to calibrate" in response.json()["detail"]
 
 
-@patch("photobooth.routers.api_admin.multicamera.process_wigglegram_inner")
-@patch("photobooth.routers.api_admin.multicamera.container")
-def test_get_result_success(mock_container, mock_process, client_authenticated: TestClient, tmp_path: Path):
-    # Fake acquisition service
-    mock_container.acquisition_service.wait_for_multicam_files.return_value = [tmp_path / "img0.jpg"]
-
-    # Fake processed images
-    img = Image.new("RGB", (100, 100))
-    mock_process.return_value = [img]
-
+def test_get_result_success(client_authenticated: TestClient):
     response = client_authenticated.get("/admin/multicamera/result")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "image/webp"
+    img = Image.open(io.BytesIO(response.content))
+    img.verify()
 
 
 @patch("photobooth.routers.api_admin.multicamera.process_wigglegram_inner", side_effect=RuntimeError("fail"))
-@patch("photobooth.routers.api_admin.multicamera.container")
-def test_get_result_failure(mock_container, mock_process, client_authenticated: TestClient):
-    mock_container.acquisition_service.wait_for_multicam_files.return_value = []
-
+def test_get_result_failure(mock_process, client_authenticated: TestClient):
     response = client_authenticated.get("/admin/multicamera/result")
     assert response.status_code == 500
     assert "something went wrong" in response.json()["detail"]
