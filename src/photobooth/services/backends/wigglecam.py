@@ -170,7 +170,10 @@ class WigglecamBackend(AbstractBackend):
                 with self._lores_data[msg.device_id].condition:
                     self._lores_data[msg.device_id].data = msg.jpg_bytes
                     self._lores_data[msg.device_id].condition.notify_all()
-                self._frame_tick()
+
+                if msg.device_id == self._config.index_cam_video:
+                    self._frame_tick()
+
             except pynng.Timeout:
                 # this is used to start another loop and have chance to check for a stop_event
                 continue
