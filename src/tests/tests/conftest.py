@@ -38,8 +38,6 @@ def client_authenticated(client: TestClient) -> Generator[TestClient, None, None
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup1():
-    logger.info("global function-scoped mediaitem setup")
-
     if container.mediacollection_service.count() == 0:
         logger.info("no mediaitem in collection, creating one image")
         if not container.is_started():
@@ -55,8 +53,6 @@ def global_function_setup1():
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup2():
-    logger.info("global function-scoped appconfig reset and optimization for speed reasons")
-
     appconfig.reset_defaults()
 
     appconfig.actions.image[0].jobcontrol.countdown_capture = 0.2

@@ -46,6 +46,8 @@ class CalibrationBase(Generic[T]):
         if dir.exists():
             shutil.rmtree(dir)
 
+        self.reset_calibration_data()
+
     def reset_calibration_data(self) -> None:
         self._caldataalign = []
 

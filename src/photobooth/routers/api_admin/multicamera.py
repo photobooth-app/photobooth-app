@@ -58,8 +58,6 @@ def api_delete_calibration_delete():
     cu = SimpleCalibrationUtil()
     cu.delete_calibration_data(CALIBRATION_DATA_PATH)
 
-    container.reload()
-
     return {"ok": True}
 
 
@@ -93,7 +91,6 @@ def api_post_calibrate_all(req: CalibrationRequest):
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Failed to calibrate, error {exc}") from exc
     else:
-        container.reload()
         return {"ok": True}
 
 
