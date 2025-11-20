@@ -117,3 +117,19 @@ def test_stream_exception_disabled(client: TestClient):
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 405
     assert "detail" in response.json()
+
+
+def test_capture_multicamera(client: TestClient):
+    response = client.get("/aquisition/multicam")
+    assert response.status_code == 200
+
+    files: list[str] = response.json()
+
+    for file in files:
+        with Image.open(file) as img:
+            img.verify()
+
+        response_download = client.get(f"/aquisition/multicam/{file}")
+        assert response_download.status_code == 200
+        with Image.open(io.BytesIO(response_download.content)) as img:
+            img.verify()
