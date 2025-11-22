@@ -41,10 +41,10 @@ async def wrap_iter(iterable: Generator[bytes, Any, None]) -> AsyncGenerator[byt
 
 
 @router.websocket("/stream")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, index_device: int = 0, index_subdevice: int = 0):
     await websocket.accept()
 
-    async for frame in wrap_iter(container.acquisition_service.gen_stream()):
+    async for frame in wrap_iter(container.acquisition_service.gen_stream(index_device, index_subdevice)):
         try:
             await websocket.send_bytes(frame)
         except WebSocketDisconnect as exc:
@@ -62,17 +62,16 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @router.get("/stream.mjpg")
-def video_stream(index_subdevice: int = 0):
-    headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
-
+def video_stream(index_device: int = 0, index_subdevice: int = 0):
     if not appconfig.backends.enable_livestream:
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
 
     def gen_multipart():
-        for jpeg_bytes in container.acquisition_service.gen_stream(index_subdevice):
+        for jpeg_bytes in container.acquisition_service.gen_stream(index_device, index_subdevice):
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n\r\n")
 
     try:
+        headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
         return StreamingResponse(content=gen_multipart(), headers=headers, media_type="multipart/x-mixed-replace; boundary=frame")
     except Exception as exc:
         logger.exception(exc)

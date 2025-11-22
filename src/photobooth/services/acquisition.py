@@ -106,7 +106,7 @@ class AcquisitionService(BaseService):
         except IndexError as exc:
             raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
 
-    def gen_stream(self, index_subdevice: int = 0):
+    def gen_stream(self, index_device: int = 0, index_subdevice: int = 0):
         """
         yield jpeg images to stream to client (if not created otherwise)
         this function may be overriden by backends, but this is the default one
@@ -116,22 +116,9 @@ class AcquisitionService(BaseService):
             logger.warning("livestream is disabled.")
             raise ConnectionRefusedError
 
-        try:
-            backend_to_stream_from = self._get_video_backend()
-            logger.debug(f"start livestream on backend {backend_to_stream_from} subdevice index {index_subdevice}")
-        except Exception as exc:
-            logger.critical(f"camera error: {exc}")
-            yield __class__._substitute_image(
-                f":| Camera {type(exc).__name__}",
-                f"{exc}",
-                appconfig.uisettings.livestream_mirror_effect,
-            )
-            time.sleep(0.5)  # rate limit if it fails
-            return
-
         while self.is_running():
             try:
-                output_jpeg_bytes = backend_to_stream_from.wait_for_lores_image(index_subdevice=index_subdevice)
+                output_jpeg_bytes = self._backends[index_device].wait_for_lores_image(index_subdevice=index_subdevice)
             except StopIteration:
                 return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
             except Exception as exc:
@@ -142,6 +129,7 @@ class AcquisitionService(BaseService):
                     f"{exc}",
                     appconfig.uisettings.livestream_mirror_effect,
                 )
+                time.sleep(0.5)  # rate limit if it fails
 
             yield output_jpeg_bytes
 

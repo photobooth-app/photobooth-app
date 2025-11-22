@@ -77,7 +77,7 @@ def test_invalid_modechange(client: TestClient):
     assert response.status_code == 422
 
 
-def fake_gen_stream(index_subdevice: int = 0):
+def fake_gen_stream(index_device: int = 0, index_subdevice: int = 0):
     # Minimal valid JPEG: start + padding + end
     yield b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
 
