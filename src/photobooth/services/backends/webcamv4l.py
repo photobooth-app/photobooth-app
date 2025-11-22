@@ -165,6 +165,10 @@ class WebcamV4lBackend(AbstractBackend):
 
         if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
             return bytes(frame)
+        elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUV420:  # v4l raw int enum 12  YUV 4:2:0
+            encoded = turbojpeg.encode_from_yuv(frame, frame.height, frame.width, quality=90)
+            assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
+            return encoded
         elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUYV:  # v4l raw int enum 16  YUV 4:2:2
             data = frame.array
             data.shape = frame.height, frame.width, -1
