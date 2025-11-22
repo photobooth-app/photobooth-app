@@ -204,7 +204,7 @@ class GroupCameraV4l2(BaseModelCamera):
         description="Device identifier (index 0 or 1 or /dev/xxx) of webcam.",
         json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
-    pixel_format_fourcc: Literal["MJPG", "YUYV"] = Field(
+    pixel_format_fourcc: Literal["MJPG", "YUYV", "YU12"] = Field(
         default="MJPG",
         description="MJPG is preferred usually. Some cameras (especially virtual cameras) do not support MJPG, so you can fall back to uncompressed YUYV here.",
     )
