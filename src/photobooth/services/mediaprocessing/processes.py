@@ -9,6 +9,7 @@ from PIL import Image, ImageOps
 
 from ...appconfig import appconfig
 from ...database.models import Mediaitem
+from ...utils.media_encode import encode
 from ...utils.metrics_timer import MetricsTimer
 from ..config.groups.actions import AnimationProcessing, CollageProcessing, MulticameraProcessing, SingleImageProcessing, VideoProcessing
 from .context import AnimationContext, CollageContext, ImageContext, MulticameraContext, VideoContext
@@ -82,37 +83,12 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     return manipulated_image
 
 
-def __pil_save(images: list[Image.Image], file_out: Path, durations: int | list[int] | tuple[int, ...] | None = None):
-    FORMAT_OPTIONS = {
-        ".jpg": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "optimize": True},
-        ".gif": {"optimize": True},
-        ".webp": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "method": 0, "lossless": False},
-        ".avif": {"quality": appconfig.mediaprocessing.HIRES_STILL_QUALITY, "speed": 10, "lossless": False},
-    }
-    try:
-        format_params = FORMAT_OPTIONS[file_out.suffix.lower()]
-    except KeyError as exc:
-        raise RuntimeError(f"Unsupported format: {file_out.suffix}") from exc
-
-    sequence_params = {}
-    if len(images) > 1:
-        # webp, gif and avif have the save_all option for animations, jpeg not.
-        sequence_params = {
-            "save_all": True,
-            "append_images": images[1:] if len(images) > 1 else [],
-            "duration": durations,  # config.duration,  # duration per frame in milliseconds. integer=all frames same, list/tuple individual.
-            "loop": 0,  # loop forever
-        }
-
-    images[0].save(file_out, format=None, **format_params, **sequence_params)
-
-
 def process_phase1images(file_in: Path, mediaitem: Mediaitem):
     manipulated_image = process_image_inner(file_in, SingleImageProcessing(**mediaitem.pipeline_config), preview=False)
 
     ## final: save full result and create scaled versions
     # complete processed version (unprocessed and processed are different here)
-    __pil_save([manipulated_image], mediaitem.processed)
+    encode([manipulated_image], mediaitem.processed)
 
     return mediaitem
 
@@ -189,7 +165,7 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
 
     ## create mediaitem
     canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-    __pil_save([canvas], mediaitem.unprocessed)
+    encode([canvas], mediaitem.unprocessed)
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
@@ -215,7 +191,7 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
         pipeline(context)
 
     ## create mediaitem
-    __pil_save(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
+    encode(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
@@ -247,7 +223,7 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # sequence like 1-2-3-4-3-2-restart
     sequence_images = manipulated_image
     sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
-    __pil_save(sequence_images, mediaitem.unprocessed, durations=config.duration)
+    encode(sequence_images, mediaitem.unprocessed, durations=config.duration)
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
