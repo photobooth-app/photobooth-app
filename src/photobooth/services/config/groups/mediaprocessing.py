@@ -15,14 +15,6 @@ class GroupMediaprocessing(BaseModel):
 
     model_config = ConfigDict(title="Process media after capture")
 
-    HIRES_STILL_QUALITY: int = Field(
-        default=90,
-        ge=10,
-        le=100,
-        description="Still JPEG full resolution quality, applied to download images and images with filter",
-        json_schema_extra={"ui_component": "QSlider"},
-    )
-
     full_still_length: int = Field(
         default=1500,
         ge=800,
