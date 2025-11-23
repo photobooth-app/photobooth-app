@@ -1103,7 +1103,7 @@ wheels = [
 
 [[package]]
 name = "photobooth-app"
-version = "8.5.1"
+version = "8.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
@@ -1227,15 +1227,15 @@ wheels = [
 
 [[package]]
 name = "pilgram2"
-version = "2.0.9"
+version = "2.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "pillow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/e9/fb8b84cf8536c9f7fa1ac38b5ef7704bf60663e6dfd5a7947ca349b178db/pilgram2-2.0.9.tar.gz", hash = "sha256:c3163c5aefb7b1eb97980b09a37a0573a1e3af4f906b18675b5afd5417c810cc", size = 96485, upload-time = "2025-10-16T19:49:31.396Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/61/e1/0c5d0839c76c10f71d497a43933111acaf86705a08a7069aebc016d0eee5/pilgram2-2.0.10.tar.gz", hash = "sha256:5aa4d9f5b2f056ec253a29510a3246b9a0919b6884c86d2b37b728daec903f1d", size = 96472, upload-time = "2025-11-23T17:31:30.584Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c9/b7/23fd37d3a9d973f80ca8f8fcd663e739ee70359ab4a93ca4dd7f3e2ff356/pilgram2-2.0.9-py3-none-any.whl", hash = "sha256:75d1b6ba0603371d6bc28664788af5e47c40a34ecee656b01477a5a9992f1ccd", size = 195169, upload-time = "2025-10-16T19:49:30.274Z" },
+    { url = "https://files.pythonhosted.org/packages/68/1f/0abf86623212f90fd14b16d425e175596c22004ec6f5181e75b607b36c16/pilgram2-2.0.10-py3-none-any.whl", hash = "sha256:020cc856b36ebd2f1ba7d8ca392480fbb73258b5484ca5e999f7371d6edf1d9b", size = 195214, upload-time = "2025-11-23T17:31:29.313Z" },
 ]
 
 [[package]]
@@ -1345,20 +1345,20 @@ wheels = [
 
 [[package]]
 name = "poethepoet"
-version = "0.37.0"
+version = "0.38.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pastel" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/f2/273fe54a78dc5c6c8dd63db71f5a6ceb95e4648516b5aeaeff4bde804e44/poethepoet-0.37.0.tar.gz", hash = "sha256:73edf458707c674a079baa46802e21455bda3a7f82a408e58c31b9f4fe8e933d", size = 68570, upload-time = "2025-08-11T18:00:29.103Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/14/d1f795f314c4bf3ad6d64216e370bdfda73093ed76e979485778b655a7ac/poethepoet-0.38.0.tar.gz", hash = "sha256:aeeb2f0a2cf0d3afa833976eff3ac7b8f5e472ae64171824900d79d3c68163c7", size = 77339, upload-time = "2025-11-23T13:51:28.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/1b/5337af1a6a478d25a3e3c56b9b4b42b0a160314e02f4a0498d5322c8dac4/poethepoet-0.37.0-py3-none-any.whl", hash = "sha256:861790276315abcc8df1b4bd60e28c3d48a06db273edd3092f3c94e1a46e5e22", size = 90062, upload-time = "2025-08-11T18:00:27.595Z" },
+    { url = "https://files.pythonhosted.org/packages/38/89/2bf7d43ef4b0d60f446933ae9d3649f95c2c45c47b6736d121b602c28361/poethepoet-0.38.0-py3-none-any.whl", hash = "sha256:214bd9fcb348ff3dfd1466579d67e0c02242451a7044aced1a79641adef9cad0", size = 101938, upload-time = "2025-11-23T13:51:26.518Z" },
 ]
 
 [[package]]
 name = "pre-commit"
-version = "4.4.0"
+version = "4.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cfgv" },
@@ -1367,9 +1367,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "virtualenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/49/7845c2d7bf6474efd8e27905b51b11e6ce411708c91e829b93f324de9929/pre_commit-4.4.0.tar.gz", hash = "sha256:f0233ebab440e9f17cabbb558706eb173d19ace965c68cdce2c081042b4fab15", size = 197501, upload-time = "2025-11-08T21:12:11.607Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/9b/6a4ffb4ed980519da959e1cf3122fc6cb41211daa58dbae1c73c0e519a37/pre_commit-4.5.0.tar.gz", hash = "sha256:dc5a065e932b19fc1d4c653c6939068fe54325af8e741e74e88db4d28a4dd66b", size = 198428, upload-time = "2025-11-22T21:02:42.304Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/11/574fe7d13acf30bfd0a8dd7fa1647040f2b8064f13f43e8c963b1e65093b/pre_commit-4.4.0-py2.py3-none-any.whl", hash = "sha256:b35ea52957cbf83dcc5d8ee636cbead8624e3a15fbfa61a370e42158ac8a5813", size = 226049, upload-time = "2025-11-08T21:12:10.228Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/c4/b2d28e9d2edf4f1713eb3c29307f1a63f3d67cf09bdda29715a36a68921a/pre_commit-4.5.0-py2.py3-none-any.whl", hash = "sha256:25e2ce09595174d9c97860a95609f9f852c0614ba602de3561e267547f2335e1", size = 226429, upload-time = "2025-11-22T21:02:40.836Z" },
 ]
 
 [[package]]
