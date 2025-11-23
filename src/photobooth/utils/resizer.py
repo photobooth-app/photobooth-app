@@ -143,8 +143,9 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     output_stream.width = ow
     output_stream.height = oh
     output_stream.codec_context.options["movflags"] = "faststart"
-    output_stream.codec_context.options["preset"] = "fast"
-    output_stream.codec_context.bit_rate = 5000000  # 5000k==5Mbps seems reasonable for simple streams in the 1080range
+    output_stream.codec_context.options["preset"] = "veryfast"
+    output_stream.codec_context.options["crf"] = "23"  # 23 default, 17-18 is visually lossless
+    # output_stream.codec_context.bit_rate = 5000000  # 5000k==5Mbps seems reasonable for simple streams in the 1080range
 
     for frame in input_container.decode(input_stream):
         # Das Frame in der Zielgröße skalieren
