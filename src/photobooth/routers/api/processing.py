@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from ...container import container
 from ...database.models import DimensionTypes
 from ...services.collection import MAP_DIMENSION_TO_PIXEL
-from ...utils.resizer import generate_resized
+from ...utils.media_resizer import resize
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/processing", tags=["processing"])
@@ -21,7 +21,7 @@ def api_get_preview_image_filtered(capture_id: UUID, background_tasks: Backgroun
         filepath_in = container.processing_service.get_capture(capture_id).filepath
         filepath_out = Path(NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix="approval_img_", suffix=filepath_in.suffix).name)
 
-        generate_resized(filepath_in, filepath_out, MAP_DIMENSION_TO_PIXEL[DimensionTypes.preview])
+        resize(filepath_in, filepath_out, MAP_DIMENSION_TO_PIXEL[DimensionTypes.preview])
 
         background_tasks.add_task(lambda path: path.unlink(), filepath_out)
 

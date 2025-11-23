@@ -19,8 +19,8 @@ from ..database.database import engine
 from ..database.models import Cacheditem, DimensionTypes, Mediaitem
 from ..database.schemas import MediaitemPublic
 from ..plugins import pm as pluggy_pm
+from ..utils.media_resizer import resize
 from ..utils.metrics_timer import MetricsTimer
-from ..utils.resizer import generate_resized
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventDbInsert, SseEventDbRemove, SseEventDbUpdate
@@ -172,7 +172,7 @@ class Cache:
                     )
 
                     with MetricsTimer(f"generate resized '{dimension.value}' for {cacheditem_new.filepath}"):
-                        generate_resized(
+                        resize(
                             filepath_in=item.processed if processed else item.unprocessed,
                             filepath_out=cacheditem_new.filepath,
                             scaled_min_length=dimension_pixel,

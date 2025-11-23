@@ -8,7 +8,14 @@ from PIL import Image, ImageOps
 
 from photobooth.database.types import DimensionTypes
 from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
-from photobooth.utils.resizer import generate_resized, resize_animation_pillow, resize_jpeg, resize_jpeg_pillow, resize_jpeg_turbojpeg, resize_mp4
+from photobooth.utils.media_resizer import (
+    resize,
+    resize_animation_pillow,
+    resize_jpeg,
+    resize_jpeg_pillow,
+    resize_jpeg_turbojpeg,
+    resize_mp4,
+)
 
 from ..util import dummy_animation, get_exiforiented_jpeg, get_jpeg
 
@@ -41,15 +48,15 @@ def test_resize_jpg(tmp_path):
 def test_resize_jpg_autofallback(tmp_path):
     import turbojpeg
 
-    import photobooth.utils.resizer
+    import photobooth.utils.media_resizer
 
     with patch.object(turbojpeg, "TurboJPEG", side_effect=ModuleNotFoundError("fake turbojpeg not avail")):
         # need to reload the lib because for the turbojpeg module is checked for availability on import
 
-        importlib.reload(photobooth.utils.resizer)
+        importlib.reload(photobooth.utils.media_resizer)
 
         # ensure turbojpeg has not been loaded
-        assert photobooth.utils.resizer.turbojpeg is None
+        assert photobooth.utils.media_resizer.turbojpeg is None
 
         input = Path("src/tests/assets/input.jpg")
         output = tmp_path / "output.jpg"
@@ -61,7 +68,7 @@ def test_resize_jpg_autofallback(tmp_path):
             img.verify()
 
     # reload again outside of patch to ensure following tests have the turbojpeg available again if needed.
-    importlib.reload(photobooth.utils.resizer)
+    importlib.reload(photobooth.utils.media_resizer)
 
 
 def test_resize_jpg_force_turbojpeg(tmp_path):
@@ -127,36 +134,36 @@ def test_resize_mp4(tmp_path):
 
 
 def test_generate_resized():
-    import photobooth.utils.resizer
+    import photobooth.utils.media_resizer
 
-    with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
-        generate_resized(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_jpeg") as mock:
+        resize(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_jpeg") as mock:
-        generate_resized(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_jpeg") as mock:
+        resize(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
-        generate_resized(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
+        resize(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
-        generate_resized(filepath_in=Path("somefile.webp"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
+        resize(filepath_in=Path("somefile.webp"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_animation_pillow") as mock:
-        generate_resized(filepath_in=Path("somefile.avif"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
+        resize(filepath_in=Path("somefile.avif"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.resizer, "resize_mp4") as mock:
-        generate_resized(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(photobooth.utils.media_resizer, "resize_mp4") as mock:
+        resize(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
 
 def test_generate_resized_raise_nonavail_format():
     with pytest.raises(RuntimeError):
-        generate_resized(filepath_in=Path("somefile.unknownextension"), filepath_out=Path("dontcare"), scaled_min_length=100)
+        resize(filepath_in=Path("somefile.unknownextension"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
 
 def test_exif_transpose():

@@ -168,7 +168,7 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
     output_container.close()
 
 
-def generate_resized(filepath_in: Path, filepath_out: Path, scaled_min_length: int) -> None:
+def resize(filepath_in: Path, filepath_out: Path, scaled_min_length: int) -> None:
     assert isinstance(filepath_in, Path)
     assert isinstance(filepath_out, Path)
 

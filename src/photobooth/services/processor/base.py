@@ -12,7 +12,7 @@ from ...appconfig import appconfig
 from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import filename_str_time
-from ...utils.resizer import generate_resized
+from ...utils.media_resizer import resize
 from ..acquisition import AcquisitionService
 from ..config.groups.actions import (
     BaseConfigurationSet,
@@ -217,7 +217,7 @@ class JobModelBase(ABC, Generic[T]):
 
         # TODO: get some clever way to scale AND cache?
         # TODO: check if cache-generation checks for size and if already same as target, don't scale, just copy, clever trick done.
-        generate_resized(captured_original, mediaitem.unprocessed, appconfig.mediaprocessing.full_still_length)
+        resize(captured_original, mediaitem.unprocessed, appconfig.mediaprocessing.full_still_length)
         process_phase1images(mediaitem.unprocessed, mediaitem)
 
         assert mediaitem.unprocessed.is_file()
