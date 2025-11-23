@@ -64,7 +64,7 @@ class GroupMediaprocessing(BaseModel):
         description="Format in which animations are stored. WebP is recommended nowadays. AVIF is a newer format, encodes fast, produces smallest files but is not yet broadly compatible. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. GIF is deprecated here.",
     )
 
-    fileformat_multicamera: Literal["webp", "avif", "gif"] = Field(
-        default="webp",
-        description="Format in which wigglegrams are stored. WebP is recommended nowadays. AVIF is a newer format, encodes fast, produces smallest files but is not yet broadly compatible. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. GIF is deprecated here.",
+    fileformat_multicamera: Literal["mp4", "webp", "avif", "gif"] = Field(
+        default="mp4",
+        description="Format in which wigglegrams are stored. MP4 is recommended for quality and filesize as well as compatibility. WebP/AVIF are recommended over MP4 and GIF but still lack support sharing via WhatsApp. GIF is lower quality (max 256 colors), more compute intensive to encode but offers best compatibility. GIF is deprecated here.",
     )
