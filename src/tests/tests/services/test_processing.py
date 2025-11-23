@@ -211,6 +211,7 @@ def test_video_stop_early(_container: Container):
 
 
 def test_multicamera(_container: Container):
+    fileformat_should = appconfig.mediaprocessing.fileformat_multicamera
     number_of_images_before = _container.mediacollection_service.count()
 
     _container.processing_service.trigger_action("multicamera", 0)
@@ -224,7 +225,12 @@ def test_multicamera(_container: Container):
     assert _container.mediacollection_service.count() == number_of_images_before + 5
 
     phase2_item = _container.mediacollection_service.get_item_latest()
-    assert phase2_item.unprocessed.suffix.lower() in (".gif", ".avif", ".webp")
+    assert phase2_item.unprocessed.suffix.lower() == f".{fileformat_should}"
 
-    with Image.open(phase2_item.unprocessed, formats=["GIF", "AVIF", "WEBP"]) as img:
-        img.verify()
+    # ensure written video is about in tolerance duration
+    if fileformat_should == "mp4":
+        video_duration_seconds = abs(round(video_duration(phase2_item.unprocessed), 1))
+        assert video_duration_seconds > 0.1
+    else:
+        with Image.open(phase2_item.unprocessed, formats=["GIF", "AVIF", "WEBP"]) as img:
+            img.verify()
