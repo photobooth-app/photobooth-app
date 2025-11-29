@@ -21,3 +21,10 @@ def ui_private_css():
         return Response("/* placeholder. create private.css in userdata folder to customize css */", headers=headers)
     else:
         return FileResponse(path=path, headers=headers)
+
+
+@static_router.get("/")
+def index():
+    """Serve index.html with forced revalidation (ETag checked every time)."""
+    headers = {"Cache-Control": "no-cache"}
+    return FileResponse(path=Path(__file__).parent.parent.parent.joinpath("web/frontend", "index.html").resolve(), headers=headers)
