@@ -215,6 +215,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
     temperatures: dict[str, Any]
     mediacollection: dict[str, Any]
     plugins: list[GenericStats]
+    pi_throttled_flags: dict[str, bool]
 
     @property
     def event(self) -> str:
@@ -235,6 +236,7 @@ class SseEventIntervalInformationRecord(SseEventBase):
                 temperatures=self.temperatures,
                 mediacollection=self.mediacollection,
                 plugins=[asdict(entry) for entry in self.plugins],
+                pi_throttled_flags=self.pi_throttled_flags,
             )
         )
 

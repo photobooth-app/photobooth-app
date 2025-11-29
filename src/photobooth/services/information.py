@@ -1,5 +1,6 @@
 import logging
 import platform
+import subprocess
 import sys
 from datetime import datetime
 from importlib.metadata import version
@@ -29,8 +30,6 @@ STATS_INTERVAL_TIMER = 2  # every x seconds
 
 
 class InformationService(BaseService):
-    """_summary_"""
-
     def __init__(self, acquisition_service: AcquisitionService):
         super().__init__()
 
@@ -40,6 +39,7 @@ class InformationService(BaseService):
         self._stats_interval_timer: RepeatedTimer = RepeatedTimer(STATS_INTERVAL_TIMER, self._on_stats_interval_timer)
         self._cpu_percent_thread = StoppableThread(name="_on_cpu_percent_worker", target=self._on_cpu_percent_fun, daemon=True)
         self._cpu_percent: float = 0.0
+        self._skip_gathering: set = set()
 
         # log some very basic common information
         logger.info(f"Platform: {platform.uname()}")
@@ -130,11 +130,10 @@ class InformationService(BaseService):
             temperatures=self._gather_temperatures(),
             mediacollection=self._gather_mediacollection(),
             plugins=self._gather_plugins(),
+            pi_throttled_flags=self._gather_pi_throttled_flags(),
         )
 
     def initial_emit(self):
-        """_summary_"""
-
         # gather one time on connect information to be sent off:
         sse_service.dispatch_event(self.get_initial_inforecord())
 
@@ -214,7 +213,7 @@ class InformationService(BaseService):
             # try to get raspberry model
             try:
                 with open("/proc/device-tree/model") as f:
-                    model = f.read()
+                    model = f.read().strip("\x00\n")  # strip nulls and newlines
             except Exception:
                 pass
 
@@ -249,3 +248,32 @@ class InformationService(BaseService):
 
     def _gather_plugins(self) -> list[GenericStats]:
         return [stat for stat in pluggy_pm.hook.get_stats() if stat is not None]
+
+    def _gather_pi_throttled_flags(self) -> dict[str, bool]:
+        """Raspberry Pi system health monitor using vcgencmd.
+        Decode throttled bitmask into human-readable flags."""
+        flags = {}
+
+        if "pi_throttled_flags" in self._skip_gathering:
+            # if vcgencmd failed once, we skip in future because the computer is probably no Pi
+            return flags
+
+        try:
+            out = subprocess.check_output(["vcgencmd", "get_throttled"]).decode().strip()
+            mask = int(out.split("=")[1], 16)
+
+            flags = {
+                "undervoltage_now": bool(mask & 0x1),
+                "freq_capped_now": bool(mask & 0x2),
+                "throttled_now": bool(mask & 0x4),
+                "soft_temp_limit_now": bool(mask & 0x8),
+                "undervoltage_occurred": bool(mask & 0x10000),
+                "freq_capped_occurred": bool(mask & 0x20000),
+                "throttled_occurred": bool(mask & 0x40000),
+                "soft_temp_limit_occurred": bool(mask & 0x80000),
+            }
+
+        except Exception:
+            self._skip_gathering.add("pi_throttled_flags")
+
+        return flags
