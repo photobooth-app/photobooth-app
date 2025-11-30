@@ -10,6 +10,9 @@ def test_read_web_spa(client: TestClient):
     response = client.get("../")
     assert response.status_code == 200
 
+    # ensure no cache on main page so frontent updates work fine
+    assert "cache-control" in response.headers and "no-cache" == response.headers["cache-control"]
+
 
 def test_read_web_downloadportal(client: TestClient):
     response = client.get("../download/")
