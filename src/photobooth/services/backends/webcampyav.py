@@ -6,8 +6,9 @@ import io
 import logging
 import sys
 from pathlib import Path
+from queue import Empty, Full, Queue
 from tempfile import NamedTemporaryFile
-from threading import Condition
+from threading import Condition, Thread
 
 import av
 from av.codec import Capabilities, Codec
@@ -42,12 +43,15 @@ class WebcamPyavBackend(AbstractBackend):
 
         self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
         self._worker_thread: StoppableThread | None = None
+        self._frame_queue = Queue(maxsize=1)
 
         # for debugging purposes output some information about underlying libs
         self._version_codec_info()
 
     def start(self):
         super().start()
+
+        Thread(target=self.encoder_loop, daemon=True).start()
 
         # not supported platform, will raise exception during startup. no exception during init to not break the overall app
         assert input_ffmpeg_device is not None, "the platform is not supported"
@@ -104,8 +108,45 @@ class WebcamPyavBackend(AbstractBackend):
 
     def teardown_resource(self): ...
 
-    def run_service(self):
+    def encoder_loop(self):
         reformatter = VideoReformatter()
+
+        rW = self._config.cam_resolution_width // self._config.preview_resolution_reduce_factor
+        rH = self._config.cam_resolution_height // self._config.preview_resolution_reduce_factor
+        while not self._stop_event.is_set():
+            try:
+                frame = self._frame_queue.get(timeout=0.1)
+            except Empty:
+                continue
+
+            if self._config.preview_resolution_reduce_factor > 1:
+                out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
+            else:
+                if frame.format.name != "yuvj420p":
+                    out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
+                else:
+                    out_frame = frame.to_ndarray()
+            import time
+
+            time.sleep(0.2)
+            # compress raw YUV420p to JPEG
+            jpeg_bytes = encode_jpeg_yuv_planes(
+                Y=out_frame[:rH],
+                U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
+                V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
+                quality=85,
+                fastdct=True,
+            )
+            # Alternative approach using turbojpeg. speed is actually the same but simplejpeg comes with turbojpeg libs bundled for windows
+            # jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
+
+            with self._lores_data.condition:
+                self._lores_data.data = jpeg_bytes
+                self._lores_data.condition.notify_all()
+
+            self._frame_tick()
+
+    def run_service(self):
         options = {
             "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",
             "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
@@ -115,8 +156,6 @@ class WebcamPyavBackend(AbstractBackend):
             # dshow/v4l usually dont need this configured because their default seems reasonable.
             options["framerate"] = str(self._config.cam_framerate)
 
-        rW = self._config.cam_resolution_width // self._config.preview_resolution_reduce_factor
-        rH = self._config.cam_resolution_height // self._config.preview_resolution_reduce_factor
         frame_count = 0
 
         try:
@@ -138,7 +177,6 @@ class WebcamPyavBackend(AbstractBackend):
             logger.info(f"input_stream codec: {input_stream.codec}")
             logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
             logger.info(f"pyav packet received: {next(input_device.demux())}")
-            logger.info(f"livestream resolution: {rW}x{rH}")
 
             try:
                 frame = next(input_device.decode(input_stream))
@@ -178,30 +216,12 @@ class WebcamPyavBackend(AbstractBackend):
                 else:
                     frame_count = 0
 
-                if self._config.preview_resolution_reduce_factor > 1:
-                    out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
-                else:
-                    if frame.format.name != "yuvj420p":
-                        out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
-                    else:
-                        out_frame = frame.to_ndarray()
-
-                # compress raw YUV420p to JPEG
-                jpeg_bytes = encode_jpeg_yuv_planes(
-                    Y=out_frame[:rH],
-                    U=out_frame.reshape(rH * 3, rW // 2)[rH * 2 : rH * 2 + rH // 2],
-                    V=out_frame.reshape(rH * 3, rW // 2)[rH * 2 + rH // 2 :],
-                    quality=85,
-                    fastdct=True,
-                )
-                # Alternative approach using turbojpeg. speed is actually the same but simplejpeg comes with turbojpeg libs bundled for windows
-                # jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
-
-                with self._lores_data.condition:
-                    self._lores_data.data = jpeg_bytes
-                    self._lores_data.condition.notify_all()
-
-                self._frame_tick()
+                try:
+                    self._frame_queue.put_nowait(frame)
+                except Full:
+                    # drop frame to avoid lag
+                    print("frame dropped")
+                    continue
 
                 # abort streaming on shutdown so process can join and close
                 if self._stop_event.is_set():
