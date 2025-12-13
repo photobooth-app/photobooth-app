@@ -133,15 +133,35 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show filter provided by plugins. Pilgram2 filter are included in the app. See documentation to extend and build your own plugin.",
     )
+    gallery_filter_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom filter button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
     gallery_show_download: bool = Field(
         default=True,
         description="Show a download button in gallery.",
+    )
+    gallery_download_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom download button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
     )
     gallery_show_delete: bool = Field(
         default=True,
         description="Show a delete button in gallery.",
     )
+    gallery_delete_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom delete button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
     gallery_show_shareprint: bool = Field(
         default=True,
         description="Show the share/print buttons in gallery.",
+    )
+    gallery_shareprint_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom share/print button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    return_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom return button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
     )
