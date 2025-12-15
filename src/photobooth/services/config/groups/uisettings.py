@@ -31,6 +31,11 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to gallery on frontpage.",
     )
+    gallery_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom gallery button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+
     show_admin_on_frontpage: bool = Field(
         default=True,
         description="Show button to admin center, usually only during setup.",
@@ -157,11 +162,24 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show the share/print buttons in gallery.",
     )
-    gallery_shareprint_image_path: str = Field(
-        default="",
-        description="Base64 encoded image string for custom share/print button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
-    )
-    return_image_path: str = Field(
+    return_button_image_string: str = Field(
         default="",
         description="Base64 encoded image string for custom return button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+
+    abort_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom abort button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    retake_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom retake button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    next_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom next button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    admin_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom admin button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
     )
