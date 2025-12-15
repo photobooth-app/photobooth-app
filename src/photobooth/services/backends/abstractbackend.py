@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition, Event
+from typing import overload
 
 import piexif
 
@@ -196,40 +197,42 @@ class AbstractBackend(ResilientService, ABC):
 
         super().stop()
 
-    def rotate_jpeg_file_by_exif_flag(self, filepath: Path, orientation_choice: Orientation):
+    @overload
+    def rotate_jpeg_by_exif_flag(self, jpeg_image: Path, orientation_choice) -> Path: ...
+    @overload
+    def rotate_jpeg_by_exif_flag(self, jpeg_image: bytes, orientation_choice) -> bytes: ...
+
+    def rotate_jpeg_by_exif_flag(self, jpeg_image: Path | bytes, orientation_choice: Orientation) -> Path | bytes:
         """inserts updated orientation flag in given filepath.
         ref https://sirv.com/help/articles/rotate-photos-to-be-upright/
 
         Args:
-            filepath (Path): file to modify
-            orientation_value (int): Orientierung (1=0°, 3=180°, 5=90°, 7=270°)
+            jpeg_image (Path|bytes): jpeg to modify
+            orientation_choice (Literal): Orientierung (1=0°, 3=180°, 5=90°, 7=270°)
         """
-        piexif.insert(self._get_updated_exif_bytes(str(filepath), orientation_choice), str(filepath))
 
-    def rotate_jpeg_data_by_exif_flag(self, image_data: bytes, orientation_choice: Orientation):
-        """reads exif from image_data bytes and returns new bytes with updated orientation.
-        ref: https://sirv.com/help/articles/rotate-photos-to-be-upright/
+        def _get_updated_exif_bytes(maybe_image, orientation_choice: Orientation):
+            assert isinstance(orientation_choice, str)
 
-        Args:
-            image_data (bytes): data to modify
-            orientation_value (int): Orientierung (0=0°, 3=180°, 5=90°, 7=270°)
-        """
-        output = io.BytesIO()
-        piexif.insert(self._get_updated_exif_bytes(image_data, orientation_choice), image_data, output)
+            orientation = int(orientation_choice[0])
+            if 1 < orientation > 8:
+                raise ValueError(f"invalid orientation choice {orientation_choice} results in invalid value: {orientation}.")
 
-        return output.getvalue()
+            exif_dict = piexif.load(maybe_image)
+            exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation
 
-    def _get_updated_exif_bytes(self, maybe_image, orientation_choice: Orientation):
-        assert isinstance(orientation_choice, str)
+            return piexif.dump(exif_dict)
 
-        orientation = int(orientation_choice[0])
-        if 1 < orientation > 8:
-            raise ValueError(f"invalid orientation choice {orientation_choice} results in invalid value: {orientation}.")
-
-        exif_dict = piexif.load(maybe_image)
-        exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation
-
-        return piexif.dump(exif_dict)
+        if isinstance(jpeg_image, Path):
+            # File case: update in place
+            piexif.insert(_get_updated_exif_bytes(str(jpeg_image), orientation_choice), str(jpeg_image))
+            return jpeg_image
+        elif isinstance(jpeg_image, (bytes, bytearray)):
+            # Bytes case: return new data
+            output = io.BytesIO()
+            piexif.insert(_get_updated_exif_bytes(jpeg_image, orientation_choice), jpeg_image, output)
+            return output.getvalue()
+        # else: ...           #not going to happen as per type
 
     def wait_for_multicam_files(self, retries: int = 3) -> list[Path]:
         """
@@ -261,7 +264,7 @@ class AbstractBackend(ResilientService, ABC):
         while True:
             try:
                 filepath = self._wait_for_still_file()
-                self.rotate_jpeg_file_by_exif_flag(filepath, self._orientation)
+                self.rotate_jpeg_by_exif_flag(filepath, self._orientation)
                 return filepath
             except Exception as exc:
                 attempt += 1
@@ -302,7 +305,7 @@ class AbstractBackend(ResilientService, ABC):
 
             try:
                 img_bytes = self._wait_for_lores_image(index_subdevice=index_subdevice)  # blocks 0.5s usually. 10 retries default wait time=5s
-                img = self.rotate_jpeg_data_by_exif_flag(img_bytes, self._orientation)
+                img = self.rotate_jpeg_by_exif_flag(img_bytes, self._orientation)
                 return img
             except TimeoutError as exc:
                 if self.is_started():
