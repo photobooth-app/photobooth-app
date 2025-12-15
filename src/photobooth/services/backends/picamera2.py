@@ -61,7 +61,8 @@ class Picamera2Backend(AbstractBackend):
         elif exif_orientation == 4:
             self._transform = Transform(vflip=True)
         else:
-            logger.warning("Picamera2 only supports 0/180° angles, 90/270° are not supported.")
+            logger.warning("Picamera2 only supports 0/180° angles, 90/270° are not supported. Fallback no transform.")
+            self._transform = Transform()
 
         # private props
         self._picamera2: Picamera2 | None = None
