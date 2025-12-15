@@ -10,7 +10,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Condition
 
-from libcamera import controls  # type: ignore
+from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
 from picamera2.allocators import PersistentAllocator  # type: ignore
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
@@ -47,7 +47,21 @@ class PicamLoresData(io.BufferedIOBase):
 class Picamera2Backend(AbstractBackend):
     def __init__(self, config: GroupCameraPicamera2):
         self._config: GroupCameraPicamera2 = config
-        super().__init__(orientation=config.orientation)
+
+        super().__init__(orientation="1: 0°")  # for picamera there is only 1-4 supported (no 90°/270° rotation as it's not exposed by picamera2)
+
+        exif_orientation = int(config.orientation[0])
+
+        if exif_orientation == 1:
+            self._transform = Transform()
+        elif exif_orientation == 2:
+            self._transform = Transform(hflip=True)
+        elif exif_orientation == 3:
+            self._transform = Transform(hflip=True, vflip=True)
+        elif exif_orientation == 4:
+            self._transform = Transform(vflip=True)
+        else:
+            logger.warning("Picamera2 only supports 0/180° angles, 90/270° are not supported.")
 
         # private props
         self._picamera2: Picamera2 | None = None
@@ -258,6 +272,7 @@ class Picamera2Backend(AbstractBackend):
             buffer_count=3,
             display="lores",
             controls={"FrameRate": self._config.framerate_still_mode},
+            transform=self._transform,
         )
 
         # config preview mode (used for permanent live view)
@@ -268,6 +283,7 @@ class Picamera2Backend(AbstractBackend):
             buffer_count=3,
             display="lores",
             controls={"FrameRate": self._config.framerate_video_mode},
+            transform=self._transform,
         )
 
         # set preview mode on init
