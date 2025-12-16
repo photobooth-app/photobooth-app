@@ -31,6 +31,11 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show button to gallery on frontpage.",
     )
+    gallery_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom gallery button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+
     show_admin_on_frontpage: bool = Field(
         default=True,
         description="Show button to admin center, usually only during setup.",
@@ -133,15 +138,48 @@ class GroupUiSettings(BaseModel):
         default=True,
         description="Show filter provided by plugins. Pilgram2 filter are included in the app. See documentation to extend and build your own plugin.",
     )
+    gallery_filter_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom filter button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
     gallery_show_download: bool = Field(
         default=True,
         description="Show a download button in gallery.",
+    )
+    gallery_download_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom download button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
     )
     gallery_show_delete: bool = Field(
         default=True,
         description="Show a delete button in gallery.",
     )
+    gallery_delete_image_path: str = Field(
+        default="",
+        description="Base64 encoded image string for custom delete button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
     gallery_show_shareprint: bool = Field(
         default=True,
         description="Show the share/print buttons in gallery.",
+    )
+    return_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom return button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+
+    abort_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom abort button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    retake_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom retake button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    next_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom next button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
+    )
+    admin_button_image_string: str = Field(
+        default="",
+        description="Base64 encoded image string for custom admin button (e.g., data:image/png;base64,...). When provided, displays image instead of default button.",
     )

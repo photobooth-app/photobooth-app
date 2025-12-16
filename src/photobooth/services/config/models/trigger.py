@@ -33,6 +33,10 @@ class UiTrigger(BaseModel):
         default=Color("#196cb0"),
         description="Custom color for the button.",
     )
+    image_path: str = Field(
+        default="",
+        description="Base64 encoded image string to use instead of button (when provided, displays image instead of button).",
+    )
 
 
 class KeyboardTrigger(BaseModel):
