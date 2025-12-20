@@ -12,13 +12,13 @@ Welcome to your brand-new open-source photobooth-app! Written in Python 🐍, co
 
 ## 😍 Features
 
-📷 Capture stills, animated gif, collages and even 📹 videos!  
+📷 Capture stills, animated gif, collages, 🪃 boomerangs and 3d wigglegrams!  
 🫶 Supports DSLR, Raspberry Pi cameras and webcameras  
-🎉 Camera live preview with shortest delay as possible, permanent video live view in background  
+🎉 Live preview during countdown and on the home screen  
 🛫 Optimized for speed, highly response UI  
-🫶 Several camera backends supported for high quality stills and livestream  
-💡 Countdown animation using customizable WLED module
-🤝 Linux 🐧, Raspberry Pi 🍓 and Windows 🪟 platforms supported  
+🫶 Combine multiple cameras, dedicate one for high quality stills and another one for the livestream  
+💡 Integrates with WLED to signal countdown using LED rings  
+🤝 Linux, Raspberry Pi and Windows platforms supported  
 🔓 Open-source, non-restrictive MIT license  
 
 [![photobooth-app screenshot of the frontpage](https://raw.githubusercontent.com/photobooth-app/photobooth-app/main/assets/screenshots/frontpage.png)](https://photobooth-app.org/screenshots/)
