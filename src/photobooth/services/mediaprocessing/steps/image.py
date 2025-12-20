@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
+from collections import OrderedDict
 from datetime import datetime
 from enum import Enum
 from itertools import chain
 from pathlib import Path
+from threading import Lock
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydantic_extra_types.color import Color
@@ -23,6 +26,9 @@ from ..pipeline import NextStep, PipelineStep
 logger = logging.getLogger(__name__)
 
 rembg_session: BaseSession | None = None
+REMOVE_CACHE: OrderedDict[str, Image.Image] = OrderedDict()
+MAX_CACHE = 3
+LOCK_CACHE = Lock()
 
 
 def get_plugin_avail_filters():
@@ -215,27 +221,52 @@ class RemovebgStep(PipelineStep):
     def __init__(self, model_name: RembgModelType) -> None:
         self.model_name = model_name
 
+    @staticmethod
+    def hash_image_fast(img: Image.Image):
+        h = hashlib.sha256()
+        h.update(img.mode.encode())
+        h.update(str(img.size).encode())
+        h.update(img.tobytes())
+        return h.hexdigest()
+
+    def remove_with_cache(self, img: Image.Image, session):
+        key = self.hash_image_fast(img)
+
+        with LOCK_CACHE:
+            if key in REMOVE_CACHE:
+                REMOVE_CACHE.move_to_end(key)
+                return REMOVE_CACHE[key]
+
+            tms = time.monotonic()
+            result = remove(img=img, session=session)
+            tme = time.monotonic()
+
+            logger.info(f"remove background using AI duration took {tme - tms:0.3}s")
+
+            REMOVE_CACHE[key] = result
+            REMOVE_CACHE.move_to_end(key)
+
+            if len(REMOVE_CACHE) > MAX_CACHE:
+                REMOVE_CACHE.popitem(last=False)
+
+        return result
+
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
         global rembg_session
 
         try:
-            tms = time.monotonic()
-
             # maybe in future we can reuse a session and predownload models, but as of now we start a session only on first use
             if not rembg_session or rembg_session.name() != self.model_name:
                 logger.debug(f"ai background removal model {self.model_name} session initialized")
                 rembg_session = new_session(model_name=self.model_name)
 
-            cutout_image = remove(img=context.image, session=rembg_session)
+            cutout_image = self.remove_with_cache(img=context.image, session=rembg_session)
 
-            tme = time.monotonic()
             assert type(cutout_image) is Image.Image
             assert cutout_image is not context.image
 
             context.image = cutout_image
             cutout_image = None  # only if assert abotve is correct.
-
-            logger.info(f"remove background using AI duration took {tme - tms:0.3}s")
 
         except Exception as exc:
             logger.error(f"could not remove background, error {exc}")
