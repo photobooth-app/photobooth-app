@@ -97,6 +97,7 @@ class SingleImageProcessing(BaseModel):
     model_config = ConfigDict(title="Single captures processing after capture")
 
     remove_background: bool = Field(
+        json_schema_extra={"computeIntense": True},
         default=False,
         description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
     )
@@ -148,6 +149,7 @@ class CollageProcessing(BaseModel):
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
     capture_remove_background: bool = Field(
+        json_schema_extra={"computeIntense": True},
         default=False,
         description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
     )

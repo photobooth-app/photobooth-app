@@ -13,11 +13,11 @@ class GroupFileTransfer(BaseModel):
 
     enabled: bool = Field(
         default=False,
-        description="(DEPRECATED in v8) Enable the automatic file transfer to USB service. Files are copied when the USB drive is inserted.",
-        # json_schema_extra={"deprecated": "v8"},
+        description="Enable the automatic file transfer to USB service. Files are copied when the USB drive is inserted.",
+        deprecated="deprecated in v8, use the synchronizer plugin instead.",
     )
     target_folder_name: str = Field(
         default="photobooth",
-        description="(DEPRECATED in v8) Name of the top-level folder on the USB drive where files will be copied to.",
-        # json_schema_extra={"deprecated": "v8"},
+        description="Name of the top-level folder on the USB drive where files will be copied to.",
+        deprecated="deprecated in v8, use the synchronizer plugin instead.",
     )

@@ -27,6 +27,7 @@ class GroupCameraVirtual(BaseModelCamera):
         ge=5,
         le=30,
         description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+        json_schema_extra={"ui_schema_extra": {"slider": True}, "computeIntense": True},
     )
     emulate_hires_static_still: bool = Field(
         default=False,
@@ -73,30 +74,35 @@ class GroupCameraPicamera2(BaseModelCamera):
         ge=500,
         le=3500,  # hardware encoder in pi only supports max 4000 width/height
         description="actual resolution width for liveview stream",
+        json_schema_extra={"computeIntense": True},
     )
     LIVEVIEW_RESOLUTION_HEIGHT: int = Field(
         default=648,
         ge=500,
         le=2500,  # hardware encoder in pi only supports max 4000 width/height
         description="actual resolution height for liveview stream",
+        json_schema_extra={"computeIntense": True},
     )
     framerate_still_mode: int = Field(
         default=10,
         ge=5,
         le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+        description="Framerate of the camera when in still capture mode.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
     framerate_video_mode: int = Field(
         default=25,
         ge=5,
         le=30,
-        description="Reduce the framerate to save cpu/gpu on device displaying the live preview",
+        description="Framerate of the camera when in video mode or idle.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
     frame_skip_count: int = Field(
         default=2,
         ge=1,
         le=4,
         description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
+        json_schema_extra={"computeIntense": True, "ui_schema_extra": {"slider": True}},
     )
     optimized_lowlight_short_exposure: bool = Field(
         default=False,
@@ -111,7 +117,7 @@ class GroupCameraPicamera2(BaseModelCamera):
         ge=10,
         le=100,
         description="Picamera produces original files, this is the quality for the JPG.",
-        json_schema_extra={"ui_component": "QSlider"},
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
 
 
@@ -156,7 +162,10 @@ class GroupCameraGphoto2(BaseModelCamera):
     )
     timeout_until_inactive: int = Field(
         default=30,
+        ge=10,
+        le=300,
         description="Delay after which the livestream is considered as inactive and camera should idle.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
 
 
@@ -186,12 +195,14 @@ class GroupCameraPyav(BaseModelCamera):
     preview_resolution_reduce_factor: Literal[1, 2, 4, 8] = Field(
         default=2,
         description="Reduce the video and permanent livestream by this factor. Raise the factor to save CPU.",
+        json_schema_extra={"computeIntense": True},
     )
     frame_skip_count: int = Field(
         default=3,
         ge=1,
         le=8,
         description="Reduce the framerate_video_mode by frame_skip_count to save cpu/gpu on producing device as well as client devices. Choose 1 to emit every produced frame.",
+        json_schema_extra={"computeIntense": True, "ui_schema_extra": {"slider": True}},
     )
 
 
@@ -207,15 +218,18 @@ class GroupCameraV4l2(BaseModelCamera):
     pixel_format_fourcc: Literal["MJPG", "YUYV", "YU12"] = Field(
         default="MJPG",
         description="MJPG is preferred usually. Some cameras (especially virtual cameras) do not support MJPG, so you can fall back to uncompressed YUYV here.",
+        json_schema_extra={"computeIntense": True},
     )
 
     CAM_RESOLUTION_WIDTH: int = Field(
         default=640,
         description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+        json_schema_extra={"computeIntense": True},
     )
     CAM_RESOLUTION_HEIGHT: int = Field(
         default=480,
         description="Camera resolution width in normal mode for preview and videos. Low resolution recommended to save resources.",
+        json_schema_extra={"computeIntense": True},
     )
 
     switch_to_high_resolution_for_stills: bool = Field(
@@ -235,6 +249,7 @@ class GroupCameraV4l2(BaseModelCamera):
         ge=0,
         le=20,
         description="After switching the format, to high resolution, the camera might need some frames to accomodate to the light again. Use the lowest numer of frames that gives the same image as before in preview mode. If too low, images might apper darker or lighter than expected.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
 
 
@@ -359,6 +374,7 @@ class GroupCameras(BaseModel):
         ge=1,
         le=5,
         description="Number of attempts to gather a picture from backend.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
     countdown_camera_capture_offset: float = Field(
         default=0.2,

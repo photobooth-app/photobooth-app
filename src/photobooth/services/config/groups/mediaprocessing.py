@@ -16,6 +16,7 @@ class GroupMediaprocessing(BaseModel):
     model_config = ConfigDict(title="Process media after capture")
 
     full_still_length: int = Field(
+        json_schema_extra={"computeIntense": True},
         default=1500,
         ge=800,
         le=5000,
@@ -39,6 +40,7 @@ class GroupMediaprocessing(BaseModel):
         ge=1000,
         le=10000,
         description="Video quality bitrate in k.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
 
     video_compatibility_mode: bool = Field(
@@ -48,6 +50,7 @@ class GroupMediaprocessing(BaseModel):
 
     remove_background_model: RembgModelType = Field(
         default="modnet",
+        json_schema_extra={"computeIntense": True},
         description="Select from predefined models. Modnet and u2netp are packaged with the app, other models will be downloaded on demand and cached, so on first use of other models, the app needs internet access. u2netp is a reduced model that is fastest, modnet usually only slightly slower but provides good results.",
     )
 
