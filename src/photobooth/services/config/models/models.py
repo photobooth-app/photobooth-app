@@ -18,7 +18,7 @@ class TextsConfig(BaseModel):
         default=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    color: Color = Color("red")
+    color: Color = Color("#cd1c18")
 
 
 class CollageMergeDefinition(BaseModel):
