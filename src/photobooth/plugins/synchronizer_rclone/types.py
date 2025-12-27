@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from enum import IntEnum
 from pathlib import Path
+from typing import TypeAlias
 
 
 @dataclass
@@ -18,23 +18,18 @@ class Stats:
 
 
 @dataclass
-class SyncTaskUpload:
+class TaskCopy:
     """Upload without prior check if it exists or is outdated"""
 
     file_local: Path
-    folder_remote: Path
+    file_remote: Path
 
     def __str__(self):
         return self.file_local.name
 
 
 @dataclass
-class SyncTaskUpdate(SyncTaskUpload):
-    """Update if not existing or file size different only. Prior upload checking if is same."""
-
-
-@dataclass
-class SyncTaskDelete:
+class TaskDelete:
     """Delete from remote"""
 
     file_remote: Path
@@ -43,18 +38,7 @@ class SyncTaskDelete:
         return self.file_remote.name
 
 
-taskSyncType = SyncTaskUpload | SyncTaskUpdate | SyncTaskDelete
+TaskSyncType: TypeAlias = TaskCopy | TaskDelete
 
-
-class Priority(IntEnum):
-    HIGH = 1  # high for immediate syncs
-    LOW = 2  # low for regular syncs
-
-
-@dataclass(order=True)
-class PriorizedTask:
-    priority: Priority
-    task: taskSyncType = field(compare=False)
-
-    def __str__(self):
-        return f"{self.task} - {self.priority.name} priority)"
+# taskSyncType: TypeAlias = TaskCopy | TaskDelete
+# taskSyncType:type = TaskCopy | TaskDelete
