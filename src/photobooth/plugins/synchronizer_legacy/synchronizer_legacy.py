@@ -15,7 +15,7 @@ from .utils import get_remote_filepath
 logger = logging.getLogger(__name__)
 
 
-class Synchronizer(BasePlugin[SynchronizerConfig]):
+class SynchronizerLegacy(BasePlugin[SynchronizerConfig]):
     def __init__(self):
         super().__init__()
 
