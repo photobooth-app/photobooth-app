@@ -23,6 +23,20 @@ class Common(BaseModel):
         description="Log verbosity of Rclone. The logfile is written to log/rclone.log.",
     )
 
+    rclone_transfers: int = Field(
+        default=4,
+        ge=1,
+        le=8,
+        description="Maximum number of concurrent transfers. Ensure your servers handles the amount of simultaneous connections including the connections for the checkers.",
+    )
+
+    rclone_checkers: int = Field(
+        default=4,
+        ge=1,
+        le=8,
+        description="Maximum number of concurrent checkers. Ensure your servers handles the amount of simultaneous connections including the connections for the transfers.",
+    )
+
 
 class SyncConfig(BaseModel):
     enable_immediate_sync: bool = Field(

@@ -1,5 +1,4 @@
 import subprocess
-from pathlib import Path
 from shutil import which
 from typing import Any
 
@@ -10,9 +9,11 @@ from .exceptions import RcloneConnectionException, RcloneProcessException
 
 
 class RcloneClient:
-    def __init__(self, bind="localhost:5572", log_level: str = "NOTICE"):
+    def __init__(self, bind="localhost:5572", log_level: str = "NOTICE", transfers: int = 4, checkers: int = 4):
         self.__bind_addr = bind
         self.__log_level = log_level
+        self.__transfers = transfers
+        self.__checkers = checkers
         self.__connect_addr = f"http://{bind}"
         self.__process = None
 
@@ -30,11 +31,15 @@ class RcloneClient:
             [
                 "rclone",
                 "rcd",
+                # web-gui is always on, as the api is accessible anyways so there is no reason to disable gui "for security"
                 f"--rc-addr={self.__bind_addr}",
                 "--rc-no-auth",
-                "--rc-web-gui",  # web-gui is always on, as the api is accessible anyways so there is no reason to disable gui "for security"
-                "--transfers=4",  # NOTE: the server needs to accept at least transfers+checkers connections, otherwise sync might fail!
-                "--checkers=4",  # The connections could be limited, but it could cause deadlocks, so it's preferred to change transfers/checkers only
+                "--rc-web-gui",
+                "--rc-web-gui-no-open-browser",
+                # The server needs to accept at least transfers+checkers connections, otherwise sync might fail!
+                # The connections could be limited, but it could cause deadlocks, so it's preferred to change transfers/checkers only
+                f"--transfers={self.__transfers}",
+                f"--checkers={self.__checkers}",
                 "--log-file=log/rclone.log",
                 f"--log-level={self.__log_level}",
             ]
@@ -162,74 +167,74 @@ class RcloneClient:
             return False
 
 
-if __name__ == "__main__":
-    client = RcloneClient()
+# if __name__ == "__main__":
+#     client = RcloneClient()
 
-    # print(client.version())
-    # print(client.job_list())
-    # print(client.core_stats())
-    # print(client.config_listremotes())
-    # print(client.alive())
+#     # print(client.version())
+#     # print(client.job_list())
+#     # print(client.core_stats())
+#     # print(client.config_listremotes())
+#     # print(client.alive())
 
-    print(
-        client.sync(
-            "media",
-            f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-sync'.rstrip('/')}/",
-        )
-    )
+#     print(
+#         client.sync(
+#             "media",
+#             f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-sync'.rstrip('/')}/",
+#         )
+#     )
 
-    print(
-        client.copyfile(
-            str(Path.cwd().absolute()),
-            "userdata/private.css",
-            f"{'localremote'.rstrip(':')}:",
-            f"{'tmp/copyfile'.rstrip('/')}/priv.css",
-        )
-    )
+#     print(
+#         client.copyfile(
+#             str(Path.cwd().absolute()),
+#             "userdata/private.css",
+#             f"{'localremote'.rstrip(':')}:",
+#             f"{'tmp/copyfile'.rstrip('/')}/priv.css",
+#         )
+#     )
 
-    print(
-        client.copyfile(
-            str(Path.cwd().absolute()),
-            "userdata/private.css",
-            f"{'localremote'.rstrip(':')}:",
-            f"{'tmp/copyfile'.rstrip('/')}/private.css",
-        )
-    )
+#     print(
+#         client.copyfile(
+#             str(Path.cwd().absolute()),
+#             "userdata/private.css",
+#             f"{'localremote'.rstrip(':')}:",
+#             f"{'tmp/copyfile'.rstrip('/')}/private.css",
+#         )
+#     )
 
-    # print(
-    #     client.copy(
-    #         "media",
-    #         f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-copy'.rstrip('/')}/",
-    #     )
-    # )
+#     # print(
+#     #     client.copy(
+#     #         "media",
+#     #         f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-copy'.rstrip('/')}/",
+#     #     )
+#     # )
 
-    copyjob = client.copyfile_async(
-        "/home/michael/dev/photobooth/photobooth-app/",  # local files seems need to be absolute?! but this is not true for sync?!
-        "src/web/download/index.html",
-        f"{'localremote'.rstrip(':')}:",
-        f"{'tmp/subdir_api'.rstrip('/')}/index.html",
-    )
-    # print(copyjob)
-    # print(client.job_status(copyjob.jobid))
-    # print(client.core_stats())
-    # time.sleep(1)
-    # print(client.job_status(copyjob.jobid))
-    # print(client.core_stats())
+#     copyjob = client.copyfile_async(
+#         "/home/michael/dev/photobooth/photobooth-app/",  # local files seems need to be absolute?! but this is not true for sync?!
+#         "src/web/download/index.html",
+#         f"{'localremote'.rstrip(':')}:",
+#         f"{'tmp/subdir_api'.rstrip('/')}/index.html",
+#     )
+#     # print(copyjob)
+#     # print(client.job_status(copyjob.jobid))
+#     # print(client.core_stats())
+#     # time.sleep(1)
+#     # print(client.job_status(copyjob.jobid))
+#     # print(client.core_stats())
 
-    # last_job = max(client.job_list().jobids)
-    # print(client.job_status(last_job))
+#     # last_job = max(client.job_list().jobids)
+#     # print(client.job_status(last_job))
 
-    # try:
-    #     print(client._post("rc/error"))
-    # except RcloneProcessException as exc:
-    #     print("got error")
-    #     print(exc)
-    # try:
-    #     print(client._post("rc/fatal"))
-    # except RcloneProcessException as exc:
-    #     print("got fatal err")
-    #     print(exc.status)
+#     # try:
+#     #     print(client._post("rc/error"))
+#     # except RcloneProcessException as exc:
+#     #     print("got error")
+#     #     print(exc)
+#     # try:
+#     #     print(client._post("rc/fatal"))
+#     # except RcloneProcessException as exc:
+#     #     print("got fatal err")
+#     #     print(exc.status)
 
-    # print(client._post("rc/list"))
-    print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])
-    print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])
+#     # print(client._post("rc/list"))
+#     print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])
+#     print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])

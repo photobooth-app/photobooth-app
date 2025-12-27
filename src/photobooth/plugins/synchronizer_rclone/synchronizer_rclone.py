@@ -31,12 +31,15 @@ class Stats:
 class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
     def __init__(self):
         super().__init__()
-
-        self._service_ready: threading.Event = threading.Event()
-
-        self.__rclone_client: RcloneClient = RcloneClient()
         self._config = SynchronizerConfig()
+
+        self.__rclone_client: RcloneClient = RcloneClient(
+            log_level=self._config.common.rclone_log_level,
+            transfers=self._config.common.rclone_transfers,
+            checkers=self._config.common.rclone_checkers,
+        )
         self.__local_base_path = Path("./media/")
+        self._service_ready: threading.Event = threading.Event()
         self._stats = Stats()
 
     def __str__(self):
