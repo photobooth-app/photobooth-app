@@ -211,7 +211,7 @@ class RcloneClient:
 
 #     copyjob = client.copyfile_async(
 #         "/home/michael/dev/photobooth/photobooth-app/",  # local files seems need to be absolute?! but this is not true for sync?!
-#         "src/web/download/index.html",
+#         "src/web/sharepage/index.html",
 #         f"{'localremote'.rstrip(':')}:",
 #         f"{'tmp/subdir_api'.rstrip('/')}/index.html",
 #     )

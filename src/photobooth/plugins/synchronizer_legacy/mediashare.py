@@ -72,7 +72,7 @@ class AbstractMediashare(ABC, Generic[T]):
 
     def downloadportal_file(self) -> Path | None:
         if isinstance(self._config.share, FtpShareConfig | FilesystemShareConfig) and self._config.share.downloadportal_autoupload:
-            dlportal_source_path = Path(str(resources.files("web").joinpath("download/index.html")))
+            dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
             assert dlportal_source_path.is_file()
 
             return dlportal_source_path
