@@ -9,11 +9,12 @@ from .exceptions import RcloneConnectionException, RcloneProcessException
 
 
 class RcloneClient:
-    def __init__(self, bind="localhost:5572", log_level: str = "NOTICE", transfers: int = 4, checkers: int = 4):
+    def __init__(self, bind="localhost:5572", log_level: str = "NOTICE", transfers: int = 4, checkers: int = 4, enable_webui: bool = False):
         self.__bind_addr = bind
         self.__log_level = log_level
         self.__transfers = transfers
         self.__checkers = checkers
+        self.__enable_webui = enable_webui
         self.__connect_addr = f"http://{bind}"
         self.__process = None
 
@@ -34,7 +35,7 @@ class RcloneClient:
                 # web-gui is always on, as the api is accessible anyways so there is no reason to disable gui "for security"
                 f"--rc-addr={self.__bind_addr}",
                 "--rc-no-auth",
-                "--rc-web-gui",
+                *(["--rc-web-gui"] if self.__enable_webui else []),
                 "--rc-web-gui-no-open-browser",
                 # The server needs to accept at least transfers+checkers connections, otherwise sync might fail!
                 # The connections could be limited, but it could cause deadlocks, so it's preferred to change transfers/checkers only
