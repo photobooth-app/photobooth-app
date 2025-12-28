@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from pydantic import HttpUrl
@@ -83,7 +84,7 @@ def test_put_to_workers_queues(synchronizer: SynchronizerLegacy):
 def test_get_share_links_enabled(synchronizer: SynchronizerLegacy):
     synchronizer.start()
 
-    result = synchronizer.get_share_links(Path("media/file.jpg"))
+    result = synchronizer.get_share_links(Path("media/file.jpg"), identifier=uuid4())
 
     assert result == ["http://test.dummy.local/remote/#/?url=http%3A%2F%2Ftest.dummy.local%2Fremote%2Ffile.jpg"]
 
@@ -92,7 +93,7 @@ def test_get_share_links_disabled(synchronizer: SynchronizerLegacy):
     synchronizer._config.common.enable_share_links = False
     synchronizer.start()
 
-    result = synchronizer.get_share_links(Path("media/file.txt"))
+    result = synchronizer.get_share_links(Path("media/file.txt"), identifier=uuid4())
     assert result == []
 
 

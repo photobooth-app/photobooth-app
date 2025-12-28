@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
 from urllib.parse import quote
+from uuid import UUID
 
 from ...models.genericstats import DisplayEnum, GenericStats, SubList, SubStats
 from ...utils.rclone_client.client import RcloneClient
@@ -34,9 +35,10 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         self._config = SynchronizerConfig()
 
         self.__rclone_client: RcloneClient = RcloneClient(
-            log_level=self._config.common.rclone_log_level,
-            transfers=self._config.common.rclone_transfers,
-            checkers=self._config.common.rclone_checkers,
+            log_level=self._config.rclone_client_config.rclone_log_level,
+            transfers=self._config.rclone_client_config.rclone_transfers,
+            checkers=self._config.rclone_client_config.rclone_checkers,
+            enable_webui=self._config.rclone_client_config.enable_webui,
         )
         self.__local_base_path = Path("./media/")
         self._service_ready: threading.Event = threading.Event()
@@ -99,7 +101,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             self._stats.last_check_started = datetime.now()
 
             for remote in self._config.remotes:
-                if not (remote.enabled and remote.syncconfig.enable_regular_sync):
+                if not (remote.enabled and remote.enable_regular_sync):
                     continue
 
                 self.__rclone_client.sync_async(
@@ -120,7 +122,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
     def _put_to_rclone_job_manager(self, task: TaskSyncType):
         for remote in self._config.remotes:
-            if not (remote.enabled and remote.syncconfig.enable_immediate_sync):
+            if not (remote.enabled and remote.enable_immediate_sync):
                 continue
 
             try:
@@ -201,7 +203,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         return out
 
     def copy_shareportal_to_remotes(self):
-        dlportal_source_path = Path(str(resources.files("web").joinpath("download/index.html")))
+        dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
         assert dlportal_source_path.is_file()
 
         for remote in self._config.remotes:
@@ -219,23 +221,29 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             )
 
     @hookimpl
-    def get_share_links(self, filepath_local: Path) -> list[str]:
+    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
         share_links: list[str] = []
 
-        if not self._config.common.enable_share_links:
+        if not self._config.common.enabled_share_links:
             logger.info("share link generation is disabled globally in synchronizer plugin")
             return []
 
+        if self._config.common.enabled_custom_qr_url:
+            custom_url = self._config.common.custom_qr_url
+            custom_url = custom_url.replace("{filename}", filepath_local.name)
+            custom_url = custom_url.replace("{identifier}", str(identifier))
+
+            share_links.append(custom_url)
+
         for remote in self._config.remotes:
+            shareconfig = remote.shareconfig
             mediaitem_link: str | None = None
 
-            if not remote.shareconfig.enable_share_link:
+            if not shareconfig.enabled:
                 continue
 
-            if remote.shareconfig.publiclink_override:
-                mediaitem_link = (
-                    str(remote.shareconfig.publiclink_override).rstrip("/") + "/" + get_corresponding_remote_file(filepath_local).as_posix()
-                )
+            if shareconfig.publiclink_override:
+                mediaitem_link = str(shareconfig.publiclink_override).rstrip("/") + "/" + get_corresponding_remote_file(filepath_local).as_posix()
             else:
                 try:
                     mediaitem_link = self.__rclone_client.publiclink(
@@ -253,12 +261,12 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 continue
 
             # sanity check on downloadportal url
-            if remote.shareconfig.use_downloadportal and not remote.shareconfig.shareportal_url:
+            if shareconfig.use_downloadportal and not shareconfig.shareportal_url:
                 logger.error(f"cannot share because use of downloadportal is enabled but no URL available for {remote.description}")
                 continue
 
-            if remote.shareconfig.use_downloadportal:
-                shareportal_url = f"{str(remote.shareconfig.shareportal_url).rstrip('/')}/#/?url="
+            if shareconfig.use_downloadportal:
+                shareportal_url = f"{str(shareconfig.shareportal_url).rstrip('/')}/#/?url="
                 mediaitem_url_safe = quote(mediaitem_link, safe="")
                 out = shareportal_url + mediaitem_url_safe
             else:

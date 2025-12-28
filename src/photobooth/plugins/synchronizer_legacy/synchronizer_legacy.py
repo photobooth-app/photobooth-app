@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from uuid import UUID
 
 from ...models.genericstats import DisplayEnum, GenericStats, SubList, SubStats
 from .. import hookimpl
@@ -127,7 +128,7 @@ class SynchronizerLegacy(BasePlugin[SynchronizerConfig]):
         return out
 
     @hookimpl
-    def get_share_links(self, filepath_local: Path) -> list[str]:
+    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
         share_links: list[str] = []
 
         if not self._config.common.enable_share_links:
