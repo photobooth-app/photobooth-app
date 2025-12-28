@@ -10,6 +10,9 @@ from ...services.config.serializer import contextual_serializer_password
 
 
 class Common(BaseModel):
+    model_config = SettingsConfigDict(
+        title="Common (PLUGIN DEPRECATED IN v9)",
+    )
     enabled: bool = Field(
         default=False,
         description="Enable plugin to sync media files globally.",
@@ -186,7 +189,7 @@ class Backend(BaseModel):
 
 class SynchronizerConfig(BaseConfig):
     model_config = SettingsConfigDict(
-        title="Synchronizer and Share-Link Generation",
+        title="Synchronizer and Share-Link Generation (DEPRECATED IN v9)",
         json_file=f"{CONFIG_PATH}plugin_synchronizer.json",
         env_prefix="synchronizer-",
     )
