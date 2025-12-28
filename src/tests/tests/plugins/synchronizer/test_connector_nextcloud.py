@@ -7,7 +7,7 @@ import pytest
 from nc_py_api import NextcloudException
 from pydantic import HttpUrl, SecretStr
 
-from photobooth.plugins.synchronizer.connectors.nextcloud import NextcloudConnector, NextcloudConnectorConfig
+from photobooth.plugins.synchronizer_legacy.connectors.nextcloud import NextcloudConnector, NextcloudConnectorConfig
 
 logger = logging.getLogger(name=None)
 

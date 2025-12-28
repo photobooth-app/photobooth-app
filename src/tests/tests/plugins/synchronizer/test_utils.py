@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 
 import pytest
 
-from photobooth.plugins.synchronizer.utils import get_remote_filepath
+from photobooth.plugins.synchronizer_legacy.utils import get_remote_filepath
 
 logger = logging.getLogger(name=None)
 

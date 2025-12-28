@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import HttpUrl
 
-from photobooth.plugins.synchronizer.config import (
+from photobooth.plugins.synchronizer_legacy.config import (
     Backend,
     Common,
     FilesystemBackendConfig,
@@ -12,14 +12,14 @@ from photobooth.plugins.synchronizer.config import (
     FilesystemShareConfig,
     SynchronizerConfig,
 )
-from photobooth.plugins.synchronizer.synchronizer import Synchronizer
-from photobooth.plugins.synchronizer.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
+from photobooth.plugins.synchronizer_legacy.synchronizer_legacy import SynchronizerLegacy
+from photobooth.plugins.synchronizer_legacy.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 
 
 @pytest.fixture()
 def synchronizer(tmp_path: Path):
     # setup
-    synchronizer = Synchronizer()
+    synchronizer = SynchronizerLegacy()
     synchronizer._config = SynchronizerConfig(
         common=Common(enabled=True),
         backends=[
@@ -36,7 +36,7 @@ def synchronizer(tmp_path: Path):
     yield synchronizer
 
 
-def test_reset(synchronizer: Synchronizer):
+def test_reset(synchronizer: SynchronizerLegacy):
     synchronizer._queue_processors = [MagicMock()]
     synchronizer._regular_complete_sync = [MagicMock()]
     synchronizer._shares = [MagicMock()]
@@ -48,7 +48,7 @@ def test_reset(synchronizer: Synchronizer):
     assert synchronizer._shares == []
 
 
-def test_start_runs_components(synchronizer: Synchronizer):
+def test_start_runs_components(synchronizer: SynchronizerLegacy):
     synchronizer.start()
 
     assert len(synchronizer._queue_processors) == 1
@@ -56,7 +56,7 @@ def test_start_runs_components(synchronizer: Synchronizer):
     assert len(synchronizer._shares) == 1
 
 
-def test_stop_calls_stop_on_all(synchronizer: Synchronizer):
+def test_stop_calls_stop_on_all(synchronizer: SynchronizerLegacy):
     q1 = MagicMock()
     q2 = MagicMock()
     r1 = MagicMock()
@@ -70,7 +70,7 @@ def test_stop_calls_stop_on_all(synchronizer: Synchronizer):
         i.stop.assert_called_once()
 
 
-def test_put_to_workers_queues(synchronizer: Synchronizer):
+def test_put_to_workers_queues(synchronizer: SynchronizerLegacy):
     mock_worker = MagicMock()
     synchronizer._queue_processors = [mock_worker]
     task = PriorizedTask(Priority.HIGH, MagicMock())
@@ -80,7 +80,7 @@ def test_put_to_workers_queues(synchronizer: Synchronizer):
     mock_worker.put_to_queue.assert_called_once_with(task)
 
 
-def test_get_share_links_enabled(synchronizer: Synchronizer):
+def test_get_share_links_enabled(synchronizer: SynchronizerLegacy):
     synchronizer.start()
 
     result = synchronizer.get_share_links(Path("media/file.jpg"))
@@ -88,7 +88,7 @@ def test_get_share_links_enabled(synchronizer: Synchronizer):
     assert result == ["http://test.dummy.local/remote/#/?url=http%3A%2F%2Ftest.dummy.local%2Fremote%2Ffile.jpg"]
 
 
-def test_get_share_links_disabled(synchronizer: Synchronizer):
+def test_get_share_links_disabled(synchronizer: SynchronizerLegacy):
     synchronizer._config.common.enable_share_links = False
     synchronizer.start()
 
@@ -96,7 +96,7 @@ def test_get_share_links_disabled(synchronizer: Synchronizer):
     assert result == []
 
 
-def test_collection_files_added(synchronizer: Synchronizer):
+def test_collection_files_added(synchronizer: SynchronizerLegacy):
     mock_worker = MagicMock()
     synchronizer._queue_processors = [mock_worker]
     files = [Path("media/file1.txt"), Path("media/file2.txt")]
@@ -111,7 +111,7 @@ def test_collection_files_added(synchronizer: Synchronizer):
         assert c.priority == Priority.HIGH
 
 
-def test_collection_files_original_added(synchronizer: Synchronizer):
+def test_collection_files_original_added(synchronizer: SynchronizerLegacy):
     mock_worker = MagicMock()
     synchronizer._queue_processors = [mock_worker]
     files = [Path("media/file1.txt"), Path("media/file2.txt")]
@@ -126,7 +126,7 @@ def test_collection_files_original_added(synchronizer: Synchronizer):
         assert c.priority == Priority.LOW
 
 
-def test_collection_files_deleted(synchronizer: Synchronizer):
+def test_collection_files_deleted(synchronizer: SynchronizerLegacy):
     mock_worker = MagicMock()
     synchronizer._queue_processors = [mock_worker]
     files = [Path("media/delete1.txt")]

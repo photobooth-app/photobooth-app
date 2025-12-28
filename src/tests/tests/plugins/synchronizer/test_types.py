@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from photobooth.plugins.synchronizer.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
+from photobooth.plugins.synchronizer_legacy.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 
 logger = logging.getLogger(name=None)
 

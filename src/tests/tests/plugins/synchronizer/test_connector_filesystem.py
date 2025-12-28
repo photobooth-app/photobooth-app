@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from photobooth.plugins.synchronizer.connectors.filesystem import FilesystemConnector, FilesystemConnectorConfig
+from photobooth.plugins.synchronizer_legacy.connectors.filesystem import FilesystemConnector, FilesystemConnectorConfig
 
 logger = logging.getLogger(name=None)
 

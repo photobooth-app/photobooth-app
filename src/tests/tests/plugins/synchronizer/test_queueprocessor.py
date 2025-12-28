@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from photobooth.plugins.synchronizer.config import FilesystemConnectorConfig
-from photobooth.plugins.synchronizer.queueprocessor import QueueProcessor
-from photobooth.plugins.synchronizer.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
+from photobooth.plugins.synchronizer_legacy.config import FilesystemConnectorConfig
+from photobooth.plugins.synchronizer_legacy.queueprocessor import QueueProcessor
+from photobooth.plugins.synchronizer_legacy.types import Priority, PriorizedTask, SyncTaskDelete, SyncTaskUpload
 
 logger = logging.getLogger(name=None)
 
