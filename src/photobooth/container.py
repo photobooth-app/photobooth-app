@@ -5,13 +5,11 @@ from .services.acquisition import AcquisitionService
 from .services.base import BaseService
 from .services.collection import MediacollectionService
 from .services.configuration import ConfigurationService
-from .services.filtetransfer import FileTransferService
 from .services.gpio import GpioService
 from .services.information import InformationService
 from .services.logging import LoggingService
 from .services.pluginmanager import PluginManagerService
 from .services.processing import ProcessingService
-from .services.qrshare import QrShareService
 from .services.share import ShareService
 from .services.system import SystemService
 
@@ -30,8 +28,6 @@ class Container:
     system_service = SystemService()
     share_service = ShareService()
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)
-    qr_share_service = QrShareService(mediacollection_service)
-    filetransfer_service = FileTransferService()
     config_service = ConfigurationService(pluginmanager_service)
 
     _lock_startstop = Lock()

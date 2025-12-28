@@ -12,10 +12,6 @@ permissions:
 
 jobs:
   tests-hosted-linux:
-    env:
-      qrshare__shareservice_apikey: "runnertestingpassword"
-      qrshare__shareservice_url: "http://localhost:8082/dl.php"
-      PHP_CLI_SERVER_WORKERS: 6
     runs-on: ubuntu-latest
     continue-on-error: false
     strategy:
@@ -58,14 +54,6 @@ jobs:
     
     steps:
       - uses: actions/checkout@v6
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          ini-values: upload_max_filesize=50M, post_max_size=51M, memory_limit=200M, max_execution_time=180
-      - name: start php built-in server to allow testing shareservice
-        run: |
-          sed -i '0,/changedefault!/s//runnertestingpassword/' extras/shareservice/dl.php
-          nohup php -S localhost:8082 -t extras/shareservice/ > phpd.log 2>&1 &
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v7
         with:
@@ -82,11 +70,6 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - name: output php logs
-        if: always()
-        run: |
-          cat phpd.log || true
-          cat extras/shareservice/php-error.log || true
       - uses: actions/upload-artifact@v6
         with:
           name: coverage-hosted-linux-${{ matrix.python-version }}
