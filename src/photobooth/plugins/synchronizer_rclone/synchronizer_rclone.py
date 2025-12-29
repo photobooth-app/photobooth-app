@@ -249,7 +249,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     mediaitem_link = self.__rclone_client.publiclink(
                         f"{remote.name.rstrip(':')}:",
                         get_corresponding_remote_file(filepath_local).as_posix(),
-                    )
+                    ).link
                 except Exception as exc:
                     logger.warning(f"could not create public link due to error: {exc}")
 
