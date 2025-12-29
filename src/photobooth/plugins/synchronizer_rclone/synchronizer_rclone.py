@@ -207,7 +207,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         assert dlportal_source_path.is_file()
 
         for remote in self._config.remotes:
-            if not remote.shareconfig.downloadportal_autoupload:
+            if not remote.shareconfig.sharepage_autosync:
                 continue
 
             # add to queue for later upload.
@@ -260,13 +260,15 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 )
                 continue
 
-            # sanity check on downloadportal url
-            if shareconfig.use_downloadportal and not shareconfig.shareportal_url:
-                logger.error(f"cannot share because use of downloadportal is enabled but no URL available for {remote.description}")
+            # sanity check on sharepage url
+            if shareconfig.use_sharepage and not shareconfig.sharepage_url:
+                logger.error(
+                    f"can't generate a link because the sharepage shall be used but no URL was given in the configuration for {remote.description}"
+                )
                 continue
 
-            if shareconfig.use_downloadportal:
-                shareportal_url = f"{str(shareconfig.shareportal_url).rstrip('/')}/#/?url="
+            if shareconfig.use_sharepage:
+                shareportal_url = f"{str(shareconfig.sharepage_url).rstrip('/')}/#/?url="
                 mediaitem_url_safe = quote(mediaitem_link, safe="")
                 out = shareportal_url + mediaitem_url_safe
             else:

@@ -71,17 +71,17 @@ class ShareConfig(BaseModel):
         default=None,
         description="Mediafiles copied to remote are accessible using this url. The filename is appended automatically when generating the qr code link.",
     )
-    use_downloadportal: bool = Field(
+    use_sharepage: bool = Field(
         default=True,
         description="Using the download-portal improves the endusers' experience when downloading and sharing mediaitems. When enabled, the download-portal url needs to point to publicly available webspace. Some backends support automatic setup (autoupload), for others check the documentation.",
     )
-    shareportal_url: HttpUrl | None = Field(
+    sharepage_url: HttpUrl | None = Field(
         default=None,
         description="Url used to build the links for QR codes pointing to the download portal (if enabled above).",
     )
-    downloadportal_autoupload: bool = Field(
+    sharepage_autosync: bool = Field(
         default=True,
-        description="Automatically copy the downloadportal file to the remote. You need to ensure that the media-url below is accessible publicly to use this function.",
+        description="Automatically copy the sharepage-file to the remote. You need to ensure that the media-url below is accessible publicly to use this function.",
     )
 
 
