@@ -128,10 +128,7 @@ def test_copyfile_async(_rclone_fixture: RcloneFixture, tmp_path: Path):
 
     # Perform the copy
     job = client.copyfile_async(str(dummy_local.parent), dummy_local.name, f"{remote}:", dummy_remote.as_posix())
-
-    while not client.job_status(jobid=job.jobid).finished:
-        # might be finished in first loop already, but need to ensure it's finished
-        time.sleep(0.05)
+    client.wait_for_jobs([job.jobid])
 
     final_status = client.job_status(jobid=job.jobid)
     final_joblist = client.job_list()
@@ -181,10 +178,7 @@ def test_copy_async(_rclone_fixture: RcloneFixture, tmp_path: Path):
 
     # Perform
     job = client.copy_async(str(dummy_local.parent), f"{remote}:{dummy_remote.as_posix()}")
-
-    while not client.job_status(jobid=job.jobid).finished:
-        # might be finished in first loop already, but need to ensure it's finished
-        time.sleep(0.05)
+    client.wait_for_jobs([job.jobid])
 
     final_status = client.job_status(jobid=job.jobid)
     final_joblist = client.job_list()
@@ -234,10 +228,7 @@ def test_sync_async(_rclone_fixture: RcloneFixture, tmp_path: Path):
 
     # Perform
     job = client.sync_async(str(dummy_local.parent), f"{remote}:{dummy_remote.as_posix()}")
-
-    while not client.job_status(jobid=job.jobid).finished:
-        # might be finished in first loop already, but need to ensure it's finished
-        time.sleep(0.05)
+    client.wait_for_jobs([job.jobid])
 
     final_status = client.job_status(jobid=job.jobid)
     final_joblist = client.job_list()
