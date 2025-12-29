@@ -24,7 +24,7 @@ class RcloneFixture:
 
 @pytest.fixture()
 def _rclone_fixture() -> Generator[RcloneFixture, None, None]:
-    client = RcloneClient()
+    client = RcloneClient("localhost:5573")
     client.start()
     while not client.operational():
         time.sleep(0.1)
@@ -41,7 +41,7 @@ def _rclone_fixture() -> Generator[RcloneFixture, None, None]:
 
 
 def test_operational():
-    ins = RcloneClient()
+    ins = RcloneClient("localhost:5573")
     assert ins.operational() is False
 
     ins.start()

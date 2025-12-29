@@ -87,7 +87,6 @@ class RcloneClient:
         if not resp.ok:
             raise RcloneProcessException.from_dict(response_json)
 
-        # print(response_json)
         return response_json
 
     def _noopauth(self, input: dict):

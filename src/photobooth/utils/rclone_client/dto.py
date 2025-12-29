@@ -210,26 +210,10 @@ class LsJsonResponse:
 
 @dataclass(slots=True)
 class PubliclinkResponse:
-    """
-    Represents the response from rclone rc operations/publiclink.
-    Only 'link' is guaranteed; all other fields are backend-dependent.
-    """
-
     link: str
-
-    # expire: str | None = None
-    # password: str | None = None
-    # token: str | None = None
-    # headers: dict[str, Any] | None = None
-    # error: str | None = None
 
     @staticmethod
     def from_dict(d: dict[str, Any]):
         return PubliclinkResponse(
             link=str(d["link"]),
-            # expire=d.get("expire"),
-            # password=d.get("password"),
-            # token=d.get("token"),
-            # headers=d.get("headers"),
-            # error=d.get("error"),
         )
