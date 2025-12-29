@@ -50,6 +50,8 @@ class RcloneClient:
     def stop(self):
         if self.__process:
             self.__process.terminate()
+            self.__process.wait(timeout=5)
+
             self.__process = None
 
     # -------------------------
