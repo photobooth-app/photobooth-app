@@ -76,7 +76,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         return self._service_ready.wait(timeout=timeout)
 
     def run_service(self):
-        sync_every_x_seconds = 60 * 5
+        sync_every_x_seconds = 60 * self._config.common.full_sync_interval
         slept_counter = 0
         sleep_time = 0.5
         assert self.__rclone_client
@@ -96,18 +96,25 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         while not self._stop_event.is_set():
             ## Monitoring phase
-            logger.info("Regular full sync starts")
 
             self._stats.last_check_started = datetime.now()
+            full_sync_jobids: list[int] = []
 
             for remote in self._config.remotes:
                 if not (remote.enabled and remote.enable_regular_sync):
                     continue
 
-                self.__rclone_client.sync_async(
+                job = self.__rclone_client.sync_async(
                     str(Path("media").absolute()),
                     f"{remote.name.rstrip(':')}:{remote.subdir.rstrip('/')}/",
                 )
+
+                full_sync_jobids.append(job.jobid)
+
+            ## wait until finished - TODO: maybe stop if an immediate sync is requested.
+            logger.info("Regular full sync triggered")
+            self.__rclone_client.wait_for_jobs(full_sync_jobids)
+            logger.info("All enabled full sync jobs finished, going to sleep now.")
 
             ## Sleeping phase
             self._stats.next_check = datetime.now() + timedelta(seconds=sync_every_x_seconds)
@@ -207,7 +214,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         assert dlportal_source_path.is_file()
 
         for remote in self._config.remotes:
-            if not remote.shareconfig.sharepage_autosync:
+            if not remote.enable_sharepage_sync:
                 continue
 
             # add to queue for later upload.
@@ -229,11 +236,12 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             return []
 
         if self._config.common.enabled_custom_qr_url:
-            custom_url = self._config.common.custom_qr_url
-            custom_url = custom_url.replace("{filename}", filepath_local.name)
-            custom_url = custom_url.replace("{identifier}", str(identifier))
+            formatted_custom_qr_url = self._config.common.custom_qr_url.format(
+                filename=filepath_local.name,
+                identifier=str(identifier),
+            )
 
-            share_links.append(custom_url)
+            share_links.append(formatted_custom_qr_url)
 
         for remote in self._config.remotes:
             shareconfig = remote.shareconfig
@@ -242,8 +250,11 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             if not shareconfig.enabled:
                 continue
 
-            if shareconfig.publiclink_override:
-                mediaitem_link = str(shareconfig.publiclink_override).rstrip("/") + "/" + get_corresponding_remote_file(filepath_local).as_posix()
+            if shareconfig.manual_public_link:
+                mediaitem_link = shareconfig.manual_public_link.format(
+                    filename=filepath_local.name,
+                    identifier=str(identifier),
+                )
             else:
                 try:
                     mediaitem_link = self.__rclone_client.publiclink(
@@ -268,7 +279,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 continue
 
             if shareconfig.use_sharepage:
-                shareportal_url = f"{str(shareconfig.sharepage_url).rstrip('/')}/#/?url="
+                shareportal_url = f"{str(shareconfig.sharepage_url).rstrip('/')}#/?url="
                 mediaitem_url_safe = quote(mediaitem_link, safe="")
                 out = shareportal_url + mediaitem_url_safe
             else:

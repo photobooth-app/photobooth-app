@@ -1,4 +1,5 @@
 import subprocess
+import time
 from shutil import which
 from typing import Any
 
@@ -91,6 +92,16 @@ class RcloneClient:
 
     def _noopauth(self, input: dict):
         return self._post("rc/noopauth", input)
+
+    def wait_for_jobs(self, job_ids: list[int]):
+        _job_ids = set(job_ids)
+
+        while self.__process:  # only wait if there is a process running
+            running = set(self.job_list().runningIds)
+            if _job_ids.isdisjoint(running):
+                return
+
+            time.sleep(0.05)
 
     # -------------------------
     # Operations

@@ -1,7 +1,7 @@
 from platform import node
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from pydantic_settings import SettingsConfigDict
 
 from ... import CONFIG_PATH
@@ -14,6 +14,11 @@ class Common(BaseModel):
     enabled: bool = Field(
         default=False,
         description="Enable plugin to sync media files globally.",
+    )
+
+    full_sync_interval: int = Field(
+        default=5,
+        description="Interval for full sync in minutes.",
     )
 
     enabled_share_links: bool = Field(
@@ -67,7 +72,7 @@ class ShareConfig(BaseModel):
         description="Enable to generate a link displayed as QR code. You can have multiple QR codes, but it is recommended to enable only one.",
     )
 
-    publiclink_override: HttpUrl | None = Field(
+    manual_public_link: str | None = Field(  # str instead HttpUrl because otherwise {}-placeholder would be encoded by pydantic
         default=None,
         description="Mediafiles copied to remote are accessible using this url. The filename is appended automatically when generating the qr code link.",
     )
@@ -75,13 +80,9 @@ class ShareConfig(BaseModel):
         default=True,
         description="Using the download-portal improves the endusers' experience when downloading and sharing mediaitems. When enabled, the download-portal url needs to point to publicly available webspace. Some backends support automatic setup (autoupload), for others check the documentation.",
     )
-    sharepage_url: HttpUrl | None = Field(
+    sharepage_url: str | None = Field(
         default=None,
         description="Url used to build the links for QR codes pointing to the download portal (if enabled above).",
-    )
-    sharepage_autosync: bool = Field(
-        default=True,
-        description="Automatically copy the sharepage-file to the remote. You need to ensure that the media-url below is accessible publicly to use this function.",
     )
 
 
@@ -111,9 +112,9 @@ class RemoteConfig(BaseModel):
         default=True,
         description="Check media folder every X minutes and synchronize any missing files.",
     )
-    interval: int = Field(
-        default=1,
-        description="Interval for full sync in minutes.",
+    enable_sharepage_sync: bool = Field(
+        default=True,
+        description="Copy the sharepage-file to the remote on startup. You need to ensure that the media-url below is accessible publicly to use this function.",
     )
 
     shareconfig: ShareConfig
