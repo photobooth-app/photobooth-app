@@ -4,7 +4,7 @@ from typing import Any
 
 import niquests as requests
 
-from .dto import AsyncJobResponse, ConfigListremotes, CoreStats, CoreVersion, JobList, JobStatus
+from .dto import AsyncJobResponse, ConfigListremotes, CoreStats, CoreVersion, JobList, JobStatus, LsJsonEntry, PubliclinkResponse
 from .exceptions import RcloneConnectionException, RcloneProcessException
 
 
@@ -22,11 +22,10 @@ class RcloneClient:
     # Lifecycle
     # -------------------------
     def start(self):
+        assert self.is_installed(), "rclone is not installed on this system or not on PATH. Please install it from here: https://rclone.org/"
+
         if self.__process:
             return
-
-        if not self.is_installed():
-            raise Exception("rclone is not installed on this system or not on PATH. Please install it from here: https://rclone.org/")
 
         self.__process = subprocess.Popen(
             [
@@ -61,6 +60,14 @@ class RcloneClient:
     def is_installed() -> bool:
         return which("rclone") is not None
 
+    @staticmethod
+    def _valid_dst(fs: str, remote: str):
+        # Remote backend: dst_fs ends with ":" → dst_remote must NOT start with "/"
+        assert not (fs.endswith(":") and remote.startswith("/")), f"dst_remote must be relative when dst_fs is a remote: {remote}"
+
+        # Local backend: dst_fs does NOT end with ":" → dst_remote must start with "/"
+        assert not (not fs.endswith(":") and not remote.startswith("/")), f"dst_remote must be absolute when dst_fs is a local path: {remote}"
+
     def _post(self, endpoint: str, data: dict[str, Any] | None = None):
         try:
             resp = requests.post(
@@ -89,52 +96,42 @@ class RcloneClient:
     # -------------------------
 
     def deletefile(self, fs: str, remote: str) -> None:
-        self._post(
-            "operations/deletefile",
-            {"fs": fs, "remote": remote},
-        )
+        self._valid_dst(fs, remote)
+        self._post("operations/deletefile", {"fs": fs, "remote": remote})
 
     def copyfile(self, src_fs: str, src_remote: str, dst_fs: str, dst_remote: str) -> None:
+        self._valid_dst(dst_fs, dst_remote)
         self._post("operations/copyfile", {"srcFs": src_fs, "srcRemote": src_remote, "dstFs": dst_fs, "dstRemote": dst_remote})
 
     def copyfile_async(self, src_fs: str, src_remote: str, dst_fs: str, dst_remote: str) -> AsyncJobResponse:
+        self._valid_dst(dst_fs, dst_remote)
         result = self._post(
-            "operations/copyfile",
-            {"_async": True, "srcFs": src_fs, "srcRemote": src_remote, "dstFs": dst_fs, "dstRemote": dst_remote},
+            "operations/copyfile", {"_async": True, "srcFs": src_fs, "srcRemote": src_remote, "dstFs": dst_fs, "dstRemote": dst_remote}
         )
         return AsyncJobResponse.from_dict(result)
 
     def copy(self, src_fs: str, dst_fs: str, create_empty_src_dirs: bool = False) -> None:
-        self._post(
-            "sync/copy",
-            {"srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs},
-        )
+        self._post("sync/copy", {"srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs})
 
     def copy_async(self, src_fs: str, dst_fs: str, create_empty_src_dirs: bool = False) -> AsyncJobResponse:
-        result = self._post(
-            "sync/copy",
-            {"_async": True, "srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs},
-        )
+        result = self._post("sync/copy", {"_async": True, "srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs})
         return AsyncJobResponse.from_dict(result)
 
     def sync(self, src_fs: str, dst_fs: str, create_empty_src_dirs: bool = False) -> None:
-        self._post(
-            "sync/sync",
-            {"srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs},
-        )
+        self._post("sync/sync", {"srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs})
 
     def sync_async(self, src_fs: str, dst_fs: str, create_empty_src_dirs: bool = False) -> AsyncJobResponse:
-        result = self._post(
-            "sync/sync",
-            {"_async": True, "srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs},
-        )
+        result = self._post("sync/sync", {"_async": True, "srcFs": src_fs, "dstFs": dst_fs, "createEmptySrcDirs": create_empty_src_dirs})
         return AsyncJobResponse.from_dict(result)
 
-    def publiclink(self, fs: str, remote: str, unlink: bool = False, expire: str | None = None) -> None:
-        self._post(
-            "operations/publiclink",
-            {"fs": fs, "remote": remote, "unlink": unlink, **({"expire": expire} if expire else {})},
-        )
+    def publiclink(self, fs: str, remote: str, unlink: bool = False, expire: str | None = None) -> PubliclinkResponse:
+        result = self._post("operations/publiclink", {"fs": fs, "remote": remote, "unlink": unlink, **({"expire": expire} if expire else {})})
+        return PubliclinkResponse.from_dict(result)
+
+    def ls(self, fs: str, remote: str) -> list[LsJsonEntry]:
+        response: dict = self._post("operations/list", {"fs": fs, "remote": remote})
+        ls: list[dict] = response["list"]
+        return [LsJsonEntry.from_dict(x) for x in ls]
 
     # -------------------------
     # Utilities
@@ -145,17 +142,23 @@ class RcloneClient:
     def job_list(self) -> JobList:
         return JobList.from_dict(self._post("job/list"))
 
-    def abort_job(self, jobid: int) -> None:
-        self._post("job/stop", {"jobid": jobid})
+    # def abort_job(self, jobid: int) -> None:
+    #     self._post("job/stop", {"jobid": jobid})
 
-    def abort_jobgroup(self, group: str) -> None:
-        self._post("job/stopgroup", {"group": group})
+    # def abort_jobgroup(self, group: str) -> None:
+    #     self._post("job/stopgroup", {"group": group})
 
     def core_stats(self) -> CoreStats:
         return CoreStats.from_dict(self._post("core/stats"))
 
     def version(self) -> CoreVersion:
         return CoreVersion.from_dict(self._post("core/version"))
+
+    def config_create(self, name: str, type: str, parameters: dict[str, Any]) -> None:
+        return self._post("config/create", {"name": name, "type": type, "parameters": parameters})
+
+    def config_delete(self, name: str) -> None:
+        return self._post("config/delete", {"name": name})
 
     def config_listremotes(self) -> ConfigListremotes:
         return ConfigListremotes.from_dict(self._post("config/listremotes"))
@@ -166,76 +169,3 @@ class RcloneClient:
             return self._noopauth(chk_input) == chk_input
         except Exception:
             return False
-
-
-# if __name__ == "__main__":
-#     client = RcloneClient()
-
-#     # print(client.version())
-#     # print(client.job_list())
-#     # print(client.core_stats())
-#     # print(client.config_listremotes())
-#     # print(client.alive())
-
-#     print(
-#         client.sync(
-#             "media",
-#             f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-sync'.rstrip('/')}/",
-#         )
-#     )
-
-#     print(
-#         client.copyfile(
-#             str(Path.cwd().absolute()),
-#             "userdata/private.css",
-#             f"{'localremote'.rstrip(':')}:",
-#             f"{'tmp/copyfile'.rstrip('/')}/priv.css",
-#         )
-#     )
-
-#     print(
-#         client.copyfile(
-#             str(Path.cwd().absolute()),
-#             "userdata/private.css",
-#             f"{'localremote'.rstrip(':')}:",
-#             f"{'tmp/copyfile'.rstrip('/')}/private.css",
-#         )
-#     )
-
-#     # print(
-#     #     client.copy(
-#     #         "media",
-#     #         f"{'localremote'.rstrip(':')}:{'tmp/subdir_api-copy'.rstrip('/')}/",
-#     #     )
-#     # )
-
-#     copyjob = client.copyfile_async(
-#         "/home/michael/dev/photobooth/photobooth-app/",  # local files seems need to be absolute?! but this is not true for sync?!
-#         "src/web/sharepage/index.html",
-#         f"{'localremote'.rstrip(':')}:",
-#         f"{'tmp/subdir_api'.rstrip('/')}/index.html",
-#     )
-#     # print(copyjob)
-#     # print(client.job_status(copyjob.jobid))
-#     # print(client.core_stats())
-#     # time.sleep(1)
-#     # print(client.job_status(copyjob.jobid))
-#     # print(client.core_stats())
-
-#     # last_job = max(client.job_list().jobids)
-#     # print(client.job_status(last_job))
-
-#     # try:
-#     #     print(client._post("rc/error"))
-#     # except RcloneProcessException as exc:
-#     #     print("got error")
-#     #     print(exc)
-#     # try:
-#     #     print(client._post("rc/fatal"))
-#     # except RcloneProcessException as exc:
-#     #     print("got fatal err")
-#     #     print(exc.status)
-
-#     # print(client._post("rc/list"))
-#     print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])
-#     print(client._post("options/local", {"input": "test", "_config": {"BwLimit": "1000K"}})["config"]["BwLimit"])

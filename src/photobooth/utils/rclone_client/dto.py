@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass
+@dataclass(slots=True)
 class CoreVersion:
     version: str
 
@@ -11,7 +11,7 @@ class CoreVersion:
         return CoreVersion(version=d.get("version", "unknown"))
 
 
-@dataclass
+@dataclass(slots=True)
 class JobList:
     executeId: str
     jobids: list[int]
@@ -28,7 +28,7 @@ class JobList:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ConfigListremotes:
     remotes: list[str]
 
@@ -37,7 +37,7 @@ class ConfigListremotes:
         return ConfigListremotes(remotes=d.get("remotes", []))
 
 
-@dataclass
+@dataclass(slots=True)
 class AsyncJobResponse:
     jobid: int
     executeId: str
@@ -50,7 +50,7 @@ class AsyncJobResponse:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class JobStatus:
     finished: bool
     duration: float
@@ -79,7 +79,7 @@ class JobStatus:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class TransferEntry:
     bytes: int
     eta: float | None
@@ -102,7 +102,7 @@ class TransferEntry:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class CoreStats:
     bytes: int
     checks: int
@@ -158,4 +158,78 @@ class CoreStats:
             transfers=d.get("transfers", 0),
             transferring=[TransferEntry.from_dict(x) for x in d.get("transferring", [])],
             checking=d.get("checking", []),
+        )
+
+
+@dataclass(slots=True)
+class LsJsonEntry:
+    Name: str
+    Size: int
+    Path: str
+    IsDir: bool
+
+    ModTime: str | None
+    MimeType: str | None
+    Hashes: dict[str, str] | None = None
+    ID: str | None = None
+    OrigID: str | None = None
+    IsBucket: bool | None = None
+    Encrypted: str | None = None
+    EncryptedPath: str | None = None
+    Tier: str | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]):
+        return LsJsonEntry(
+            # mandatory
+            Name=str(d["Name"]),
+            Size=int(d["Size"]),
+            Path=str(d["Path"]),
+            IsDir=bool(d["IsDir"]),
+            # optional and/or backend dependent
+            ModTime=d.get("ModTime"),
+            MimeType=d.get("MimeType"),
+            Hashes=d.get("Hashes"),
+            ID=d.get("ID"),
+            OrigID=d.get("OrigID"),
+            IsBucket=d.get("IsBucket"),
+            Encrypted=d.get("Encrypted"),
+            EncryptedPath=d.get("EncryptedPath"),
+            Tier=d.get("Tier"),
+        )
+
+
+@dataclass(slots=True)
+class LsJsonResponse:
+    entries: list[LsJsonEntry]
+
+    @staticmethod
+    def from_list(items: list[dict[str, Any]]):
+        return LsJsonResponse(entries=[LsJsonEntry.from_dict(x) for x in items])
+
+
+@dataclass(slots=True)
+class PubliclinkResponse:
+    """
+    Represents the response from rclone rc operations/publiclink.
+    Only 'link' is guaranteed; all other fields are backend-dependent.
+    """
+
+    link: str
+
+    # expire: str | None = None
+    # password: str | None = None
+    # token: str | None = None
+    # headers: dict[str, Any] | None = None
+    # error: str | None = None
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]):
+        return PubliclinkResponse(
+            link=str(d["link"]),
+            # expire=d.get("expire"),
+            # password=d.get("password"),
+            # token=d.get("token"),
+            # headers=d.get("headers"),
+            # error=d.get("error"),
         )
