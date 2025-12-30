@@ -96,12 +96,12 @@ class RemoteConfig(BaseModel):
         description="",
     )
     name: str = Field(
-        default="localremote",
+        default="",
         description="Name of the remote given during configuration.",
     )
     subdir: str = Field(
-        default="subdir",
-        description="subdir that is used as base to sync to.",
+        default="",
+        description="Subdir that is used as base to sync to.",
     )
 
     enable_immediate_sync: bool = Field(
@@ -133,7 +133,10 @@ class SynchronizerConfig(BaseConfig):
 
     remotes: list[RemoteConfig] = [
         RemoteConfig(
-            enabled=True,
+            enabled=False,
+            description="demo localremote",
+            name="localremote",
+            subdir="tmp/localsync",
             shareconfig=ShareConfig(),
         )
     ]
