@@ -161,8 +161,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         try:
             core_stats = self.__rclone_client.core_stats()
-        except Exception as exc:
-            logger.error(f"cannot gather stats, error: {exc}")
+        except Exception:
             return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", "Cannot connect to Rclone API!")])
 
         out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
