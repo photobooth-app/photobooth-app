@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
 
-from ...models.genericstats import DisplayEnum, GenericStats, SubList, SubStats
+from ...models.genericstats import GenericStats, SubList, SubStats
 from ...utils.rclone_client.client import RcloneClient
 from ...utils.resilientservice import ResilientService
 from .. import hookimpl
@@ -39,6 +39,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             transfers=self._config.rclone_client_config.rclone_transfers,
             checkers=self._config.rclone_client_config.rclone_checkers,
             enable_webui=self._config.rclone_client_config.enable_webui,
+            # bwlimit="1M",
         )
         self.__local_base_path = Path("./media/")
         self._service_ready: threading.Event = threading.Event()
@@ -165,47 +166,47 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", "Cannot connect to Rclone API!")])
 
         out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
+
         out.stats.append(
             SubList(
                 "Rclone Core Stats",
                 val=[
-                    SubStats("bytes", core_stats.bytes),
-                    SubStats("checks", core_stats.checks),
-                    SubStats("transfers", core_stats.transfers),
-                    SubStats("deletes", core_stats.deletes),
-                    SubStats("totalTransfers", core_stats.totalTransfers),
+                    SubStats("Amount Finished", float(core_stats.bytes) / float(core_stats.totalBytes) * 100.0, unit="%"),
+                    SubStats("Amount", core_stats.bytes / 1024 / 1024, unit="Mb"),
+                    SubStats("Total Amount", core_stats.totalBytes / 1024 / 1024, unit="Mb"),
+                    SubStats("eta", core_stats.eta, unit="s"),
                     SubStats("errors", core_stats.errors),
-                    SubStats("eta", core_stats.eta),
+                    SubStats("speed", core_stats.speed / 1014 / 1014, decimals=1, unit="Mb/s"),
+                    SubStats("totalTransfers", core_stats.totalTransfers),
+                    SubStats("deletes", core_stats.deletes),
                 ],
             )
         )
         out.stats.append(SubStats("lastError", core_stats.lastError))
 
-        for active_transfer in core_stats.transferring:
-            out.stats.append(
-                SubList(
-                    name=str(active_transfer.name),
-                    val=[
-                        SubStats("percentage", active_transfer.percentage, unit="%"),
-                        SubStats("speedAvg", active_transfer.speedAvg, unit=""),
-                    ],
-                )
-            )
-
         out.stats.append(
             SubList(
                 name="Regular Full Sync Stats",
                 val=[
-                    SubStats("check_active", self._stats.check_active, display=DisplayEnum.spinner),
                     SubStats(
                         "last_check_started", self._stats.last_check_started.astimezone().strftime("%X") if self._stats.last_check_started else None
                     ),
-                    SubStats("last_duration", self._stats.last_duration, unit="s"),
                     SubStats("next_check", self._stats.next_check.astimezone().strftime("%X") if self._stats.next_check else None),
-                    SubStats("files_queued_last_check", self._stats.files_queued_last_check),
                 ],
             )
         )
+
+        for idx, active_transfer in enumerate(core_stats.transferring):
+            out.stats.append(
+                SubList(
+                    name=f"Transfer #{idx}",
+                    val=[
+                        SubStats("file", active_transfer.name),
+                        SubStats("percentage", active_transfer.percentage, unit="%"),
+                        SubStats("speedAvg", active_transfer.speedAvg / 1014 / 1014, decimals=1, unit="MB/s"),
+                    ],
+                )
+            )
 
         return out
 
