@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
 
+from ... import MEDIA_PATH
 from ...models.genericstats import GenericStats, SubList, SubStats
 from ...utils.rclone_client.client import RcloneClient
 from ...utils.resilientservice import ResilientService
@@ -22,11 +23,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Stats:
-    check_active: bool = False
     last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
-    last_duration: float | None = None
     next_check: datetime | None = None
-    files_queued_last_check: int = 0
 
 
 class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
@@ -41,19 +39,15 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             enable_webui=self._config.rclone_client_config.enable_webui,
             # bwlimit="1M",
         )
-        self.__local_base_path = Path("./media/")
+
         self._service_ready: threading.Event = threading.Event()
         self._stats = Stats()
 
     def __str__(self):
-        return "SynchronizerRclone ()"
-
-    def reset(self): ...
+        return "SynchronizerRclone"
 
     @hookimpl
     def start(self):
-        self.reset()
-
         if not self._config.common.enabled:
             logger.info("Synchronizer Plugin is disabled")
             return
@@ -106,7 +100,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     continue
 
                 job = self.__rclone_client.sync_async(
-                    str(Path("media").absolute()),
+                    str(Path(MEDIA_PATH).absolute()),
                     f"{remote.name.rstrip(':')}:{remote.subdir.rstrip('/')}/",
                 )
 
