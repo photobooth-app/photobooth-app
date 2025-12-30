@@ -86,7 +86,7 @@ class RcloneClient:
             resp = requests.post(
                 f"{self.__connect_addr}/{endpoint}",
                 json=data or {},
-                timeout=(20, 5, 20),  # note: TotalTimeout, ConnectTimeout, ReadTimeout
+                timeout=(20, 20),  # note: ConnectTimeout, ReadTimeout
                 retries=0,
             )
         except requests.exceptions.RequestException as exc:
