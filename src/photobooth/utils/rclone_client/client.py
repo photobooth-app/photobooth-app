@@ -10,12 +10,21 @@ from .exceptions import RcloneConnectionException, RcloneProcessException
 
 
 class RcloneClient:
-    def __init__(self, bind="localhost:5572", log_level: str = "NOTICE", transfers: int = 4, checkers: int = 4, enable_webui: bool = False):
+    def __init__(
+        self,
+        bind="localhost:5572",
+        log_level: str = "NOTICE",
+        transfers: int = 4,
+        checkers: int = 4,
+        enable_webui: bool = False,
+        bwlimit: str | None = None,
+    ):
         self.__bind_addr = bind
         self.__log_level = log_level
         self.__transfers = transfers
         self.__checkers = checkers
         self.__enable_webui = enable_webui
+        self.__bwlimit = bwlimit
         self.__connect_addr = f"http://{bind}"
         self.__process = None
 
@@ -43,10 +52,11 @@ class RcloneClient:
                 f"--checkers={self.__checkers}",
                 "--log-file=log/rclone.log",
                 f"--log-level={self.__log_level}",
+                *([f"--bwlimit={self.__bwlimit}"] if self.__bwlimit else []),
             ]
         )
         # during dev you might want to start on cli separately:
-        # rclone rcd --rc-no-auth --rc-addr=localhost:5572 --rc-web-gui --transfers=4 --checkers=4 --bwlimit=50K
+        # rclone rcd --rc-no-auth --rc-addr=localhost:5572 --rc-web-gui --transfers=4 --checkers=4 --bwlimit=5K
 
     def stop(self):
         if self.__process:
