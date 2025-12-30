@@ -97,6 +97,7 @@ class SingleImageProcessing(BaseModel):
     model_config = ConfigDict(title="Single captures processing after capture")
 
     remove_background: bool = Field(
+        json_schema_extra={"computeIntense": True},
         default=False,
         description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
     )
@@ -106,7 +107,7 @@ class SingleImageProcessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     fill_background_color: Color = Field(
-        default=Color("blue"),
+        default=Color("#2D68C4"),
         description="Solid color used to fill background.",
     )
     img_background_enable: bool = Field(
@@ -148,6 +149,7 @@ class CollageProcessing(BaseModel):
     ## phase 1 per capture application on collage also. settings taken from PipelineImage if needed
 
     capture_remove_background: bool = Field(
+        json_schema_extra={"computeIntense": True},
         default=False,
         description="Use AI to remove the background from the captured image. Results may vary. There are different models available in the mediaprocessing section.",
     )
@@ -157,7 +159,7 @@ class CollageProcessing(BaseModel):
         description="Apply solid color background to captured image (useful only if image is extended or background removed)",
     )
     capture_fill_background_color: Color = Field(
-        default=Color("blue"),
+        default=Color("#2D68C4"),
         description="Solid color used to fill background.",
     )
     capture_img_background_enable: bool = Field(
@@ -188,7 +190,7 @@ class CollageProcessing(BaseModel):
         description="Apply solid color background to collage",
     )
     canvas_fill_background_color: Color = Field(
-        default=Color("green"),
+        default=Color("#2e6f40"),
         description="Solid color used to fill background.",
     )
     canvas_img_background_enable: bool = Field(
@@ -353,7 +355,7 @@ class GroupActions(BaseModel):
                             pos_y=1250,
                             rotate=0,
                             font_size=30,
-                            color=Color("#333"),
+                            color=Color("#333333"),
                         )
                     ],
                 ),
@@ -377,7 +379,7 @@ class GroupActions(BaseModel):
                 processing=CollageProcessing(
                     capture_remove_background=True,
                     capture_fill_background_enable=True,
-                    capture_fill_background_color=Color("white"),
+                    capture_fill_background_color=Color("#ffffff"),
                     canvas_width=1920,
                     canvas_height=1280,
                     merge_definition=[
@@ -419,7 +421,7 @@ class GroupActions(BaseModel):
                             pos_x=200,
                             pos_y=1100,
                             rotate=1,
-                            color=Color("#333"),
+                            color=Color("#333333"),
                         )
                     ],
                 ),

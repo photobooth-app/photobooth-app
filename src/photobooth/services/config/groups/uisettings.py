@@ -74,6 +74,7 @@ class GroupUiSettings(BaseModel):
     livestream_blurredbackground_high_framerate: bool = Field(
         default=False,
         description="To save CPU, the blurred refreshs only every 300ms/3.3fps. If the app runs on a beefy computer, you can enable the higher framerate refreshing every 50ms/20fps.",
+        json_schema_extra={"computeIntense": True},
     )
     enable_livestream_frameoverlay: bool = Field(
         default=True,

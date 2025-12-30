@@ -52,7 +52,7 @@ def test_collage_stage_definition_not_matching_with_no_captured():
         CollageMergeDefinition(pos_x=800, rotate=-5),
         CollageMergeDefinition(pos_y=800),
     ]
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         context = CollageContext(canvas, images)
         steps = [MergeCollageStep(collage_merge_definition)]
         pipeline = Pipeline[CollageContext](*steps)

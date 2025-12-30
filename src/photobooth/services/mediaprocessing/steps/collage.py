@@ -17,17 +17,18 @@ class MergeCollageStep(PipelineStep):
 
     def __call__(self, context: CollageContext, next_step: NextStep) -> None:
         assert context.canvas.mode == "RGBA"  # ensure were always operating on img with alpha channel
-        assert len(context.images) == len(self.collage_merge_definition)  # ensure numbers are right
 
-        for index, _definition in enumerate(self.collage_merge_definition):
-            logger.debug(_definition)
-            _image = context.images[index]
-            _image = ImageOps.fit(_image, (_definition.width, _definition.height), method=Image.Resampling.LANCZOS)  # or contain?
-            _image, offset_x, offset_y = __class__.rotate(_image, _definition.rotate)
+        layer_pairs = zip(self.collage_merge_definition, context.images, strict=True)  # strict also ensures numbers are right (same len)
+
+        for merge_def, img in sorted(layer_pairs, key=lambda p: p[0].pos_z, reverse=False):
+            logger.debug(merge_def)
+
+            img = ImageOps.fit(img, (merge_def.width, merge_def.height), method=Image.Resampling.LANCZOS)
+            img, offset_x, offset_y = __class__.rotate(img, merge_def.rotate)
 
             # _image needs to have an alpha channel, otherwise paste with mask=_image fails.
             # above rotate always converts to RGBA consistently now to ensure paste nevers fails.
-            context.canvas.paste(_image, (_definition.pos_x - offset_x, _definition.pos_y - offset_y), _image)
+            context.canvas.paste(img, (merge_def.pos_x - offset_x, merge_def.pos_y - offset_y), img)
 
         next_step(context)
 
