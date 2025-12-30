@@ -1,13 +1,15 @@
 import logging
 import sys
 from collections.abc import Generator
+from types import SimpleNamespace
+from typing import cast
 from unittest.mock import patch
 
 import pytest
-from psutil import _common
 
 from photobooth.appconfig import appconfig
 from photobooth.container import Container, container
+from photobooth.services.filtetransfer import DiskPart
 
 logger = logging.getLogger(name=None)
 
@@ -48,7 +50,7 @@ def test_filetransfer_handle_unmount(_container: Container):
     """service is disabled by default - test for that."""
 
     appconfig.filetransfer.enabled = True
-    null_partition = _common.sdiskpart(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw")
+    null_partition = cast(DiskPart, SimpleNamespace(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw"))
 
     _container.filetransfer_service.stop()
     _container.filetransfer_service.start()
@@ -62,7 +64,7 @@ def test_filetransfer_handle_mount(mock_copytree, _container: Container):
         pytest.skip("testing mount handle on linux only")
 
     appconfig.filetransfer.enabled = True
-    null_partition = _common.sdiskpart(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw")
+    null_partition = cast(DiskPart, SimpleNamespace(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw"))
 
     _container.filetransfer_service.stop()
     _container.filetransfer_service.start()
@@ -80,7 +82,7 @@ def test_filetransfer_handle_mount_no_target_name(mock_copytree, _container: Con
 
     appconfig.filetransfer.enabled = True
     appconfig.filetransfer.target_folder_name = ""
-    null_partition = _common.sdiskpart(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw")
+    null_partition = cast(DiskPart, SimpleNamespace(device="/dev/null", mountpoint="/tmp", fstype="none", opts="rw"))
 
     _container.filetransfer_service.stop()
     _container.filetransfer_service.start()

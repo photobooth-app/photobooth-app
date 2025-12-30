@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, cast
 
 import psutil
-from psutil._common import sbattery
 from sqlalchemy import CursorResult, delete, func, select
 from sqlalchemy.orm import Session
 
@@ -225,7 +224,7 @@ class InformationService(BaseService):
         # https://psutil.readthedocs.io/en/latest/index.html#psutil.sensors_battery
         # None if not determinable otherwise named tuple.
         # clamp to 0...100%
-        battery: sbattery | None = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
+        battery = psutil.sensors_battery() if hasattr(psutil, "sensors_battery") else None
         if battery:
             battery_percent = max(min(100, round(battery.percent, None)), 0)
 

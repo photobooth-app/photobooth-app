@@ -3,9 +3,9 @@ import os
 import shutil
 import time
 from pathlib import Path
+from typing import Protocol
 
 import psutil
-from psutil import _common
 
 from .. import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
 from ..appconfig import appconfig
@@ -14,6 +14,17 @@ from .base import BaseService
 
 logger = logging.getLogger(__name__)
 LIST_FOLDERS_TO_COPY = [PATH_UNPROCESSED, PATH_PROCESSED, PATH_CAMERA_ORIGINAL]
+
+
+class DiskPart(Protocol):
+    @property
+    def device(self) -> str: ...
+    @property
+    def mountpoint(self) -> str: ...
+    @property
+    def fstype(self) -> str: ...
+    @property
+    def opts(self) -> str: ...
 
 
 class FileTransferService(BaseService):
@@ -68,7 +79,7 @@ class FileTransferService(BaseService):
             # poll every 1 seconds
             time.sleep(1)
 
-    def handle_mount(self, device: _common.sdiskpart):
+    def handle_mount(self, device: DiskPart):
         logger.info(f"Device {device.device} has been newly detected.")
 
         if device.mountpoint:
@@ -79,7 +90,7 @@ class FileTransferService(BaseService):
         else:
             logger.error(f"USB device not correctly mounted {device}.")
 
-    def handle_unmount(self, device: _common.sdiskpart):
+    def handle_unmount(self, device: DiskPart):
         logger.info(f"Device {device.device} has been removed.")
 
     @staticmethod
