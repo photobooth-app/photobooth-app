@@ -169,7 +169,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         out.stats.append(
             SubList(
-                "Rclone Core Stats",
+                name="Rclone Core Stats",
                 val=[
                     SubStats("Amount Finished", float(core_stats.bytes) / float(core_stats.totalBytes) * 100.0, unit="%"),
                     SubStats("Amount", core_stats.bytes / 1024 / 1024, unit="Mb"),

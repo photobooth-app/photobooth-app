@@ -196,6 +196,30 @@ def test_copy_async(_rclone_fixture: RcloneFixture, tmp_path: Path):
     assert Path(dummy_remote, "file1.txt").is_file()
 
 
+def test_copy_localonly(_rclone_fixture: RcloneFixture, tmp_path: Path):
+    client = _rclone_fixture.client
+    # remote = _rclone_fixture.remote_name
+
+    dummy_local = tmp_path / "in" / "file1.txt"
+    dummy_local.parent.mkdir(parents=True)
+    dummy_local.touch()
+
+    dummy_local_remote = Path(tmp_path / "out").absolute()
+
+    # Perform
+    client.copy(str(dummy_local.parent), str(dummy_local_remote))
+
+    # Assertions
+    listing1 = client.ls("/", str(dummy_local_remote))
+    listing2 = client.ls(str(dummy_local_remote), "/")
+    # logger.warning(listing)
+
+    assert any(entry.Name == "file1.txt" for entry in listing1)
+    assert any(entry.Name == "file1.txt" for entry in listing2)
+
+    assert Path(dummy_local_remote, "file1.txt").is_file()
+
+
 def test_sync(_rclone_fixture: RcloneFixture, tmp_path: Path):
     client = _rclone_fixture.client
     remote = _rclone_fixture.remote_name

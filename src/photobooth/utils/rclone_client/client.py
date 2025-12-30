@@ -74,12 +74,12 @@ class RcloneClient:
         return which("rclone") is not None
 
     @staticmethod
-    def _valid_dst(fs: str, remote: str):
-        # Remote backend: dst_fs ends with ":" → dst_remote must NOT start with "/"
-        assert not (fs.endswith(":") and remote.startswith("/")), f"dst_remote must be relative when dst_fs is a remote: {remote}"
+    def _valid_fs_remote(fs: str, remote: str):
+        # Remote backend: fs ends with ":" → dst_remote must NOT start with "/"
+        assert not (fs.endswith(":") and remote.startswith("/")), f"remote must be relative when fs is a remote: {fs=} {remote=}"
 
         # Local backend: dst_fs does NOT end with ":" → dst_remote must start with "/"
-        assert not (not fs.endswith(":") and not remote.startswith("/")), f"dst_remote must be absolute when dst_fs is a local path: {remote}"
+        assert not (not fs.endswith(":") and not fs.startswith("/")), f"fs must be absolute when fs is a local path: {fs=} {remote=}"
 
     def _post(self, endpoint: str, data: dict[str, Any] | None = None):
         try:
@@ -118,15 +118,17 @@ class RcloneClient:
     # -------------------------
 
     def deletefile(self, fs: str, remote: str) -> None:
-        self._valid_dst(fs, remote)
+        self._valid_fs_remote(fs, remote)
         self._post("operations/deletefile", {"fs": fs, "remote": remote})
 
     def copyfile(self, src_fs: str, src_remote: str, dst_fs: str, dst_remote: str) -> None:
-        self._valid_dst(dst_fs, dst_remote)
+        self._valid_fs_remote(src_fs, src_remote)
+        self._valid_fs_remote(dst_fs, dst_remote)
         self._post("operations/copyfile", {"srcFs": src_fs, "srcRemote": src_remote, "dstFs": dst_fs, "dstRemote": dst_remote})
 
     def copyfile_async(self, src_fs: str, src_remote: str, dst_fs: str, dst_remote: str) -> AsyncJobResponse:
-        self._valid_dst(dst_fs, dst_remote)
+        self._valid_fs_remote(src_fs, src_remote)
+        self._valid_fs_remote(dst_fs, dst_remote)
         result = self._post(
             "operations/copyfile", {"_async": True, "srcFs": src_fs, "srcRemote": src_remote, "dstFs": dst_fs, "dstRemote": dst_remote}
         )
@@ -147,10 +149,12 @@ class RcloneClient:
         return AsyncJobResponse.from_dict(result)
 
     def publiclink(self, fs: str, remote: str, unlink: bool = False, expire: str | None = None) -> PubliclinkResponse:
+        self._valid_fs_remote(fs, remote)
         result = self._post("operations/publiclink", {"fs": fs, "remote": remote, "unlink": unlink, **({"expire": expire} if expire else {})})
         return PubliclinkResponse.from_dict(result)
 
     def ls(self, fs: str, remote: str) -> list[LsJsonEntry]:
+        self._valid_fs_remote(fs, remote)
         response: dict = self._post("operations/list", {"fs": fs, "remote": remote})
         ls: list[dict] = response["list"]
         return [LsJsonEntry.from_dict(x) for x in ls]
