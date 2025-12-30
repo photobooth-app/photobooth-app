@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 
 from photobooth.utils.rclone_client.client import RcloneClient
+from photobooth.utils.rclone_client.exceptions import RcloneProcessException
 
 logger = logging.getLogger(name=None)
 
@@ -243,3 +244,17 @@ def test_sync_async(_rclone_fixture: RcloneFixture, tmp_path: Path):
     assert any(entry.Name == "file1.txt" for entry in listing)
 
     assert Path(dummy_remote, "file1.txt").is_file()
+
+
+def test_publiclink(_rclone_fixture: RcloneFixture, tmp_path: Path):
+    client = _rclone_fixture.client
+    remote = _rclone_fixture.remote_name
+
+    dummy_local = tmp_path / "file1.txt"
+    dummy_local.touch()
+
+    dummy_remote = Path(tmp_path / "file1.txt").relative_to(Path.cwd())
+
+    # Perform
+    with pytest.raises(RcloneProcessException):
+        client.publiclink(f"{remote}:", dummy_remote.as_posix())
