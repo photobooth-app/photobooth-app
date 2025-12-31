@@ -13,7 +13,7 @@ class CoreVersion:
 
 @dataclass(slots=True)
 class JobList:
-    executeId: str
+    executeId: str | None
     jobids: list[int]
     runningIds: list[int]
     finishedIds: list[int]
@@ -21,7 +21,7 @@ class JobList:
     @staticmethod
     def from_dict(d: dict[str, Any]):
         return JobList(
-            executeId=str(d.get("executeId", "")),
+            executeId=str(d.get("executeId")),
             jobids=d.get("jobids", []),
             runningIds=d.get("runningIds", []),
             finishedIds=d.get("finishedIds", []),
@@ -40,13 +40,13 @@ class ConfigListremotes:
 @dataclass(slots=True)
 class AsyncJobResponse:
     jobid: int
-    executeId: str
+    executeId: str | None
 
     @staticmethod
     def from_dict(d: dict[str, Any]):
         return AsyncJobResponse(
             jobid=d["jobid"],
-            executeId=d["executeId"],
+            executeId=d.get("executeId"),
         )
 
 
