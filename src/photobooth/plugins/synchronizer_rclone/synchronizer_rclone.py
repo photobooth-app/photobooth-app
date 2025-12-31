@@ -85,7 +85,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         self._service_ready.set()
 
-        self.copy_shareportal_to_remotes()
+        self.copy_sharepage_to_remotes()
 
         ####
 
@@ -203,7 +203,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         return out
 
-    def copy_shareportal_to_remotes(self):
+    def copy_sharepage_to_remotes(self):
         dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
         assert dlportal_source_path.is_file()
 
