@@ -62,8 +62,7 @@ jobs:
       - name: Install system apt dependencies
         run: |
           sudo apt update
-          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev
-          sudo apt -y install ffmpeg
+          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev ffmpeg rclone
       - name: install the project
         run: |
           uv sync --all-extras --dev
@@ -84,15 +83,19 @@ jobs:
         python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
-      - name: Setup FFmpeg
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: 7.1 # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
+      # - name: Setup FFmpeg
+      #   uses: AnimMouse/setup-ffmpeg@v1
+      #   with:
+      #     version: 7.1 # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
       - name: Set up Python and uv ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+      - name: install system dependencies
+        run: |
+          choco install rclone
+          choco install ffmpeg
       - name: install the project
         run: |
           uv sync --all-extras --dev
@@ -122,6 +125,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+      - name: install system dependencies
+        run: |
+          brew update
+          brew install rclone
       - name: install the project
         run: |
           uv sync --all-extras --dev
