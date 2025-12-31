@@ -23,12 +23,20 @@ class RcloneFixture:
     remote_name: str
 
 
+def _wait_op(client: RcloneClient):
+    abort_counter = 0
+    while not client.operational():
+        time.sleep(0.1)
+        abort_counter += 1
+        assert abort_counter < 50, "rclone not getting operational, aborting!"
+
+
 @pytest.fixture()
 def _rclone_fixture() -> Generator[RcloneFixture, None, None]:
     client = RcloneClient("localhost:5573")
     client.start()
-    while not client.operational():
-        time.sleep(0.1)
+
+    _wait_op(client)
 
     # create local remote for testing
     remote_name = uuid4().hex
@@ -46,8 +54,7 @@ def test_operational():
     assert ins.operational() is False
 
     ins.start()
-    while not ins.operational():
-        time.sleep(0.1)
+    _wait_op(ins)
 
     assert ins.operational() is True
 

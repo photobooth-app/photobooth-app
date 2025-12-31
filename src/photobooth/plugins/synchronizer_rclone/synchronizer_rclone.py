@@ -81,7 +81,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 break
             time.sleep(0.1)
         else:
-            raise RuntimeError("rclone did not become alive after 20 attempts")
+            raise RuntimeError("rclone did not become alive after 30 attempts")
 
         self._service_ready.set()
 

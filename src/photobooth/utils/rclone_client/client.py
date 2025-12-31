@@ -1,3 +1,4 @@
+import json
 import subprocess
 import time
 from shutil import which
@@ -85,10 +86,15 @@ class RcloneClient:
         try:
             resp = requests.post(
                 f"{self.__connect_addr}/{endpoint}",
-                json=data or {},
+                data=json.dumps(data or {}),
+                headers={"Content-Type": "application/json"},
+                # add header to ensure compat with rclone 1.60 (debian apt).
+                # It fails using content type "application/json;charset=utf-8" which is niquests default
+                # could revert to json=data in future when more recent rclone is used
                 timeout=(20, 20),  # note: ConnectTimeout, ReadTimeout
                 retries=0,
             )
+
         except requests.exceptions.RequestException as exc:
             # rclone daemon not running / wrong port / refused connection / timeout, ...
             raise RcloneConnectionException(f"Issue connecting to rclone RC server, error: {exc}") from exc
