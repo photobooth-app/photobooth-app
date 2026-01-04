@@ -85,11 +85,12 @@ class RcloneClient:
 
     @staticmethod
     def _valid_fs_remote(fs: str, remote: str):
-        # Remote backend: fs ends with ":" → dst_remote must NOT start with "/"
-        assert not (fs.endswith(":") and remote.startswith("/")), f"remote must be relative when fs is a remote: {fs=} {remote=}"
+        # Remote backend: fs ends with ":" → remote must NOT be absolute
 
-        # Local backend: dst_fs does NOT end with ":" → dst_remote must start with "/"
-        assert not (not fs.endswith(":") and not fs.startswith("/")), f"fs must be absolute when fs is a local path: {fs=} {remote=}"
+        assert not (fs.endswith(":") and Path(remote).is_absolute()), f"remote must be relative when fs is a remote: {fs=} {remote=}"
+
+        # Local backend: fs does NOT end with ":" → remote must be absolute
+        assert not (not fs.endswith(":") and not Path(fs).is_absolute()), f"fs must be absolute when remote is a local path: {fs=} {remote=}"
 
     def _post(self, endpoint: str, data: dict[str, Any] | None = None):
         try:
