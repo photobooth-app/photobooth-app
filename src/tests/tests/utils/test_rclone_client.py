@@ -221,9 +221,9 @@ def test_copy_localonly(_rclone_fixture: RcloneFixture, tmp_path: Path):
     client.copy(str(dummy_local.parent), str(dummy_local_remote))
 
     # Assertions
-    listing1 = client.ls("/", str(dummy_local_remote))
+    listing1 = client.ls(dummy_local_remote.anchor, str(dummy_local_remote))
     listing2 = client.ls(str(dummy_local_remote), "")
-    listing3 = client.ls(str(dummy_local_remote), "/")  # error in rclone 1.6, works in latest releases.
+    listing3 = client.ls(str(dummy_local_remote), dummy_local_remote.anchor)  # error in rclone 1.6, works in latest releases.
 
     assert any(entry.Name == "file1.txt" for entry in listing1)
     assert any(entry.Name == "file1.txt" for entry in listing2)
