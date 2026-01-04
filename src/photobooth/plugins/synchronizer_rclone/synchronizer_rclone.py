@@ -46,6 +46,10 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
     def __str__(self):
         return "SynchronizerRclone"
 
+    def ensure_rclone_avail(self) -> bool:
+        # ensure is installed, otherwise will download prior start, useful to ensure everything is setup before starting pytests
+        return self.__rclone_client.is_installed()
+
     @hookimpl
     def start(self):
         if not self._config.common.enabled:

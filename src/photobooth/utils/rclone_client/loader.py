@@ -25,7 +25,7 @@ SYS_MAP = {
 
 
 def rclone_install_dir() -> pathlib.Path:
-    fpath = pathlib.Path.home() / ".photobooth-data" / "rclone"
+    fpath = pathlib.Path.home() / ".cache" / "photobooth-app" / "rclone"
     fpath.mkdir(parents=True, exist_ok=True)
 
     return fpath
@@ -53,7 +53,7 @@ def downloaded_rclone(force_download: bool = False) -> pathlib.Path:
     sums_url = f"{base_url}/SHA256SUMS"
 
     print(f"Downloading rclone from {url}", file=sys.stderr)
-    req_session = requests.Session()
+    req_session = requests.Session(disable_http3=True)  # niquests supports http3 while the server seems it does not despite advertising so
     resp = req_session.get(url)
     resp.raise_for_status()
     assert resp.content
