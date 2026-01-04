@@ -3,7 +3,6 @@ import time
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
-from shutil import which
 from uuid import uuid4
 
 import pytest
@@ -12,9 +11,6 @@ from photobooth.utils.rclone_client.client import RcloneClient
 from photobooth.utils.rclone_client.exceptions import RcloneProcessException
 
 logger = logging.getLogger(name=None)
-
-if which("rclone") is None:
-    pytest.skip("rclone not available", allow_module_level=True)
 
 
 @dataclass
@@ -34,6 +30,10 @@ def _wait_op(client: RcloneClient):
 @pytest.fixture()
 def _rclone_fixture() -> Generator[RcloneFixture, None, None]:
     client = RcloneClient("localhost:5573")
+
+    # ensure is installed, otherwise will download prior start.
+    client.is_installed()
+
     client.start()
 
     _wait_op(client)
@@ -66,7 +66,11 @@ def test_operational():
 
 
 def test_version(_rclone_fixture: RcloneFixture):
+    version = _rclone_fixture.client.version()
+
     assert _rclone_fixture.client.version()
+
+    logger.info(version)
 
 
 def test_core_stats(_rclone_fixture: RcloneFixture):
@@ -218,11 +222,12 @@ def test_copy_localonly(_rclone_fixture: RcloneFixture, tmp_path: Path):
 
     # Assertions
     listing1 = client.ls("/", str(dummy_local_remote))
-    listing2 = client.ls(str(dummy_local_remote), "/")
-    # logger.warning(listing)
+    listing2 = client.ls(str(dummy_local_remote), "")
+    listing3 = client.ls(str(dummy_local_remote), "/")  # error in rclone 1.6, works in latest releases.
 
     assert any(entry.Name == "file1.txt" for entry in listing1)
     assert any(entry.Name == "file1.txt" for entry in listing2)
+    assert any(entry.Name == "file1.txt" for entry in listing3)
 
     assert Path(dummy_local_remote, "file1.txt").is_file()
 

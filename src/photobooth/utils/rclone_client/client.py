@@ -1,13 +1,14 @@
 import json
 import subprocess
 import time
-from shutil import which
+from pathlib import Path
 from typing import Any
 
 import niquests as requests
 
 from .dto import AsyncJobResponse, ConfigListremotes, CoreStats, CoreVersion, JobList, JobStatus, LsJsonEntry, PubliclinkResponse
 from .exceptions import RcloneConnectionException, RcloneProcessException
+from .loader import resolve_rclone
 
 
 class RcloneClient:
@@ -28,19 +29,24 @@ class RcloneClient:
         self.__bwlimit = bwlimit
         self.__connect_addr = f"http://{bind}"
         self.__process = None
+        self.__rclone_bin: Path | None = None
 
     # -------------------------
     # Lifecycle
     # -------------------------
     def start(self):
-        assert self.is_installed(), "rclone is not installed on this system or not on PATH. Please install it from here: https://rclone.org/"
-
         if self.__process:
             return
 
+        try:
+            if not self.__rclone_bin:
+                self.__rclone_bin = resolve_rclone()
+        except Exception as exc:
+            raise RuntimeError("rclone is not installed on this system or not on PATH. Please install it from here: https://rclone.org/") from exc
+
         self.__process = subprocess.Popen(
             [
-                "rclone",
+                str(self.__rclone_bin),
                 "rcd",
                 # web-gui is always on, as the api is accessible anyways so there is no reason to disable gui "for security"
                 f"--rc-addr={self.__bind_addr}",
@@ -69,10 +75,13 @@ class RcloneClient:
     # -------------------------
     # Internal helper
     # -------------------------
-
     @staticmethod
     def is_installed() -> bool:
-        return which("rclone") is not None
+        try:
+            resolve_rclone()
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _valid_fs_remote(fs: str, remote: str):
