@@ -60,7 +60,7 @@ class ResilientService(ABC):
                     raise ServiceCrashedTemporarily(e) from e
 
                 try:
-                    logger.info(f"{self}-resilient service start running service logic")
+                    logger.debug(f"{self}-resilient service start running service logic")
                     self._running = True
                     self.run_service()
                     self._running = False

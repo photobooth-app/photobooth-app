@@ -111,9 +111,10 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 full_sync_jobids.append(job.jobid)
 
             ## wait until finished - TODO: maybe stop if an immediate sync is requested.
-            logger.info("Regular full sync triggered")
-            self.__rclone_client.wait_for_jobs(full_sync_jobids)
-            logger.info("All enabled full sync jobs finished, going to sleep now.")
+            if full_sync_jobids:
+                logger.info("Regular full sync triggered")
+                self.__rclone_client.wait_for_jobs(full_sync_jobids)
+                logger.info("All enabled full sync jobs finished, going to sleep now.")
 
             ## Sleeping phase
             self._stats.next_check = datetime.now() + timedelta(seconds=sync_every_x_seconds)

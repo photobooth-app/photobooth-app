@@ -260,7 +260,7 @@ class SseService:
 
     def request_shutdown(self):
         # shutdown request is one way - the app will not recover from this but needs a restart to resume
-        logger.info("sse service shutdown requested to stop yielding messages")
+        logger.debug("sse service shutdown requested to stop yielding messages")
         self._shutdown = True
 
     def setup_client(self, client: Client):
