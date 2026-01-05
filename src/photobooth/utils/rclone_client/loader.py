@@ -1,5 +1,6 @@
 import hashlib
 import io
+import os
 import pathlib
 import platform
 import sys
@@ -7,7 +8,7 @@ import zipfile
 
 import niquests as requests
 
-RCLONE_VERSION = "1.72.1"
+RCLONE_VERSION = os.environ.get("RCLONE_CLIENT_RCLONE_VERSION", "1.72.1")
 RCLONE_BASE_URL = "https://downloads.rclone.org"
 
 ARCH_MAP = {
