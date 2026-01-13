@@ -16,8 +16,6 @@ def synchronizer(tmp_path: Path):
         common=Common(enabled=True),
     )
 
-    synchronizer.ensure_rclone_avail()
-
     yield synchronizer
 
 

@@ -8,9 +8,10 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
 
+from rclone_client.client import RcloneClient
+
 from ... import MEDIA_PATH
 from ...models.genericstats import GenericStats, SubList, SubStats
-from ...utils.rclone_client.client import RcloneClient
 from ...utils.resilientservice import ResilientService
 from .. import hookimpl
 from ..base_plugin import BasePlugin
@@ -45,10 +46,6 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
     def __str__(self):
         return "SynchronizerRclone"
-
-    def ensure_rclone_avail(self) -> bool:
-        # ensure is installed, otherwise will download prior start, useful to ensure everything is setup before starting pytests
-        return self.__rclone_client.is_installed()
 
     @hookimpl
     def start(self):
