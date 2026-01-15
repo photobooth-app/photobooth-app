@@ -1970,16 +1970,15 @@ wheels = [
 
 [[package]]
 name = "rclone-bin-api"
-version = "1.0.0"
+version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/13/4d/c4fc950e2c0b77ca5c802867e6f837b9118900721d4d00b2c793dead0fb8/rclone_bin_api-1.0.0.tar.gz", hash = "sha256:f363de368e3c788f64239d3ef7da79f42602687a71df99f4f2d77125dd436231", size = 11066, upload-time = "2026-01-15T12:01:01.24Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/a8/26f55befa35062f89327190d92ffcfad5333d2cf9c1d606bc39ea3f77161/rclone_bin_api-1.0.1.tar.gz", hash = "sha256:32803cd44c2f8700ca817f82d3c2643889ce1ea58208bd70738fd619047985f4", size = 11105, upload-time = "2026-01-15T12:52:18.208Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/23/5e758d5f2ff59d4606b53ae47b50c18f02a37c03f676669090664d71f1e3/rclone_bin_api-1.0.0-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:c263ae126dba5908e3120a16bc70ba60ea3ace66119384d9fb72bf08f58eebf4", size = 28171224, upload-time = "2026-01-15T12:01:04.114Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/fb/11dd93a62083458b3c94ee42002d24f61bcc3c56df82c3844c757d6cba99/rclone_bin_api-1.0.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:2e7c89cfdf1b48ff57e6f902b9d56a340bdbcb825c9c162486667e5782aa646d", size = 26013580, upload-time = "2026-01-15T12:01:21.088Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/ef/467f6d6674ff90d2c055be3f7edf9d69f49fecb633f4f0d8701c9261e31b/rclone_bin_api-1.0.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:6617b55d04217130496a57fd56d95a2e7ba30e7d66e27264f8faadad7a447dad", size = 22488776, upload-time = "2026-01-15T12:01:08.629Z" },
-    { url = "https://files.pythonhosted.org/packages/68/e1/184271839860d4f43deffc70e769b23a29a925630fcd06003ffecc553182/rclone_bin_api-1.0.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:8baa7818e1adfa6c680e2cd9dd099c4ac8d59c8fd48bb239f25cadebc62eb70c", size = 24951782, upload-time = "2026-01-15T12:01:16.357Z" },
-    { url = "https://files.pythonhosted.org/packages/d8/bb/0499d6887f164cf7126b60ca692a4ae8b8d833cc9deceee564551f4fa914/rclone_bin_api-1.0.0-py3-none-win_amd64.whl", hash = "sha256:3ba73163d2afa5bd4134992f4f5e231fc05bd09dc878547c2ef0ccc7632304df", size = 24881362, upload-time = "2026-01-15T12:01:12.16Z" },
-    { url = "https://files.pythonhosted.org/packages/9d/c3/784ca861eab2548f7e6c75bd9b97364589ec68ff3315bce3e4783fda1b39/rclone_bin_api-1.0.0-py3-none-win_arm64.whl", hash = "sha256:285249a1064e3b93836de45d1767b1e3d27045b0aac423f3ff7b307058c5c09e", size = 22220721, upload-time = "2026-01-15T12:01:25.253Z" },
+    { url = "https://files.pythonhosted.org/packages/55/2b/938d10e03fe9d5b6afdfefaa8a1826b720f0ddaad1c1bc74101bf4a4af82/rclone_bin_api-1.0.1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:bcdb91a27f166db5fe6d5bba1b27adf57572c5b4524668d148105621f5be0d7c", size = 28171268, upload-time = "2026-01-15T12:52:27.478Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/51/c54dfac428b580d42fcde4ec9fe62427df1d3e294ae6ab1a634d9229a10f/rclone_bin_api-1.0.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:4d59f45a36d36532e87ff3b76ee4318a47f7c4daafc22f35ee7f61dc08dfab12", size = 26013624, upload-time = "2026-01-15T12:52:19.579Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/99/0d9a27bfacf74d3facd9aa355cdfd682339a18c50b87115b839897d57811/rclone_bin_api-1.0.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:9d5381073cd9ce7573228e63e39f3ab2648f6230499afde2e6bc7e8770080a70", size = 24951826, upload-time = "2026-01-15T12:52:22.296Z" },
+    { url = "https://files.pythonhosted.org/packages/09/7a/f4732f7e5b1a3136b5fcbdb7bc144855ffbe0685442b8548e76f16d70907/rclone_bin_api-1.0.1-py3-none-win_amd64.whl", hash = "sha256:1ff3bc5b8f608025ef00bd5a08df18419f20d4421ecc6c547aa8d162ff6c15dd", size = 24881404, upload-time = "2026-01-15T12:52:30.418Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/36/501e5b4a572806169c849f63262885cdc3a545c674e75f8da2f3f68e098e/rclone_bin_api-1.0.1-py3-none-win_arm64.whl", hash = "sha256:0b1a2c0c8773e514d5d4af542f7806e22a09a324954a43766ca004d1d7cb79ac", size = 22220765, upload-time = "2026-01-15T12:52:24.918Z" },
 ]
 
 [[package]]
