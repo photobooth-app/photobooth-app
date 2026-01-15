@@ -61,6 +61,7 @@ dependencies = [
   "av~=16.0.0",
   "alembic>=1.15.2",
   "onnxruntime",
+  "rclone-bin-api",
   "nc-py-api>=0.20.1",
   "wigglecam",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng",                                                                          # needs python3-dev package
@@ -75,7 +76,8 @@ commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
-synchronizer = 'photobooth.plugins.synchronizer.synchronizer'
+synchronizer_legacy = 'photobooth.plugins.synchronizer_legacy.synchronizer_legacy'
+synchronizer_rclone = 'photobooth.plugins.synchronizer_rclone.synchronizer_rclone'
 
 
 [project.urls]
@@ -178,5 +180,14 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = ["photobooth", "web"]
 
+# comment out for local development using editable installs
+# [tool.uv.workspace]
+# members = [
+#   "../photobooth-wigglecam",
+#   "../rclone-bin-api",
+# ]
+
 # [tool.uv.sources]
-# wigglecam = { path = "../photobooth-wigglecam", editable = true }
+# # rclone-bin-api = { path = "../rclone-bin-api", editable=true }
+# rclone-bin-api = {  workspace = true, editable=true }
+# wigglecam = { workspace = true, editable = true }

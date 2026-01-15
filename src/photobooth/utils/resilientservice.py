@@ -6,7 +6,16 @@ from time import time
 logger = logging.getLogger(__name__)
 
 
-class ServiceCrashed(Exception): ...
+class PermanentFault(Exception):
+    """Raised from within the services when the service should not attempt recovery."""
+
+    ...
+
+
+class ServiceCrashedTemporarily(Exception): ...
+
+
+class ServiceCrashedPermanently(Exception): ...
 
 
 class ResilientService(ABC):
@@ -43,33 +52,46 @@ class ResilientService(ABC):
             try:
                 try:
                     self.setup_resource()
+                except (AssertionError, PermanentFault) as e:  # assertion err is considered as programming bug or intended to be permanent fail.
+                    self._report_crash(e)
+                    raise ServiceCrashedPermanently(e) from e
                 except Exception as e:
                     self._report_crash(e)
-
-                    raise ServiceCrashed(e) from e
+                    raise ServiceCrashedTemporarily(e) from e
 
                 try:
-                    logger.info(f"{self}-resilient service start running service logic")
+                    logger.debug(f"{self}-resilient service start running service logic")
                     self._running = True
                     self.run_service()
                     self._running = False
-                except Exception as e:
+                except (AssertionError, PermanentFault) as e:  # assertion err is considered as programming bug or intended to be permanent fail.
                     self._report_crash(e)
 
-                    # if the run failed, some last resort teardown here...
+                    # if the run failed still try teardown to free up resources, but don't complain if it fails...
                     try:
                         self.teardown_resource()
                     except Exception as e2:
-                        logger.critical(f"teardown resource after run failed errored also: {e2}")
+                        self._report_crash(e2)
 
-                    raise ServiceCrashed(e) from e
+                    raise ServiceCrashedPermanently(e) from e
+                except Exception as e:
+                    self._report_crash(e)
 
+                # if the run finished regular, in teardown
                 try:
                     self.teardown_resource()
                 except Exception as e:
                     self._report_crash(e)
 
-            except ServiceCrashed:
+                    raise ServiceCrashedTemporarily(e) from e
+
+            except ServiceCrashedPermanently:
+                logger.critical("Permanent failure detected. Stopping service and not trying to recover automatically. Check the error and restart.")
+                self._running = False
+                self._stop_event.set()
+                break
+
+            except ServiceCrashedTemporarily:
                 self._running = False
 
                 if self._stop_event.is_set():

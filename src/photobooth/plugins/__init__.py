@@ -9,6 +9,7 @@ import sys
 from enum import Enum
 from importlib.metadata import entry_points
 from pathlib import Path
+from uuid import UUID
 
 import pluggy
 from PIL import Image
@@ -95,7 +96,7 @@ class PluginMediacollectionSpec:
     def collection_original_file_added(self, files: list[Path]) -> None: ...
 
     @hookspec  # share backends shall create a link to the mediaitem ressource so it can be used in qr codes, ...
-    def get_share_links(self, filepath_local: Path) -> list[str]: ...
+    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]: ...
 
 
 pm.add_hookspecs(PluginManagementSpec)

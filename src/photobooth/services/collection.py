@@ -219,7 +219,7 @@ class Cache:
 
             session.commit()
 
-            logger.info(f"deleted {len(outdated_items)} outdated items from the cache")
+            logger.debug(f"deleted {len(outdated_items)} outdated items from the cache")
 
             for outdated_filepath in outdated_filepaths:
                 try:

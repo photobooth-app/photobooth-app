@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from pydantic import HttpUrl
 
-from photobooth.plugins.synchronizer.config import (
+from photobooth.plugins.synchronizer_legacy.config import (
     FilesystemBackendConfig,
     FilesystemConnectorConfig,
     FilesystemShareConfig,
@@ -16,8 +16,8 @@ from photobooth.plugins.synchronizer.config import (
     NextcloudConnectorConfig,
     NextcloudShareConfig,
 )
-from photobooth.plugins.synchronizer.connectors.abstractconnector import AbstractConnector
-from photobooth.plugins.synchronizer.mediashare import (
+from photobooth.plugins.synchronizer_legacy.connectors.abstractconnector import AbstractConnector
+from photobooth.plugins.synchronizer_legacy.mediashare import (
     FilesystemMediashare,
     FtpMediashare,
     NextcloudMediashare,

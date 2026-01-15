@@ -14,8 +14,8 @@ def test_read_web_spa(client: TestClient):
     assert "cache-control" in response.headers and "no-cache" == response.headers["cache-control"]
 
 
-def test_read_web_downloadportal(client: TestClient):
-    response = client.get("../download/")
+def test_read_web_sharepage(client: TestClient):
+    response = client.get("../sharepage/")
     assert response.status_code == 200
 
 
