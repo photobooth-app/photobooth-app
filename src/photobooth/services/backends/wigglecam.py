@@ -51,7 +51,7 @@ class WigglecamBackend(AbstractBackend):
             self._pub_trigger.dial(f"tcp://{node.address}:{node.base_port + 0}", block=False)
 
         # Listen for lores streams
-        self._sub_lores = pynng.Sub0()
+        self._sub_lores = pynng.Sub0(recv_max_size=0)  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
         self._sub_lores.add_post_pipe_connect_cb(cb_connected)
         self._sub_lores.subscribe(b"")
         self._sub_lores.recv_timeout = 1000
@@ -59,7 +59,7 @@ class WigglecamBackend(AbstractBackend):
             self._sub_lores.dial(f"tcp://{node.address}:{node.base_port + 1}", block=False)
 
         # Setup Sub for hires
-        self._sub_hires = pynng.Sub0()
+        self._sub_hires = pynng.Sub0(recv_max_size=0)  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
         self._sub_hires.add_post_pipe_connect_cb(cb_connected)
         self._sub_hires.subscribe(b"")
         self._sub_hires.recv_timeout = 3000
@@ -121,11 +121,11 @@ class WigglecamBackend(AbstractBackend):
                 msg = ImageMessage.from_bytes(data)
 
                 if msg.job_id != job_uuid:
-                    logger.warning("warning, old job id result received, ignored!")
+                    logger.warning(f"warning, old job result received, expected {job_uuid=}, decoded {msg.device_id=}, {msg.job_id=}")
                     continue
 
                 if msg.device_id in results:
-                    logger.warning("warning, duplicate device id result received, ignored!")
+                    logger.warning(f"warning, duplicate device_id {msg.device_id} result received, ignored! Maybe wrong configuration?")
                     continue
 
                 fname = f"wigglenode_device_id-{msg.device_id}.jpg"
