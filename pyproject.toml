@@ -180,14 +180,14 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = ["photobooth", "web"]
 
+# comment out for local development using editable installs
+# [tool.uv.workspace]
+# members = [
+#   "../photobooth-wigglecam",
+#   "../rclone-bin-api",
+# ]
 
-[tool.uv.workspace]
-members = [
-  "../photobooth-wigglecam",
-  "../rclone-bin-api",
-]
-
-[tool.uv.sources]
-# rclone-bin-api = { path = "../rclone-bin-api", editable=true }
-rclone-bin-api = {  workspace = true, editable=true }
-wigglecam = { workspace = true, editable = true }
+# [tool.uv.sources]
+# # rclone-bin-api = { path = "../rclone-bin-api", editable=true }
+# rclone-bin-api = {  workspace = true, editable=true }
+# wigglecam = { workspace = true, editable = true }
