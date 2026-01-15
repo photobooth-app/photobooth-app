@@ -49,7 +49,7 @@ def test_validate_test_method_same():
     assert img1 is not img2  # imgs are not same
 
     # method 1
-    assert list(iter(img2.getdata())) == list(iter(img1.getdata()))
+    assert list(iter(img2.get_flattened_data())) == list(iter(img1.get_flattened_data()))
     # method 2
     assert is_same(img1, img2)
 
@@ -60,7 +60,7 @@ def test_validate_test_method_different():
     assert img1 is not img2  # imgs are not same
 
     # method 1
-    assert list(iter(img2.getdata())) != list(iter(img1.getdata()))
+    assert list(iter(img2.get_flattened_data())) != list(iter(img1.get_flattened_data()))
     # method 2
     assert not is_same(img1, img2)
 
