@@ -78,7 +78,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         sleep_time = 0.5
         assert self.__rclone_client
 
-        self.copy_sharepage_to_remotes()
+        self._copy_sharepage_to_remotes()
 
         ####
 
@@ -223,7 +223,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
         return out
 
-    def copy_sharepage_to_remotes(self):
+    def _copy_sharepage_to_remotes(self):
         assert self.__rclone_client
 
         dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
@@ -245,6 +245,9 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
     @hookimpl
     def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
+        if not self.is_running():
+            return []
+
         assert self.__rclone_client
 
         share_links: list[str] = []
