@@ -88,7 +88,8 @@ class BaseConfig(BaseSettings):
         return self.model_dump(context={"secrets_is_allowed": secrets_is_allowed}, mode="json")
 
     def reset_defaults(self):
-        self.__dict__.update(self.__class__())
+        # reload in-place https://docs.pydantic.dev/latest/concepts/pydantic_settings/#in-place-reloading
+        self.__init__()
 
     def persist(self):
         """Persist config to file"""

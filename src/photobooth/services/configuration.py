@@ -32,7 +32,7 @@ class ConfigurationService(BaseService):
     def reset(self, configurable: str):
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
         appconfig_or_plugin_config.deleteconfig()
-        appconfig_or_plugin_config.reset_defaults()
+        appconfig_or_plugin_config.__init__()  # reload in place (defaults because config is deleted)
 
     def list_configurables(self) -> list[str]:
         configurable_elements = ["app"] + self._pms.list_configurable_plugins()
@@ -48,10 +48,13 @@ class ConfigurationService(BaseService):
 
     def validate_and_set_current_and_persist(self, configurable: str, updated_config: dict[AnyStr, Any]):
         appconfig_or_plugin_config = self._get_appconfig_or_pluginconfig(configurable)
-        updated_config_validated = appconfig_or_plugin_config.model_validate(updated_config)
-        appconfig_or_plugin_config.__dict__.update(updated_config_validated)
 
-        appconfig_or_plugin_config.persist()
+        # validate posted config and persist
+        updated_config_validated = appconfig_or_plugin_config.model_validate(updated_config)
+        updated_config_validated.persist()
+
+        # reload in-place https://docs.pydantic.dev/latest/concepts/pydantic_settings/#in-place-reloading
+        appconfig_or_plugin_config.__init__()
 
     def _get_appconfig_or_pluginconfig(self, configurable: str) -> BaseConfig:
         if not configurable:
