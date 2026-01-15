@@ -117,7 +117,11 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     break  # next sync run.
 
     def _put_to_rclone_job_manager(self, task: TaskSyncType):
+        if not self.is_running():
+            return
+
         assert self.__rclone_client
+
         for remote in self._config.remotes:
             if not (remote.enabled and remote.enable_immediate_sync):
                 continue
