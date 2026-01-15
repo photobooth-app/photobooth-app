@@ -77,15 +77,16 @@ class ShareConfig(BaseModel):
 
     manual_public_link: str | None = Field(  # str instead HttpUrl because otherwise {}-placeholder would be encoded by pydantic
         default=None,
-        description="Mediafiles copied to remote are accessible using this url. The filename is appended automatically when generating the qr code link.",
+        description="If given, mediafiles copied to the remote must be accessible using this URL. Use {filename} to replace for the actual filename. If empty, Rclone tries to generate a public link (limited to S3 and maybe others).",
     )
+
     use_sharepage: bool = Field(
         default=True,
-        description="Using the download-portal improves the endusers' experience when downloading and sharing mediaitems. When enabled, the download-portal url needs to point to publicly available webspace. Some backends support automatic setup (autoupload), for others check the documentation.",
+        description="Using the sharepage improves the endusers' experience when viewing mediaitems after scanning the QR code. When enabled, the sharepage URL needs to point to a public webspace, https is preferred for full functionality.",
     )
     sharepage_url: str | None = Field(
         default=None,
-        description="Url used to build the links for QR codes pointing to the download portal (if enabled above).",
+        description="URL used to build the links for QR codes pointing to the sharepage (if enabled above).",
     )
 
 
@@ -104,7 +105,7 @@ class RemoteConfig(BaseModel):
     )
     subdir: str = Field(
         default="",
-        description="Subdir that is used as base to sync to.",
+        description="Subdir that is used as base to sync to. In this directory the sharepage (subdir/index.html) and mediafiles (subdir/media/) will be placed.",
     )
 
     enable_immediate_sync: bool = Field(
@@ -117,7 +118,7 @@ class RemoteConfig(BaseModel):
     )
     enable_sharepage_sync: bool = Field(
         default=True,
-        description="Copy the sharepage-file to the remote on startup. You need to ensure that the media-url below is accessible publicly to use this function.",
+        description="Copy the sharepage-file (index.html) to the remote on startup.",
     )
 
     shareconfig: ShareConfig
