@@ -1,5 +1,4 @@
 import logging
-import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -34,7 +33,6 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         self._config = SynchronizerConfig()
 
         self.__rclone_client: RcloneApi | None = None
-        self._service_ready: threading.Event = threading.Event()
         self._stats = Stats()
 
     def __str__(self):
@@ -46,13 +44,6 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             logger.info("Synchronizer Plugin is disabled")
             return
 
-        super().start()
-
-    @hookimpl
-    def stop(self):
-        super().stop()
-
-    def setup_resource(self):
         self.__rclone_client = RcloneApi(
             log_file=Path("log/rclone.log") if self._config.rclone_client_config.rclone_enable_logging else None,
             log_level=self._config.rclone_client_config.rclone_log_level,
@@ -61,31 +52,31 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             enable_webui=self._config.rclone_client_config.enable_webui,
             # bwlimit="1M",
         )
+
+        super().start()
+
+    @hookimpl
+    def stop(self):
+        super().stop()
+
+    def setup_resource(self):
+        assert self.__rclone_client
+
         self.__rclone_client.start()
 
     def teardown_resource(self):
-        self._service_ready.clear()
-
         if self.__rclone_client:
             self.__rclone_client.stop()
 
-    def wait_until_ready(self, timeout: float = 5) -> bool:
-        return self._service_ready.wait(timeout=timeout)
+    def wait_until_ready(self, timeout: float = 5) -> None:
+        if self.__rclone_client:
+            self.__rclone_client.wait_until_operational(timeout)
 
     def run_service(self):
         sync_every_x_seconds = 60 * self._config.common.full_sync_interval
         slept_counter = 0
         sleep_time = 0.5
         assert self.__rclone_client
-
-        for _ in range(30):
-            if self.__rclone_client.operational():
-                break
-            time.sleep(0.1)
-        else:
-            raise RuntimeError("rclone did not become alive after 30 attempts")
-
-        self._service_ready.set()
 
         self.copy_sharepage_to_remotes()
 
