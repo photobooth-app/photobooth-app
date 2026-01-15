@@ -61,7 +61,7 @@ dependencies = [
   "av~=16.0.0",
   "alembic>=1.15.2",
   "onnxruntime",
-  "rclone-bin-client",
+  "rclone-bin-api",
   "nc-py-api>=0.20.1",
   "wigglecam",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng",                                                                          # needs python3-dev package
@@ -184,10 +184,10 @@ module-name = ["photobooth", "web"]
 [tool.uv.workspace]
 members = [
   "../photobooth-wigglecam",
-  "../rclone-bin-client",
+  "../rclone-bin-api",
 ]
 
 [tool.uv.sources]
-# rclone-bin-client = { path = "../rclone-bin-client", editable=true }
-rclone-bin-client = {  workspace = true, editable=true }
+# rclone-bin-api = { path = "../rclone-bin-api", editable=true }
+rclone-bin-api = {  workspace = true, editable=true }
 wigglecam = { workspace = true, editable = true }

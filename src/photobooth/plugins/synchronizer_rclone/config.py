@@ -40,10 +40,13 @@ class RcloneClientConfig(BaseModel):
     model_config = SettingsConfigDict(
         title="Global Rclone Instance Settings",
     )
-
+    rclone_enable_logging: bool = Field(
+        default=True,
+        description="Enable logging to log/rclone.log.",
+    )
     rclone_log_level: Literal["DEBUG", "INFO", "NOTICE", "ERROR"] = Field(
         default="NOTICE",
-        description="Log verbosity of Rclone. The logfile is written to log/rclone.log.",
+        description="Log verbosity.",
     )
 
     rclone_transfers: int = Field(

@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
 
-from rclone_client.client import RcloneClient
+from rclone_api.api import RcloneApi
 
 from ... import MEDIA_PATH
 from ...models.genericstats import GenericStats, SubList, SubStats
@@ -33,14 +33,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         super().__init__()
         self._config = SynchronizerConfig()
 
-        self.__rclone_client: RcloneClient = RcloneClient(
-            log_level=self._config.rclone_client_config.rclone_log_level,
-            transfers=self._config.rclone_client_config.rclone_transfers,
-            checkers=self._config.rclone_client_config.rclone_checkers,
-            enable_webui=self._config.rclone_client_config.enable_webui,
-            # bwlimit="1M",
-        )
-
+        self.__rclone_client: RcloneApi | None = None
         self._service_ready: threading.Event = threading.Event()
         self._stats = Stats()
 
@@ -60,6 +53,14 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         super().stop()
 
     def setup_resource(self):
+        self.__rclone_client = RcloneApi(
+            log_file=Path("log/rclone.log") if self._config.rclone_client_config.rclone_enable_logging else None,
+            log_level=self._config.rclone_client_config.rclone_log_level,
+            transfers=self._config.rclone_client_config.rclone_transfers,
+            checkers=self._config.rclone_client_config.rclone_checkers,
+            enable_webui=self._config.rclone_client_config.enable_webui,
+            # bwlimit="1M",
+        )
         self.__rclone_client.start()
 
     def teardown_resource(self):
@@ -102,7 +103,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
                 job = self.__rclone_client.sync_async(
                     str(Path(MEDIA_PATH).absolute()),
-                    f"{remote.name.rstrip(':')}:{remote.subdir.rstrip('/')}/",
+                    f"{remote.name.rstrip(':')}:{remote.subdir.rstrip('/')}/{get_corresponding_remote_file(Path(MEDIA_PATH))}",
                 )
 
                 full_sync_jobids.append(job.jobid)
@@ -125,6 +126,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     break  # next sync run.
 
     def _put_to_rclone_job_manager(self, task: TaskSyncType):
+        assert self.__rclone_client
         for remote in self._config.remotes:
             if not (remote.enabled and remote.enable_immediate_sync):
                 continue
@@ -155,10 +157,13 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             # avoids display of an empty stats object in the admin dashboard
             return None
 
+        assert self.__rclone_client
+
         try:
             core_stats = self.__rclone_client.core_stats()
-        except Exception:
-            return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", "Cannot connect to Rclone API!")])
+            job_list = self.__rclone_client.job_list()
+        except Exception as exc:
+            return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", f"Cannot gather stats, reason: {exc}")])
 
         out = GenericStats(id="hook-plugin-synchronizer", name="Synchronizer")
 
@@ -205,9 +210,27 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 )
             )
 
+        for running_jobid in sorted(job_list.runningIds):
+            job_status = self.__rclone_client.job_status(running_jobid)
+
+            if not job_status.finished:
+                out.stats.append(
+                    SubList(
+                        name=f"Running Job #{running_jobid}",
+                        val=[
+                            SubStats("startTime", job_status.startTime),
+                            SubStats("finished", job_status.finished),
+                            SubStats("success", job_status.success),
+                            SubStats("progress", job_status.progress),
+                        ],
+                    )
+                )
+
         return out
 
     def copy_sharepage_to_remotes(self):
+        assert self.__rclone_client
+
         dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
         assert dlportal_source_path.is_file()
 
@@ -227,6 +250,8 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
     @hookimpl
     def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
+        assert self.__rclone_client
+
         share_links: list[str] = []
 
         if not self._config.common.enabled_share_links:
@@ -257,7 +282,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 try:
                     mediaitem_link = self.__rclone_client.publiclink(
                         f"{remote.name.rstrip(':')}:",
-                        get_corresponding_remote_file(filepath_local).as_posix(),
+                        f"{remote.subdir.rstrip('/')}/{get_corresponding_remote_file(filepath_local).as_posix()}",
                     ).link
                 except Exception as exc:
                     logger.warning(f"could not create public link due to error: {exc}")
