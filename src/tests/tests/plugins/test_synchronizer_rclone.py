@@ -59,7 +59,7 @@ def test_put_to_rclone_copy(sync: SynchronizerRclone):
     task = TaskCopy(Path("/local/file.txt"), Path("remote/file.txt"))
     sync._put_to_rclone_job_manager(task)
 
-    sync._rclone_client.copyfile_async.assert_called_once()
+    sync._rclone_client.copyfile_async.assert_called_once()  # type: ignore
 
 
 def test_put_to_rclone_delete(sync: SynchronizerRclone):
@@ -68,7 +68,7 @@ def test_put_to_rclone_delete(sync: SynchronizerRclone):
     task = TaskDelete(Path("remote/file.txt"))
     sync._put_to_rclone_job_manager(task)
 
-    sync._rclone_client.deletefile.assert_called_once()
+    sync._rclone_client.deletefile.assert_called_once()  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def test_put_to_rclone_delete(sync: SynchronizerRclone):
 def test_get_share_links_public(sync: SynchronizerRclone):
     sync.is_running = lambda: True
 
-    sync._rclone_client.publiclink.return_value.link = "https://remote/link"
+    sync._rclone_client.publiclink.return_value.link = "https://remote/link"  # type: ignore
 
     out = sync.get_share_links(Path("media/file.jpg"), uuid4())
     assert out == ["http://test123", "https://remote/link"]
@@ -102,7 +102,7 @@ def test_get_share_links_public_failure(sync):
 def test_get_stats_ok(sync: SynchronizerRclone):
     mock_client = sync._rclone_client
 
-    mock_client.core_stats.return_value = MagicMock(
+    mock_client.core_stats.return_value = MagicMock(  # type: ignore
         bytes=100,
         totalBytes=200,
         eta=10,
@@ -114,7 +114,7 @@ def test_get_stats_ok(sync: SynchronizerRclone):
         transferring=[],
     )
 
-    mock_client.job_list.return_value = MagicMock(runningIds=[5])
+    mock_client.job_list.return_value = MagicMock(runningIds=[5])  # type: ignore
 
     stats = sync.get_stats()
 
@@ -123,7 +123,7 @@ def test_get_stats_ok(sync: SynchronizerRclone):
 
 
 def test_get_stats_error(sync: SynchronizerRclone):
-    sync._rclone_client.core_stats.side_effect = Exception("fail")
+    sync._rclone_client.core_stats.side_effect = Exception("fail")  # type: ignore
 
     stats = sync.get_stats()
 
@@ -144,7 +144,7 @@ def test_copy_sharepage_to_remotes(sync: SynchronizerRclone):
 
         sync._copy_sharepage_to_remotes()
 
-        sync._rclone_client.copyfile_async.assert_called_once()
+        sync._rclone_client.copyfile_async.assert_called_once()  # type: ignore
 
 
 # ---------------------------------------------------------------------------
