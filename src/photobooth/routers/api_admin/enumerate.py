@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter
 
 from ... import USERDATA_PATH
-from ...utils.enumerate import serial_ports, webcameras
+from ...utils.enumerate import rclone_remotes, serial_ports, webcameras
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
@@ -28,3 +28,8 @@ def get_search(q: str = "") -> list[str]:
     sanitized_input = filenames_sanitize(f"{USERDATA_PATH}**/{search_pattern}").relative_to(Path.cwd())
 
     return [result for result in sorted(glob(str(sanitized_input), recursive=True)) if Path(result).is_file()]
+
+
+@router.get("/rclone_remotes")
+def api_get_rclone_remotes() -> list[str]:
+    return rclone_remotes()

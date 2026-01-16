@@ -101,7 +101,8 @@ class RemoteConfig(BaseModel):
     )
     name: str = Field(
         default="",
-        description="Name of the remote given during configuration.",
+        description="Name of the remote given during configuration. You need to setup the remote separately using the rclone cli or the web-interface at http://localhost:5572/",
+        json_schema_extra={"list_api": "/api/admin/enumerate/rclone_remotes"},
     )
     subdir: str = Field(
         default="",

@@ -3,26 +3,31 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from threading import Lock
 
 import serial.tools.list_ports
+from rclone_api.api import RcloneApi
 
 logger = logging.getLogger(__name__)
 
+enumerate_lock = Lock()  # only one enumeration at the same time to avoid HW access issues
+
 
 def serial_ports() -> list[str]:
-    ports = serial.tools.list_ports.comports()
-    logger.info(f"found serial ports: {[f'{port.device}: {port.description}' for port in ports]}")
-    pyserial_ports = [port.device for port in sorted(ports)]
+    with enumerate_lock:
+        ports = serial.tools.list_ports.comports()
+        logger.info(f"found serial ports: {[f'{port.device}: {port.description}' for port in ports]}")
+        pyserial_ports = [port.device for port in sorted(ports)]
 
-    # if avail on linux, add also by-id paths to the list for convenience.
-    serial_byid_paths = []
-    try:
-        serial_byid_paths = [str(path) for path in sorted(Path("/dev/serial/by-id/").glob("*"))]
-        logger.info(f"found serial by-id ports: {serial_byid_paths}")
-    except Exception:
-        pass
+        # if avail on linux, add also by-id paths to the list for convenience.
+        serial_byid_paths = []
+        try:
+            serial_byid_paths = [str(path) for path in sorted(Path("/dev/serial/by-id/").glob("*"))]
+            logger.info(f"found serial by-id ports: {serial_byid_paths}")
+        except Exception:
+            pass
 
-    return serial_byid_paths + pyserial_ports
+        return serial_byid_paths + pyserial_ports
 
 
 def webcameras() -> list[str]:
@@ -78,31 +83,44 @@ def webcameras() -> list[str]:
         camera_names: list[str] = re.findall(r"^\s{4}([^\n:]+):\s*$", result.stdout, re.MULTILINE)
         return [name.strip() for name in camera_names]
 
-    if sys.platform == "win32":
-        return _webcameras_windows()
-    elif sys.platform == "linux":
-        return _webcameras_linux()
-    elif sys.platform == "darwin":
-        return _webcameras_darwin()
-    else:
-        raise OSError("platform not supported to enumerate")
+    with enumerate_lock:
+        if sys.platform == "win32":
+            return _webcameras_windows()
+        elif sys.platform == "linux":
+            return _webcameras_linux()
+        elif sys.platform == "darwin":
+            return _webcameras_darwin()
+        else:
+            raise OSError("platform not supported to enumerate")
 
 
 def dslr_gphoto2() -> list[int]:
-    available_indexes: list[int] = []
+    with enumerate_lock:
+        available_indexes: list[int] = []
 
-    try:
-        import gphoto2 as gp  # type: ignore
-    except ImportError as exc:
-        raise RuntimeError("cannot enumerate gphoto2 cameras because not supported by platform or not installed.") from exc
+        try:
+            import gphoto2 as gp  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError("cannot enumerate gphoto2 cameras because not supported by platform or not installed.") from exc
 
-    camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
-    if len(camera_list) == 0:
-        logger.info("no camera detected")
-        return []
+        camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
+        if len(camera_list) == 0:
+            logger.info("no camera detected")
+            return []
 
-    for index, (name, addr) in enumerate(camera_list.items()):
-        available_indexes.append(index)
-        logger.info(f"found camera - {index}:  {addr}  {name}")
+        for index, (name, addr) in enumerate(camera_list.items()):
+            available_indexes.append(index)
+            logger.info(f"found camera - {index}:  {addr}  {name}")
 
-    return available_indexes
+        return available_indexes
+
+
+def rclone_remotes() -> list[str]:
+    with enumerate_lock:
+        rclone_api = RcloneApi(bind="localhost:5574")
+        rclone_api.start()
+        remotes = rclone_api.config_listremotes().remotes
+        rclone_api.stop()
+        logger.info(f"got remotes: {remotes}")
+
+        return remotes
