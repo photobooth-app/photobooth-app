@@ -135,13 +135,13 @@ class WigglecamBackend(AbstractBackend):
 
                 results[msg.device_id] = fpath
 
-            except pynng.exceptions.Timeout as exc:
+            except pynng.exceptions.Timeout:
                 if results:
                     missing = set(expected_device_ids) - results.keys()
                     logger.error(f"got partial results from device-ids {set(results)}, missing from device_ids {missing}!")
                 else:
                     logger.error("timeout waiting for hires stills, no results received!")
-                raise TimeoutError("timeout receiving stills from nodes") from exc
+                raise TimeoutError("timeout receiving stills from nodes") from None
 
         logger.info(f"Finished receiving images. Results from device-ids '{set(results)}' saved to {job_folder}")
 

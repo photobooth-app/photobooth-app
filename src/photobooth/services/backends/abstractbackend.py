@@ -239,22 +239,22 @@ class AbstractBackend(ResilientService, ABC):
         function blocks until high quality image is available
         """
 
-        for attempt in range(1, retries + 1):
+        attempt = 0
+        while True:
             try:
                 return self._wait_for_multicam_files()
             except NotImplementedError:
                 # backend does not support, immediately reraise and done.
                 raise
             except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"error capture image. {attempt=}/{retries}, retrying")
-                continue
+                attempt += 1
 
-        else:
-            # we failed finally all the attempts - deal with the consequences.
-            logger.critical(f"finally failed after {retries} attempts to capture image!")
-
-            raise RuntimeError(f"finally failed after {retries} attempts to capture image!")
+                if attempt <= retries:
+                    logger.error(f"Error {exc} during capture. {attempt=}/{retries}")
+                    continue
+                else:
+                    # we failed finally all the attempts - deal with the consequences.
+                    raise RuntimeError(f"finally failed after {retries} attempts to capture image!") from exc
 
     def wait_for_still_file(self, retries: int = 3) -> Path:
         """
@@ -269,11 +269,10 @@ class AbstractBackend(ResilientService, ABC):
             except Exception as exc:
                 attempt += 1
                 if attempt <= retries:
-                    logger.warning(f"capture image in {attempt=}/{retries}. retrying.")
+                    logger.error(f"Error {exc} during capture. {attempt=}/{retries}")
                     continue
                 else:
                     # we failed finally all the attempts - deal with the consequences.
-                    logger.exception(exc)
                     raise RuntimeError(f"finally failed after {retries} attempts to capture image!") from exc
 
     def pause_wait_for_lores_while_hires_capture(self):
