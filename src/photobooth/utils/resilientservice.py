@@ -44,7 +44,7 @@ class ResilientService(ABC):
 
     def _report_crash(self, exc: Exception):
         logger.exception(exc)
-        logger.critical(f"normal service op interrupted, error: {exc}")
+        logger.critical(f"service crashed, error: {exc}")
 
     def _run(self):
         attempt = 0
@@ -76,6 +76,8 @@ class ResilientService(ABC):
                     raise ServiceCrashedPermanently(e) from e
                 except Exception as e:
                     self._report_crash(e)
+
+                    raise ServiceCrashedTemporarily(e) from e
 
                 # if the run finished regular, in teardown
                 try:
