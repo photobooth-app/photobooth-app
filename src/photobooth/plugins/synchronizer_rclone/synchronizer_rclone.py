@@ -94,7 +94,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
                 job = self.__rclone_client.sync_async(
                     str(Path(MEDIA_PATH).absolute()),
-                    f"{remote.name.rstrip(':')}:{remote.subdir.rstrip('/')}/{get_corresponding_remote_file(Path(MEDIA_PATH))}",
+                    f"{remote.name.rstrip(':')}:{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
                 )
 
                 full_sync_jobids.append(job.jobid)
@@ -132,13 +132,13 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                         str(Path.cwd().absolute()),
                         f"{task.file_local}",
                         f"{remote.name.rstrip(':')}:",
-                        f"{remote.subdir.rstrip('/')}/{task.file_remote}",
+                        Path(remote.subdir, task.file_remote).as_posix(),
                     )
 
                 elif isinstance(task, TaskDelete):
                     self.__rclone_client.deletefile(
                         f"{remote.name.rstrip(':')}:",
-                        f"{remote.subdir.rstrip('/')}/{task.file_remote}",
+                        Path(remote.subdir, task.file_remote).as_posix(),
                     )
                 # else never as per typing
             except Exception as exc:
@@ -240,7 +240,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 dlportal_source_path.parent.absolute().as_posix(),
                 dlportal_source_path.name,
                 f"{remote.name.rstrip(':')}:",
-                f"{remote.subdir.rstrip('/')}/{dlportal_source_path.name}",
+                Path(remote.subdir, dlportal_source_path.name).as_posix(),
             )
 
     @hookimpl
@@ -280,7 +280,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 try:
                     mediaitem_link = self.__rclone_client.publiclink(
                         f"{remote.name.rstrip(':')}:",
-                        f"{remote.subdir.rstrip('/')}/{get_corresponding_remote_file(filepath_local).as_posix()}",
+                        Path(remote.subdir, get_corresponding_remote_file(filepath_local)).as_posix(),
                     ).link
                 except Exception as exc:
                     logger.warning(f"could not create public link due to error: {exc}")
