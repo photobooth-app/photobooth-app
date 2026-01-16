@@ -32,7 +32,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         super().__init__()
         self._config = SynchronizerConfig()
 
-        self.__rclone_client: RcloneApi | None = None
+        self._rclone_client: RcloneApi | None = None
         self._stats = Stats()
 
     def __str__(self):
@@ -44,7 +44,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             logger.info("Synchronizer Plugin is disabled")
             return
 
-        self.__rclone_client = RcloneApi(
+        self._rclone_client = RcloneApi(
             log_file=Path("log/rclone.log") if self._config.rclone_client_config.rclone_enable_logging else None,
             log_level=self._config.rclone_client_config.rclone_log_level,
             transfers=self._config.rclone_client_config.rclone_transfers,
@@ -60,23 +60,23 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         super().stop()
 
     def setup_resource(self):
-        assert self.__rclone_client
+        assert self._rclone_client
 
-        self.__rclone_client.start()
+        self._rclone_client.start()
 
     def teardown_resource(self):
-        if self.__rclone_client:
-            self.__rclone_client.stop()
+        if self._rclone_client:
+            self._rclone_client.stop()
 
     def wait_until_ready(self, timeout: float = 5) -> None:
-        if self.__rclone_client:
-            self.__rclone_client.wait_until_operational(timeout)
+        if self._rclone_client:
+            self._rclone_client.wait_until_operational(timeout)
 
     def run_service(self):
         sync_every_x_seconds = 60 * self._config.common.full_sync_interval
         slept_counter = 0
         sleep_time = 0.5
-        assert self.__rclone_client
+        assert self._rclone_client
 
         self._copy_sharepage_to_remotes()
 
@@ -92,7 +92,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 if not (remote.enabled and remote.enable_regular_sync):
                     continue
 
-                job = self.__rclone_client.sync_async(
+                job = self._rclone_client.sync_async(
                     str(Path(MEDIA_PATH).absolute()),
                     f"{remote.name.rstrip(':')}:{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
                 )
@@ -102,7 +102,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             ## wait until finished - TODO: maybe stop if an immediate sync is requested.
             if full_sync_jobids:
                 logger.info("Regular full sync triggered")
-                self.__rclone_client.wait_for_jobs(full_sync_jobids)
+                self._rclone_client.wait_for_jobs(full_sync_jobids)
                 logger.info("All enabled full sync jobs finished, going to sleep now.")
 
             ## Sleeping phase
@@ -120,7 +120,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         if not self.is_running():
             return
 
-        assert self.__rclone_client
+        assert self._rclone_client
 
         for remote in self._config.remotes:
             if not (remote.enabled and remote.enable_immediate_sync):
@@ -128,7 +128,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
             try:
                 if isinstance(task, TaskCopy):
-                    self.__rclone_client.copyfile_async(
+                    self._rclone_client.copyfile_async(
                         str(Path.cwd().absolute()),
                         f"{task.file_local}",
                         f"{remote.name.rstrip(':')}:",
@@ -136,7 +136,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     )
 
                 elif isinstance(task, TaskDelete):
-                    self.__rclone_client.deletefile(
+                    self._rclone_client.deletefile(
                         f"{remote.name.rstrip(':')}:",
                         Path(remote.subdir, task.file_remote).as_posix(),
                     )
@@ -152,11 +152,11 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             # avoids display of an empty stats object in the admin dashboard
             return None
 
-        assert self.__rclone_client
+        assert self._rclone_client
 
         try:
-            core_stats = self.__rclone_client.core_stats()
-            job_list = self.__rclone_client.job_list()
+            core_stats = self._rclone_client.core_stats()
+            job_list = self._rclone_client.job_list()
         except Exception as exc:
             return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", f"Cannot gather stats, reason: {exc}")])
 
@@ -206,7 +206,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             )
 
         for running_jobid in sorted(job_list.runningIds):
-            job_status = self.__rclone_client.job_status(running_jobid)
+            job_status = self._rclone_client.job_status(running_jobid)
 
             if not job_status.finished:
                 out.stats.append(
@@ -224,7 +224,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         return out
 
     def _copy_sharepage_to_remotes(self):
-        assert self.__rclone_client
+        assert self._rclone_client
 
         dlportal_source_path = Path(str(resources.files("web").joinpath("sharepage/index.html")))
         assert dlportal_source_path.is_file()
@@ -236,7 +236,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             # add to queue for later upload.
             # this way if no internet the startup is not causing issues preventing the complete app from startup
             logger.info(f"update shareportal to {remote.name}/{remote.subdir}")
-            self.__rclone_client.copyfile_async(
+            self._rclone_client.copyfile_async(
                 dlportal_source_path.parent.absolute().as_posix(),
                 dlportal_source_path.name,
                 f"{remote.name.rstrip(':')}:",
@@ -248,7 +248,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         if not self.is_running():
             return []
 
-        assert self.__rclone_client
+        assert self._rclone_client
 
         share_links: list[str] = []
 
@@ -278,7 +278,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                 )
             else:
                 try:
-                    mediaitem_link = self.__rclone_client.publiclink(
+                    mediaitem_link = self._rclone_client.publiclink(
                         f"{remote.name.rstrip(':')}:",
                         Path(remote.subdir, get_corresponding_remote_file(filepath_local)).as_posix(),
                     ).link
