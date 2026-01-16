@@ -46,23 +46,29 @@ class WigglecamBackend(AbstractBackend):
 
         # host also subscribes to the hires replies
         self._pub_trigger = pynng.Pub0()
+        self._pub_trigger.tcp_keepalive = True  # after several hours network connection could be dropped without data, TODO: check if fixes
+        self._pub_trigger.tcp_nodelay = True  # trigger shall send immediately, no msg queueing
         self._pub_trigger.add_post_pipe_connect_cb(cb_connected)
         for node in self._config.devices:
             self._pub_trigger.dial(f"tcp://{node.address}:{node.base_port + 0}", block=False)
 
         # Listen for lores streams
-        self._sub_lores = pynng.Sub0(recv_max_size=0)  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
+        self._sub_lores = pynng.Sub0()
         self._sub_lores.add_post_pipe_connect_cb(cb_connected)
         self._sub_lores.subscribe(b"")
+        self._sub_lores.tcp_keepalive = True  # after several hours network connection could be dropped without data, TODO: check if fixes
         self._sub_lores.recv_timeout = 1000
+        self._sub_lores.recv_max_size = 0  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
         for node in self._config.devices:
             self._sub_lores.dial(f"tcp://{node.address}:{node.base_port + 1}", block=False)
 
-        # Setup Sub for hires
-        self._sub_hires = pynng.Sub0(recv_max_size=0)  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
+        # Listen for hires captures
+        self._sub_hires = pynng.Sub0()
         self._sub_hires.add_post_pipe_connect_cb(cb_connected)
         self._sub_hires.subscribe(b"")
+        self._sub_hires.tcp_keepalive = True  # after several hours network connection could be dropped without data, TODO: check if fixes
         self._sub_hires.recv_timeout = 3000
+        self._sub_hires.recv_max_size = 0  # 0 indicates indefinite max_size, otherwise >1MB is silently ignored
         for node in self._config.devices:
             self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
