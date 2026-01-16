@@ -16,6 +16,7 @@ from av.video.reformatter import Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
 from ...utils.helper import filename_str_time
+from ...utils.resilientservice import PermanentFault
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
@@ -145,15 +146,15 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"pyav frame received: {frame}")
                 logger.info(f"frame format: {frame.format}")
             except Exception as exc:
-                logger.exception(exc)
-                raise RuntimeError("error decoding camera frame! please ensure the settings are correct (device name, fps, resolution, ...)") from exc
+                raise PermanentFault("Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)") from exc
+
+            codec_name = input_stream.codec.name
 
             for frame in input_device.decode(input_stream):
                 # hires
                 if self._hires_data.request.is_set():
                     self._hires_data.request.clear()
 
-                    codec_name = input_stream.codec.name
                     if codec_name == "mjpeg":
                         jpeg_bytes_hires = bytes(next(input_device.demux()))
                     elif codec_name == "rawvideo":
@@ -161,7 +162,7 @@ class WebcamPyavBackend(AbstractBackend):
                         frame.to_image().save(image_bytesio, format="JPEG", quality=90)
                         jpeg_bytes_hires = image_bytesio.getvalue()
                     else:
-                        raise RuntimeError(f"The webcams output codec {codec_name} is not supported!")
+                        raise PermanentFault(f"The webcam's codec {codec_name} is not supported!")
 
                     # only capture one pic and return to lores streaming afterwards
                     with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
