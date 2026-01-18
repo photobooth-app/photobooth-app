@@ -1,7 +1,11 @@
+import logging
+
 import cv2
 import pytest
 from PIL import Image
 from PIL.Image import Resampling
+
+logger = logging.getLogger(__name__)
 
 
 def pil_resize(img: Image.Image, mode: Resampling):
@@ -9,10 +13,7 @@ def pil_resize(img: Image.Image, mode: Resampling):
     img.resize((int(img.width / 2), int(img.height / 2)), resample=mode)
 
 
-def cv2_resize(img: str, mode):
-    img_np = cv2.imread(img, cv2.IMREAD_COLOR)
-    assert img_np is not None
-
+def cv2_resize(img_np, mode):
     scale_percent = 50  # percent of original size
     width = int(img_np.shape[1] * scale_percent / 100)
     height = int(img_np.shape[0] * scale_percent / 100)
@@ -26,6 +27,7 @@ def cv2_resize(img: str, mode):
 @pytest.mark.benchmark(group="resize_algo")
 def test_pil_resize(name, mode, benchmark):
     img = Image.open("src/tests/assets/input.jpg")
+    img.load()
     benchmark(pil_resize, img=img, mode=mode)
 
 
@@ -44,4 +46,6 @@ def test_pil_resize(name, mode, benchmark):
 @pytest.mark.benchmark(group="resize_algo")
 def test_cv2_resize(name, mode, benchmark):
     img = "src/tests/assets/input.jpg"
-    benchmark(cv2_resize, img=img, mode=mode)
+    img_np = cv2.imread(img, cv2.IMREAD_COLOR)
+    assert img_np is not None
+    benchmark(cv2_resize, img_np=img_np, mode=mode)
