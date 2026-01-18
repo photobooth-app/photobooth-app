@@ -38,6 +38,7 @@ def cv2_crop(jpeg_bytes, tmp_path):
     # convert to cv2 format that can be resized by cv2
     nparr = numpy.frombuffer(jpeg_bytes, numpy.uint8)
     img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    assert img_np
 
     cropped_img = img_np[8 : 8 + 64, 8 : 8 + 64]
 
