@@ -231,7 +231,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
             # add to queue for later upload.
             # this way if no internet the startup is not causing issues preventing the complete app from startup
-            logger.info(f"update shareportal to {remote.name}/{remote.subdir}")
+            logger.info(f"update shareportal to {remote.name}{remote.subdir}")
             self._rclone_client.copyfile_async(
                 dlportal_source_path.parent.absolute().as_posix(),
                 dlportal_source_path.name,

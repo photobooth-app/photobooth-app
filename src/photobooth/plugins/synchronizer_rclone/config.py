@@ -101,7 +101,7 @@ class RemoteConfig(BaseModel):
     )
     name: str = Field(
         default="",
-        description="Name of the remote given during configuration including the ':' at the end. You need to setup the remote separately using the rclone web-ui at http://localhost:5572/. To sync to local folders select '/' and use subdir as target.",
+        description="Name of the remote given during configuration including the ':' at the end. You need to setup the remote separately using the rclone web-ui at http://localhost:5572/. To sync to local folders set '/' (Linux) or 'C:\\' (Windows) and use subdir as target.",
         json_schema_extra={"list_api": "/api/admin/enumerate/rclone_remotes"},
     )
     subdir: str = Field(

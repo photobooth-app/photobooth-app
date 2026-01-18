@@ -1,4 +1,5 @@
 import logging
+import sys
 from glob import glob
 from pathlib import Path
 
@@ -33,4 +34,4 @@ def get_search(q: str = "") -> list[str]:
 @router.get("/rclone_remotes")
 def api_get_rclone_remotes() -> list[str]:
     remotes = [f"{r}:" for r in rclone_remotes()]
-    return ["/"] + remotes
+    return ["C:\\" if sys.platform == "win32" else "/"] + remotes
