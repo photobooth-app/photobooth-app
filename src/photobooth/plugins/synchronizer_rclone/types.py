@@ -6,15 +6,8 @@ from typing import TypeAlias
 
 @dataclass
 class Stats:
-    check_active: bool = False
     last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
-    last_duration: float | None = None
     next_check: datetime | None = None
-    files_queued_last_check: int = 0
-
-    def update(self, record: dict):
-        # receives updates from rclone via listener.
-        ...
 
 
 @dataclass
@@ -39,6 +32,3 @@ class TaskDelete:
 
 
 TaskSyncType: TypeAlias = TaskCopy | TaskDelete
-
-# taskSyncType: TypeAlias = TaskCopy | TaskDelete
-# taskSyncType:type = TaskCopy | TaskDelete

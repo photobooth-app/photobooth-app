@@ -32,4 +32,5 @@ def get_search(q: str = "") -> list[str]:
 
 @router.get("/rclone_remotes")
 def api_get_rclone_remotes() -> list[str]:
-    return rclone_remotes()
+    remotes = [f"{r}:" for r in rclone_remotes()]
+    return ["/"] + remotes

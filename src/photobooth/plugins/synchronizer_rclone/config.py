@@ -101,12 +101,12 @@ class RemoteConfig(BaseModel):
     )
     name: str = Field(
         default="",
-        description="Name of the remote given during configuration. You need to setup the remote separately using the rclone cli or the web-interface at http://localhost:5572/",
+        description="Name of the remote given during configuration including the ':' at the end. You need to setup the remote separately using the rclone web-ui at http://localhost:5572/. To sync to local folders select '/' and use subdir as target.",
         json_schema_extra={"list_api": "/api/admin/enumerate/rclone_remotes"},
     )
     subdir: str = Field(
         default="",
-        description="Subdir that is used as base to sync to. In this directory the sharepage (subdir/index.html) and mediafiles (subdir/media/) will be placed.",
+        description="Subdir that is used as base to sync to. In this directory the sharepage (subdir/index.html) and mediafiles (subdir/media/) will be placed. WARNING: This directory is owned by the app - it will delete unknown files!",
     )
 
     enable_immediate_sync: bool = Field(

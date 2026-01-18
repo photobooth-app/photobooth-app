@@ -1,6 +1,5 @@
 import logging
 import time
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from importlib import resources
 from pathlib import Path
@@ -15,16 +14,10 @@ from ...utils.resilientservice import ResilientService
 from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import SynchronizerConfig
-from .types import TaskCopy, TaskDelete, TaskSyncType
+from .types import Stats, TaskCopy, TaskDelete, TaskSyncType
 from .utils import get_corresponding_remote_file
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Stats:
-    last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
-    next_check: datetime | None = None
 
 
 class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
@@ -94,7 +87,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
                 job = self._rclone_client.sync_async(
                     str(Path(MEDIA_PATH).absolute()),
-                    f"{remote.name.rstrip(':')}:{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
+                    f"{remote.name}{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
                 )
 
                 full_sync_jobids.append(job.jobid)
@@ -131,13 +124,13 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     self._rclone_client.copyfile_async(
                         str(Path.cwd().absolute()),
                         f"{task.file_local}",
-                        f"{remote.name.rstrip(':')}:",
+                        remote.name,
                         Path(remote.subdir, task.file_remote).as_posix(),
                     )
 
                 elif isinstance(task, TaskDelete):
                     self._rclone_client.deletefile(
-                        f"{remote.name.rstrip(':')}:",
+                        remote.name,
                         Path(remote.subdir, task.file_remote).as_posix(),
                     )
                 # else never as per typing
@@ -239,7 +232,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             self._rclone_client.copyfile_async(
                 dlportal_source_path.parent.absolute().as_posix(),
                 dlportal_source_path.name,
-                f"{remote.name.rstrip(':')}:",
+                remote.name,
                 Path(remote.subdir, dlportal_source_path.name).as_posix(),
             )
 
@@ -279,16 +272,16 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             else:
                 try:
                     mediaitem_link = self._rclone_client.publiclink(
-                        f"{remote.name.rstrip(':')}:",
+                        remote.name,
                         Path(remote.subdir, get_corresponding_remote_file(filepath_local)).as_posix(),
                     ).link
                 except Exception as exc:
-                    logger.warning(f"could not create public link due to error: {exc}")
+                    logger.error(f"could not create public link due to error: {exc}")
 
             if not mediaitem_link:
                 logger.error(
-                    f"could not generate a link for {filepath_local} using remote {remote.name}. "
-                    "If the remote does not support public links, you need to provide an override or use a different provider."
+                    f"could not generate a link for {filepath_local.name} using remote {remote.name}. "
+                    "If the remote does not support public links, you need to provide a manual url override or use a different provider."
                 )
                 continue
 
