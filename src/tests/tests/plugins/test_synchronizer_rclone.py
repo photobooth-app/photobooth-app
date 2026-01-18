@@ -41,11 +41,18 @@ def sync():
 # ---------------------------------------------------------------------------
 
 
-def test_service(sync: SynchronizerRclone):
-    sync.start()
-    sync.wait_until_ready()
+def test_service_real():
+    sr = SynchronizerRclone()
 
-    sync.stop()
+    cfg = SynchronizerConfig()
+    cfg.common.enabled = True
+
+    sr._config = cfg
+
+    sr.start()
+    sr.wait_until_ready()
+
+    sr.stop()
 
 
 # ---------------------------------------------------------------------------

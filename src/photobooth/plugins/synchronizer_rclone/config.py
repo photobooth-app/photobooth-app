@@ -140,7 +140,7 @@ class SynchronizerConfig(BaseConfig):
         RemoteConfig(
             enabled=False,
             description="demo localremote",
-            name="localremote",
+            name="/",
             subdir="tmp/localsync",
             shareconfig=ShareConfig(),
         )

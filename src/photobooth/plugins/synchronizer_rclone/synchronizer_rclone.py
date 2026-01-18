@@ -62,6 +62,9 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             self._rclone_client.stop()
 
     def wait_until_ready(self, timeout: float = 5) -> None:
+        if not self._rclone_client:
+            raise RuntimeError("cannot wait for the service to be ready if not enabled and started before!")
+
         if self._rclone_client:
             self._rclone_client.wait_until_operational(timeout)
 
