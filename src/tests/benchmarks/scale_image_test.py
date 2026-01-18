@@ -1,7 +1,6 @@
 import io
 import logging
 from collections.abc import Generator
-from subprocess import PIPE, Popen
 
 import cv2
 import numpy
@@ -14,29 +13,6 @@ turbojpeg = TurboJPEG()
 logger = logging.getLogger(name=None)
 
 
-def ffmpeg_scale(jpeg_bytes, tmp_path):
-    ffmpeg_subprocess = Popen(
-        [
-            "ffmpeg",
-            "-y",  # overwrite with no questions
-            "-f",  # force input or output format
-            "image2pipe",
-            "-i",
-            "-",
-            "-vf",
-            "scale='iw/2:ih/2'",  # bicubic
-            str(tmp_path / "ffmpeg_scale.jpg"),  # https://docs.python.org/3/library/pathlib.html#operators
-        ],
-        stdin=PIPE,
-    )
-    assert ffmpeg_subprocess.stdin
-    ffmpeg_subprocess.stdin.write(jpeg_bytes)
-    ffmpeg_subprocess.stdin.close()
-    code = ffmpeg_subprocess.wait()
-    if code != 0:
-        raise AssertionError("process fail")
-
-
 def simplejpeg_scale(jpeg_bytes, tmp_path):
     decoded_img = decode_jpeg(jpeg_bytes, min_height=1300)  # half the height of original
     bytes = encode_jpeg(
@@ -44,7 +20,7 @@ def simplejpeg_scale(jpeg_bytes, tmp_path):
         quality=85,
         fastdct=True,
     )
-    with open(tmp_path / "scaled.jpg", "wb") as file:
+    with open(tmp_path / "simplejpeg.jpg", "wb") as file:
         file.write(bytes)
 
 
@@ -53,7 +29,7 @@ def turbojpeg_scale(jpeg_bytes, tmp_path):
     # 85=default quality
     bytes = turbojpeg.scale_with_quality(jpeg_bytes, quality=85, scaling_factor=(1, 2), flags=TJFLAG_FASTDCT)
 
-    with open(tmp_path / "scaled.jpg", "wb") as file:
+    with open(tmp_path / "turbojpeg.jpg", "wb") as file:
         file.write(bytes)
 
 
@@ -68,14 +44,14 @@ def pillow_scale(jpeg_bytes, tmp_path):
     height = int(image.height * scale_percent / 100)
     dim = (width, height)
     # https://pillow.readthedocs.io/en/latest/handbook/concepts.html#filters-comparison-table
-    image.thumbnail(dim, Image.Resampling.BICUBIC)  # bicubic for comparison
+    image.thumbnail(dim, Image.Resampling.NEAREST)  # bicubic for comparison
 
     # encode to jpeg again
     byte_io = io.BytesIO()
     image.save(byte_io, format="JPEG", quality=85)
     bytes = byte_io.getbuffer()
 
-    with open(tmp_path / "scaled.jpg", "wb") as file:
+    with open(tmp_path / "pillow.jpg", "wb") as file:
         file.write(bytes)
 
 
@@ -91,14 +67,14 @@ def cv2_scale(jpeg_bytes, tmp_path):
     dim = (width, height)
 
     # resize image
-    img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_CUBIC)  # bicubic
+    img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_LINEAR)  # bicubic
 
     # and encode to jpeg again
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
     result, encimg = cv2.imencode(".jpg", img_np_resized, encode_param)
 
     bytes = encimg.tobytes()
-    with open(tmp_path / "scaled.jpg", "wb") as file:
+    with open(tmp_path / "cv2.jpg", "wb") as file:
         file.write(bytes)
 
 
@@ -108,7 +84,6 @@ def cv2_scale(jpeg_bytes, tmp_path):
         "simplejpeg_scale",
         "pillow_scale",
         "cv2_scale",
-        "ffmpeg_scale",
     ]
 )
 def library(request):
@@ -143,3 +118,10 @@ def test_scale_hires(library, image_hires, benchmark, tmp_path):
 def test_scale_lores(library, image_lores, benchmark, tmp_path):
     benchmark(eval(library), jpeg_bytes=image_lores, tmp_path=tmp_path)
     assert True
+
+
+def test_quality_compare_hires(image_hires, tmp_path):
+    turbojpeg_scale(jpeg_bytes=image_hires, tmp_path=tmp_path)
+    simplejpeg_scale(jpeg_bytes=image_hires, tmp_path=tmp_path)
+    pillow_scale(jpeg_bytes=image_hires, tmp_path=tmp_path)
+    cv2_scale(jpeg_bytes=image_hires, tmp_path=tmp_path)
