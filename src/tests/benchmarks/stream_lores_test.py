@@ -144,7 +144,7 @@ def pyav_cv2_scale():
 
             nparr = numpy.frombuffer(bytes(packet), numpy.uint8)
             img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            assert img_np
+            assert img_np is not None
 
             scale_percent = 50  # percent of original size
             width = int(img_np.shape[1] * scale_percent / 100)

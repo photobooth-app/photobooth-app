@@ -178,7 +178,7 @@ def test_exif_transpose():
     assert Image.open(updated_jpeg_bytes_io).size == dim  # dim is not reversed because exif_transpose was not applied
 
     img_transposed = ImageOps.exif_transpose(Image.open(jpeg_bytes_io))
-    assert img_transposed
+    assert img_transposed is not None
     assert img_transposed.size == dim  # no orientation flag here, so same as input.
     update_img_transpose = ImageOps.exif_transpose(Image.open(updated_jpeg_bytes_io))
     assert update_img_transpose

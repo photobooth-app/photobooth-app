@@ -83,7 +83,7 @@ def cv2_scale(jpeg_bytes, tmp_path):
     # convert to cv2 format that can be resized by cv2
     nparr = numpy.frombuffer(jpeg_bytes, numpy.uint8)
     img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    assert img_np
+    assert img_np is not None
 
     scale_percent = 50  # percent of original size
     width = int(img_np.shape[1] * scale_percent / 100)
