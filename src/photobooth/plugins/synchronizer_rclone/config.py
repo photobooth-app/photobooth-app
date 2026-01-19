@@ -1,3 +1,4 @@
+import sys
 from platform import node
 from typing import Literal
 
@@ -140,7 +141,7 @@ class SynchronizerConfig(BaseConfig):
         RemoteConfig(
             enabled=False,
             description="demo localremote",
-            name="/",
+            name="C:\\" if sys.platform == "win32" else "/",
             subdir="tmp/localsync",
             shareconfig=ShareConfig(),
         )
