@@ -3,8 +3,8 @@ import subprocess
 import time
 from unittest.mock import patch
 
-import niquests
 import pytest
+import requests
 from pydantic import HttpUrl
 from statemachine import Event, State
 
@@ -164,7 +164,7 @@ def test_invoke_command_error(commander_plugin: Commander):
 
 
 def test_invoke_http(commander_plugin: Commander):
-    with patch.object(niquests, "request") as mock_requests_request:
+    with patch.object(requests, "request") as mock_requests_request:
         for req in commander_plugin._config.tasks_httprequests:
             commander_plugin.invoke_httprequest(req, "finished", None)
 
@@ -174,16 +174,16 @@ def test_invoke_http(commander_plugin: Commander):
 
 
 def test_invoke_http_error(commander_plugin: Commander):
-    with patch.object(niquests, "request", side_effect=RuntimeError("mocked,swallowed")) as mock_req:
+    with patch.object(requests, "request", side_effect=RuntimeError("mocked,swallowed")) as mock_req:
         commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()
 
-    fake_response = niquests.Response()
+    fake_response = requests.Response()
     fake_response.status_code = 500
-    with patch.object(niquests, "request", side_effect=niquests.exceptions.HTTPError(response=fake_response)) as mock_req:
+    with patch.object(requests, "request", side_effect=requests.exceptions.HTTPError(response=fake_response)) as mock_req:
         commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()
 
-    with patch.object(niquests, "request", side_effect=niquests.exceptions.RequestException()) as mock_req:
+    with patch.object(requests, "request", side_effect=requests.exceptions.RequestException()) as mock_req:
         commander_plugin.invoke_httprequest(TaskHttpRequest(url=HttpUrl("http://127.0.0.1/"), wait_until_completed=True), "finished", None)
         mock_req.assert_called()

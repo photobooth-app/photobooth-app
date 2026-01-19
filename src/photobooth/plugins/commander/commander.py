@@ -3,7 +3,7 @@ import subprocess
 import threading
 import time
 
-import niquests
+import requests
 from statemachine import Event, State
 
 from ...database.models import MediaitemTypes
@@ -75,7 +75,7 @@ class ThreadUrl(threading.Thread):
             req_data = self.body_params
 
         try:
-            r = niquests.request(
+            r = requests.request(
                 method=self.method,
                 url=self.url,
                 params=self.query_params,
@@ -86,9 +86,9 @@ class ThreadUrl(threading.Thread):
 
             r.raise_for_status()
 
-        except niquests.exceptions.HTTPError as exc:
+        except requests.exceptions.HTTPError as exc:
             logger.error(f"http request sent but remote returned error code {exc.response.status_code if exc.response else 'None'}, error {exc}")
-        except niquests.exceptions.RequestException as exc:  # catches .Timeout | .TooManyRedirects | .ConnectionError
+        except requests.exceptions.RequestException as exc:  # catches .Timeout | .TooManyRedirects | .ConnectionError
             logger.error(f"error sending http request, error {exc}")
         except Exception as exc:
             logger.error(f"unknown error in http request, error {exc}")

@@ -160,7 +160,6 @@ class LoggingService(BaseService):
             "PIL",
             "multipart",
             "requests",
-            "niquests",
             "urllib3",
             "urllib3_future",
             "pynng",

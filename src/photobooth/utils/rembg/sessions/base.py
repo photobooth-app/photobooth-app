@@ -2,9 +2,9 @@ import hashlib
 import logging
 from pathlib import Path
 
-import niquests
 import numpy as np
 import onnxruntime as ort
+import requests
 from PIL import Image
 from PIL.Image import Image as PILImage
 
@@ -95,7 +95,7 @@ class BaseSession:
         if not hash or hash != hash_valid:
             logger.info(f"downloading model {fpath.name}, depending on the internet connection and model size this may take some time!")
 
-            with niquests.get(url, stream=True) as r:
+            with requests.get(url, stream=True) as r:
                 r.raise_for_status()
                 with open(fpath, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
