@@ -14,7 +14,6 @@ from .baseconfig import BaseConfig
 from .groups.actions import GroupActions
 from .groups.cameras import GroupCameras
 from .groups.common import GroupCommon
-from .groups.filetransfer import GroupFileTransfer
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
 from .groups.mediaprocessing import GroupMediaprocessing
 from .groups.misc import GroupMisc
@@ -48,7 +47,6 @@ class AppConfig(BaseConfig):
     actions: GroupActions = GroupActions()
     share: GroupShare = GroupShare()
     qrshare: GroupQrShare = GroupQrShare()
-    filetransfer: GroupFileTransfer = GroupFileTransfer()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupCameras = GroupCameras()
