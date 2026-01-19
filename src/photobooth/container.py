@@ -10,6 +10,7 @@ from .services.information import InformationService
 from .services.logging import LoggingService
 from .services.pluginmanager import PluginManagerService
 from .services.processing import ProcessingService
+from .services.qrshare import QrShareService
 from .services.share import ShareService
 from .services.system import SystemService
 
@@ -28,6 +29,7 @@ class Container:
     system_service = SystemService()
     share_service = ShareService()
     gpio_service = GpioService(processing_service, share_service, mediacollection_service)
+    qr_share_service = QrShareService(mediacollection_service)
     config_service = ConfigurationService(pluginmanager_service)
 
     _lock_startstop = Lock()

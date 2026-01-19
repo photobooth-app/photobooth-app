@@ -17,6 +17,7 @@ from .groups.common import GroupCommon
 from .groups.hardwareinputoutput import GroupHardwareInputOutput
 from .groups.mediaprocessing import GroupMediaprocessing
 from .groups.misc import GroupMisc
+from .groups.qrshare import GroupQrShare
 from .groups.share import GroupShare
 from .groups.uisettings import GroupUiSettings
 
@@ -45,6 +46,7 @@ class AppConfig(BaseConfig):
     common: GroupCommon = GroupCommon()
     actions: GroupActions = GroupActions()
     share: GroupShare = GroupShare()
+    qrshare: GroupQrShare = GroupQrShare()
     mediaprocessing: GroupMediaprocessing = GroupMediaprocessing()
     uisettings: GroupUiSettings = GroupUiSettings()
     backends: GroupCameras = GroupCameras()
