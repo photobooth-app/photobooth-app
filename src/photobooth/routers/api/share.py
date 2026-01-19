@@ -52,7 +52,4 @@ def api_download_item_id_get_sharelinks(id: UUID):  # -> list[str]:
     pluggy_links = pluggy_pm.hook.get_share_links(filepath_local=requested_mediaitem.processed, identifier=requested_mediaitem.id)
     pluggy_links_flatten = [x for xs in pluggy_links for x in xs]
 
-    # deprecated qrshare service
-    qrcodeservice_link = container.qr_share_service.get_share_link(identifier=requested_mediaitem.id, filename=requested_mediaitem.processed.name)
-
-    return qrcodeservice_link + pluggy_links_flatten
+    return pluggy_links_flatten
