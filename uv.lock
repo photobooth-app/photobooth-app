@@ -983,7 +983,7 @@ wheels = [
 
 [[package]]
 name = "photobooth-app"
-version = "8.7.0"
+version = "9.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
