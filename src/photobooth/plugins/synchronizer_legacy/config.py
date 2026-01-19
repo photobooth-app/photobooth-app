@@ -11,7 +11,7 @@ from ...services.config.serializer import contextual_serializer_password
 
 class Common(BaseModel):
     model_config = SettingsConfigDict(
-        title="Common (PLUGIN DEPRECATED IN v9)",
+        title="Common (PLUGIN DEPRECATED IN v8.7.0)",
     )
     enabled: bool = Field(
         default=False,
@@ -189,7 +189,7 @@ class Backend(BaseModel):
 
 class SynchronizerConfig(BaseConfig):
     model_config = SettingsConfigDict(
-        title="Synchronizer and Share-Link Generation (DEPRECATED IN v9)",
+        title="Synchronizer and Share-Link Generation (DEPRECATED IN v8.7.0)",
         json_file=f"{CONFIG_PATH}plugin_synchronizer.json",
         env_prefix="synchronizer-",
     )
