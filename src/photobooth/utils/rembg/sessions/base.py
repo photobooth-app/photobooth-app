@@ -9,6 +9,7 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 
 logger = logging.getLogger(__name__)
+ort.disable_telemetry_events()  # https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md
 
 
 class BaseSession:

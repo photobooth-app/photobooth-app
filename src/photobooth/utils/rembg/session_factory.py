@@ -5,6 +5,8 @@ import onnxruntime as ort
 from .sessions import sessions_class
 from .sessions.base import BaseSession
 
+ort.disable_telemetry_events()  # https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md
+
 
 def new_session(model_name: str = "modnet", *args, **kwargs) -> BaseSession:
     """
