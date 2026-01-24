@@ -21,6 +21,15 @@ from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraPyav
 from .abstractbackend import AbstractBackend, GeneralBytesResult
 
+# Pyright cannot resolve attributes on the `av` module in some environments.
+# Import av.error symbols explicitly and fall back to builtins to keep runtime behavior.
+try:
+    from av.error import BlockingIOError as AvBlockingIOError
+    from av.error import OSError as AvOSError
+except Exception:  # pragma: no cover - fallback for static analysis environments
+    AvOSError = OSError
+    AvBlockingIOError = BlockingIOError
+
 logger = logging.getLogger(__name__)
 
 input_ffmpeg_device = None
@@ -57,7 +66,40 @@ class WebcamPyavBackend(AbstractBackend):
         super().stop()
 
     def _device_name_platform(self):
-        return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
+        if sys.platform == "win32":
+            return f"video={self._config.device_identifier}"
+
+        if sys.platform == "darwin":
+            ident = str(self._config.device_identifier)
+            if ident.isdigit():
+                return ident
+
+            try:
+                device_id = self._darwin_device_index(ident)
+                return str(device_id)
+            except Exception:
+                logger.warning("could not map camera name to avfoundation index, falling back to provided identifier")
+                return f"{self._config.device_identifier}"
+
+        return f"{self._config.device_identifier}"
+
+    def _darwin_device_index(self, camera_name: str) -> str:
+        """Map macOS camera name to avfoundation index via ffmpeg."""
+        import re
+        import subprocess
+
+        try:
+            proc = subprocess.run(["ffmpeg", "-f", "avfoundation", "-list_devices", "true", "-i", ""], capture_output=True, text=True, check=False)
+        except FileNotFoundError as exc:
+            raise RuntimeError("ffmpeg not found, cannot enumerate avfoundation devices") from exc
+
+        stderr = proc.stderr or ""
+        matches = re.findall(r"\[([0-9]+)\]\s*(.+)$", stderr, flags=re.MULTILINE)
+        for idx, name in matches:
+            if name.strip().lower() == camera_name.strip().lower():
+                return idx
+
+        raise RuntimeError(f"could not find avfoundation device index for camera name '{camera_name}'")
 
     def _wait_for_multicam_files(self) -> list[Path]:
         raise NotImplementedError("backend does not support multicam files")
@@ -109,7 +151,6 @@ class WebcamPyavBackend(AbstractBackend):
         reformatter = VideoReformatter()
         options = {
             "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",
-            "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
         }
         if self._config.cam_framerate > 0:
             # avfoundation has ntsc as default. webcams refuse to work with that framerate, so allow to set it explicit
@@ -123,6 +164,50 @@ class WebcamPyavBackend(AbstractBackend):
         try:
             logger.info(f"trying to open camera index={self._config.device_identifier=}")
             input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
+        except AvOSError as exc:
+            # Errno 5 => Input/output error, commonly caused by unsupported framerate/resolution
+            if getattr(exc, "errno", None) == 5:
+                error_msg = (
+                    f"Cannot open camera with current settings (resolution: {self._config.cam_resolution_width}x{self._config.cam_resolution_height}"
+                    + (f", framerate: {self._config.cam_framerate}" if self._config.cam_framerate > 0 else "")
+                    + "). The camera likely does not support these parameters. Try reducing the framerate or resolution in the camera settings."
+                )
+                logger.critical(error_msg)
+
+                # 1) Try without explicit framerate (some devices reject an explicit framerate)
+                if "framerate" in options:
+                    logger.info("Retrying without explicit framerate setting...")
+                    opts_fb = options.copy()
+                    opts_fb.pop("framerate", None)
+                    try:
+                        input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=opts_fb)
+                        logger.warning("Camera opened successfully without framerate option. Consider removing the framerate configuration.")
+                    except Exception:
+                        # fallthrough to trying reduced framerates
+                        input_device = None
+                else:
+                    input_device = None
+
+                # 2) Try a few common lower framerates
+                if input_device is None:
+                    for fps in (30, 25, 15):
+                        if self._config.cam_framerate and fps >= self._config.cam_framerate:
+                            continue
+                        logger.info(f"Retrying with reduced framerate={fps}...")
+                        opts_low = options.copy()
+                        opts_low["framerate"] = str(fps)
+                        try:
+                            input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=opts_low)
+                            logger.warning(f"Camera opened with reduced framerate={fps}. Update config to avoid repeated retries.")
+                            break
+                        except Exception:
+                            input_device = None
+
+                if input_device is None:
+                    raise RuntimeError(error_msg) from exc
+            else:
+                logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
+                raise
         except Exception as exc:
             logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")
             raise exc
@@ -150,7 +235,17 @@ class WebcamPyavBackend(AbstractBackend):
 
             codec_name = input_stream.codec.name
 
-            for frame in input_device.decode(input_stream):
+            # Main decode loop
+            while not self._stop_event.is_set():
+                try:
+                    frame = next(input_device.decode(input_stream))
+                except AvBlockingIOError:
+                    # Temporary EAGAIN on macOS - just continue
+                    continue
+                except StopIteration:
+                    # Stream ended
+                    break
+
                 # hires
                 if self._hires_data.request.is_set():
                     self._hires_data.request.clear()
