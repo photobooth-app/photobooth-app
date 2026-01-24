@@ -2,17 +2,23 @@
 
 ## Motivation
 
+<!--
 Explain the purpose of this pull request and what it changes.
 Why is this change needed? What problem does it solve?
+-->
 
 ## Changes
 
+<!--
 - List the key modifications
 - Keep it short and clear
+-->
 
 ## Testing
 
+<!--
 Describe how you tested the changes or how reviewers can verify them.
+-->
 
 ## Checklist
 
@@ -24,7 +30,7 @@ Describe how you tested the changes or how reviewers can verify them.
 ## Is there anything you'd like reviewers to focus on?
 
 <!--
-Please explain if there is
+Please explain.
 -->
 
 ## AI used to create this Pull Request?
