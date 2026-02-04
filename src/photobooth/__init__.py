@@ -10,7 +10,7 @@ locale.setlocale(locale.LC_ALL, "")
 _, encoding = locale.getlocale()
 if not encoding or "utf" not in encoding.lower():
     raise OSError(
-        "\n  Your system locale is not UTF-8, which is required.\n"
+        f"\n  Your system locale '{encoding}' is not UTF, which is required.\n"
         "    Recommended fix:\n"
         "      sudo dpkg-reconfigure locales\n"
         "      → select ....UTF-8 like de_DE.UTF-8\n"
