@@ -15,4 +15,4 @@ class MetricsTimer:
         duration = time.perf_counter() - self.start
 
         if duration > 0.01:
-            print(f"⏱️  {self.name} took {duration:.3f}s")
+            print(f"{self.name} took {duration:.3f}s")
