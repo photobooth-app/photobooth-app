@@ -3,6 +3,8 @@ import os
 import subprocess
 from pathlib import Path
 
+# 1. Force UTF‑8 for Python's output layer (non-invasive)
+os.environ["PYTHONIOENCODING"] = "utf-8"
 # set locale to systems default ...
 locale.setlocale(locale.LC_ALL, "")
 
