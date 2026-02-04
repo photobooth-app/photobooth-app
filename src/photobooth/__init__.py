@@ -1,6 +1,7 @@
 import locale
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 # 1. Force UTF‑8 for Python's output layer (non-invasive)
@@ -10,6 +11,16 @@ locale.setlocale(locale.LC_ALL, "")
 
 # test if it works on win/mac/linux in the github actions.
 print("😝")
+print("😝".encode())
+
+os.environ["PYTHONUTF8"] = "1"
+locale.setlocale(locale.LC_ALL, "")
+print(sys.flags.utf8_mode)
+print(sys.getfilesystemencoding())
+print(locale.getpreferredencoding())
+# 1. Force UTF‑8 for Python's output layer (non-invasive)
+# set locale to systems default ...
+locale.setlocale(locale.LC_ALL, "")
 
 # ...and verify that the active locale uses UTF‑8
 _, encoding = locale.getlocale()
