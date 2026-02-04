@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class DisplayEnum(str, Enum):
+class DisplayEnum(StrEnum):
     label = "label"
     checkbox = "checkbox"
     toggle = "toggle"

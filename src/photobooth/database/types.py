@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import String, TypeDecorator
 
 
-class MediaitemTypes(str, enum.Enum):
+class MediaitemTypes(enum.StrEnum):
     """
     SQLalchemy persists the name, fastapi validates against the value.
     We just set name==value so it works in both worlds without any conversion.
@@ -18,7 +18,7 @@ class MediaitemTypes(str, enum.Enum):
     multicamera = "multicamera"  #  video - h264, mp4, result of multicamera image, example the wigglegram
 
 
-class DimensionTypes(str, enum.Enum):
+class DimensionTypes(enum.StrEnum):
     """
     SQLalchemy persists the name, fastapi validates against the value.
     We just set name==value so it works in both worlds without any conversion.
