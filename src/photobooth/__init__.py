@@ -3,8 +3,18 @@ import os
 import subprocess
 from pathlib import Path
 
-# set locale to systems default
+# set locale to systems default ...
 locale.setlocale(locale.LC_ALL, "")
+
+# ...and verify that the active locale uses UTF‑8
+_, encoding = locale.getlocale()
+if not encoding or "utf" not in encoding.lower():
+    raise OSError(
+        "\n  Your system locale is not UTF-8, which is required.\n"
+        "    Recommended fix:\n"
+        "      sudo dpkg-reconfigure locales\n"
+        "      → select ....UTF-8 like de_DE.UTF-8\n"
+    )
 
 # database
 DATABASE_PATH = "./database/"
