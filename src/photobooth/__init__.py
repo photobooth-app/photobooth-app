@@ -8,6 +8,9 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 # set locale to systems default ...
 locale.setlocale(locale.LC_ALL, "")
 
+# test if it works on win/mac/linux in the github actions.
+print("😝")
+
 # ...and verify that the active locale uses UTF‑8
 _, encoding = locale.getlocale()
 if not encoding or "utf" not in encoding.lower():
