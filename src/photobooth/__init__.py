@@ -10,7 +10,6 @@ os.environ["PYTHONIOENCODING"] = "utf-8"
 locale.setlocale(locale.LC_ALL, "")
 
 # test if it works on win/mac/linux in the github actions.
-print("😝")
 print("😝".encode())
 
 os.environ["PYTHONUTF8"] = "1"
