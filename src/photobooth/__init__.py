@@ -18,7 +18,7 @@ if not encoding or "utf" not in encoding.lower():
         f"\n  Your system locale '{encoding}' is not UTF, which is required.\n"
         "    Recommended fix:\n"
         "      sudo dpkg-reconfigure locales\n"
-        "      → select ....UTF-8 like de_DE.UTF-8\n"
+        "      select ....UTF-8 like de_DE.UTF-8\n"
     )
 
 # database
