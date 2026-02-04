@@ -11,7 +11,7 @@ locale.setlocale(locale.LC_ALL, "")
 
 # test if it works on win/mac/linux in the github actions.
 print("😝".encode())
-
+quit()
 os.environ["PYTHONUTF8"] = "1"
 locale.setlocale(locale.LC_ALL, "")
 print(sys.flags.utf8_mode)
