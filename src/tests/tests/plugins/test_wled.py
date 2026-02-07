@@ -9,7 +9,7 @@ logger = logging.getLogger(name=None)
 
 
 ## check skip if wrong platform
-if not WledConfig().wled_serial_port:
+if not WledConfig().common.serial_port:
     pytest.skip("no serial port defined, skipping test", allow_module_level=True)
 
 
@@ -23,8 +23,8 @@ def wled_plugin():
 
 def test_disabled(wled_plugin: Wled):
     """should just fail in silence if disabled but app triggers some presets"""
-    wled_plugin._config.wled_enabled = False
-    wled_plugin._config.wled_serial_port = ""
+    wled_plugin._config.common.enabled = False
+    wled_plugin._config.common.serial_port = ""
 
     wled_plugin.start()
 
@@ -35,8 +35,8 @@ def test_disabled(wled_plugin: Wled):
 def test_enabled_nonexistentserialport(wled_plugin: Wled):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    wled_plugin._config.wled_enabled = True
-    wled_plugin._config.wled_serial_port = "nonexistentserialport"
+    wled_plugin._config.common.enabled = True
+    wled_plugin._config.common.serial_port = "nonexistentserialport"
 
     # start service on nonexistant port shall not fail - it tries to reconnect and never shall fail
     wled_plugin.start()
@@ -46,8 +46,8 @@ def test_enabled_nonexistentserialport(wled_plugin: Wled):
 def test_enabled_emptyport(wled_plugin: Wled):
     """should just fail in silence if disabled but app triggers some presets"""
 
-    wled_plugin._config.wled_enabled = True
-    wled_plugin._config.wled_serial_port = ""
+    wled_plugin._config.common.enabled = True
+    wled_plugin._config.common.serial_port = ""
 
     # start service on nonexistant port shall not fail - it tries to reconnect and never shall fail
     wled_plugin.start()

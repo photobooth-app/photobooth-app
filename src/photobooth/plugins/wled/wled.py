@@ -23,6 +23,11 @@ class WledPreset(Enum):
     SHOOT = 3
     RECORD = 4
 
+    # new in v9 - intended to use with a matrix ws2812 module (like 4x4) to display arrows directing to the lens of the according camera
+    THRILL_STILL = 20
+    THRILL_VIDEO = 21
+    THRILL_MULTICAM = 22
+
 
 class Wled(ResilientService, BasePlugin[WledConfig]):
     def __init__(self):
@@ -38,20 +43,20 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         self._queue: Queue[WledPreset | None] | None = None
 
     def __str__(self):
-        return f"WLED ({self._config.wled_serial_port})"
+        return f"WLED ({self._config.common.serial_port})"
 
     @hookimpl
     def start(self):
         """To start the resilient service"""
 
-        if not self._config.wled_enabled:
+        if not self._config.common.enabled:
             logger.info("WledService disabled")
             return
 
         # check for empty port fails here in start. that means resilientservice is not started
         # and there are no log messages permanently about the false config.
         # but maybe it's better to log this cyclic to show the user there is a mistake in the config?
-        if not self._config.wled_serial_port:
+        if not self._config.common.serial_port:
             logger.warning("WLED plugin enabled but given serial port is empty. Define a valid port!")
             return
 
@@ -95,14 +100,35 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
 
     @hookimpl
     def sm_on_enter_state(self, source: State, target: State, event: Event):
-        if target.id == "counting":
-            self.send_preset(WledPreset.THRILL)
-
-        elif target.id == "finished":
+        if target.id == "finished":
             self.send_preset(WledPreset.STANDBY)
 
     @hookimpl
+    def acq_thrill(self):
+        if not self._config.common.use_separate_thrill_presets:
+            self.send_preset(WledPreset.THRILL)
+
+    @hookimpl
+    def acq_thrill_still(self):
+        if self._config.common.use_separate_thrill_presets:
+            self.send_preset(WledPreset.THRILL_STILL)
+
+    @hookimpl
+    def acq_thrill_video(self):
+        if self._config.common.use_separate_thrill_presets:
+            self.send_preset(WledPreset.THRILL_VIDEO)
+
+    @hookimpl
+    def acq_thrill_multicam(self):
+        if self._config.common.use_separate_thrill_presets:
+            self.send_preset(WledPreset.THRILL_MULTICAM)
+
+    @hookimpl
     def acq_before_get_still(self):
+        self.send_preset(WledPreset.SHOOT)
+
+    @hookimpl
+    def acq_before_get_multicam(self):
         self.send_preset(WledPreset.SHOOT)
 
     @hookimpl
@@ -114,6 +140,8 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
         self.send_preset(WledPreset.STANDBY)
 
     def send_preset(self, preset: WledPreset):
+        # print(f"\n\n{preset.value} {preset.name}\n")
+
         if not self._queue:
             # no queue, request ignored.
             return
@@ -126,7 +154,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
     def device_init(self) -> bool:
         try:
             self._serial = serial.Serial(
-                port=self._config.wled_serial_port,
+                port=self._config.common.serial_port,
                 baudrate=115200,
                 bytesize=8,
                 timeout=1,
