@@ -27,6 +27,7 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         return 1
 
     def on_enter_counting(self):
+        self._acquisition_service.thrill_multicam()
         self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         super().on_enter_counting()

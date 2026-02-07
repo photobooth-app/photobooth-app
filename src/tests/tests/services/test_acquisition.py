@@ -1,6 +1,5 @@
 import io
 import logging
-import subprocess
 import time
 from collections.abc import Generator
 from unittest import mock
@@ -36,15 +35,6 @@ def test_getimages_directlyaccess_backends(_acqs: AcquisitionService):
     with Image.open(io.BytesIO(_acqs._backends[0].wait_for_lores_image())) as img:
         logger.info(img)
         img.verify()
-
-
-def test_preload_ffmpeg():
-    error_mock = mock.MagicMock()
-    error_mock.side_effect = Exception("mock error")
-
-    with patch.object(subprocess, "run", error_mock):
-        # no error is raised if load fails.
-        AcquisitionService._load_ffmpeg()
 
 
 def test_get_multicam_files(_acqs: AcquisitionService):
@@ -133,7 +123,7 @@ def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
 
         if i == 5:
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
-            _acqs._get_video_backend().restart()
+            _acqs._video_backend.restart()
 
         if i >= 30:
             g_stream.close()

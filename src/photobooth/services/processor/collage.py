@@ -29,6 +29,7 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
         return self._get_number_of_captures_from_merge_definition(self._configuration_set.processing.merge_definition)
 
     def on_enter_counting(self):
+        self._acquisition_service.thrill_still()
         self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         super().on_enter_counting()

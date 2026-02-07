@@ -4,12 +4,12 @@ manage up to two photobooth-app backends in this module
 
 import dataclasses
 import logging
-import subprocess
 import time
 from functools import cache
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
+from typing import Literal
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -44,14 +44,15 @@ class AcquisitionService(BaseService):
         if not self._backends:
             raise RuntimeError("no backend enabled!")
 
-        # validate during startup that all indexes are in valid range. TODO: move to pydantic config logic at any point?
-        max_index = max(appconfig.backends.index_backend_stills, appconfig.backends.index_backend_video, appconfig.backends.index_backend_multicam)
-        if max_index > len(self._backends) - 1:
-            raise RuntimeError(f"configuration error: index out of range! {max_index=} whereas max_index allowed={len(self._backends) - 1}")
+        # keep a reference to the types of backends for future use:
+        self._stills_backend = self._get_backend("index_backend_stills")
+        self._video_backend = self._get_backend("index_backend_video")
+        self._multicam_backend = self._get_backend("index_backend_multicam")
+
+        # it's not a copy, it's a ref we hold.
+        assert self._stills_backend is self._backends[appconfig.backends.index_backend_stills]
 
         logger.info(f"loaded backends: {[f'{index}:{name}' for index, name in enumerate(self._backends)]}")
-
-        self._load_ffmpeg()
 
         for backend in self._backends:
             backend.start()
@@ -70,6 +71,14 @@ class AcquisitionService(BaseService):
 
         super().stopped()
 
+    def _get_backend(self, index_type: Literal["index_backend_stills", "index_backend_video", "index_backend_multicam"]) -> AbstractBackend:
+        index = getattr(appconfig.backends, index_type)
+
+        try:
+            return self._backends[index]
+        except IndexError:
+            raise RuntimeError(f"illegal configuration, cannot get backend {index=} for {index_type}") from None
+
     def stats(self):
         """
         Gather stats from active backends.
@@ -85,26 +94,20 @@ class AcquisitionService(BaseService):
 
         return acquisition_stats
 
-    def _get_stills_backend(self) -> AbstractBackend:
-        index = appconfig.backends.index_backend_stills
-        try:
-            return self._backends[index]
-        except IndexError as exc:
-            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
+    def thrill_still(self):
+        """called by job processor when a countdown for stills is started"""
+        pluggy_pm.hook.acq_thrill()
+        pluggy_pm.hook.acq_thrill_still()
 
-    def _get_video_backend(self) -> AbstractBackend:
-        index = appconfig.backends.index_backend_video
-        try:
-            return self._backends[index]
-        except IndexError as exc:
-            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
+    def thrill_video(self):
+        """called by job processor when a countdown for video is started"""
+        pluggy_pm.hook.acq_thrill()
+        pluggy_pm.hook.acq_thrill_video()
 
-    def _get_multicam_backend(self) -> AbstractBackend:
-        index = appconfig.backends.index_backend_multicam
-        try:
-            return self._backends[index]
-        except IndexError as exc:
-            raise ValueError(f"illegal configuration, cannot get backend {index=}") from exc
+    def thrill_multicam(self):
+        """called by job processor when a countdown for multicam is started"""
+        pluggy_pm.hook.acq_thrill()
+        pluggy_pm.hook.acq_thrill_multicam()
 
     def gen_stream(self, index_device: int = 0, index_subdevice: int = 0):
         """
@@ -142,8 +145,7 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_before_get_still()
 
         try:
-            still_backend = self._get_stills_backend()
-            return still_backend.wait_for_still_file(appconfig.backends.retry_capture)
+            return self._stills_backend.wait_for_still_file(appconfig.backends.retry_capture)
         except Exception as exc:
             raise exc
         finally:
@@ -159,8 +161,7 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_before_get_multicam()
 
         try:
-            multicam_backend = self._get_multicam_backend()
-            return multicam_backend.wait_for_multicam_files(appconfig.backends.retry_capture)
+            return self._multicam_backend.wait_for_multicam_files(appconfig.backends.retry_capture)
         except Exception as exc:
             raise exc
         finally:
@@ -171,15 +172,15 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_video()
 
-        return self._get_video_backend().start_recording(video_framerate)
+        return self._video_backend.start_recording(video_framerate)
 
     def stop_recording(self):
         pluggy_pm.hook.acq_after_shot()
 
-        self._get_video_backend().stop_recording()
+        self._video_backend.stop_recording()
 
     def is_recording(self):
-        return self._get_video_backend().is_recording()
+        return self._video_backend.is_recording()
 
     def signalbackend_configure_optimized_for_idle(self):
         """
@@ -255,12 +256,3 @@ class AcquisitionService(BaseService):
         jpeg_buffer = BytesIO()
         img.save(jpeg_buffer, format="jpeg", quality=95)
         return jpeg_buffer.getvalue()
-
-    @staticmethod
-    def _load_ffmpeg():
-        # load ffmpeg once to have it in memory. otherwise first video might fail because startup time is not respected by implementation
-
-        try:
-            subprocess.run(args=["ffmpeg", "-version"], timeout=10, check=True, stdout=subprocess.DEVNULL)
-        except Exception as exc:
-            logger.warning(f"ffmpeg could not be loaded, error: {exc}")

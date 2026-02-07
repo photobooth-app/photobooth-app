@@ -28,6 +28,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
         return 1
 
     def on_enter_counting(self):
+        self._acquisition_service.thrill_video()
         self._acquisition_service.signalbackend_configure_optimized_for_video()
 
         super().on_enter_counting()

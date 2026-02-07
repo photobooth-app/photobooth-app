@@ -20,7 +20,7 @@ def _container() -> Generator[Container, None, None]:
     container.start()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
-    block_until_device_is_running(container.acquisition_service._get_video_backend())
+    block_until_device_is_running(container.acquisition_service._video_backend)
 
     # deliver
     yield container

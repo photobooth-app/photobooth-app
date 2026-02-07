@@ -55,20 +55,50 @@ class PluginStatemachineSpec:
 
 
 class PluginAcquisitionSpec:
-    @hookspec  # triggers before a shot
-    def acq_before_shot(self) -> None: ...
+    @hookspec
+    def acq_before_shot(self) -> None:
+        """triggers before a shot"""
+        ...
 
-    @hookspec  # triggers before a still only
-    def acq_before_get_still(self) -> None: ...
+    @hookspec
+    def acq_before_get_still(self) -> None:
+        """triggers before a still only"""
+        ...
 
-    @hookspec  # triggers before a video only
-    def acq_before_get_video(self) -> None: ...
+    @hookspec
+    def acq_before_get_video(self) -> None:
+        """triggers before a video only"""
+        ...
 
-    @hookspec  # triggers before a multicam still only
-    def acq_before_get_multicam(self) -> None: ...
+    @hookspec
+    def acq_before_get_multicam(self) -> None:
+        """triggers before a multicam still only"""
+        ...
 
-    @hookspec  # triggers after a capture still event
-    def acq_after_shot(self) -> None: ...
+    @hookspec
+    def acq_after_shot(self) -> None:
+        """triggers after a capture still event"""
+        ...
+
+    @hookspec
+    def acq_thrill(self) -> None:
+        """triggers at the start of a any countdown event"""
+        ...
+
+    @hookspec
+    def acq_thrill_still(self) -> None:
+        """triggers at the start of a still countdown event"""
+        ...
+
+    @hookspec
+    def acq_thrill_video(self) -> None:
+        """triggers at the start of a video countdown event"""
+        ...
+
+    @hookspec
+    def acq_thrill_multicam(self) -> None:
+        """triggers at the start of a still countdown event"""
+        ...
 
 
 class PluginMediaprocessingSpec:
