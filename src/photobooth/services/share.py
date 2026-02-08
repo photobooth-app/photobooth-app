@@ -147,15 +147,25 @@ class ShareService(BaseService):
                 shell=True,  # needs to be shell so a string as command is accepted.
             )
 
-        except Exception as exc:
+        except subprocess.CalledProcessError as exc:
+            logger.error(f"Command failed: {exc.cmd}")
+            logger.error(f"Return code: {exc.returncode}")
+            logger.error(f"stdout: {exc.stdout}")
+            logger.error(f"stderr: {exc.stderr}")
+
             sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="share.process_failed"))
-            raise RuntimeError(f"Process failed, error {exc}") from exc
+
+            raise RuntimeError(f"Process failed with exit code {exc.returncode}: {exc.stderr or exc.stdout}") from exc
+
+        except Exception as exc:
+            # other errors (timeout, OSError, etc.)
+            logger.exception("Unexpected error running command")
+            raise RuntimeError(f"Unexpected error running command: {exc}") from exc
 
         else:
             logger.info(f"cmd={completed_process.args}")
-            logger.info(f"stdout={completed_process.stdout}")
-            logger.debug(f"stderr={completed_process.stderr}")
-
+            logger.info(f"stdout={completed_process.stdout.decode(errors='replace')}")
+            logger.debug(f"stderr={completed_process.stderr.decode(errors='replace')}")
             logger.info(f"command started successfully {mediaitem}")
 
         updated_current_shares = self.limit_counter_increment(action_config.name)
