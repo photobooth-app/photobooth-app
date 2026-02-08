@@ -65,6 +65,7 @@ dependencies = [
   "wigglecam",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng",                                                                          # needs python3-dev package
   "requests",
+  "pywin32; platform_system == 'Windows'",
 ]
 
 [project.scripts]
