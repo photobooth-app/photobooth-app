@@ -171,7 +171,7 @@ benchmark = [
 
 
 [build-system]
-requires = ["uv_build>=0.8.3,<0.10.0"]
+requires = ["uv_build>=0.8.3,<0.11.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
