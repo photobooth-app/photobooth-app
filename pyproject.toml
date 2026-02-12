@@ -61,7 +61,7 @@ dependencies = [
   "av>=16.0,<16.2",
   "alembic>=1.15.2",
   "onnxruntime",
-  "rclone-bin-api==1.0.2",
+  "rclone-bin-api==1.0.3",
   "wigglecam",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng",                                                                          # needs python3-dev package
   "requests",
@@ -178,7 +178,7 @@ build-backend = "uv_build"
 module-name = ["photobooth", "web"]
 
 # comment out for local development using editable installs
-# [tool.uv.sources]
+[tool.uv.sources]
 # # rclone-bin-api = {  workspace = true, editable=true }
 # rclone-bin-api = { path = "../rclone-bin-api", editable=true }
 # wigglecam = { path="../photobooth-wigglecam", editable = true }
