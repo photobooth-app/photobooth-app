@@ -226,7 +226,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         assert dlportal_source_path.is_file()
 
         for remote in self._config.remotes:
-            if not remote.enable_sharepage_sync:
+            if not (remote.enable_sharepage_sync and remote.enabled):
                 continue
 
             # add to queue for later upload.
