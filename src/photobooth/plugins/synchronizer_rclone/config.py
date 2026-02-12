@@ -50,6 +50,15 @@ class RcloneClientConfig(BaseModel):
         description="Log verbosity.",
     )
 
+    use_local_config_file: bool = Field(
+        default=False,
+        description="Enable using the local config file for rclone.",
+    )
+    local_config_file: str = Field(
+        default="./config/rclone.conf",
+        description="If use_local_config_file is enabled, this file will be used instead the automatically detected. Useful for write-protected systems. Use a relative path to store below the photobooth-app data dir. Recommended to store in ./config/rclone.conf",
+    )
+
     rclone_transfers: int = Field(
         default=4,
         ge=1,

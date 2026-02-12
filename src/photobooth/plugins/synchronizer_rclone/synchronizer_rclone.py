@@ -37,12 +37,16 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             logger.info("Synchronizer Plugin is disabled")
             return
 
+        _log_file = Path("log/rclone.log") if self._config.rclone_client_config.rclone_enable_logging else None
+        _config_file = Path(self._config.rclone_client_config.local_config_file) if self._config.rclone_client_config.use_local_config_file else None
+
         self._rclone_client = RcloneApi(
-            log_file=Path("log/rclone.log") if self._config.rclone_client_config.rclone_enable_logging else None,
+            log_file=_log_file,
             log_level=self._config.rclone_client_config.rclone_log_level,
             transfers=self._config.rclone_client_config.rclone_transfers,
             checkers=self._config.rclone_client_config.rclone_checkers,
             enable_webui=self._config.rclone_client_config.enable_webui,
+            config_file=_config_file,
             # bwlimit="1M",
         )
 
