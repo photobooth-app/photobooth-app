@@ -280,10 +280,11 @@ class MediacollectionService(BaseService):
 
         self.db.add_item(item)
 
-        pluggy_pm.hook.collection_files_added(files=[item.processed, item.unprocessed])
+        # if shown in gallery negative priority_modifier for higher prio.
+        pluggy_pm.hook.collection_files_added(files=[item.processed, item.unprocessed], priority_modifier=-1 if item.show_in_gallery else +1)
 
         if item.captured_original:
-            pluggy_pm.hook.collection_original_file_added(files=[item.captured_original])
+            pluggy_pm.hook.collection_files_added(files=[item.captured_original], priority_modifier=+2)
 
         # and insert in client db collection so gallery is up to date.
         if item.show_in_gallery:

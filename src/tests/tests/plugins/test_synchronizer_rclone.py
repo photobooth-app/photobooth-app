@@ -6,34 +6,49 @@ import pytest
 
 from photobooth.plugins.synchronizer_rclone.config import SynchronizerConfig
 from photobooth.plugins.synchronizer_rclone.synchronizer_rclone import SynchronizerRclone
-from photobooth.plugins.synchronizer_rclone.types import TaskCopy, TaskDelete
+from photobooth.plugins.synchronizer_rclone.types import CopyOperation, DeleteOperation, TaskCopy, TaskDelete
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def sync():
     """Create a SynchronizerRclone with mocked config + mocked rclone client."""
-    s = SynchronizerRclone()
 
-    cfg = SynchronizerConfig()
-    cfg.common.enabled = True
-    cfg.common.enabled_share_links = True
-    cfg.common.enabled_custom_qr_url = True
-    cfg.common.custom_qr_url = "http://test123"
+    with (
+        patch("photobooth.plugins.synchronizer_rclone.synchronizer_rclone.RcloneApi") as mock_rclone_ctor,
+        patch("photobooth.plugins.synchronizer_rclone.synchronizer_rclone.ThreadedImmediateSyncPipeline") as mock_pipeline_ctor,
+    ):
+        mock_client = MagicMock()
+        mock_pipeline = MagicMock()
 
-    # Enable first remote for all sync types
-    remote = cfg.remotes[0]
-    remote.enabled = True
-    remote.enable_regular_sync = True
-    remote.enable_immediate_sync = True
-    remote.enable_sharepage_sync = True
-    remote.shareconfig.enabled = True
-    remote.shareconfig.use_sharepage = False
+        mock_rclone_ctor.return_value = mock_client
+        mock_pipeline_ctor.return_value = mock_pipeline
 
-    s._config = cfg
+        s = SynchronizerRclone()
 
-    s._rclone_client = MagicMock()
+        cfg = SynchronizerConfig()
+        cfg.common.enabled = True
+        cfg.common.enabled_share_links = True
+        cfg.common.enabled_custom_qr_url = True
+        cfg.common.custom_qr_url = "http://test123"
 
-    return s
+        # Enable first remote for all sync types
+        remote = cfg.remotes[0]
+        remote.enabled = True
+        remote.enable_regular_sync = True
+        remote.enable_immediate_sync = True
+        remote.enable_sharepage_sync = True
+        remote.shareconfig.enabled = True
+        remote.shareconfig.use_sharepage = False
+
+        s._config = cfg
+
+        s.start()
+        s.wait_until_ready()
+        # time.sleep(1)
+
+        yield s
+
+        s.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -58,24 +73,22 @@ def test_service_real():
 # ---------------------------------------------------------------------------
 # _put_to_rclone_job_manager()
 # ---------------------------------------------------------------------------
-
-
 def test_put_to_rclone_copy(sync: SynchronizerRclone):
-    sync.is_running = lambda: True
-
     task = TaskCopy(Path("/local/file.txt"), Path("remote/file.txt"))
-    sync._put_to_rclone_job_manager(task)
+    sync._put_to_immediate_sync(task, priority=10)
 
-    sync._rclone_client.copyfile_async.assert_called_once()  # type: ignore
+    sync._immediate_pipeline.submit.assert_called_once()  # type: ignore
+    (op,) = sync._immediate_pipeline.submit.call_args[0]  # type: ignore
+    assert isinstance(op, CopyOperation)
 
 
 def test_put_to_rclone_delete(sync: SynchronizerRclone):
-    sync.is_running = lambda: True
-
     task = TaskDelete(Path("remote/file.txt"))
-    sync._put_to_rclone_job_manager(task)
+    sync._put_to_immediate_sync(task, priority=10)
 
-    sync._rclone_client.deletefile.assert_called_once()  # type: ignore
+    sync._immediate_pipeline.submit.assert_called_once()  # type: ignore
+    (op,) = sync._immediate_pipeline.submit.call_args[0]  # type: ignore
+    assert isinstance(op, DeleteOperation)
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +97,6 @@ def test_put_to_rclone_delete(sync: SynchronizerRclone):
 
 
 def test_get_share_links_public(sync: SynchronizerRclone):
-    sync.is_running = lambda: True
 
     sync._rclone_client.publiclink.return_value.link = "https://remote/link"  # type: ignore
 
@@ -93,7 +105,6 @@ def test_get_share_links_public(sync: SynchronizerRclone):
 
 
 def test_get_share_links_public_failure(sync):
-    sync.is_running = lambda: True
 
     sync._rclone_client.publiclink.side_effect = Exception("boom")
 
@@ -149,9 +160,9 @@ def test_copy_sharepage_to_remotes(sync: SynchronizerRclone):
         # Make joinpath return a real file path (this test file)
         mock_files.return_value.joinpath.return_value = Path(__file__)
 
+        before_calls = sync._rclone_client.copyfile_async.call_count  # type: ignore
         sync._copy_sharepage_to_remotes()
-
-        sync._rclone_client.copyfile_async.assert_called_once()  # type: ignore
+        assert sync._rclone_client.copyfile_async.call_count == before_calls + 1  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -163,9 +174,8 @@ def test_collection_hooks(sync: SynchronizerRclone):
     with patch.object(sync, "_put_to_rclone_job_manager") as mock_put:
         f = Path("media/test.jpg")
 
-        sync.collection_original_file_added([f])
-        sync.collection_files_added([f])
+        sync.collection_files_added([f], priority_modifier=0)
         sync.collection_files_updated([f])
         sync.collection_files_deleted([f])
 
-        assert mock_put.call_count == 4
+        assert mock_put.call_count == 3

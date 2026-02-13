@@ -14,7 +14,8 @@ from ...utils.resilientservice import ResilientService
 from .. import hookimpl
 from ..base_plugin import BasePlugin
 from .config import SynchronizerConfig
-from .types import Stats, TaskCopy, TaskDelete, TaskSyncType
+from .immediate_synchronizer import ThreadedImmediateSyncPipeline
+from .types import CopyOperation, DeleteOperation, Stats, TaskCopy, TaskDelete, TaskSyncType
 from .utils import get_corresponding_remote_file
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         self._config = SynchronizerConfig()
 
         self._rclone_client: RcloneApi | None = None
+        self._immediate_pipeline: ThreadedImmediateSyncPipeline | None = None
         self._stats = Stats()
 
     def __str__(self):
@@ -50,6 +52,8 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             # bwlimit="1M",
         )
 
+        self._immediate_pipeline = ThreadedImmediateSyncPipeline(self._rclone_client)
+
         super().start()
 
     @hookimpl
@@ -58,10 +62,16 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
 
     def setup_resource(self):
         assert self._rclone_client
+        assert self._immediate_pipeline
+
+        self._immediate_pipeline.start()
 
         self._rclone_client.start()
 
     def teardown_resource(self):
+        if self._immediate_pipeline:
+            self._immediate_pipeline.stop()
+
         if self._rclone_client:
             self._rclone_client.stop()
 
@@ -116,35 +126,33 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
                     slept_counter = 0
                     break  # next sync run.
 
-    def _put_to_rclone_job_manager(self, task: TaskSyncType):
+    def _put_to_immediate_sync(self, task: TaskSyncType, priority: int):
         if not self.is_running():
             return
 
         assert self._rclone_client
+        assert self._immediate_pipeline
 
         for remote in self._config.remotes:
             if not (remote.enabled and remote.enable_immediate_sync):
                 continue
 
-            try:
-                if isinstance(task, TaskCopy):
-                    self._rclone_client.copyfile_async(
-                        str(Path.cwd().absolute()),
-                        f"{task.file_local}",
-                        remote.name,
-                        Path(remote.subdir, task.file_remote).as_posix(),
-                    )
+            if isinstance(task, TaskCopy):
+                self._immediate_pipeline.submit(
+                    CopyOperation(str(Path.cwd().absolute()), f"{task.file_local}", remote.name, Path(remote.subdir, task.file_remote).as_posix()),
+                    priority=priority,
+                )
+            elif isinstance(task, TaskDelete):
+                self._immediate_pipeline.submit(
+                    DeleteOperation(remote.name, Path(remote.subdir, task.file_remote).as_posix()),
+                    priority=priority,
+                )
+            # else never as per typing
 
-                elif isinstance(task, TaskDelete):
-                    self._rclone_client.deletefile(
-                        remote.name,
-                        Path(remote.subdir, task.file_remote).as_posix(),
-                    )
-                # else never as per typing
-            except Exception as exc:
-                logger.exception(exc)
-                logger.error(f"failed processing task {task}, error {exc}")
-                # TODO: what if task failed? reinsert to sync queue?
+            # when we hammer jobs into rclone it swallows some jobs.
+            # we work around this currently using a small delay, but this is not ideal.
+            # time.sleep(0.15)
+            # we keep this as a reminder, but now we have a job queue pipeline for immediate sync in place.
 
     @hookimpl
     def get_stats(self) -> GenericStats | None:
@@ -153,10 +161,12 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
             return None
 
         assert self._rclone_client
+        assert self._immediate_pipeline
 
         try:
             core_stats = self._rclone_client.core_stats()
             job_list = self._rclone_client.job_list()
+            immediate_stats = self._immediate_pipeline.get_stats()
         except Exception as exc:
             return GenericStats(id="hook-plugin-synchronizer", name="Synchronizer", stats=[SubStats("Error", f"Cannot gather stats, reason: {exc}")])
 
@@ -181,6 +191,18 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         )
         out.stats.append(SubStats("lastError", core_stats.lastError))
 
+        out.stats.append(
+            SubList(
+                name="Immediate Sync Stats (#files since app start)",
+                val=[
+                    SubStats("Pending", immediate_stats.pending),
+                    SubStats("Transferring", immediate_stats.transferring),
+                    SubStats("Finished", immediate_stats.finished),
+                    SubStats("Failed", immediate_stats.failed),
+                    SubStats("Total", immediate_stats.total),
+                ],
+            )
+        )
         out.stats.append(
             SubList(
                 name="Regular Full Sync Stats",
@@ -311,21 +333,17 @@ class SynchronizerRclone(ResilientService, BasePlugin[SynchronizerConfig]):
         return share_links
 
     @hookimpl
-    def collection_original_file_added(self, files: list[Path]):
+    def collection_files_added(self, files: list[Path], priority_modifier: int):
+        priority = 10 + priority_modifier
         for file in files:
-            self._put_to_rclone_job_manager(TaskCopy(file, get_corresponding_remote_file(file)))
-
-    @hookimpl
-    def collection_files_added(self, files: list[Path]):
-        for file in files:
-            self._put_to_rclone_job_manager(TaskCopy(file, get_corresponding_remote_file(file)))
+            self._put_to_immediate_sync(TaskCopy(file, get_corresponding_remote_file(file)), priority=priority)
 
     @hookimpl
     def collection_files_updated(self, files: list[Path]):
         for file in files:
-            self._put_to_rclone_job_manager(TaskCopy(file, get_corresponding_remote_file(file)))
+            self._put_to_immediate_sync(TaskCopy(file, get_corresponding_remote_file(file)), priority=15)
 
     @hookimpl
     def collection_files_deleted(self, files: list[Path]):
         for file in files:
-            self._put_to_rclone_job_manager(TaskDelete(get_corresponding_remote_file(file)))
+            self._put_to_immediate_sync(TaskDelete(get_corresponding_remote_file(file)), priority=19)
