@@ -11,6 +11,7 @@ from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
 from ..database.types import MediaitemTypes
 from ..utils.exceptions import WrongMediaTypeError
+from ..utils.printer import PrinterStatus, get_printer_status
 from .base import BaseService
 from .sse import sse_service
 from .sse.sse_ import SseEventTranslateableFrontendNotification
@@ -99,13 +100,29 @@ class ShareService(BaseService):
 
             raise BlockingIOError(f"Request ignored! Wait {remaining_s:.0f}s before trying again.")
 
-        # filename absolute to print, use in printing command
         filename = mediaitem.processed.absolute()
         media_type = mediaitem.media_type
         action_config_name = action_config.name
+        printer_name = action_config.processing.printer_name
 
-        # print command
-        logger.info(f"share/print {filename=}")
+        # once unblocked, also check printer availability if configured:
+        if action_config.processing.check_if_printer_is_idle:
+            try:
+                printer_state, printer_state_raw = get_printer_status(printer_name)
+                logger.debug(f"checked {printer_state=}, {printer_state_raw=}")
+            except Exception as exc:
+                raise RuntimeError(f"Failed getting printer status, error: {exc}! Maybe the printer '{printer_name}' does not exist?") from exc
+
+            if printer_state is not PrinterStatus.OK:
+                logger.warning(f"Print command failed because PrinterStatus is not OK, error: {printer_state_raw}")
+                sse_service.dispatch_event(
+                    SseEventTranslateableFrontendNotification(
+                        color="negative",
+                        message_key="share.printer_not_ready",
+                        context_data={"action_name": action_config.name, "printer_name": printer_name},
+                    )
+                )
+                raise BlockingIOError(f"Printer {printer_name} is not available! Please check power, connectivity, paper and cartridges.")
 
         if parameters is None:
             share_parameters = {parameter.key: parameter.default for parameter in action_config.processing.parameters}
@@ -121,6 +138,7 @@ class ShareService(BaseService):
                 filename=filename,
                 media_type=media_type.value,
                 action_config_name=action_config_name,
+                printer_name=action_config.processing.printer_name,
                 **share_parameters,
             )
         except KeyError as exc:
@@ -128,6 +146,9 @@ class ShareService(BaseService):
         except TypeError as exc:
             # usually this error is prevented by having the pattern= in the pydantic field in config already.
             raise RuntimeError(f"Error in configuration! Probably illegal parameter name defined, error: {exc}") from exc
+
+        # command to be executed
+        logger.info(f"executing command '{formatted_command}'")
 
         sse_service.dispatch_event(
             SseEventTranslateableFrontendNotification(
