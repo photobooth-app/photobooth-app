@@ -171,7 +171,7 @@ def test_copy_sharepage_to_remotes(sync: SynchronizerRclone):
 
 
 def test_collection_hooks(sync: SynchronizerRclone):
-    with patch.object(sync, "_put_to_rclone_job_manager") as mock_put:
+    with patch.object(sync, "_put_to_immediate_sync") as mock_put:
         f = Path("media/test.jpg")
 
         sync.collection_files_added([f], priority_modifier=0)
