@@ -126,7 +126,7 @@ class GroupShare(BaseModel):
                 name="Printing",
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="echo {filename} media_type={media_type} action_config_name={action_config_name} copies={copies}",
+                    share_command="echo printing {filename} on {printer_name} media_type={media_type} action_config_name={action_config_name} copies={copies}",
                     ask_user_for_parameter_input=False,
                     share_blocked_time=3,
                     parameters=[ShareProcessingParameters()],
@@ -141,7 +141,7 @@ class GroupShare(BaseModel):
                 name="Printing copies",
                 handles_images_only=True,
                 processing=ShareProcessing(
-                    share_command="echo {filename} media_type={media_type} action_config_name={action_config_name} copies={copies}",
+                    share_command="echo printing {filename} on {printer_name} media_type={media_type} action_config_name={action_config_name} copies={copies}",
                     ask_user_for_parameter_input=True,
                     parameters_dialog_caption="How many copies?",
                     share_blocked_time=3,
