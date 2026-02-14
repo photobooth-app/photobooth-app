@@ -6,7 +6,6 @@ import pytest
 
 from photobooth.plugins.synchronizer_rclone.config import SynchronizerConfig
 from photobooth.plugins.synchronizer_rclone.synchronizer_rclone import SynchronizerRclone
-from photobooth.plugins.synchronizer_rclone.types import CopyOperation, DeleteOperation, TaskCopy, TaskDelete
 
 
 @pytest.fixture(scope="function")
@@ -71,27 +70,6 @@ def test_service_real():
 
 
 # ---------------------------------------------------------------------------
-# _put_to_rclone_job_manager()
-# ---------------------------------------------------------------------------
-def test_put_to_rclone_copy(sync: SynchronizerRclone):
-    task = TaskCopy(Path("/local/file.txt"), Path("remote/file.txt"))
-    sync._put_to_immediate_sync(task, priority=10)
-
-    sync._immediate_pipeline.submit.assert_called_once()  # type: ignore
-    (op,) = sync._immediate_pipeline.submit.call_args[0]  # type: ignore
-    assert isinstance(op, CopyOperation)
-
-
-def test_put_to_rclone_delete(sync: SynchronizerRclone):
-    task = TaskDelete(Path("remote/file.txt"))
-    sync._put_to_immediate_sync(task, priority=10)
-
-    sync._immediate_pipeline.submit.assert_called_once()  # type: ignore
-    (op,) = sync._immediate_pipeline.submit.call_args[0]  # type: ignore
-    assert isinstance(op, DeleteOperation)
-
-
-# ---------------------------------------------------------------------------
 # get_share_links()
 # ---------------------------------------------------------------------------
 
@@ -152,16 +130,14 @@ def test_get_stats_error(sync: SynchronizerRclone):
 # ---------------------------------------------------------------------------
 # _copy_sharepage_to_remotes()
 # ---------------------------------------------------------------------------
-
-
 def test_copy_sharepage_to_remotes(sync: SynchronizerRclone):
     # Patch resources.files("web").joinpath("sharepage/index.html")
     with patch("photobooth.plugins.synchronizer_rclone.synchronizer_rclone.resources.files") as mock_files:
         # Make joinpath return a real file path (this test file)
         mock_files.return_value.joinpath.return_value = Path(__file__)
-
+        r = sync._config.remotes[0]
         before_calls = sync._rclone_client.copyfile_async.call_count  # type: ignore
-        sync._copy_sharepage_to_remotes()
+        sync._copy_sharepage_to_remotes(remote=r)
         assert sync._rclone_client.copyfile_async.call_count == before_calls + 1  # type: ignore
 
 
@@ -171,7 +147,7 @@ def test_copy_sharepage_to_remotes(sync: SynchronizerRclone):
 
 
 def test_collection_hooks(sync: SynchronizerRclone):
-    with patch.object(sync, "_put_to_immediate_sync") as mock_put:
+    with patch.object(sync._immediate_pipeline, "submit") as mock_put:
         f = Path("media/test.jpg")
 
         sync.collection_files_added([f], priority_modifier=0)

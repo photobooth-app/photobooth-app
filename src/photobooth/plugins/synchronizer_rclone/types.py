@@ -1,23 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 from typing import TypeAlias
-
-# ------------------------------------------------------------
-# Regular Sync
-# ------------------------------------------------------------
-
-
-@dataclass
-class Stats:
-    last_check_started: datetime | None = None  # datetime to convert .astimezone().strftime('%Y%m%d-%H%M%S')
-    next_check: datetime | None = None
-
-
-# ------------------------------------------------------------
-# Immediate Sync
-# ------------------------------------------------------------
 
 
 class JobStatus(Enum):
@@ -61,21 +45,20 @@ OperationTypes: TypeAlias = CopyOperation | DeleteOperation
 class TaskCopy:
     """Copy to remove, update if needed."""
 
-    file_local: Path
-    file_remote: Path
+    file: Path
 
     def __str__(self):
-        return str(self.file_local.absolute())
+        return str(self.file.absolute())
 
 
 @dataclass
 class TaskDelete:
     """Delete from remote"""
 
-    file_remote: Path
+    file: Path
 
     def __str__(self):
-        return str(self.file_remote.absolute())
+        return str(self.file.absolute())
 
 
 TaskSyncType: TypeAlias = TaskCopy | TaskDelete

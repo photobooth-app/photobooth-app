@@ -4,11 +4,15 @@ import random
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from queue import Empty, PriorityQueue
 
 from rclone_api.api import RcloneApi
 
-from .types import CopyOperation, DeleteOperation, JobResult, JobStatus, OperationTypes
+from photobooth.plugins.synchronizer_rclone.utils import get_corresponding_remote_file
+
+from .config import RemoteConfig
+from .types import CopyOperation, DeleteOperation, JobResult, JobStatus, OperationTypes, TaskCopy, TaskDelete, TaskSyncType
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +40,9 @@ class PrioritizedJob:
 
 
 class ThreadedImmediateSyncPipeline:
-    def __init__(self, rclone: RcloneApi, max_concurrency: int = 3, max_retries: int = 3, retry_delay: float = 5.0):
+    def __init__(self, rclone: RcloneApi, remotes: list[RemoteConfig], max_concurrency: int = 2, max_retries: int = 3, retry_delay: float = 5.0):
         self.rclone = rclone
+        self.remotes = remotes
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
@@ -48,15 +53,14 @@ class ThreadedImmediateSyncPipeline:
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
-        self._workers = [threading.Thread(target=self._worker_loop, name=f"rclone-worker-{i}", daemon=True) for i in range(max_concurrency)]
+        self._workers = [threading.Thread(target=self._worker_loop, name=f"rclone-immediate-worker-{i}", daemon=True) for i in range(max_concurrency)]
+
+        for w in self._workers:
+            w.start()
 
     # --------------------------------------------------------
     # Lifecycle
     # --------------------------------------------------------
-    def start(self):
-        for w in self._workers:
-            w.start()
-
     def stop(self):
         self._stop_event.set()
 
@@ -81,16 +85,25 @@ class ThreadedImmediateSyncPipeline:
     # --------------------------------------------------------
     # Public API
     # --------------------------------------------------------
-    def submit(self, operation: OperationTypes, priority: int = 10) -> int:
-        job_id = next(self._job_counter)
-        job = PrioritizedJob(priority=priority, job_id=job_id, operation=operation)
+    def submit(self, task: TaskSyncType, priority: int = 10):
 
-        with self._lock:
-            self.results[job_id] = JobResult(JobStatus.PENDING, 0, None)
+        for r in self.remotes:
+            # translate task to rclone operation for all remotes listed here
+            if isinstance(task, TaskCopy):
+                op = CopyOperation(
+                    str(Path.cwd().absolute()), f"{task.file}", r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix()
+                )
+            elif isinstance(task, TaskDelete):
+                op = DeleteOperation(r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix())
+            # else never as per typing
 
-        self.queue.put(job)
+            job_id = next(self._job_counter)
+            job = PrioritizedJob(priority=priority, job_id=job_id, operation=op)
 
-        return job_id
+            with self._lock:
+                self.results[job_id] = JobResult(JobStatus.PENDING, 0, None)
+
+            self.queue.put(job)
 
     # --------------------------------------------------------
     # Worker Loop
