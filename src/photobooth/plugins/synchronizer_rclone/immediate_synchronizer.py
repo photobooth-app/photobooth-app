@@ -116,6 +116,8 @@ class ThreadedImmediateSyncPipeline:
                 continue
 
             attempts = 0
+            success = False
+
             while attempts < self.max_retries and not self._stop_event.is_set():
                 attempts += 1
 
@@ -137,6 +139,7 @@ class ThreadedImmediateSyncPipeline:
 
                     logger.debug(f"immediate sync finished: {job}")
 
+                    success = True
                     break  # <-- job finished successfully, quit retry loop
 
                 except Exception as exc:
@@ -146,5 +149,6 @@ class ThreadedImmediateSyncPipeline:
                     time.sleep(self.retry_delay + random.uniform(0, 0.5))
 
             # at this point all failed...
-            with self._lock:
-                self.results[job.job_id] = JobResult(JobStatus.FAILED, attempts, "max retries exceeded")
+            if not success:
+                with self._lock:
+                    self.results[job.job_id] = JobResult(JobStatus.FAILED, attempts, "max retries exceeded")
