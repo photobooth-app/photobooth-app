@@ -6,7 +6,8 @@ import logging
 import threading
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections import deque
+from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Condition, Event
 
@@ -67,32 +68,25 @@ class GeneralMultifileResult:
 
 @dataclass
 class Framerate:
-    """helps calculating the current framerate of backend.
-    init empty and on every frame delivered, set current_timestamp with monotonic_ns() value
-    when two timestamps are avail, the fps can be read from .fps
+    """Thread-safe rolling-window FPS calculator."""
 
-    Returns:
-        int: Framerate
-    """
+    _timestamps: deque[int] = field(default_factory=lambda: deque(maxlen=5))
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
-    _last_timestamp: int | None = None
-    _current_timestamp: int | None = None
-
-    @property
-    def current_timestamp(self) -> int | None:
-        return self._current_timestamp
-
-    @current_timestamp.setter
-    def current_timestamp(self, v: int) -> None:
-        self._last_timestamp = self._current_timestamp
-        self._current_timestamp = v
+    def add_frame(self) -> None:
+        with self._lock:
+            self._timestamps.append(time.monotonic_ns())
 
     @property
     def fps(self) -> int:
-        if self._last_timestamp and self._current_timestamp:
-            return int(round(1.0 / ((self._current_timestamp - self._last_timestamp) * 1.0e-9), 0))
-        else:
-            return 0
+        with self._lock:
+            if len(self._timestamps) < 2:
+                return 0
+
+            deltas = [self._timestamps[i] - self._timestamps[i - 1] for i in range(1, len(self._timestamps))]
+
+        avg_delta_ns = sum(deltas) / len(deltas)
+        return int(round(1.0 / (avg_delta_ns * 1e-9), 0))
 
 
 class AbstractBackend(ResilientService, ABC):
@@ -130,7 +124,7 @@ class AbstractBackend(ResilientService, ABC):
 
     def _frame_tick(self):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
-        self._framerate.current_timestamp = time.monotonic_ns()
+        self._framerate.add_frame()
 
     @property
     def livestream_requested(self) -> bool:
