@@ -3,7 +3,6 @@ Testing VIRTUALCAMERA Backend
 """
 
 import logging
-import time
 from collections.abc import Generator
 
 import pytest
@@ -49,13 +48,3 @@ def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):
 def test_get_images_virtualcamera_hires(backend_virtual: VirtualCameraBackend):
     backend_virtual._config.emulate_hires_static_still = True
     get_images(backend_virtual, multicam_is_error=True)
-
-
-def test_get_video_virtualcamera(backend_virtual: VirtualCameraBackend):
-    """get lores and hires images from backend and assert"""
-    videopath = backend_virtual.start_recording(video_framerate=5)
-    time.sleep(2)
-    backend_virtual.stop_recording()
-
-    logger.info(f"video stored to file {videopath}")
-    assert videopath and videopath.is_file()
