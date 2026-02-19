@@ -2,26 +2,18 @@
 abstract for the photobooth-app backends
 """
 
-import io
 import logging
-import os
-import subprocess
 import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Condition, Event
-from typing import overload
 
-import piexif
-
-from ... import LOG_PATH
-from ...appconfig import appconfig
-from ...utils.helper import filename_str_time
 from ...utils.resilientservice import ResilientService
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import Orientation
+from .utils.rotate_exif import set_exif_orientation
 
 logger = logging.getLogger(__name__)
 
@@ -121,12 +113,6 @@ class AbstractBackend(ResilientService, ABC):
         self._last_requested_timestamp: float | None = None
         self._liveview_idle_thread: StoppableThread | None = None
 
-        # video feature
-        self._video_worker_capture_started: Event = Event()
-        self._video_worker_thread: StoppableThread | None = None
-        self._video_recorded_videofilepath: Path | None = None
-        self._video_framerate: int | None = None
-
         # data out (lores_data is locally handled per backend)
         self._hires_data: GeneralFileResult = GeneralFileResult(filepath=None, request=Event(), condition=Condition())
 
@@ -189,50 +175,11 @@ class AbstractBackend(ResilientService, ABC):
     def stop(self):
         """To stop the backend to serve"""
 
-        self.stop_recording()
-
-        if self._liveview_idle_thread and self._liveview_idle_thread.is_alive():
+        if self._liveview_idle_thread:
             self._liveview_idle_thread.stop()
             self._liveview_idle_thread.join()
 
         super().stop()
-
-    @overload
-    def rotate_jpeg_by_exif_flag(self, jpeg_image: Path, orientation_choice) -> Path: ...
-    @overload
-    def rotate_jpeg_by_exif_flag(self, jpeg_image: bytes, orientation_choice) -> bytes: ...
-
-    def rotate_jpeg_by_exif_flag(self, jpeg_image: Path | bytes, orientation_choice: Orientation) -> Path | bytes:
-        """inserts updated orientation flag in given filepath.
-        ref https://sirv.com/help/articles/rotate-photos-to-be-upright/
-
-        Args:
-            jpeg_image (Path|bytes): jpeg to modify
-            orientation_choice (Literal): Orientierung (1=0°, 3=180°, 5=90°, 7=270°)
-        """
-
-        def _get_updated_exif_bytes(maybe_image, orientation_choice: Orientation):
-            assert isinstance(orientation_choice, str)
-
-            orientation = int(orientation_choice[0])
-            if 1 < orientation > 8:
-                raise ValueError(f"invalid orientation choice {orientation_choice} results in invalid value: {orientation}.")
-
-            exif_dict = piexif.load(maybe_image)
-            exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation
-
-            return piexif.dump(exif_dict)
-
-        if isinstance(jpeg_image, Path):
-            # File case: update in place
-            piexif.insert(_get_updated_exif_bytes(str(jpeg_image), orientation_choice), str(jpeg_image))
-            return jpeg_image
-        elif isinstance(jpeg_image, (bytes, bytearray)):
-            # Bytes case: return new data
-            output = io.BytesIO()
-            piexif.insert(_get_updated_exif_bytes(jpeg_image, orientation_choice), jpeg_image, output)
-            return output.getvalue()
-        # else: ...           #not going to happen as per type
 
     def wait_for_multicam_files(self, retries: int = 3) -> list[Path]:
         """
@@ -264,7 +211,7 @@ class AbstractBackend(ResilientService, ABC):
         while True:
             try:
                 filepath = self._wait_for_still_file()
-                self.rotate_jpeg_by_exif_flag(filepath, self._orientation)
+                set_exif_orientation(filepath, self._orientation)
                 return filepath
             except Exception as exc:
                 attempt += 1
@@ -304,7 +251,7 @@ class AbstractBackend(ResilientService, ABC):
 
             try:
                 img_bytes = self._wait_for_lores_image(index_subdevice=index_subdevice)  # blocks 0.5s usually. 10 retries default wait time=5s
-                img = self.rotate_jpeg_by_exif_flag(img_bytes, self._orientation)
+                img = set_exif_orientation(img_bytes, self._orientation)
                 return img
             except TimeoutError as exc:
                 if self.is_started():
@@ -319,149 +266,6 @@ class AbstractBackend(ResilientService, ABC):
 
         # max attempts reached.
         raise RuntimeError(f"failed getting images after {retries} attempts.")
-
-    def start_recording(self, video_framerate: int) -> Path:
-        self._video_worker_capture_started.clear()
-        self._video_framerate = video_framerate
-
-        # generate temp filename to record to
-        mp4_output_filepath = Path("tmp", f"{filename_str_time()}_{self.__class__.__name__}_video").with_suffix(".mp4")
-
-        self._video_worker_thread = StoppableThread(name="_videoworker_fun", target=self._videoworker_fun, args=(mp4_output_filepath,), daemon=True)
-        self._video_worker_thread.start()
-
-        tms = time.time()
-        # gives 3 seconds to actually capture with ffmpeg, otherwise timeout. if ffmpeg is not in memory it needs time to load from disk
-        if not self._video_worker_capture_started.wait(timeout=3):
-            logger.warning("ffmpeg could not start within timeout; cpu too slow?")
-        logger.debug(f"-- ffmpeg startuptime: {round((time.time() - tms), 2)}s ")
-
-        return mp4_output_filepath
-
-    def is_recording(self):
-        return self._video_worker_thread is not None and self._video_worker_capture_started.is_set()
-
-    def stop_recording(self):
-        # clear notifier that capture was started
-        self._video_worker_capture_started.clear()
-
-        if self._video_worker_thread:
-            logger.debug("stop recording")
-            self._video_worker_thread.stop()
-            self._video_worker_thread.join()
-            logger.info("_video_worker_thread stopped and joined")
-
-    def _videoworker_fun(self, mp4_output_filepath: Path):
-        logger.info("_videoworker_fun start")
-        # init worker, set output to None which indicates there is no current video available to get
-        self._video_recorded_videofilepath = None
-
-        command_general_options = [
-            "-hide_banner",
-            "-loglevel",
-            "info",
-            "-y",
-        ]
-        command_video_input = [
-            "-use_wallclock_as_timestamps",
-            "1",
-            "-thread_queue_size",
-            "64",
-            "-f",
-            "image2pipe",
-            "-vcodec",
-            "mjpeg",
-            "-i",
-            "-",
-        ]
-        command_video_output = [
-            "-vcodec",
-            "libx264",  # warning! image height must be divisible by 2! #there are also hw encoder avail: https://stackoverflow.com/questions/50693934/different-h264-encoders-in-ffmpeg
-            "-preset",
-            "veryfast",
-            "-b:v",
-            f"{appconfig.mediaprocessing.video_bitrate}k",
-            "-movflags",
-            "+faststart",
-            "-r",
-            f"{self._video_framerate}",
-        ]
-        command_video_output_compat_mode = []
-        if appconfig.mediaprocessing.video_compatibility_mode:
-            # fixes #233. needs more cpu and seems deprecated, maybe in future it will be configurable to disable
-            command_video_output_compat_mode = [
-                "-pix_fmt",
-                "yuv420p",
-            ]
-
-        ffmpeg_command = (
-            ["ffmpeg"]
-            + command_general_options
-            + command_video_input
-            + command_video_output
-            + command_video_output_compat_mode
-            + [str(mp4_output_filepath)]
-        )
-
-        try:
-            ffmpeg_subprocess = subprocess.Popen(
-                ffmpeg_command,
-                stdin=subprocess.PIPE,
-                # following report is workaround to avoid deadlock by pushing too much output in stdout/err
-                # https://thraxil.org/users/anders/posts/2008/03/13/Subprocess-Hanging-PIPE-is-your-enemy/
-                env=dict(os.environ, FFREPORT=f"file={LOG_PATH}/ffmpeg-last.log:level=32"),
-                # stdout=subprocess.PIPE,
-                # stderr=subprocess.STDOUT,
-            )
-            assert ffmpeg_subprocess.stdin
-        except Exception as exc:
-            logger.error(f"starting ffmpeg failed: {exc}")
-            return
-
-        logger.info("writing to ffmpeg stdin")
-        tms = time.time()
-
-        # inform calling function, that ffmpeg received first image now
-        self._video_worker_capture_started.set()
-
-        assert self._video_worker_thread
-        while not self._video_worker_thread.stopped():
-            try:
-                # retry with a low number because video would be messed anyways if needs to retry
-                ffmpeg_subprocess.stdin.write(self.wait_for_lores_image(retries=4))
-                ffmpeg_subprocess.stdin.flush()  # forces every frame to get timestamped individually
-            except Exception as exc:  # presumably a BrokenPipeError? should we check explicitly?
-                ffmpeg_subprocess = None
-                logger.exception(exc)
-                logger.error(f"Failed to create video! Error: {exc}")
-
-                self._video_worker_thread.stop()
-                break
-
-        if ffmpeg_subprocess is not None:
-            logger.info("writing to ffmpeg stdin finished")
-            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
-
-            # release final video processing
-            tms = time.time()
-
-            _, ffmpeg_stderr = ffmpeg_subprocess.communicate()  # send empty to stdin, indicates close and gets stderr/stdout; shut down tidily
-            code = ffmpeg_subprocess.wait()  # Give it a moment to flush out video frames, but after that make sure we terminate it.
-
-            if code != 0:
-                logger.error(ffmpeg_stderr)  # can help to track down errors for non-zero exitcodes.
-
-                logger.error(f"error creating videofile, ffmpeg exit code ({code}).")
-                # note: there is more information in ffmpeg logfile: ffmpeg-last.log
-
-            ffmpeg_subprocess = None
-
-            logger.info("ffmpeg finished")
-            logger.debug(f"-- process time: {round((time.time() - tms), 2)}s ")
-
-            logger.info(f"record written to {mp4_output_filepath}")
-
-        logger.info("leaving _videoworker_fun")
 
     #
     # ABSTRACT METHODS TO BE IMPLEMENTED BY CONCRETE BACKEND (cv2, v4l, ...)

@@ -16,6 +16,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
 from .backends.abstractbackend import AbstractBackend
+from .backends.encoder.video import SoftwareVideoRecorder
 from .base import BaseService
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ class AcquisitionService(BaseService):
         super().__init__()
 
         self._backends: list[AbstractBackend] = []
+        self._recorder: SoftwareVideoRecorder | None = None
 
     def start(self):
         super().start()
@@ -56,6 +58,8 @@ class AcquisitionService(BaseService):
 
         for backend in self._backends:
             backend.start()
+
+        self._recorder = SoftwareVideoRecorder(self._video_backend)
 
         super().started()
 
@@ -174,18 +178,25 @@ class AcquisitionService(BaseService):
             pluggy_pm.hook.acq_after_shot()
 
     def start_recording(self, video_framerate: int = 25) -> Path:
+        assert self._recorder, "service needs to be started before using the recorder"
+
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_video()
 
-        return self._video_backend.start_recording(video_framerate)
+        file = self._recorder.start_recording(video_framerate)
+        return file
 
     def stop_recording(self):
+        assert self._recorder, "service needs to be started before using the recorder"
+
         pluggy_pm.hook.acq_after_shot()
 
-        self._video_backend.stop_recording()
+        self._recorder.stop_recording()
 
     def is_recording(self):
-        return self._video_backend.is_recording()
+        assert self._recorder, "service needs to be started before using the recorder"
+
+        return self._recorder.is_recording()
 
     def signalbackend_configure_optimized_for_idle(self):
         """
