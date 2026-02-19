@@ -132,6 +132,9 @@ class AcquisitionService(BaseService):
                     f"{exc}",
                     appconfig.uisettings.livestream_mirror_effect,
                 )
+
+                self._backends[index_device].restart()
+
                 time.sleep(0.5)  # rate limit if it fails
 
             yield output_jpeg_bytes
@@ -147,6 +150,7 @@ class AcquisitionService(BaseService):
         try:
             return self._stills_backend.wait_for_still_file(appconfig.backends.retry_capture)
         except Exception as exc:
+            self._stills_backend.restart()
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
@@ -163,6 +167,7 @@ class AcquisitionService(BaseService):
         try:
             return self._multicam_backend.wait_for_multicam_files(appconfig.backends.retry_capture)
         except Exception as exc:
+            self._multicam_backend.restart()
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
