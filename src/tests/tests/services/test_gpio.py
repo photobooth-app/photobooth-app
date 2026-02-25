@@ -18,14 +18,10 @@ logger = logging.getLogger(name=None)
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
-    # setup
-
     # tests fail if not enabled
     appconfig.hardwareinputoutput.gpio_enabled = True
 
-    container.start()
-
-    # deliver
+    container.reload()
     yield container
     container.stop()
 

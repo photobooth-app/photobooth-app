@@ -29,7 +29,7 @@ class SoftwareVideoRecorder:
         self._capture_started = threading.Event()
         self._output_filepath: Path | None = None
 
-    def start_recording(self, video_framerate: int) -> Path:
+    def start_recording(self, video_framerate: int, subdevice_index: int = 0) -> Path:
         """
         Start recording. Returns the output filepath.
         """
@@ -40,7 +40,7 @@ class SoftwareVideoRecorder:
 
         self._output_filepath = Path("tmp", f"{filename_str_time()}_{self._backend.__class__.__name__}_video").with_suffix(".mp4")
 
-        self._thread = StoppableThread(name="SoftwareVideoRecorder", target=self._thread_fun, args=(video_framerate,), daemon=True)
+        self._thread = StoppableThread(name="SoftwareVideoRecorder", target=self._thread_fun, args=(video_framerate, subdevice_index), daemon=True)
         self._thread.start()
 
         # wait for ffmpeg to start
@@ -58,7 +58,7 @@ class SoftwareVideoRecorder:
     def is_recording(self) -> bool:
         return self._thread is not None and self._capture_started.is_set()
 
-    def _thread_fun(self, video_framerate: int):
+    def _thread_fun(self, video_framerate: int, subdevice_index: int):
         assert self._thread
 
         logger.info("SoftwareVideoRecorder: start")
@@ -111,7 +111,7 @@ class SoftwareVideoRecorder:
 
         while not self._thread.stopped():
             try:
-                frame = self._backend.wait_for_lores_image(retries=4)
+                frame = self._backend.wait_for_lores_image(subdevice_index)
                 proc.stdin.write(frame)
                 proc.stdin.flush()
             except Exception as exc:

@@ -103,14 +103,12 @@ def api_multicam_loadfile_get(file_path: Path):
     return FileResponse(filepath_sanitized, filename=filepath_sanitized.name)  # cannot catch exceptions here since async internally.
 
 
-@router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
-def api_cmd_aquisition_capturemode_get(mode: Literal["preview", "capture", "video", "idle"] = "preview"):
+@router.get("/mode/{backend_index}/{mode}", status_code=status.HTTP_202_ACCEPTED)
+def api_cmd_aquisition_capturemode_get(backend_index: int = 0, mode: Literal["capture", "video", "standby"] = "video"):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        container.acquisition_service.signalbackend_configure_optimized_for_hq_capture()
-    elif mode == "preview":
-        container.acquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        container.acquisition_service._backends[backend_index]._mode_machine.ensure_still_mode()
     elif mode == "video":
-        container.acquisition_service.signalbackend_configure_optimized_for_video()
-    elif mode == "idle":
-        container.acquisition_service.signalbackend_configure_optimized_for_idle()
+        container.acquisition_service._backends[backend_index]._mode_machine.ensure_video_mode()
+    elif mode == "standby":
+        container.acquisition_service._backends[backend_index]._mode_machine.pause()

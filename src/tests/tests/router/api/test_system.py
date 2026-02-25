@@ -1,43 +1,33 @@
 import platform
-from collections.abc import Generator
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from photobooth.application import app
 from photobooth.container import container
 
 
-@pytest.fixture(scope="module")
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/system") as client:
-        container.start()
-        yield client
-        container.stop()
-
-
-@pytest.fixture(params=["/host/reboot", "/host/shutdown"])
+@pytest.fixture(params=["/system/host/reboot", "/system/host/shutdown"])
 def system_host_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(params=["/service/reload"])
+@pytest.fixture(params=["/system/service/reload"])
 def system_service_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(params=["/systemctl/start", "/systemctl/restart", "/systemctl/stop"])
+@pytest.fixture(params=["/system/systemctl/start", "/system/systemctl/restart", "/system/systemctl/stop"])
 def system_systemctl_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(params=["/systemctl/install", "/systemctl/uninstall"])
+@pytest.fixture(params=["/system/systemctl/install", "/system/systemctl/uninstall"])
 def system_systemctl_installuninstall_endpoint(request):
     yield request.param
 
 
-@pytest.fixture(params=["/host/xxx", "/service/xxx", "/systemctl/xxx"])
+@pytest.fixture(params=["/system/host/xxx", "/system/service/xxx", "/system/systemctl/xxx"])
 def system_nonexistant_endpoint(request):
     yield request.param
 

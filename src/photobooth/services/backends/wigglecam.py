@@ -1,14 +1,14 @@
 import logging
+import time
 import uuid
 from pathlib import Path
-from threading import Condition
 
 import pynng
 from wigglecam.dto import ImageMessage
 
 from ... import DATABASE_PATH, TMP_PATH
 from ..config.groups.cameras import GroupCameraWigglecam
-from .abstractbackend import AbstractBackend, GeneralBytesResult
+from .abstractbackend import AbstractBackend, MulticamRequest, StillRequest
 
 logger = logging.getLogger(__name__)
 CALIBRATION_DATA_PATH = Path(DATABASE_PATH, "multicam_calibration_data")
@@ -16,10 +16,9 @@ CALIBRATION_DATA_PATH = Path(DATABASE_PATH, "multicam_calibration_data")
 
 class WigglecamBackend(AbstractBackend):
     def __init__(self, config: GroupCameraWigglecam):
-        super().__init__()
         self._config = config
+        super().__init__(config.orientation, len(self.expected_device_ids()))
 
-        self._lores_data: list[GeneralBytesResult] | None = None
         self._pub_trigger: pynng.Pub0 | None = None
         self._sub_lores: pynng.Sub0 | None = None
         self._sub_hires: pynng.Sub0 | None = None
@@ -72,10 +71,6 @@ class WigglecamBackend(AbstractBackend):
         for node in self._config.devices:
             self._sub_hires.dial(f"tcp://{node.address}:{node.base_port + 2}", block=False)
 
-        self._lores_data = [GeneralBytesResult(data=b"", condition=Condition()) for _ in expected_device_ids]
-        # Sanity check: ensure distinct objects were created
-        assert all(a is not b for i, a in enumerate(self._lores_data) for j, b in enumerate(self._lores_data) if i != j)
-
     def teardown_resource(self):
         if self._pub_trigger:
             self._pub_trigger.close()
@@ -86,21 +81,20 @@ class WigglecamBackend(AbstractBackend):
         if self._sub_hires:
             self._sub_hires.close()
 
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
+    def _capture_lores(self, index_subdevice: int = 0) -> bytes:
         assert self._lores_data
 
-        self.pause_wait_for_lores_while_hires_capture()
         with self._lores_data[index_subdevice].condition:
             if not self._lores_data[index_subdevice].condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
             return self._lores_data[index_subdevice].data
 
-    def _wait_for_still_file(self) -> Path:
+    def _capture_still(self, subdevice_index: int) -> Path:
         # TODO: get highres from the one camera selected, for now get all and return the selected one
         captured_filepaths = self.__request_multicam_files()
-        return captured_filepaths[self._config.index_cam_stills]
+        return captured_filepaths[subdevice_index]
 
-    def _wait_for_multicam_files(self) -> list[Path]:
+    def _capture_multicam(self) -> list[Path]:
         captured_filepaths = self.__request_multicam_files()
         return captured_filepaths
 
@@ -146,10 +140,11 @@ class WigglecamBackend(AbstractBackend):
                     missing = set(expected_device_ids) - results.keys()
                     logger.error(f"got partial results from device-ids {set(results)}, missing from device_ids {missing}!")
                 else:
-                    logger.error("timeout waiting for hires stills, no results received!")
-                raise TimeoutError("timeout receiving stills from nodes") from None
+                    logger.error("timeout waiting for hires captures, no results received!")
 
-        logger.info(f"Finished receiving images. Results from device-ids '{set(results)}' saved to {job_folder}")
+                raise TimeoutError("timeout receiving captures from nodes") from None
+
+        logger.info(f"Finished receiving captures. Results from device-ids '{set(results)}' saved to {job_folder}")
 
         # Build ordered list according to config.devices
         files_out = [results[i] for i in range(len(self._config.devices)) if i in results]
@@ -162,9 +157,51 @@ class WigglecamBackend(AbstractBackend):
     def run_service(self):
         """Background loop to receive lores frames."""
         assert self._sub_lores
+        assert self._sub_hires
+        assert self._pub_trigger
         assert self._lores_data
 
+        logger.info("waiting for all nodes to be connected once before starting service.")
+        while True:
+            all_pub_triggers = len(self._pub_trigger.pipes) == len(self._config.devices)
+            all_sub_hires = len(self._sub_hires.pipes) == len(self._config.devices)
+            all_sub_lores = len(self._sub_lores.pipes) == len(self._config.devices)
+
+            time.sleep(0.1)
+
+            if (all_sub_hires and all_pub_triggers and all_sub_lores) or self._stop_event.is_set():
+                break
+            else:
+                continue
+
         while not self._stop_event.is_set():
+            with self._hires_lock:
+                req = self._hires_queue.popleft() if self._hires_queue else None
+
+            if req:
+                self._mode_machine.ensure_still_mode()
+
+                if isinstance(req, StillRequest):
+                    file = self._capture_still(req.subdevice_index)
+                    with req.condition:
+                        req.result_file = file
+                        req.condition.notify_all()
+                elif isinstance(req, MulticamRequest):
+                    files = self._capture_multicam()
+                    with req.condition:
+                        req.result_files = files
+                        req.condition.notify_all()
+                else:
+                    logger.warning(f"this backend does not support {type(req)} requests")
+                    continue
+
+            if self._mode_machine.standby.is_active:  # type: ignore
+                time.sleep(0.1)
+                continue
+
+            self._mode_machine.ensure_video_mode()
+
+            # "produce" next lores-frame
             try:
                 data = self._sub_lores.recv()  # timeout after set time during setup
                 msg = ImageMessage.from_bytes(data)
@@ -186,10 +223,8 @@ class WigglecamBackend(AbstractBackend):
 
         logger.debug("run_service loop exited")
 
-    def _on_configure_optimized_for_idle(self): ...
+    def _handle_switchmode_video_mode(self): ...
 
-    def _on_configure_optimized_for_hq_preview(self): ...
+    def _handle_switchmode_still_mode(self): ...
 
-    def _on_configure_optimized_for_hq_capture(self): ...
-
-    def _on_configure_optimized_for_livestream_paused(self): ...
+    def _handle_switchmode_standby(self): ...

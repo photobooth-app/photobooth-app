@@ -24,7 +24,7 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
     def on_enter_counting(self):
         self._acquisition_service.thrill_still()
-        self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        # self._acquisition_service.signalbackends_hq_thrill()
 
         super().on_enter_counting()
 
@@ -33,8 +33,6 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
     def on_enter_capture(self):
         logger.info(f"current capture ({self.captures_taken + 1}/{self.total_captures_to_take}, remaining {self.remaining_captures_to_take - 1})")
-
-        self._acquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         captureset = CaptureSet([Capture(self._acquisition_service.wait_for_still_file())])
 
@@ -52,7 +50,6 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         super().on_exit_approval(event)
 
     def on_enter_completed(self):
-        super().on_enter_completed()
 
         ## PHASE 1:
         # postprocess each capture individually

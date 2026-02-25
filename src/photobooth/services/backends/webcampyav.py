@@ -5,9 +5,9 @@ pyav webcam implementation backend
 import io
 import logging
 import sys
+import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition
 
 import av
 from av.codec import Capabilities, Codec
@@ -17,9 +17,8 @@ from simplejpeg import encode_jpeg_yuv_planes
 
 from ...utils.helper import filename_str_time
 from ...utils.resilientservice import PermanentFault
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraPyav
-from .abstractbackend import AbstractBackend, GeneralBytesResult
+from .abstractbackend import AbstractBackend, StillRequest
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +38,7 @@ elif sys.platform == "linux":
 class WebcamPyavBackend(AbstractBackend):
     def __init__(self, config: GroupCameraPyav):
         self._config: GroupCameraPyav = config
-        super().__init__(orientation=config.orientation)
-
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
-        self._worker_thread: StoppableThread | None = None
+        super().__init__(orientation=config.orientation, num_subdevices=1)
 
         # for debugging purposes output some information about underlying libs
         self._version_codec_info()
@@ -59,47 +55,14 @@ class WebcamPyavBackend(AbstractBackend):
     def _device_name_platform(self):
         return f"video={self._config.device_identifier}" if sys.platform == "win32" else f"{self._config.device_identifier}"
 
-    def _wait_for_multicam_files(self) -> list[Path]:
-        raise NotImplementedError("backend does not support multicam files")
+    def _handle_switchmode_video_mode(self):
+        super()._handle_switchmode_video_mode()
 
-    def _wait_for_still_file(self) -> Path:
-        """
-        for other threads to receive a hq JPEG image
-        mode switches are handled internally automatically, no separate trigger necessary
-        this function blocks until frame is received
-        raise TimeoutError if no frame was received
-        """
-        with self._hires_data.condition:
-            self._hires_data.request.set()
+    def _handle_switchmode_still_mode(self):
+        super()._handle_switchmode_still_mode()
 
-            if not self._hires_data.condition.wait(timeout=4):
-                # wait returns true if timeout expired
-                raise TimeoutError("timeout receiving frames")
-
-            self._hires_data.request.clear()
-            assert self._hires_data.filepath
-
-            return self._hires_data.filepath
-
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
-        if index_subdevice > 0:
-            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
-
-        self.pause_wait_for_lores_while_hires_capture()
-
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
-                raise TimeoutError("timeout receiving frames")
-
-            return self._lores_data.data
-
-    def _on_configure_optimized_for_idle(self): ...
-
-    def _on_configure_optimized_for_hq_preview(self): ...
-
-    def _on_configure_optimized_for_hq_capture(self): ...
-
-    def _on_configure_optimized_for_livestream_paused(self): ...
+    def _handle_switchmode_standby(self):
+        super()._handle_switchmode_standby()
 
     def setup_resource(self): ...
 
@@ -118,7 +81,6 @@ class WebcamPyavBackend(AbstractBackend):
 
         rW = self._config.cam_resolution_width // self._config.preview_resolution_reduce_factor
         rH = self._config.cam_resolution_height // self._config.preview_resolution_reduce_factor
-        frame_count = 0
 
         try:
             logger.info(f"trying to open camera index={self._config.device_identifier=}")
@@ -151,33 +113,42 @@ class WebcamPyavBackend(AbstractBackend):
             codec_name = input_stream.codec.name
 
             for frame in input_device.decode(input_stream):
+                with self._hires_lock:
+                    req = self._hires_queue.popleft() if self._hires_queue else None
+
                 # hires
-                if self._hires_data.request.is_set():
-                    self._hires_data.request.clear()
+                if req:
+                    if isinstance(req, StillRequest):
+                        if codec_name == "mjpeg":
+                            jpeg_bytes_hires = bytes(next(input_device.demux()))
+                        elif codec_name == "rawvideo":
+                            image_bytesio = io.BytesIO()
+                            frame.to_image().save(image_bytesio, format="JPEG", quality=90)
+                            jpeg_bytes_hires = image_bytesio.getvalue()
+                        else:
+                            raise PermanentFault(f"The webcam's codec {codec_name} is not supported!")
 
-                    if codec_name == "mjpeg":
-                        jpeg_bytes_hires = bytes(next(input_device.demux()))
-                    elif codec_name == "rawvideo":
-                        image_bytesio = io.BytesIO()
-                        frame.to_image().save(image_bytesio, format="JPEG", quality=90)
-                        jpeg_bytes_hires = image_bytesio.getvalue()
+                        # only capture one pic and return to lores streaming afterwards
+                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
+                            f.write(jpeg_bytes_hires)
+
+                        with req.condition:
+                            req.result_file = Path(f.name)
+                            req.condition.notify_all()
                     else:
-                        raise PermanentFault(f"The webcam's codec {codec_name} is not supported!")
+                        logger.warning(f"this backend does not support {type(req)} requests")
+                        continue
 
-                    # only capture one pic and return to lores streaming afterwards
-                    with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
-                        f.write(jpeg_bytes_hires)
+                # abort streaming on shutdown so process can join and close
+                if self._stop_event.is_set():
+                    break
 
-                    self._hires_data.filepath = Path(f.name)
-                    with self._hires_data.condition:
-                        self._hires_data.condition.notify_all()
-
-                # lores stream
-                frame_count += 1
-                if frame_count < self._config.frame_skip_count:
+                if self._mode_machine.standby.is_active:  # type: ignore
+                    time.sleep(0.1)
                     continue
-                else:
-                    frame_count = 0
+
+                if not self._framerate.should_process_frame(2):
+                    continue
 
                 if self._config.preview_resolution_reduce_factor > 1:
                     out_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p").to_ndarray()
@@ -198,15 +169,11 @@ class WebcamPyavBackend(AbstractBackend):
                 # Alternative approach using turbojpeg. speed is actually the same but simplejpeg comes with turbojpeg libs bundled for windows
                 # jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
 
-                with self._lores_data.condition:
-                    self._lores_data.data = jpeg_bytes
-                    self._lores_data.condition.notify_all()
+                with self._lores_data[0].condition:
+                    self._lores_data[0].data = jpeg_bytes
+                    self._lores_data[0].condition.notify_all()
 
                 self._frame_tick()
-
-                # abort streaming on shutdown so process can join and close
-                if self._stop_event.is_set():
-                    break
 
         logger.info("pyav_img_acquisition finished, exit")
 

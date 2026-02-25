@@ -25,7 +25,7 @@ def capture(client: TestClient):
 
 
 def test_aquire_still_capturemode(client: TestClient):
-    response = client.get("/aquisition/mode/capture")
+    response = client.get("/aquisition/mode/0/capture")
     assert response.status_code == 202
 
     response = client.get("/aquisition/still")
@@ -44,7 +44,7 @@ def test_aquire_still_exception(client: TestClient):
 
 def test_aquire_multiple_withmodechange(client: TestClient):
     for _i in range(4):
-        response = client.get("/aquisition/mode/capture")
+        response = client.get("/aquisition/mode/0/capture")
         assert response.status_code == 202
 
         # virtual countdown
@@ -52,7 +52,7 @@ def test_aquire_multiple_withmodechange(client: TestClient):
 
         capture(client)
 
-        response = client.get("/aquisition/mode/preview")
+        response = client.get("/aquisition/mode/0/video")
         assert response.status_code == 202
 
 
@@ -62,18 +62,16 @@ def test_aquire_multiple_nomodechange(client: TestClient):
 
 
 def test_invalid_test_all_modes(client: TestClient):
-    response = client.get("/aquisition/mode/capture")
+    response = client.get("/aquisition/mode/0/capture")
     assert response.is_success
-    response = client.get("/aquisition/mode/preview")
+    response = client.get("/aquisition/mode/0/video")
     assert response.is_success
-    response = client.get("/aquisition/mode/video")
-    assert response.is_success
-    response = client.get("/aquisition/mode/idle")
+    response = client.get("/aquisition/mode/0/standby")
     assert response.is_success
 
 
 def test_invalid_modechange(client: TestClient):
-    response = client.get("/aquisition/mode/invalidmode")
+    response = client.get("/aquisition/mode/0/invalidmode")
     assert response.status_code == 422
 
 

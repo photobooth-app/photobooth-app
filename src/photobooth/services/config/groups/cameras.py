@@ -17,6 +17,18 @@ class BaseModelCamera(BaseModel):
         description="Choose the orientation of the camera. 0° is default orientation and applies no adjustment. The orientation will be set in the EXIF data so transformations are applied lossless.",
     )
 
+    pause_camera_on_livestream_inactive: bool = Field(
+        default=False,
+        description="When enabled, the app tries to disable the cameras livestream when no livestream is requested. It helps to avoid sensor overheating for older cameras by setting viewfinder=0.",
+    )
+    timeout_until_inactive: int = Field(
+        default=30,
+        ge=10,
+        le=300,
+        description="Delay after which the livestream is considered as inactive and camera should idle.",
+        json_schema_extra={"ui_schema_extra": {"slider": True}},
+    )
+
 
 class GroupCameraVirtual(BaseModelCamera):
     model_config = ConfigDict(title="VirtualCamera")
@@ -154,18 +166,6 @@ class GroupCameraGphoto2(BaseModelCamera):
     canon_eosmoviemode: bool = Field(
         default=False,
         description="Canon specific. Switch on/off eosmoviemode when streaming videos. Might not work with every camera.",
-    )
-
-    pause_camera_on_livestream_inactive: bool = Field(
-        default=False,
-        description="When enabled, the app tries to disable the cameras livestream when no livestream is requested. It helps to avoid sensor overheating for older cameras by setting viewfinder=0.",
-    )
-    timeout_until_inactive: int = Field(
-        default=30,
-        ge=10,
-        le=300,
-        description="Delay after which the livestream is considered as inactive and camera should idle.",
-        json_schema_extra={"ui_schema_extra": {"slider": True}},
     )
 
 

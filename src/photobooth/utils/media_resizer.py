@@ -10,11 +10,13 @@ logger = logging.getLogger(__name__)
 try:
     from turbojpeg import TurboJPEG
 
-    turbojpeg = TurboJPEG()
+    turbojpeg = TurboJPEG("/opt/libjpeg-turbo/lib64/libturbojpeg.so")
     print("using turbojpeg to scale images")  # print because log at this point not yet active...
-except Exception:
+except Exception as exc:
     turbojpeg = None
+
     print("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
+    print(exc)
 
 
 def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
@@ -46,7 +48,7 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
     with open(filepath_in, "rb") as file_in:
         jpeg_bytes_in = file_in.read()
 
-    (width, height, _, _) = turbojpeg.decode_header(jpeg_bytes_in)
+    (width, height, _, _) = turbojpeg.decode_header(jpeg_bytes_in)  # type: ignore
 
     original_length = max(width, height)  # scale for the max length
     scaling_factor = scaled_min_length / original_length

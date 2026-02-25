@@ -1,22 +1,11 @@
 import logging
-from collections.abc import Generator
 
-import pytest
 from fastapi.testclient import TestClient
 from httpx_sse import connect_sse
 
-from photobooth.application import app
 from photobooth.container import container
 
 logger = logging.getLogger(name=None)
-
-
-@pytest.fixture(scope="module")
-def client() -> Generator[TestClient, None, None]:
-    with TestClient(app=app, base_url="http://test/api/") as client:
-        container.start()
-        yield client
-        container.stop()
 
 
 def test_sse_stream(client: TestClient):

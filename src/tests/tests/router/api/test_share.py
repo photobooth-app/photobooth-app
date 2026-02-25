@@ -18,7 +18,6 @@ def modules_client(client) -> Generator[TestClient, None, None]:
 
     container.reload()
     yield client
-    container.stop()
 
 
 @pytest.fixture(autouse=True)

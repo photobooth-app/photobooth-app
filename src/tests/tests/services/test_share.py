@@ -19,7 +19,6 @@ logger = logging.getLogger(name=None)
 
 @pytest.fixture(scope="function")
 def _container() -> Generator[Container, None, None]:
-    container.start()
 
     # Setup
     appconfig.share.sharing_enabled = True
@@ -58,6 +57,7 @@ def _container() -> Generator[Container, None, None]:
     )
     container.share_service.limit_counter_reset_all()
 
+    container.reload()
     yield container
     container.stop()
 

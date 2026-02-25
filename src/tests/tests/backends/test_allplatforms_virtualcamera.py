@@ -35,9 +35,9 @@ def test_service_reload(backend_virtual: VirtualCameraBackend):
 
 
 def test_optimize_mode(backend_virtual: VirtualCameraBackend):
-    backend_virtual._on_configure_optimized_for_hq_capture()
-    backend_virtual._on_configure_optimized_for_hq_preview()
-    backend_virtual._on_configure_optimized_for_idle()
+    backend_virtual._handle_switchmode_still_mode()
+    backend_virtual._handle_switchmode_video_mode()
+    backend_virtual._handle_switchmode_standby()
 
 
 def test_get_images_virtualcamera(backend_virtual: VirtualCameraBackend):

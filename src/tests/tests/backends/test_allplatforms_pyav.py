@@ -47,10 +47,10 @@ def test_service_reload(backend_pyav: WebcamPyavBackend):
     backend_pyav.start()
 
 
-def test_optimize_mode(backend_pyav):
-    backend_pyav._on_configure_optimized_for_hq_capture()
-    backend_pyav._on_configure_optimized_for_hq_preview()
-    backend_pyav._on_configure_optimized_for_idle()
+def test_optimize_mode(backend_pyav: WebcamPyavBackend):
+    backend_pyav._handle_switchmode_still_mode()
+    backend_pyav._handle_switchmode_video_mode()
+    backend_pyav._handle_switchmode_standby()
 
 
 def test_get_images_webcampyav(backend_pyav: WebcamPyavBackend):

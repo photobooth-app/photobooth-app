@@ -3,16 +3,16 @@ v4l webcam implementation backend
 """
 
 import logging
+import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition
 from typing import TYPE_CHECKING, Literal
 
 import cv2
 
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraV4l2
-from .abstractbackend import AbstractBackend, GeneralBytesResult
+from .abstractbackend import AbstractBackend, StillRequest
 
 try:
     import linuxpy.video.device as linuxpy_video_device  # type: ignore
@@ -34,11 +34,13 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
+modeType = Literal["hires", "lores"]
+
 
 class WebcamV4lBackend(AbstractBackend):
     def __init__(self, config: GroupCameraV4l2):
         self._config: GroupCameraV4l2 = config
-        super().__init__(orientation=config.orientation)
+        super().__init__(orientation=config.orientation, num_subdevices=1)
 
         if linuxpy_video_device is None:
             raise ModuleNotFoundError("Backend is not available because linuxpy is not found - either wrong platform or not installed!")
@@ -46,7 +48,7 @@ class WebcamV4lBackend(AbstractBackend):
         if turbojpeg is None:
             raise ModuleNotFoundError("Backend is not available because turbojpeg library is not found - either wrong platform or not installed!")
 
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        self._capture: linuxpy_video_device_type.VideoCapture | None = None
         self._fmt_pixel_format: linuxpy_video_device_type.PixelFormat | None = None
 
     def start(self):
@@ -55,64 +57,21 @@ class WebcamV4lBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
-    def _wait_for_multicam_files(self) -> list[Path]:
-        raise NotImplementedError("backend does not support multicam files")
+    def _handle_switchmode_video_mode(self):
+        self._set_mode("lores")
+        super()._handle_switchmode_video_mode()
 
-    def _wait_for_still_file(self) -> Path:
-        """
-        for other threads to receive a hq JPEG image
-        mode switches are handled internally automatically, no separate trigger necessary
-        this function blocks until frame is received
-        raise TimeoutError if no frame was received
-        """
+    def _handle_switchmode_still_mode(self):
+        self._set_mode("hires")
+        super()._handle_switchmode_still_mode()
 
-        if self._config.switch_to_high_resolution_for_stills:
-            return self._wait_for_still_file_switch_hires()
-        else:
-            return self._wait_for_still_file_noswitch_lores()
+    def _handle_switchmode_standby(self):
+        super()._handle_switchmode_standby()
 
-    def _wait_for_still_file_switch_hires(self) -> Path:
-        assert self._hires_data
-
-        with self._hires_data.condition:
-            self._hires_data.request.set()
-
-            if not self._hires_data.condition.wait(timeout=4):
-                # wait returns true if timeout expired
-                raise TimeoutError("timeout receiving frames")
-
-            self._hires_data.request.clear()
-            assert self._hires_data.filepath
-
-            return self._hires_data.filepath
-
-    def _wait_for_still_file_noswitch_lores(self) -> Path:
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2lores_", suffix=".jpg") as f:
-            f.write(self._wait_for_lores_image())
-            return Path(f.name)
-
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
-        if index_subdevice > 0:
-            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
-
-        self.pause_wait_for_lores_while_hires_capture()
-
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
-                raise TimeoutError("timeout receiving frames")
-
-            return self._lores_data.data
-
-    def _on_configure_optimized_for_idle(self): ...
-
-    def _on_configure_optimized_for_hq_preview(self): ...
-
-    def _on_configure_optimized_for_hq_capture(self): ...
-
-    def _on_configure_optimized_for_livestream_paused(self): ...
-
-    def _set_mode(self, capture: "linuxpy_video_device_type.VideoCapture", mode: Literal["hires", "lores"]):
+    def _set_mode(self, mode: modeType):
         assert linuxpy_video_device
+        assert self._capture
+
         logger.info(f"switch_mode to {mode} requested")
 
         if mode == "hires":
@@ -122,13 +81,13 @@ class WebcamV4lBackend(AbstractBackend):
 
         try:
             # pixel_format is handed over to v4l_fourcc, so it needs to be MJPG for MJPEG
-            capture.set_format(width, height, self._config.pixel_format_fourcc)
+            self._capture.set_format(width, height, self._config.pixel_format_fourcc)
         except Exception as exc:
             logger.error(f"error switching mode due to {exc}")
 
-        fmt = capture.get_format()
-
-        logger.info(f"requested {mode}-resolution is {width}x{height}, format {self._config.pixel_format_fourcc}")
+        fmt = self._capture.get_format()
+        px_fmt_req = linuxpy_video_device.PixelFormat(linuxpy_video_device.raw.v4l2_fourcc(*self._config.pixel_format_fourcc))
+        logger.info(f"requested {mode}-resolution is {width}x{height}, format {px_fmt_req.name}")
         logger.info(f"   actual {mode}-resolution is {fmt.width}x{fmt.height}, format {fmt.pixel_format.name}")
 
         # save for later use
@@ -201,68 +160,95 @@ class WebcamV4lBackend(AbstractBackend):
         except ValueError:
             return linuxpy_video_device.Device(device_text)
 
-    def setup_resource(self): ...
+    def setup_resource(self):
+        self._capture = None
 
-    def teardown_resource(self): ...
+    def teardown_resource(self):
+        self._capture = None
 
     def run_service(self):
         assert linuxpy_video_device
+        self._capture = None
 
         logger.info(f"trying to open camera index={self._config.device_identifier=}")
         with self._get_device(self._config.device_identifier) as device:
             logger.info(f"webcam device index: {self._config.device_identifier}")
             logger.info(f"webcam name: {device.info.card if device.info else 'unknown'}")
 
-            capture = linuxpy_video_device.VideoCapture(device)
+            self._capture = linuxpy_video_device.VideoCapture(device)
 
             try:
-                capture.set_fps(25)
+                self._capture.set_fps(25)
             except OSError as exc:
                 logger.warning(f"cannot set_fps due to error: {exc}")
                 # continue even if error occured, camera might not support fps setting...
 
             while not self._stop_event.is_set():
-                if self._hires_data.request.is_set():
-                    # only capture one pic and return to lores streaming afterwards
-                    self._hires_data.request.clear()
+                with self._hires_lock:
+                    req = self._hires_queue.popleft() if self._hires_queue else None
 
-                    self._set_mode(capture, "hires")
+                if req:
+                    if isinstance(req, StillRequest):
+                        skip_counter = 0
 
-                    # capture hq picture
-                    skip_counter = 0
+                        if self._config.switch_to_high_resolution_for_stills:
+                            # self._set_mode(capture, "hires")
+                            self._mode_machine.ensure_still_mode()
+                            skip_counter = self._config.flush_number_frames_after_switch
+                        else:
+                            self._mode_machine.ensure_video_mode()
+
+                        for frame in device:
+                            # throw away the first x frames to allow the camera to settle again.
+                            if skip_counter > 0:
+                                skip_counter -= 1
+                                continue
+
+                            logger.info(f"flushed {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+
+                            with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2_", suffix=".jpg") as f:
+                                f.write(self._frame_to_jpeg(frame))
+
+                            logger.info(f"written image to {Path(f.name)}")
+
+                            with req.condition:
+                                req.result_file = Path(f.name)
+                                req.condition.notify_all()
+
+                            # job done
+                            break
+
+                    else:
+                        logger.warning(f"this backend does not support {type(req)} requests")
+                        continue
+
+                else:
+                    self._mode_machine.ensure_video_mode()
+
+                    if self._mode_machine.standby.is_active:  # type: ignore
+                        time.sleep(0.1)
+                        continue
+
                     for frame in device:
-                        # throw away the first x frames to allow the camera to settle again.
-                        if skip_counter <= self._config.flush_number_frames_after_switch:
-                            skip_counter += 1
+                        if not self._framerate.should_process_frame(2):
                             continue
 
-                        logger.info(f"skipped {skip_counter} frames before capture high resolution image")
-
-                        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2hires_", suffix=".jpg") as f:
-                            f.write(self._frame_to_jpeg(frame))
-
-                        self._hires_data.filepath = Path(f.name)
-
-                        logger.info(f"written image to {Path(f.name)}")
-
-                        with self._hires_data.condition:
-                            self._hires_data.condition.notify_all()
-
-                        # grab just one frame...
-                        break
-                else:
-                    self._set_mode(capture, "lores")
-
-                    for frame in device:  # forever
-                        with self._lores_data.condition:
-                            self._lores_data.data = self._frame_to_jpeg(frame)
-                            self._lores_data.condition.notify_all()
-
+                        # produce
+                        jpeg_buffer = self._frame_to_jpeg(frame)
                         self._frame_tick()
 
-                        # leave lores in favor to hires still capture for 1 frame.
-                        if self._hires_data.request.is_set():
+                        with self._lores_data[0].condition:
+                            self._lores_data[0].data = jpeg_buffer
+                            self._lores_data[0].condition.notify_all()
+
+                        # check for standby?
+                        if self._mode_machine.standby.is_active:  # type: ignore
                             break
+
+                        # leave lores in favor to hires still capture for 1 frame.
+                        with self._hires_lock:
+                            if self._hires_queue:
+                                break
 
                         # abort streaming on shutdown so process can join and close
                         if self._stop_event.is_set():

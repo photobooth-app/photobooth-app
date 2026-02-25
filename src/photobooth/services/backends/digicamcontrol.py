@@ -3,12 +3,11 @@ import tempfile
 import time
 import urllib.parse
 from pathlib import Path
-from threading import Condition
 
 import requests
 
 from ..config.groups.cameras import GroupCameraDigicamcontrol
-from .abstractbackend import AbstractBackend, GeneralBytesResult
+from .abstractbackend import AbstractBackend, StillRequest
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +52,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def __init__(self, config: GroupCameraDigicamcontrol):
         self._config: GroupCameraDigicamcontrol = config
-        super().__init__(orientation=config.orientation)
-
-        self._enabled_liveview: bool = False
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        super().__init__(orientation=config.orientation, num_subdevices=1)
 
     def start(self):
         super().start()
@@ -64,48 +60,16 @@ class DigicamcontrolBackend(AbstractBackend):
     def stop(self):
         super().stop()
 
-    def _wait_for_multicam_files(self) -> list[Path]:
-        raise NotImplementedError("backend does not support multicam files")
-
-    def _wait_for_still_file(self) -> Path:
-        """
-        for other threads to receive a hq JPEG image
-        mode switches are handled internally automatically, no separate trigger necessary
-        this function blocks until frame is received
-        raise TimeoutError if no frame was received
-        """
-        with self._hires_data.condition:
-            self._hires_data.request.set()
-
-            if not self._hires_data.condition.wait(timeout=8):
-                self._hires_data.request.clear()  # clear hq request even if failed, parent class might retry again
-                raise TimeoutError("timeout receiving frames")
-
-            assert self._hires_data.filepath
-            return self._hires_data.filepath
-
     #
     # INTERNAL FUNCTIONS
     #
 
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
-        if index_subdevice > 0:
-            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
+    def _handle_switchmode_still_mode(self): ...
 
-        self.pause_wait_for_lores_while_hires_capture()
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
-                raise TimeoutError("timeout receiving frames")
+    def _handle_switchmode_video_mode(self):
+        self._enable_liveview()
 
-            return self._lores_data.data
-
-    def _on_configure_optimized_for_hq_capture(self): ...
-
-    def _on_configure_optimized_for_hq_preview(self): ...
-
-    def _on_configure_optimized_for_idle(self): ...
-
-    def _on_configure_optimized_for_livestream_paused(self): ...
+    def _handle_switchmode_standby(self): ...
 
     def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
@@ -121,10 +85,7 @@ class DigicamcontrolBackend(AbstractBackend):
         else:
             logger.debug("set preview mode successful")
 
-        self._enabled_liveview = True
-
-    def setup_resource(self):
-        self._enabled_liveview: bool = False
+    def setup_resource(self): ...
 
     def teardown_resource(self):
         # when stopping the backend also stop the livestream by following command.
@@ -135,16 +96,17 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def run_service(self):
         # start in preview mode
-        self._on_configure_optimized_for_idle()
+        self._mode_machine.ensure_video_mode()
 
         session = requests.Session()
         preview_failcounter = 0
 
         while not self._stop_event.is_set():  # repeat until stopped
-            if self._hires_data.request.is_set():
-                logger.debug("triggered capture")
+            with self._hires_lock:
+                req = self._hires_queue.popleft() if self._hires_queue else None
 
-                try:
+            if req:
+                if isinstance(req, StillRequest):
                     # capture request, afterwards read file to buffer
                     tmp_dir = tempfile.gettempdir()
 
@@ -189,60 +151,56 @@ class DigicamcontrolBackend(AbstractBackend):
                         logger.critical("finally failed after 10 attempts to capture image!")
                         raise RuntimeError("finally failed after 10 attempts to capture image!")
 
-                    # success
-                    with self._hires_data.condition:
-                        self._hires_data.filepath = captured_filepath
-                        self._hires_data.condition.notify_all()
-
-                except Exception as exc:
-                    logger.critical(f"error capture! check logs for errors. {exc}")
-
-                finally:
-                    # only capture one pic and return to lores streaming afterwards
-                    self._hires_data.request.clear()
+                    with req.condition:
+                        req.result_file = captured_filepath
+                        req.condition.notify_all()
+                else:
+                    logger.warning(f"this backend does not support {type(req)} requests")
+                    continue
 
             else:
-                # one time enable liveview
-                if self.livestream_requested and not self._enabled_liveview:
-                    self._enable_liveview()
-
-                if self._enabled_liveview:
-                    try:
-                        # r = session.get("http://127.0.0.1:5514/live") #different port also!
-                        r = session.get(f"{self._config.base_url}/liveview.jpg")
-                        r.raise_for_status()
-
-                        if self._lores_data.data and (self._lores_data.data == r.content):
-                            raise RuntimeError(
-                                "received same frame again - digicamcontrol liveview might be closed or delivers "
-                                "low framerate only. Consider to reduce resolution or Livepreview Framerate."
-                            )
-
-                    except Exception as exc:
-                        preview_failcounter += 1
-
-                        if preview_failcounter <= 10:
-                            logger.warning(f"error capturing frame from DSLR: {exc}")
-                            # abort this loop iteration and continue sleeping...
-                            time.sleep(0.5)  # add another delay to avoid flooding logs
-
-                            continue  # continue and try in next run to get one...
-                        else:
-                            logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
-                            # stop device requested by leaving worker loop, so supvervisor can restart
-                            break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
-                    else:
-                        preview_failcounter = 0
-
-                    with self._lores_data.condition:
-                        assert r.content
-                        self._lores_data.data = r.content
-                        self._lores_data.condition.notify_all()
-
-                    self._frame_tick()
-
-                    # limit fps to a reasonable amount. otherwise getting liveview.jpg would lead to 100% cpu as it's getting images way too often.
+                if self._mode_machine.standby.is_active:  # type: ignore
                     time.sleep(0.1)
+                    continue
+
+                self._mode_machine.ensure_video_mode()
+
+                try:
+                    # r = session.get("http://127.0.0.1:5514/live") #different port also!
+                    r = session.get(f"{self._config.base_url}/liveview.jpg")
+                    r.raise_for_status()
+
+                    if self._lores_data[0].data and (self._lores_data[0].data == r.content):
+                        raise RuntimeError(
+                            "received same frame again - digicamcontrol liveview might be closed or delivers "
+                            "low framerate only. Consider to reduce resolution or Livepreview Framerate."
+                        )
+
+                except Exception as exc:
+                    preview_failcounter += 1
+
+                    if preview_failcounter <= 10:
+                        logger.warning(f"error capturing frame from DSLR: {exc}")
+                        # abort this loop iteration and continue sleeping...
+                        time.sleep(0.5)  # add another delay to avoid flooding logs
+
+                        continue  # continue and try in next run to get one...
+                    else:
+                        logger.critical(f"aborting capturing frame, camera disconnected? {exc}")
+                        # stop device requested by leaving worker loop, so supvervisor can restart
+                        break  # finally failed: exit worker fun, because no camera avail. connect fun supervises and reconnects
+                else:
+                    preview_failcounter = 0
+
+                with self._lores_data[0].condition:
+                    assert r.content
+                    self._lores_data[0].data = r.content
+                    self._lores_data[0].condition.notify_all()
+
+                self._frame_tick()
+
+                # limit fps to a reasonable amount. otherwise getting liveview.jpg would lead to 100% cpu as it's getting images way too often.
+                self._framerate.wait_until_fps(10)
 
             # wait for trigger...
             time.sleep(0.05)

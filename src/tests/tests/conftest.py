@@ -25,7 +25,7 @@ def client() -> Generator[TestClient, None, None]:
 
         yield client
 
-        container.stop()
+        assert container.is_started(), "container need to be in started state until the very end! otherwise it might reveal issues with the tests."
 
 
 @pytest.fixture

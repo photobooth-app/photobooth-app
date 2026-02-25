@@ -8,18 +8,17 @@ import logging
 import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
 from picamera2.allocators import PersistentAllocator  # type: ignore
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
-from picamera2.outputs import FfmpegOutput, FileOutput  # type: ignore
+from picamera2.outputs import PyavOutput  # type: ignore
 
 from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraPicamera2
-from .abstractbackend import AbstractBackend
+from .abstractbackend import AbstractBackend, StillRequest
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +31,13 @@ class PicamLoresData(io.BufferedIOBase):
         io (_type_): _description_
     """
 
-    def __init__(self):
-        self.frame = None
-        self.condition = Condition()
+    def __init__(self, lores_data):
+        self.lores_data = lores_data
 
     def write(self, buf) -> int:
-        with self.condition:
-            self.frame = buf
-            self.condition.notify_all()
+        with self.lores_data[0].condition:
+            self.lores_data[0].data = buf
+            self.lores_data[0].condition.notify_all()
 
         return len(buf)
 
@@ -48,7 +46,8 @@ class Picamera2Backend(AbstractBackend):
     def __init__(self, config: GroupCameraPicamera2):
         self._config: GroupCameraPicamera2 = config
 
-        super().__init__(orientation="1: 0°")  # for picamera there is only 1-4 supported (no 90°/270° rotation as it's not exposed by picamera2)
+        # for picamera there is only 1-4 supported (no 90°/270° rotation as it's not exposed by picamera2)
+        super().__init__(orientation="1: 0°", num_subdevices=1)
 
         exif_orientation = int(config.orientation[0])
 
@@ -68,17 +67,12 @@ class Picamera2Backend(AbstractBackend):
         self._picamera2: Picamera2 | None = None
         self._mjpeg_encoder: MJPEGEncoder | None = None  # livestream encoder
 
-        # lores and hires data output
-        self._lores_data: PicamLoresData = PicamLoresData()
-
         # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
         self._video_encoder = None
         self._video_output = None
 
-        self._capture_config = None
-        self._preview_config = None
-        self._current_config = None
-        self._last_config = None
+        self._still_configuration = None
+        self._video_configuration = None
 
     def start(self):
         super().start()
@@ -116,28 +110,6 @@ class Picamera2Backend(AbstractBackend):
 
         return tuning
 
-    def _wait_for_multicam_files(self) -> list[Path]:
-        raise NotImplementedError("backend does not support multicam files")
-
-    def _wait_for_still_file(self) -> Path:
-        """
-        for other threads to receive a hq JPEG image
-        mode switches are handled internally automatically, no separate trigger necessary
-        this function blocks until frame is received
-        raise TimeoutError if no frame was received
-        """
-        with self._hires_data.condition:
-            self._hires_data.request.set()
-
-            if not self._hires_data.condition.wait(timeout=4):
-                # wait returns true if timeout expired
-                raise TimeoutError("timeout receiving frames")
-
-            self._hires_data.request.clear()
-            assert self._hires_data.filepath
-
-            return self._hires_data.filepath
-
     @staticmethod
     def _round_none(value, digits):
         """
@@ -156,21 +128,6 @@ class Picamera2Backend(AbstractBackend):
 
         return round(value, digits)
 
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
-        if index_subdevice > 0:
-            raise RuntimeError("streaming from subdevices > 0 is not supported on this backend.")
-
-        assert self._lores_data
-
-        self.pause_wait_for_lores_while_hires_capture()
-
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
-                raise TimeoutError("timeout receiving frames")
-
-            assert self._lores_data.frame
-            return self._lores_data.frame
-
     def start_recording(self, video_framerate: int) -> Path:
         """picamera2 has local start_recording, which overrides the abstract class implementation in favor of local handling by picamera2"""
         assert self._picamera2
@@ -181,7 +138,7 @@ class Picamera2Backend(AbstractBackend):
             framerate=video_framerate,
             profile="baseline" if appconfig.mediaprocessing.video_compatibility_mode else None,  # compat mode, baseline produces yuv420
         )
-        self._video_output = FfmpegOutput(str(video_recorded_videofilepath))
+        self._video_output = PyavOutput(str(video_recorded_videofilepath))
 
         self._picamera2.start_encoder(self._video_encoder, self._video_output, name="lores")
 
@@ -197,37 +154,34 @@ class Picamera2Backend(AbstractBackend):
         else:
             logger.info("no picamera2 video encoder active that could be stopped")
 
-    def _on_configure_optimized_for_idle(self):
+    def _handle_switchmode_video_mode(self):
         logger.debug("change to preview mode requested")
-        self._last_config = self._current_config
-        self._current_config = self._preview_config
+        self._switch_mode(self._video_configuration)
 
-    def _on_configure_optimized_for_hq_preview(self):
+    def _handle_switchmode_still_mode(self):
         logger.debug("change to capture mode requested")
-        self._last_config = self._current_config
-        self._current_config = self._capture_config
+        self._switch_mode(self._still_configuration)
 
-    def _on_configure_optimized_for_hq_capture(self): ...
+    def _handle_switchmode_standby(self): ...
 
-    def _on_configure_optimized_for_livestream_paused(self): ...
-
-    def _switch_mode(self):
+    def _switch_mode(self, config):
         assert self._picamera2
         logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
 
         self._picamera2.stop_encoder()
-        self._last_config = self._current_config
 
         try:
             # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
             # if this happens, backend signals error and shall be restarted.
-            self._picamera2.switch_mode(self._current_config)
+            self._picamera2.configure(config)
         except Exception as exc:
             logger.exception(exc)
             logger.critical(f"error switching mode in picamera due to {exc}")
             raise exc
         else:
-            self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+            self._picamera2.start_encoder(
+                self._mjpeg_encoder, PyavOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
+            )
             logger.info("switchmode finished successfully")
 
     def _init_autofocus(self):
@@ -266,7 +220,7 @@ class Picamera2Backend(AbstractBackend):
         assert self._picamera2
 
         # config HQ mode (used for picture capture and live preview on countdown)
-        self._capture_config = self._picamera2.create_still_configuration(
+        self._still_configuration = self._picamera2.create_still_configuration(
             main={"size": (self._config.CAPTURE_CAM_RESOLUTION_WIDTH, self._config.CAPTURE_CAM_RESOLUTION_HEIGHT)},
             lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
             encode="lores",
@@ -277,7 +231,7 @@ class Picamera2Backend(AbstractBackend):
         )
 
         # config preview mode (used for permanent live view)
-        self._preview_config = self._picamera2.create_video_configuration(
+        self._video_configuration = self._picamera2.create_video_configuration(
             main={"size": (self._config.PREVIEW_CAM_RESOLUTION_WIDTH, self._config.PREVIEW_CAM_RESOLUTION_HEIGHT)},
             lores={"size": (self._config.LIVEVIEW_RESOLUTION_WIDTH, self._config.LIVEVIEW_RESOLUTION_HEIGHT)},
             encode="lores",
@@ -286,13 +240,6 @@ class Picamera2Backend(AbstractBackend):
             controls={"FrameRate": self._config.framerate_video_mode},
             transform=self._transform,
         )
-
-        # set preview mode on init
-        self._current_config = self._preview_config
-
-        # configure; camera needs to be stopped before
-        self._picamera2.configure(self._current_config)
-
         # capture_file image quality
         self._picamera2.options["quality"] = self._config.original_still_quality
 
@@ -311,7 +258,9 @@ class Picamera2Backend(AbstractBackend):
         self._mjpeg_encoder = MJPEGEncoder()
         assert self._mjpeg_encoder
         self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
-        self._picamera2.start_encoder(self._mjpeg_encoder, FileOutput(self._lores_data), quality=Quality[self._config.videostream_quality])
+        self._picamera2.start_encoder(
+            self._mjpeg_encoder, PyavOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
+        )
 
         # start camera
         self._picamera2.start()
@@ -331,48 +280,45 @@ class Picamera2Backend(AbstractBackend):
         _metadata = None
 
         while not self._stop_event.is_set():  # repeat until stopped
-            if self._hires_data.request.is_set() is True and self._current_config != self._capture_config:
-                # ensure cam is in capture quality mode even if there was no countdown
-                # triggered beforehand usually there is a countdown, but this is to be safe
-                logger.warning("force switchmode to capture config right before taking picture")
-                self._on_configure_optimized_for_hq_capture()
+            with self._hires_lock:
+                req = self._hires_queue.popleft() if self._hires_queue else None
 
-            if (not self._current_config == self._last_config) and self._last_config is not None:
-                if not self._stop_event.is_set():
-                    self._switch_mode()
+            if req:
+                if isinstance(req, StillRequest):
+                    logger.warning("force switchmode to capture config right before taking picture")
+                    # ensure cam is in capture quality mode even if there was no countdown
+                    # triggered beforehand usually there is a countdown, but this is to be safe
+                    self._mode_machine.ensure_still_mode()
+
+                    # capture hq picture
+                    with self._picamera2.captured_request(wait=1.5) as request:
+                        # call captured_request instead direct call to capture_file because it seems
+                        # the get_metadata leaks CmaMemory otherwise. Reference:
+                        # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
+                        filepath = Path(
+                            NamedTemporaryFile(
+                                mode="wb",
+                                delete=False,
+                                dir="tmp",
+                                prefix=f"{filename_str_time()}_picamera2_",
+                                suffix=".jpg",
+                            ).name
+                        )
+                        request.save("main", filepath)  # type: ignore
+
+                        _metadata = request.get_metadata()  # type: ignore
+
+                        with req.condition:
+                            req.result_file = filepath
+                            req.condition.notify_all()
                 else:
-                    logger.info("switch_mode ignored, because shutdown already requested")
+                    logger.warning(f"this backend does not support {type(req)} requests")
+                    continue
 
-            if self._hires_data.request.is_set():
-                # only capture one pic and return to lores streaming afterwards
-                self._hires_data.request.clear()
-
-                # capture hq picture
-                with self._picamera2.captured_request(wait=1.5) as request:
-                    # call captured_request instead direct call to capture_file because it seems
-                    # the get_metadata leaks CmaMemory otherwise. Reference:
-                    # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
-                    filepath = Path(
-                        NamedTemporaryFile(
-                            mode="wb",
-                            delete=False,
-                            dir="tmp",
-                            prefix=f"{filename_str_time()}_picamera2_",
-                            suffix=".jpg",
-                        ).name
-                    )
-                    request.save("main", filepath)  # type: ignore
-
-                    _metadata = request.get_metadata()  # type: ignore
-
-                    self._hires_data.filepath = filepath
-
-                with self._hires_data.condition:
-                    self._hires_data.condition.notify_all()
             else:
                 # capture metadata blocks until new metadata is avail
                 try:
-                    _metadata = self._picamera2.capture_metadata(wait=1.5)
+                    _ = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]
                     # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
                     # stalling
                 except TimeoutError as exc:
@@ -383,21 +329,6 @@ class Picamera2Backend(AbstractBackend):
 
                     # stop device requested by leaving worker loop, so backend can restart
                     raise RuntimeError(f"camera stopped delivering frames, error {exc}") from exc
-
-            # update backendstats (optional for backends, but this one has so many information that are easy to display)
-            # exposure time needs math on a possibly None value, do it here separate because None/1000 raises an exception.
-            if _metadata:
-                exposure_time = _metadata.get("ExposureTime", None)
-                exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
-                self._backendstats.exposure_time_ms = self._round_none(exposure_time_ms_raw, 1)
-                self._backendstats.lens_position = self._round_none(_metadata.get("LensPosition", None), 2)
-                self._backendstats.again = self._round_none(_metadata.get("AnalogueGain", None), 1)
-                self._backendstats.dgain = self._round_none(_metadata.get("DigitalGain", None), 1)
-                self._backendstats.lux = self._round_none(_metadata.get("Lux", None), 1)
-                self._backendstats.colour_temperature = _metadata.get("ColourTemperature", None)
-                self._backendstats.sharpness = _metadata.get("FocusFoM", None)
-            else:
-                logger.warning("no metadata available!")
 
             self._frame_tick()
 

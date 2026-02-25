@@ -63,9 +63,9 @@ def test_service_reload(backend_v4l: WebcamV4lBackend):
 
 
 def test_optimize_mode(backend_v4l: WebcamV4lBackend):
-    backend_v4l._on_configure_optimized_for_hq_capture()
-    backend_v4l._on_configure_optimized_for_hq_preview()
-    backend_v4l._on_configure_optimized_for_idle()
+    backend_v4l._handle_switchmode_still_mode()
+    backend_v4l._handle_switchmode_video_mode()
+    backend_v4l._handle_switchmode_standby()
 
 
 def test_get_images_webcamv4l(backend_v4l: WebcamV4lBackend):

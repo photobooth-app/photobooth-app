@@ -16,13 +16,11 @@ logger = logging.getLogger(name=None)
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
-    # setup
-    container.start()
+    container.reload()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
     block_until_device_is_running(container.acquisition_service._video_backend)
 
-    # deliver
     yield container
     container.stop()
 

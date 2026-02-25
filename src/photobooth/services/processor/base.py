@@ -147,8 +147,9 @@ class JobModelBase(ABC, Generic[T]):
 
     @abstractmethod
     def on_enter_completed(self):
+        ...
         # when completed, signal backends to idle again
-        self._acquisition_service.signalbackend_configure_optimized_for_idle()
+        # self._acquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...

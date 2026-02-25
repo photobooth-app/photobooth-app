@@ -130,6 +130,7 @@ class AcquisitionService(BaseService):
                 return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
             except Exception as exc:
                 # this error probably cannot recover.
+                logger.exception(exc)
                 logger.error(f"streaming exception: {exc}")
                 output_jpeg_bytes = __class__._substitute_image(
                     f":| Livestream {type(exc).__name__}",
@@ -137,7 +138,7 @@ class AcquisitionService(BaseService):
                     appconfig.uisettings.livestream_mirror_effect,
                 )
 
-                self._backends[index_device].restart()
+                # self._backends[index_device].recover()  # TODO: verify
 
                 time.sleep(0.5)  # rate limit if it fails
 
@@ -150,15 +151,32 @@ class AcquisitionService(BaseService):
 
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_still()
-
         try:
-            return self._stills_backend.wait_for_still_file(appconfig.backends.retry_capture)
+            return self._stills_backend.wait_for_still_file()
         except Exception as exc:
-            self._stills_backend.restart()
+            # self._stills_backend.recover()  # TODO: verify
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
             pluggy_pm.hook.acq_after_shot()
+        # for _ in range(retries): # TODO: add retries?
+        #     try:
+        #         img_bytes = self._capture_lores(index_subdevice=index_subdevice)  # blocks 0.5s usually. 10 retries default wait time=5s
+        #         img = set_exif_orientation(img_bytes, self._orientation)
+        #         return img
+        #     except TimeoutError as exc:
+        #         if self.is_started():
+        #             continue
+        #         else:
+        #             logger.debug("device not alive any more, stopping early lores image delivery.")
+        #             raise StopIteration from exc
+        #     except Exception as exc:
+        #         # other exceptions fail immediately
+        #         logger.warning("device raised exception (maybe lost connection to device?)")
+        #         raise exc
+
+        # # max attempts reached.
+        # raise RuntimeError(f"failed getting images after {retries} attempts.")
 
     def wait_for_multicam_files(self):
         """
@@ -169,9 +187,9 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_before_get_multicam()
 
         try:
-            return self._multicam_backend.wait_for_multicam_files(appconfig.backends.retry_capture)
+            return self._multicam_backend.wait_for_multicam_files()
         except Exception as exc:
-            self._multicam_backend.restart()
+            # self._multicam_backend.recover()  # TODO: verify.
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
@@ -197,37 +215,6 @@ class AcquisitionService(BaseService):
         assert self._recorder, "service needs to be started before using the recorder"
 
         return self._recorder.is_recording()
-
-    def signalbackend_configure_optimized_for_idle(self):
-        """
-        set backends to idle mode (called to switched as needed by processingservice)
-        called when job is finished
-        """
-        for backend in self._backends:
-            backend._on_configure_optimized_for_idle()
-
-    def signalbackend_configure_optimized_for_hq_preview(self):
-        """
-        set backends to preview mode preparing to hq capture (called to switched as needed by processingservice)
-        called on start of countdown
-        """
-        for backend in self._backends:
-            backend._on_configure_optimized_for_hq_preview()
-
-    def signalbackend_configure_optimized_for_hq_capture(self):
-        """
-        set backends to hq capture mode (called to switched as needed by processingservice)
-        called right before capture hq still
-        """
-        for backend in self._backends:
-            backend._on_configure_optimized_for_hq_capture()
-
-    def signalbackend_configure_optimized_for_video(self):
-        """
-        set backend to video optimized mode. currently same as for idle because idle is optimized for liveview video already.
-        called on start of countdown to recording job (as preview and actual video capture are expected to work same for preview and video capture)
-        """
-        self.signalbackend_configure_optimized_for_idle()
 
     @staticmethod
     def _import_backend(backend: str):
