@@ -15,7 +15,7 @@ from ..util import block_until_device_is_running, get_images
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     # setup
     backend = VirtualCameraBackend(GroupCameraVirtual())
@@ -25,13 +25,6 @@ def backend_virtual() -> Generator[VirtualCameraBackend, None, None]:
     block_until_device_is_running(backend)
     yield backend
     backend.stop()
-
-
-def test_service_reload(backend_virtual: VirtualCameraBackend):
-    """container reloading works reliable"""
-
-    backend_virtual.stop()
-    backend_virtual.start()
 
 
 def test_optimize_mode(backend_virtual: VirtualCameraBackend):

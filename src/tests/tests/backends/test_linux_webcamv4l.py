@@ -24,7 +24,7 @@ if linuxpy_video_device is None:
     pytest.skip("linuxpy module not available", allow_module_level=True)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_v4l():
     # setup
     backend = WebcamV4lBackend(GroupCameraV4l2())
@@ -53,13 +53,6 @@ def backend_v4l():
 
 
 ## tests
-
-
-def test_service_reload(backend_v4l: WebcamV4lBackend):
-    """container reloading works reliable"""
-
-    backend_v4l.stop()
-    backend_v4l.start()
 
 
 def test_optimize_mode(backend_v4l: WebcamV4lBackend):

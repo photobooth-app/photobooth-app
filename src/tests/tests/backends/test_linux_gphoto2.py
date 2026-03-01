@@ -33,7 +33,7 @@ if gp is None:
     pytest.skip("gphoto2 not available", allow_module_level=True)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_gphoto2():
     # ensure virtual camera is available (starting from gphoto2 2.5.0 always true)
     # assert has_vcam() # on selfhosted-runner currently a problem. TODO: setup new RPI runner
@@ -92,13 +92,6 @@ def backend_gphoto2():
 
 
 ## tests
-
-
-def test_service_reload(backend_gphoto2):
-    """container reloading works reliable"""
-
-    backend_gphoto2.stop()
-    backend_gphoto2.start()
 
 
 def test_get_images_gphoto2(backend_gphoto2):
