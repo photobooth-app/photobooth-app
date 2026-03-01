@@ -198,7 +198,7 @@ class AbstractBackend(ResilientService, ABC):
     def get_stats(self) -> BackendStats:
         stats = BackendStats(
             backend_name=self.__class__.__name__,
-            mode=self._mode_machine.current_state.name,
+            mode=next(iter(self._mode_machine.configuration)).name,  # new in state-machine v3, could have parallel states, we use flat machine
             device_fps=self._framerate.fps,
         )
 

@@ -164,6 +164,7 @@ class LoggingService(BaseService):
             "urllib3_future",
             "pynng",
             "python_multipart.multipart",
+            "statemachine",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)
