@@ -19,7 +19,7 @@ from .backends.abstractbackend import AbstractBackend
 from .backends.encoder.video import SoftwareVideoRecorder
 from .base import BaseService
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(f"{__name__}-app")
 
 
 class AcquisitionService(BaseService):
