@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 try:
     from turbojpeg import TurboJPEG
 
-    turbojpeg = TurboJPEG("/opt/libjpeg-turbo/lib64/libturbojpeg.so")
+    turbojpeg = TurboJPEG()
     print("using turbojpeg to scale images")  # print because log at this point not yet active...
 except Exception as exc:
     turbojpeg = None

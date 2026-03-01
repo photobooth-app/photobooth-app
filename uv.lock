@@ -1066,7 +1066,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.6" },
     { name = "python-statemachine", specifier = "~=3.0.0" },
-    { name = "pyturbojpeg", specifier = ">=1.7.0" },
+    { name = "pyturbojpeg", specifier = "~=1.8.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "rclone-bin-api", specifier = ">=1.0.4" },
     { name = "requests" },
@@ -1704,12 +1704,12 @@ wheels = [
 
 [[package]]
 name = "pyturbojpeg"
-version = "2.2.0"
+version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/c6/efd96866c457f22d1e893f9ac67f17ff61a5661ad2a061da61657e9c4999/pyturbojpeg-2.2.0.tar.gz", hash = "sha256:aaf0305aa9627ce7fdb8f592eb5e0fce804e1bd87db49900bcf78d7d5138eb88", size = 32514, upload-time = "2026-02-21T02:49:46.505Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/2b/5fc7a7f51af947708a5d75d7637e923d2d4e60f43f6a4cfe55ae1ea241a2/pyturbojpeg-1.8.3.tar.gz", hash = "sha256:c131591a3990cc57f45a8b2705d6261c25df913a19b1fe88de5e911dbe04a1d4", size = 12757, upload-time = "2026-02-17T02:32:53.192Z" }
 
 [[package]]
 name = "pywin32"
