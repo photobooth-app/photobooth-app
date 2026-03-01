@@ -13,7 +13,7 @@ from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
 from picamera2.allocators import PersistentAllocator  # type: ignore
 from picamera2.encoders import H264Encoder, MJPEGEncoder, Quality  # type: ignore
-from picamera2.outputs import PyavOutput  # type: ignore
+from picamera2.outputs import FileOutput, PyavOutput  # type: ignore
 
 from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
@@ -166,23 +166,23 @@ class Picamera2Backend(AbstractBackend):
 
     def _switch_mode(self, config):
         assert self._picamera2
-        logger.info("switch_mode invoked, stopping stream encoder, switch mode and restart encoder")
+        logger.debug("switch_mode invoked")
 
         self._picamera2.stop_encoder()
 
         try:
             # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
             # if this happens, backend signals error and shall be restarted.
-            self._picamera2.configure(config)
+            self._picamera2.switch_mode(config)
         except Exception as exc:
             logger.exception(exc)
             logger.critical(f"error switching mode in picamera due to {exc}")
             raise exc
         else:
             self._picamera2.start_encoder(
-                self._mjpeg_encoder, PyavOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
+                self._mjpeg_encoder, FileOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
             )
-            logger.info("switchmode finished successfully")
+            logger.debug("switch_mode finished")
 
     def _init_autofocus(self):
         """
@@ -254,13 +254,13 @@ class Picamera2Backend(AbstractBackend):
 
         logger.info(f"stream quality {Quality[self._config.videostream_quality]=}")
 
+        # configure; camera needs to be stopped before
+        self._picamera2.configure(self._video_configuration)
+
         # start encoder
         self._mjpeg_encoder = MJPEGEncoder()
         assert self._mjpeg_encoder
         self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
-
-        # switch mode, init encoder and start encoder.
-        self._switch_mode(self._video_configuration)
 
         # start camera
         self._picamera2.start()
@@ -291,26 +291,21 @@ class Picamera2Backend(AbstractBackend):
                     self._mode_machine.ensure_still_mode()
 
                     # capture hq picture
-                    with self._picamera2.captured_request(wait=1.5) as request:
-                        # call captured_request instead direct call to capture_file because it seems
-                        # the get_metadata leaks CmaMemory otherwise. Reference:
-                        # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290
-                        filepath = Path(
-                            NamedTemporaryFile(
-                                mode="wb",
-                                delete=False,
-                                dir="tmp",
-                                prefix=f"{filename_str_time()}_picamera2_",
-                                suffix=".jpg",
-                            ).name
-                        )
-                        request.save("main", filepath)  # type: ignore
+                    filepath = Path(
+                        NamedTemporaryFile(
+                            mode="wb",
+                            delete=False,
+                            dir="tmp",
+                            prefix=f"{filename_str_time()}_picamera2_",
+                            suffix=".jpg",
+                        ).name
+                    )
+                    # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290 fixed now, so use simple capture_file again
+                    _metadata = self._picamera2.capture_file(filepath, wait=1.5) # type: ignore
 
-                        _metadata = request.get_metadata()  # type: ignore
-
-                        with req.condition:
-                            req.result_file = filepath
-                            req.condition.notify_all()
+                    with req.condition:
+                        req.result_file = filepath
+                        req.condition.notify_all()
                 else:
                     logger.warning(f"this backend does not support {type(req)} requests")
                     continue
