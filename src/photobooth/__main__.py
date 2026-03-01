@@ -45,13 +45,12 @@ def main(args=None, run_server: bool = True):
     # adjust logging after uvicorn setup
     container.logging_service.uvicorn()
 
-    # start all services
-    container.start()
-
     # serve, loops endless
     # this one is not executed in tests because it's not stoppable from within
     if run_server:
         try:
+            # start all services
+            container.start()
             server.run()
         except KeyboardInterrupt:
             print("got ctrl-c, photobooth-app stopped")

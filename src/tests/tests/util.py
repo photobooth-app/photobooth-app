@@ -1,13 +1,20 @@
 import io
 import logging
+import shutil
 import subprocess
 import time
 from pathlib import Path
+from tempfile import NamedTemporaryFile
+from uuid import uuid4
 
 import piexif
 from PIL import Image, ImageChops
 
+from photobooth import PATH_CAMERA_ORIGINAL, PATH_PROCESSED, PATH_UNPROCESSED
+from photobooth.database.models import Mediaitem
+from photobooth.database.types import MediaitemTypes
 from photobooth.services.backends.abstractbackend import AbstractBackend
+from photobooth.utils.helper import filename_str_time
 
 logger = logging.getLogger(name=None)
 
@@ -115,6 +122,37 @@ def get_jpeg(dim: tuple[int, int]) -> io.BytesIO:
     jpeg_bytes_io = io.BytesIO()
     im.save(jpeg_bytes_io, "jpeg")
     return jpeg_bytes_io
+
+
+def dummy_mediaitem():
+    img = Image.new("RGB", (600, 400), color="grey")
+    img_path_original = Path(
+        NamedTemporaryFile(
+            mode="wb",
+            delete=False,
+            dir=PATH_CAMERA_ORIGINAL,
+            prefix=f"{filename_str_time()}_pytest_dummy_",
+            suffix=".jpg",
+        ).name  # name from namedtemporaryfile is the whole path.
+    )
+    # absolute path's dont work for us, make it relative to home.
+    img_path_original = img_path_original.relative_to(Path.cwd())
+
+    img.save(img_path_original)
+    shutil.copy(img_path_original, PATH_PROCESSED)
+    shutil.copy(img_path_original, PATH_UNPROCESSED)
+
+    new_item_instance = Mediaitem(
+        job_identifier=uuid4(),
+        media_type=MediaitemTypes.image,
+        captured_original=img_path_original,
+        unprocessed=Path(PATH_UNPROCESSED, img_path_original.name),
+        processed=Path(PATH_PROCESSED, img_path_original.name),
+        pipeline_config={},
+        show_in_gallery=True,
+    )
+
+    return new_item_instance
 
 
 def dummy_animation(filepath: Path):

@@ -98,7 +98,6 @@ class VirtualCameraBackend(AbstractBackend):
 
             if self._mode_machine.standby.is_active:  # type: ignore
                 time.sleep(0.1)
-                logger.info("sleep")
                 continue
 
             self._mode_machine.ensure_video_mode()
@@ -114,7 +113,7 @@ class VirtualCameraBackend(AbstractBackend):
                     self._lores_data[dev_idx].data = frame
                     self._lores_data[dev_idx].condition.notify_all()
 
-        logger.critical("virtualcamera thread finished")
+        logger.debug("virtualcamera thread finished")
 
     def _produce_multicam(self) -> list[Path]:
         files: list[Path] = []

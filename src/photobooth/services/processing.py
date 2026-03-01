@@ -124,11 +124,11 @@ class ProcessingService(BaseService):
 
         super().stopped()
 
-    def _is_occupied(self) -> bool:
+    def is_occupied(self) -> bool:
         return self._workflow_jobmodel is not None
 
     def _check_occupied(self):
-        if self._is_occupied():
+        if self.is_occupied():
             # Job ongoing ⌛There is already a job running. Please wait until it finished.
             sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="processing.machine_occupied"))
             raise ProcessMachineOccupiedError("bad request, only one request at a time!")
