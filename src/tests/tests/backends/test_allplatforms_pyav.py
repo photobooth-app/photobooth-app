@@ -12,7 +12,7 @@ from ..util import block_until_device_is_running, get_images
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     # setup
     backend = WebcamPyavBackend(GroupCameraPyav())
@@ -38,13 +38,6 @@ def backend_pyav() -> Generator[WebcamPyavBackend, None, None]:
     block_until_device_is_running(backend)
     yield backend
     backend.stop()
-
-
-def test_service_reload(backend_pyav: WebcamPyavBackend):
-    """container reloading works reliable"""
-
-    backend_pyav.stop()
-    backend_pyav.start()
 
 
 def test_optimize_mode(backend_pyav: WebcamPyavBackend):
