@@ -8,6 +8,7 @@ import logging
 import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from threading import Lock
 
 from libcamera import Transform, controls  # type: ignore
 from picamera2 import Picamera2  # type: ignore
@@ -73,6 +74,7 @@ class Picamera2Backend(AbstractBackend):
 
         self._still_configuration = None
         self._video_configuration = None
+        self._switch_configuration_lock = Lock()
 
     def start(self):
         super().start()
@@ -168,21 +170,24 @@ class Picamera2Backend(AbstractBackend):
         assert self._picamera2
         logger.debug("switch_mode invoked")
 
-        self._picamera2.stop_encoder()
+        with self._switch_configuration_lock:
+            # lock config changes as during testing different threads might change modes and stop/switch/start shall be atomic.
+            self._picamera2.stop_encoder()
 
-        try:
-            # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
-            # if this happens, backend signals error and shall be restarted.
-            self._picamera2.switch_mode(config)
-        except Exception as exc:
-            logger.exception(exc)
-            logger.critical(f"error switching mode in picamera due to {exc}")
-            raise exc
-        else:
-            self._picamera2.start_encoder(
-                self._mjpeg_encoder, FileOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
-            )
-            logger.debug("switch_mode finished")
+            try:
+                # in try-catch because switch_mode can fail if picamera cannot allocate buffers.
+                # if this happens, backend signals error and shall be restarted.
+                self._picamera2.switch_mode(config)
+            except Exception as exc:
+                logger.exception(exc)
+                logger.critical(f"error switching mode in picamera due to {exc}")
+                raise exc
+            else:
+                self._picamera2.start_encoder(
+                    self._mjpeg_encoder, FileOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
+                )
+
+        logger.debug("switch_mode finished")
 
     def _init_autofocus(self):
         """
@@ -301,7 +306,7 @@ class Picamera2Backend(AbstractBackend):
                         ).name
                     )
                     # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290 fixed now, so use simple capture_file again
-                    _metadata = self._picamera2.capture_file(filepath, wait=1.5) # type: ignore
+                    _metadata = self._picamera2.capture_file(filepath, wait=1.5)  # type: ignore
 
                     with req.condition:
                         req.result_file = filepath
@@ -327,7 +332,5 @@ class Picamera2Backend(AbstractBackend):
 
                     # stop device requested by leaving worker loop, so backend can restart
                     raise RuntimeError(f"camera stopped delivering frames, error {exc}") from exc
-
-
 
         logger.info("_generate_images_fun left")
