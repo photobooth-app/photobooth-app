@@ -299,9 +299,7 @@ class AbstractBackend(ResilientService, ABC):
         if index_subdevice > len(self._lores_data):
             raise RuntimeError(f"streaming from subdevice={index_subdevice} not possible because there are only {len(self._lores_data)} available.")
 
-        if ModeMachine.live_requested_ext in self._mode_machine.enabled_events():
-            # print("allowed")
-            self._mode_machine.live_requested_ext()
+        self._mode_machine.live_requested_ext()  # since python-sm v3 allow_event_without_transition is True, so no check if allowed, just request
 
         with self._lores_data[index_subdevice].condition:
             if not self._lores_data[index_subdevice].condition.wait(timeout=2.0):
