@@ -258,9 +258,9 @@ class Picamera2Backend(AbstractBackend):
         self._mjpeg_encoder = MJPEGEncoder()
         assert self._mjpeg_encoder
         self._mjpeg_encoder.frame_skip_count = self._config.frame_skip_count
-        self._picamera2.start_encoder(
-            self._mjpeg_encoder, PyavOutput(PicamLoresData(self._lores_data)), quality=Quality[self._config.videostream_quality]
-        )
+
+        # switch mode, init encoder and start encoder.
+        self._switch_mode(self._video_configuration)
 
         # start camera
         self._picamera2.start()
