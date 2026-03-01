@@ -311,11 +311,14 @@ class Picamera2Backend(AbstractBackend):
                     continue
 
             else:
+                self._mode_machine.ensure_video_mode()
+
                 # capture metadata blocks until new metadata is avail
                 try:
                     _ = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]
                     # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
                     # stalling
+                    self._frame_tick()
                 except TimeoutError as exc:
                     # if camera runs out of Cma during switch_config, the camera stops delivering images and so also no metadata.
                     # the supervisor thread detects that no images come in and would try to restarting the picamera2 backend to recover.
@@ -325,6 +328,6 @@ class Picamera2Backend(AbstractBackend):
                     # stop device requested by leaving worker loop, so backend can restart
                     raise RuntimeError(f"camera stopped delivering frames, error {exc}") from exc
 
-            self._frame_tick()
+
 
         logger.info("_generate_images_fun left")
