@@ -158,19 +158,22 @@ class ProcessingService(BaseService):
 
     def _process_fun(self):
         assert self._workflow_jobmodel
-        assert self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.initial_state
+        assert ProcessingMachine.start in self._workflow_jobmodel._status_sm.configuration
 
         try:
-            while not self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.finished:
-                if self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.approval:
+            while True:
+                current_state = next(iter(self._workflow_jobmodel._status_sm.configuration))
+
+                if current_state == ProcessingMachine.finished:
+                    break
+
+                if current_state == ProcessingMachine.approval:
                     assert isinstance(self._workflow_jobmodel._configuration_set.jobcontrol, MultiImageJobControl)
 
                     event = self._request_user_input(timeout=self._workflow_jobmodel._configuration_set.jobcontrol.approve_autoconfirm_timeout)
                     self._workflow_jobmodel._status_sm.send(event)
 
-                elif self._workflow_jobmodel._status_sm.current_state == ProcessingMachine.capture and isinstance(
-                    self._workflow_jobmodel, JobModelVideo
-                ):
+                elif current_state == ProcessingMachine.capture and isinstance(self._workflow_jobmodel, JobModelVideo):
                     event = self._request_user_input(timeout=self._workflow_jobmodel._configuration_set.processing.video_duration)
                     event = event if event != "reject" else "next"  # force next if reject because reject is not an allowed transition
                     self._workflow_jobmodel._status_sm.send(event)
@@ -193,8 +196,8 @@ class ProcessingService(BaseService):
         # on init if never a job ran, model could not be avail.
         # if a job is currently running and during that a client connects, if will receive the self.model
         if self._workflow_jobmodel:
-            source = self._workflow_jobmodel._status_sm.current_state
-            target = self._workflow_jobmodel._status_sm.current_state
+            source = next(iter(self._workflow_jobmodel._status_sm.configuration))
+            target = next(iter(self._workflow_jobmodel._status_sm.configuration))
             sse_service.dispatch_event(SseEventProcessStateinfo(source, target, self._workflow_jobmodel))
 
     def trigger_action(self, action_type: ActionType, action_index: int = 0):
