@@ -56,7 +56,7 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
         # postprocess each video
         capture_to_process = self._capture_sets[0].captures[0].filepath
-        logger.debug(f"recorded to {capture_to_process=}")
+        logger.debug(f"recorded to {capture_to_process}")
 
         original_filenamepath = Path(filename_str_time()).with_suffix(".mp4")
 
