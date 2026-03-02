@@ -89,11 +89,11 @@ class SoftwareVideoRecorder:
         while not self._thread.stopped():
             frame_bytes = self._backend.wait_for_lores_image(subdevice_index)
             pil_img = Image.open(io.BytesIO(frame_bytes))
-            video_frame = av.VideoFrame.from_image(pil_img)
+            video_frame: av.VideoFrame = av.VideoFrame.from_image(pil_img)
             # Compute wallclock timestamp
             now = time.monotonic()
             pts_seconds = now - start_wallclock
-            # video_frame.time_base = time_base
+            video_frame.time_base = stream.time_base
             video_frame.pts = int(pts_seconds / float(stream.time_base))
 
             for packet in stream.encode(video_frame):
