@@ -1,12 +1,12 @@
 import io
 import logging
 import shutil
-import subprocess
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
+import av
 import piexif
 from PIL import Image, ImageChops
 
@@ -66,45 +66,14 @@ def is_same(img1: Image.Image, img2: Image.Image):
     return not bool(diff.getbbox())
 
 
-def video_duration(input_video: Path | str):
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "csv=p=0",
-            str(input_video),
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
+def video_duration(path: str | Path) -> float:
+    with av.open(path) as container:
+        dur = container.streams[0].duration
+        tb = container.streams[0].time_base
+        assert dur, "cannot determine duration (ticks)"
+        assert tb, "cannot determine timebase (s/tick)"
 
-    return float(result.stdout)
-
-
-def video_frames(input_video):
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-count_frames",
-            "-show_entries",
-            "stream=nb_read_frames",
-            "-of",
-            "csv=p=0",
-            input_video,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-
-    return int(result.stdout)
+        return float(dur * tb)
 
 
 def get_exiforiented_jpeg(jpeg_bytes_io: io.BytesIO, orientation: int) -> io.BytesIO:
