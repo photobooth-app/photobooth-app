@@ -145,11 +145,10 @@ def test_animation(_container: Container):
 
 
 def test_video(_container: Container):
-    _container.processing_service.trigger_action("video", 0)
-
-    assert _container.processing_service._workflow_jobmodel is not None
     number_of_images_before = _container.mediacollection_service.count()
 
+    _container.processing_service.trigger_action("video", 0)
+    assert _container.processing_service._workflow_jobmodel is not None
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._workflow_jobmodel is None
