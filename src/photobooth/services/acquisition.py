@@ -211,11 +211,6 @@ class AcquisitionService(BaseService):
 
         self._recorder.stop_recording()
 
-    def is_recording(self):
-        assert self._recorder, "service needs to be started before using the recorder"
-
-        return self._recorder.is_recording()
-
     @staticmethod
     def _import_backend(backend: str):
         # dynamic import of backend
