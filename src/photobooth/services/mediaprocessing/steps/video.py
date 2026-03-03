@@ -49,7 +49,7 @@ class BoomerangStep(PipelineStep):
         command_general_options = [
             "-hide_banner",
             "-loglevel",
-            "info",
+            "error",  # print only if at least error level - still all goes to the logfile.
             "-y",
         ]
         command_video_input = [
