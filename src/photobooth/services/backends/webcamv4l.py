@@ -176,6 +176,7 @@ class WebcamV4lBackend(AbstractBackend):
             logger.info(f"webcam name: {device.info.card if device.info else 'unknown'}")
 
             self._capture = linuxpy_video_device.VideoCapture(device)
+            assert self._capture
 
             try:
                 self._capture.set_fps(25)
