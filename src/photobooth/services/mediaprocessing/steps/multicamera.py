@@ -252,6 +252,6 @@ class AlignAsPerCalibrationStep(PipelineStep):
         try:
             context.images = self._cal_util.align_all(context.images, crop=self._crop)
         except Exception as exc:
-            logger.warning(f"Error aligning multicam images according to existing calibration. Please rerun multicamera calibration. Error: {exc}")
+            logger.warning(f"Failed aligning multicam images using calibration. Please rerun multicamera calibration. Error: {exc}")
 
         next_step(context)
