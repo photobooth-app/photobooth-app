@@ -6,6 +6,7 @@ from pathlib import Path
 from threading import Event, Lock
 
 import av
+import av.logging
 from PIL import Image
 
 from ....appconfig import appconfig
@@ -14,6 +15,9 @@ from ....utils.stoppablethread import StoppableThread
 from ..abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
+
+# enables logging to the app's logging system, if not called, there is just nothing output at all and issues are hidden.
+av.logging.set_level(av.logging.INFO)
 
 
 class SoftwareVideoRecorder:
@@ -75,7 +79,8 @@ class SoftwareVideoRecorder:
             stream = container.add_stream("h264", rate=video_framerate, options={})
             stream.width = width
             stream.height = height
-            stream.time_base = Fraction(1, video_framerate)
+            # *10 cause esp. on win pts=int(x/time_base) can lead to same pts which is illegal and video fails
+            stream.time_base = Fraction(1, video_framerate * 10)
             stream.codec_context.options["movflags"] = "faststart"
             stream.codec_context.options["preset"] = "veryfast"
             stream.codec_context.thread_type = "AUTO"
@@ -100,7 +105,7 @@ class SoftwareVideoRecorder:
                 now = time.monotonic()
                 pts_seconds = now - start_wallclock
                 video_frame.time_base = stream.time_base
-                video_frame.pts = int(pts_seconds / float(stream.time_base))
+                video_frame.pts = int(pts_seconds / stream.time_base)
 
                 for packet in stream.encode(video_frame):
                     container.mux(packet)

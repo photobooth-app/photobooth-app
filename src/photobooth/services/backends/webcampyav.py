@@ -5,7 +5,6 @@ pyav webcam implementation backend
 import io
 import logging
 import sys
-import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -144,7 +143,8 @@ class WebcamPyavBackend(AbstractBackend):
                     break
 
                 if self._mode_machine.standby.is_active:  # type: ignore
-                    time.sleep(0.1)
+                    # no need to sleep here, because while loop is called on every frame only. otherwise pyav internal buffer runs full
+                    # and floods logging
                     continue
 
                 if not self._framerate.should_process_frame(2):
