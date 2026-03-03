@@ -112,7 +112,7 @@ class Framerate:
 
 
 class ModeMachine(StateMachine):
-    allow_event_without_transition=True # still using StateMachine but transition to StateChart (new in v3) soon. =True is default in StateChart
+    allow_event_without_transition = True  # still using StateMachine but transition to StateChart (new in v3) soon. =True is default in StateChart
 
     standby = State(initial=True)
     video_mode = State()
