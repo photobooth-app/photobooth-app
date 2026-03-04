@@ -140,11 +140,10 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
     ow, oh = scale_image_to_min_longest_side(input_stream.width, input_stream.height, scaled_min_length)
 
-    output_container = av.open(filepath_out, mode="w")
+    output_container = av.open(filepath_out, mode="w", options={"movflags": "faststart"})
     output_stream: VideoStream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
     output_stream.width = ow
     output_stream.height = oh
-    output_stream.codec_context.options["movflags"] = "faststart"
     output_stream.codec_context.options["preset"] = "veryfast"
     output_stream.codec_context.options["crf"] = "23"  # 23 default, 17-18 is visually lossless
     # output_stream.codec_context.bit_rate = 5000000  # 5000k==5Mbps seems reasonable for simple streams in the 1080range

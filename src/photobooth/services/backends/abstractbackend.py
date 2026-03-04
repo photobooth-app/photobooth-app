@@ -108,7 +108,8 @@ class Framerate:
 
     def should_process_frame(self, target_fps: int) -> bool:
         """public api, non-blocking"""
-        return self._remaining_ns(target_fps) <= 0
+        # TODO: validate 0.5 tolerance.
+        return self._remaining_ns(target_fps) <= int(0.5e9 / target_fps)
 
 
 class ModeMachine(StateMachine):

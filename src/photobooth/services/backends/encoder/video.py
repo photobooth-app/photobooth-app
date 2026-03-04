@@ -75,16 +75,18 @@ class SoftwareVideoRecorder:
         frame_bytes = self._backend.wait_for_lores_image(subdevice_index)
         width, height = Image.open(io.BytesIO(frame_bytes)).size
 
-        with av.open(self._output_filepath, mode="w") as container:
+        with av.open(self._output_filepath, mode="w", options={"movflags": "faststart"}) as container:
             stream = container.add_stream("h264", rate=video_framerate, options={})
             stream.width = width
             stream.height = height
-            # *10 cause esp. on win pts=int(x/time_base) can lead to same pts which is illegal and video fails
-            stream.time_base = Fraction(1, video_framerate * 10)
-            stream.codec_context.options["movflags"] = "faststart"
+            timebase_res = 90000  # 90000 is a default value in mp4/mjpeg
+            stream.time_base = Fraction(1, timebase_res)
+            stream.codec_context.max_b_frames = 0
+            stream.codec_context.options["tune"] = "zerolatency"  # Optional: faster encoding for real-time
             stream.codec_context.options["preset"] = "veryfast"
             stream.codec_context.thread_type = "AUTO"
-            stream.codec_context.thread_count = 0  # let FFmpeg decide
+            stream.codec_context.thread_count = 0
+            stream.codec_context.time_base = Fraction(1, timebase_res)  # Critical to sync timebase for stream/codec!
             # stream.codec_context.profile = "Main"
 
             if appconfig.mediaprocessing.video_compatibility_mode:
@@ -92,17 +94,19 @@ class SoftwareVideoRecorder:
 
             stream.codec_context.bit_rate = appconfig.mediaprocessing.video_bitrate * 1000
 
-            self._capture_started.set()
-
             # This is the key: ffmpeg -use_wallclock_as_timestamps
+            self._backend.wait_for_lores_image(subdevice_index)
             start_wallclock = time.monotonic()
+
+            self._capture_started.set()
 
             while not self._thread.stopped():
                 frame_bytes = self._backend.wait_for_lores_image(subdevice_index)
+                now = time.monotonic()
+
                 pil_img = Image.open(io.BytesIO(frame_bytes))
                 video_frame: av.VideoFrame = av.VideoFrame.from_image(pil_img)
                 # Compute wallclock timestamp
-                now = time.monotonic()
                 pts_seconds = now - start_wallclock
                 video_frame.time_base = stream.time_base
                 video_frame.pts = int(pts_seconds / stream.time_base)

@@ -231,7 +231,7 @@ class WebcamV4lBackend(AbstractBackend):
                         continue
 
                     for frame in device:
-                        if not self._framerate.should_process_frame(2):
+                        if not self._framerate.should_process_frame(15):
                             continue
 
                         # produce

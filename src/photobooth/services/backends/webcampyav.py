@@ -147,7 +147,7 @@ class WebcamPyavBackend(AbstractBackend):
                     # and floods logging
                     continue
 
-                if not self._framerate.should_process_frame(2):
+                if not self._framerate.should_process_frame(15):
                     continue
 
                 if self._config.preview_resolution_reduce_factor > 1:
