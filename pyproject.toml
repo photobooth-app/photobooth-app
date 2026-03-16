@@ -58,7 +58,7 @@ dependencies = [
   "simplejpeg>=1.8.2",
   "pyturbojpeg>=1.7.0",
   "pluggy>=1.5.0",
-  "av>=16.0,<16.2",
+  "av>=16.0,<17.1",
   "alembic>=1.15.2",
   "onnxruntime",
   "rclone-bin-api>=1.0.4",
