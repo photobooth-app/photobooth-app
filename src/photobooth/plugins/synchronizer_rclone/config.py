@@ -131,6 +131,10 @@ class RemoteConfig(BaseModel):
         default=True,
         description="Copy the sharepage-file (index.html) to the remote on startup.",
     )
+    upload_only: bool = Field(
+        default=False,
+        description="Only upload files to this remote. Deleted local files stay on the remote.",
+    )
 
     shareconfig: ShareConfig
 

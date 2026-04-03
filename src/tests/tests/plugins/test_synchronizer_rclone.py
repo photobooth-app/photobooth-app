@@ -4,8 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from photobooth.plugins.synchronizer_rclone.config import SynchronizerConfig
+from photobooth.plugins.synchronizer_rclone.config import RemoteConfig, ShareConfig, SynchronizerConfig
+from photobooth.plugins.synchronizer_rclone.immediate_synchronizer import ThreadedImmediateSyncPipeline
+from photobooth.plugins.synchronizer_rclone.regular_synchronizer import ThreadedRegularSync
 from photobooth.plugins.synchronizer_rclone.synchronizer_rclone import SynchronizerRclone
+from photobooth.plugins.synchronizer_rclone.types import DeleteOperation, TaskDelete
 
 
 @pytest.fixture(scope="function")
@@ -155,3 +158,41 @@ def test_collection_hooks(sync: SynchronizerRclone):
         sync.collection_files_deleted([f])
 
         assert mock_put.call_count == 3
+
+
+def test_immediateSnycPipeline_skip_delete_op_when_upload_only_is_enabled():
+    remotes = [
+        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", upload_only=True, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", upload_only=False, shareconfig=ShareConfig()),
+    ]
+
+    pipeline = ThreadedImmediateSyncPipeline(rclone=MagicMock(), remotes=remotes, max_concurrency=0)
+    pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
+
+    assert len(pipeline.results) == 1
+    assert pipeline.queue.qsize() == 1
+
+    queued_job = pipeline.queue.get_nowait()
+    assert isinstance(queued_job.operation, DeleteOperation)
+    assert queued_job.operation.dst_fs == "sync:"
+    assert queued_job.operation.dst_remote == "archive/media/test.jpg"
+
+
+def test_regularSync_uses_copy_for_upload_only_remotes():
+    remotes = [
+        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", upload_only=True, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", upload_only=False, shareconfig=ShareConfig()),
+    ]
+
+    rclone = MagicMock()
+    rclone.copy_async.return_value = MagicMock(jobid=11)
+    rclone.sync_async.return_value = MagicMock(jobid=22)
+
+    regular_sync = ThreadedRegularSync(rclone=rclone, fullsync_remotes=remotes, sync_interval_s=999)
+    regular_sync._worker.join(timeout=1)
+    regular_sync.stop()
+
+    assert rclone.copy_async.call_count == 1
+    assert rclone.sync_async.call_count == 1
+    assert rclone.wait_for_jobs.call_count == 1
+    assert rclone.wait_for_jobs.call_args.args[0] == [11, 22]
