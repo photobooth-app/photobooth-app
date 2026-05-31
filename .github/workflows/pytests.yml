@@ -69,7 +69,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-linux-${{ matrix.python-version }}
           path: coverage.xml
@@ -102,7 +102,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-windows-${{ matrix.python-version }}
           path: coverage.xml
@@ -135,7 +135,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-macos-${{ matrix.python-version }}
           path: coverage.xml
@@ -160,7 +160,7 @@ jobs:
       - name: Test with pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-selfhosted-rpi
           path: ./coverage.xml
