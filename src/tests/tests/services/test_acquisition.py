@@ -9,6 +9,7 @@ import pytest
 from PIL import Image
 
 from photobooth.services.acquisition import AcquisitionService
+from tests.tests.util import block_until_device_is_running
 
 logger = logging.getLogger(name=None)
 
@@ -104,17 +105,11 @@ def test_simulated_stop_exceptions(_acqs: AcquisitionService):
 
 
 def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
-    error_mock_timeout = mock.MagicMock()
-    error_mock_timeout.side_effect = TimeoutError("backend time out simulated")
-
-    error_mock_runtime = mock.MagicMock()
-    error_mock_runtime.side_effect = RuntimeError("backend other exception simulated")
-
-    g_stream = _acqs.gen_stream()
-    # stream is from second backend (live)
+    block_until_device_is_running(_acqs._video_backend)
 
     i = 0
-    for frame in g_stream:  # frame is bytes
+    for i in range(10):  # frame is bytes
+        frame = _acqs.wait_for_lores_image()
         i = i + 1
 
         # ensure we always receive a valid jpeg frame, nothing else.
@@ -125,12 +120,7 @@ def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
             _acqs._video_backend.recover()
 
-        if i >= 30:
-            g_stream.close()
+        # if i >= 30:
+        #     g_stream.close()
 
-
-def test_get_substitute_image(_acqs: AcquisitionService):
-    with Image.open(io.BytesIO(_acqs._substitute_image("Error", "Something happened!", mirror=False))) as img:
-        img.verify()
-    with Image.open(io.BytesIO(_acqs._substitute_image("Error", "Something happened!", mirror=True))) as img:
-        img.verify()
+    assert i == 10

@@ -76,6 +76,9 @@ class Picamera2Backend(AbstractBackend):
         self._video_configuration = None
         self._switch_configuration_lock = Lock()
 
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self._config.camera_num}"
+
     def start(self):
         super().start()
 
@@ -285,6 +288,8 @@ class Picamera2Backend(AbstractBackend):
         _metadata = None
 
         while not self._stop_event.is_set():  # repeat until stopped
+            self._mode_machine.process_switchmode()
+
             with self._hires_lock:
                 req = self._hires_queue.popleft() if self._hires_queue else None
 
@@ -293,7 +298,7 @@ class Picamera2Backend(AbstractBackend):
                     logger.warning("force switchmode to capture config right before taking picture")
                     # ensure cam is in capture quality mode even if there was no countdown
                     # triggered beforehand usually there is a countdown, but this is to be safe
-                    self._mode_machine.ensure_still_mode()
+                    self._mode_machine.process_switchmode("still")
 
                     # capture hq picture
                     filepath = Path(
@@ -316,8 +321,6 @@ class Picamera2Backend(AbstractBackend):
                     continue
 
             else:
-                self._mode_machine.ensure_video_mode()
-
                 # capture metadata blocks until new metadata is avail
                 try:
                     _ = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]

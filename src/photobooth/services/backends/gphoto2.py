@@ -182,7 +182,7 @@ class Gphoto2Backend(AbstractBackend):
                     captured_files: list[tuple[str, str]] = []
 
                     # check if flag is true and configure if so once.
-                    self._mode_machine.ensure_still_mode()
+                    self._mode_machine.process_switchmode("still")
 
                     try:
                         file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)  # pyright: ignore [reportAttributeAccessIssue]
@@ -261,11 +261,11 @@ class Gphoto2Backend(AbstractBackend):
             else:
                 # lores/preview stream
 
-                if self._mode_machine.standby.is_active:  # type: ignore
-                    time.sleep(0.1)
-                    continue
+                self._mode_machine.process_switchmode()
 
-                self._mode_machine.ensure_video_mode()
+                if self._mode_machine.active_mode == "standby":
+                    time.sleep(0.2)
+                    continue
 
                 # Pi5 seems too fast for the old fashioned gphoto lib, permanently producing
                 # (ptp_usb_getresp [usb.c:516]) PTP_OC 0x9153 receiving resp failed: Camera Not Ready (0xa102) (port_log.py:20)

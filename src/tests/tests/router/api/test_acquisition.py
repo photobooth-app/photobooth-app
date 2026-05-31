@@ -9,8 +9,10 @@ from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.services.acquisition import AcquisitionService
+from photobooth.utils.exceptions import BackendNotRunning
 
 logger = logging.getLogger(name=None)
+DUMMY_JPEG = b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
 
 
 def capture(client: TestClient):
@@ -75,12 +77,10 @@ def test_invalid_modechange(client: TestClient):
     assert response.status_code == 422
 
 
-def fake_gen_stream(index_device: int = 0, index_subdevice: int = 0):
-    # Minimal valid JPEG: start + padding + end
-    yield b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
-
-
-@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
+)
 def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 200
@@ -97,7 +97,10 @@ def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     assert len(frame) > 100
 
 
-@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
+)
 def test_websocket_stream(mock_gen_stream, client: TestClient):
     with client.websocket_connect("ws://test/api/aquisition/stream") as websocket:
         # Receive one frame

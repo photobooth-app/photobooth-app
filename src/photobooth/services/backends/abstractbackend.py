@@ -10,15 +10,15 @@ from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-
-from statemachine import State, StateMachine
+from typing import Literal
 
 from ...utils.resilientservice import ResilientService
-from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import Orientation
 from .utils.rotate_exif import set_exif_orientation
 
 logger = logging.getLogger(__name__)
+
+Modes = Literal["still", "video", "standby"]
 
 
 @dataclass
@@ -72,7 +72,15 @@ class Framerate:
     @property
     def fps(self) -> int:
         with self._lock:
+            # need at least 2 timestamps for fps calc
             if len(self._timestamps) < 2:
+                return 0
+
+            # invalidate outdated fps data after 1 sec of no frame received
+            elapsed_since_last_add_frame = (time.monotonic_ns() - self._timestamps[-1]) * 1e-9
+            if elapsed_since_last_add_frame > 1:
+                self._timestamps.clear()
+
                 return 0
 
             deltas = [self._timestamps[i] - self._timestamps[i - 1] for i in range(1, len(self._timestamps))]
@@ -112,45 +120,100 @@ class Framerate:
         return self._remaining_ns(target_fps) <= int(0.5e9 / target_fps)
 
 
-class ModeMachine(StateMachine):
-    allow_event_without_transition = True  # still using StateMachine but transition to StateChart (new in v3) soon. =True is default in StateChart
+class ModeController:
+    """
+    Einfacher Mode-Controller mit:
+    - requested_mode (Thread-agnostisch)
+    - active_mode (nur im Stream-Thread gesetzt)
+    - automatischem Standby nach Idle
+    """
 
-    standby = State(initial=True)
-    video_mode = State()
-    still_mode = State()
+    def __init__(self, backend: "AbstractBackend", idle_timeout: float = 5.0):
+        self.backend = backend
+        self.idle_timeout = idle_timeout
 
-    pause = standby.to.itself(internal=True) | standby.from_(video_mode, still_mode)
-    ensure_still_mode = still_mode.to.itself(internal=True) | still_mode.from_(standby, video_mode)
-    ensure_video_mode = video_mode.to.itself(internal=True) | video_mode.from_(standby, still_mode)
+        self._lock = threading.Lock()
+        self.requested_mode: Modes = "standby"
+        self.active_mode: Modes | None = None
+        self._last_live_request: float | None = time.monotonic()
 
-    live_requested_ext = video_mode.to.itself(internal=True) | video_mode.from_(standby)
+        threading.Thread(target=self._idle_monitor, daemon=True).start()
 
-    thrill_video_ext = video_mode.to.itself(internal=True) | video_mode.from_(standby, still_mode)
-    thrill_still_ext = still_mode.to.itself(internal=True) | still_mode.from_(standby, video_mode)
+    # ---------------------------------------------------------
+    # Öffentliche API (kann aus jedem Thread aufgerufen werden)
+    # ---------------------------------------------------------
 
-    def __init__(self, backend: "AbstractBackend"):
-        self._backend = backend
-        self._mode_switch_lock = threading.Lock()
+    def request_mode(self, mode: Modes):
+        with self._lock:
+            self.requested_mode = mode
 
-        super().__init__()
+    def request_video(self):
+        """usually requested when creating a video but also for livestream. livestream request video on every frame to reset the timer.
+        the stream thread needs to ensure a still capture is not interupted by another request to video!"""
+        self.reset_standby_timer()  # on mode request always reset the timer, to avoid going to standby accidentally in race conditions
+        self.request_mode("video")
 
-    def on_enter_standby(self):
-        with self._mode_switch_lock:
-            print("switchmode_standby")
-            self._backend._handle_switchmode_standby()
+    def request_still(self):
+        self.reset_standby_timer()  # on mode request always reset the timer, to avoid going to standby accidentally in race conditions
+        self.request_mode("still")
 
-    def on_enter_video_mode(self):
-        with self._mode_switch_lock:
-            print("on_enter_video_mode")
-            self._backend._handle_switchmode_video_mode()
+    def request_standby(self):
+        self.request_mode("standby")
 
-    def on_enter_still_mode(self):
-        with self._mode_switch_lock:
-            print("on_enter_still_mode")
-            self._backend._handle_switchmode_still_mode()
+    def reset_standby_timer(self):
+        with self._lock:
+            self._last_live_request = time.monotonic()
 
-    def on_live_requested_ext(self):
-        self._backend._last_requested_timestamp = time.monotonic()
+    @property
+    def is_mode_change_pending(self):
+        with self._lock:
+            return self.requested_mode != self.active_mode
+
+    def _idle_monitor(self):
+        """Monitor thread function to request standby if no livestream is requested for idle_timeout seconds"""
+        logger.info(f"pausing livestream on backend {self.backend} after {self.idle_timeout}s is enabled.")
+
+        while True:
+            time.sleep(1)
+
+            if self._last_live_request is None:
+                continue
+
+            with self._lock:
+                idle = time.monotonic() - self._last_live_request
+                act = self.active_mode
+
+            if idle > self.idle_timeout and act == "video":
+                logger.info(f"pause camera stream after {self.idle_timeout} idle timeout.")
+
+                self._last_live_request = None
+
+                self.request_standby()
+
+    def process_switchmode(self, immediate_forced_mode: Modes | None = None):
+        """Wird im stream-thread aufgerufen, wenn es passend für einen potentiellen mode-switch ist"""
+
+        with self._lock:
+            req = self.requested_mode if not immediate_forced_mode else immediate_forced_mode
+            act = self.active_mode
+
+        # Kein Modewechsel nötig
+        if req == act:
+            return
+
+        logger.info(f"changing mode from {act} to {req} on backend {self.backend}")
+
+        # Modewechsel durchführen
+        if req == "video":
+            self.backend._handle_switchmode_video_mode()
+        elif req == "still":
+            self.backend._handle_switchmode_still_mode()
+        elif req == "standby":
+            self.backend._handle_switchmode_standby()
+
+        # Mode ist jetzt aktiv
+        with self._lock:
+            self.active_mode = req
 
 
 class AbstractBackend(ResilientService, ABC):
@@ -171,18 +234,11 @@ class AbstractBackend(ResilientService, ABC):
         # init
         self._orientation: Orientation = orientation
         self._num_subdevices = num_subdevices
-        self._timeout_until_inactive: int = 30  # TODO: configurables
 
         # statisitics attributes
         self._framerate: Framerate = Framerate()
 
-        # used to indicate if the app requires this backend to deliver actually lores frames (live-backend or only one main backend)
-        # default is to assume it's not responsible to deliver frames. once wait_for_lores_image is called, this is set to true.
-        # the backend-implementation has to decide how to handle this once True.
-        self._last_requested_timestamp: float | None = None
-        self._liveview_idle_thread: StoppableThread | None = None  # TODO: needs separate thread?
-
-        self._mode_machine = ModeMachine(self)
+        self._mode_machine = ModeController(self, idle_timeout=5)
 
         # lores broadcast and ...
         self._lores_data = [LoresBroadcastRes(data=b"", condition=threading.Condition()) for _ in range(self._num_subdevices)]
@@ -201,7 +257,7 @@ class AbstractBackend(ResilientService, ABC):
     def get_stats(self) -> BackendStats:
         stats = BackendStats(
             backend_name=self.__class__.__name__,
-            mode=next(iter(self._mode_machine.configuration)).name,  # new in state-machine v3, could have parallel states, we use flat machine
+            mode=self._mode_machine.active_mode if self._mode_machine.active_mode else "unknown",
             device_fps=self._framerate.fps,
         )
 
@@ -211,33 +267,15 @@ class AbstractBackend(ResilientService, ABC):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
         self._framerate.add_frame()
 
-    def _liveview_idle_fun(self):
-        assert self._liveview_idle_thread
-        logger.info(f"pausing livestream from camera after {self._timeout_until_inactive}s is enabled.")
-
-        while not self._liveview_idle_thread.stopped():
-            time.sleep(1)
-
-            if self._last_requested_timestamp is None:
-                continue
-
-            if self._mode_machine.video_mode.is_active:  # type: ignore
-                if (time.monotonic() - self._last_requested_timestamp) > self._timeout_until_inactive:
-                    logger.info(f"pause camera stream after {self._timeout_until_inactive} idle timeout.")
-
-                    self._last_requested_timestamp = None
-
-                    self._mode_machine.pause()
-
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
 
         # reset the request for this backend to deliver lores frames
-        self._last_requested_timestamp = None
+        # self._last_requested_timestamp = None
 
-        self._liveview_idle_thread = StoppableThread(name="_liveview_idle_fun", target=self._liveview_idle_fun, daemon=True)
-        self._liveview_idle_thread.start()
+        # self._liveview_idle_thread = StoppableThread(name="_liveview_idle_fun", target=self._liveview_idle_fun, daemon=True)
+        # self._liveview_idle_thread.start()
 
         super().start()
 
@@ -245,9 +283,9 @@ class AbstractBackend(ResilientService, ABC):
     def stop(self):
         """To stop the backend to serve"""
 
-        if self._liveview_idle_thread:
-            self._liveview_idle_thread.stop()
-            self._liveview_idle_thread.join()
+        # if self._liveview_idle_thread:
+        #     self._liveview_idle_thread.stop()
+        #     self._liveview_idle_thread.join()
 
         super().stop()
 
@@ -256,6 +294,8 @@ class AbstractBackend(ResilientService, ABC):
             raise RuntimeError(f"cannot get multicam files as {self} has only {self._num_subdevices} subdevices but needs at least 2.")
 
         req = MulticamRequest(uuid.uuid4())
+
+        self._mode_machine.request_still()
 
         with self._hires_lock:
             self._hires_queue.append(req)
@@ -278,6 +318,8 @@ class AbstractBackend(ResilientService, ABC):
 
     def wait_for_still_file(self, index_subdevice: int = 0) -> Path:
         req = StillRequest(uuid.uuid4(), subdevice_index=index_subdevice)
+
+        self._mode_machine.request_still()
 
         with self._hires_lock:
             self._hires_queue.append(req)
@@ -302,7 +344,7 @@ class AbstractBackend(ResilientService, ABC):
         if index_subdevice > len(self._lores_data):
             raise RuntimeError(f"streaming from subdevice={index_subdevice} not possible because there are only {len(self._lores_data)} available.")
 
-        self._mode_machine.live_requested_ext()  # since python-sm v3 allow_event_without_transition is True, so no check if allowed, just request
+        self._mode_machine.request_video()
 
         with self._lores_data[index_subdevice].condition:
             if not self._lores_data[index_subdevice].condition.wait(timeout=2.0):

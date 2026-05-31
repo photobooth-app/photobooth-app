@@ -96,7 +96,7 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def run_service(self):
         # start in preview mode
-        self._mode_machine.ensure_video_mode()
+        self._mode_machine.process_switchmode("video")
 
         session = requests.Session()
         preview_failcounter = 0
@@ -159,11 +159,11 @@ class DigicamcontrolBackend(AbstractBackend):
                     continue
 
             else:
-                if self._mode_machine.standby.is_active:  # type: ignore
-                    time.sleep(0.1)
-                    continue
+                self._mode_machine.process_switchmode()
 
-                self._mode_machine.ensure_video_mode()
+                if self._mode_machine.active_mode == "standby":
+                    time.sleep(0.2)
+                    continue
 
                 try:
                     # r = session.get("http://127.0.0.1:5514/live") #different port also!

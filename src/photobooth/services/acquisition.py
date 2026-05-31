@@ -4,17 +4,13 @@ manage up to two photobooth-app backends in this module
 
 import dataclasses
 import logging
-import time
-from functools import cache
 from importlib import import_module
-from io import BytesIO
 from pathlib import Path
 from typing import Literal
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
-
 from ..appconfig import appconfig
 from ..plugins import pm as pluggy_pm
+from ..utils.exceptions import BackendNotRunning
 from .backends.abstractbackend import AbstractBackend
 from .backends.encoder.video import SoftwareVideoRecorder
 from .base import BaseService
@@ -113,81 +109,37 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_thrill()
         pluggy_pm.hook.acq_thrill_multicam()
 
-    def gen_stream(self, index_device: int = 0, index_subdevice: int = 0):
-        """
-        yield jpeg images to stream to client (if not created otherwise)
-        this function may be overriden by backends, but this is the default one
-        relies on the backends implementation of _wait_for_lores_image to return a buffer
-        """
-        if not appconfig.backends.enable_livestream:
-            logger.warning("livestream is disabled.")
-            raise ConnectionRefusedError
+    def wait_for_lores_image(self, index_device: int | None = 0, index_subdevice: int = 0):
 
-        while self.is_running():
-            try:
-                output_jpeg_bytes = self._backends[index_device].wait_for_lores_image(index_subdevice=index_subdevice)
-            except StopIteration:
-                return  # if backend is stopped but still requesting stream, StopIteration is sent when device is not alive any more
-            except Exception as exc:
-                # this error probably cannot recover.
-                logger.exception(exc)
-                logger.error(f"streaming exception: {exc}")
-                output_jpeg_bytes = __class__._substitute_image(
-                    f":| Livestream {type(exc).__name__}",
-                    f"{exc}",
-                    appconfig.uisettings.livestream_mirror_effect,
-                )
+        if not self.is_running():
+            raise BackendNotRunning
 
-                # self._backends[index_device].recover()  # TODO: verify
+        backend = self._video_backend if index_device is None else self._backends[index_device]
 
-                time.sleep(0.5)  # rate limit if it fails
+        return backend.wait_for_lores_image(index_subdevice=index_subdevice)
 
-            yield output_jpeg_bytes
-
-    def wait_for_still_file(self):
-        """
-        function blocks until high quality image is available
-        """
+    def wait_for_still_file(self, index_device: int | None = 0, index_subdevice: int = 0):
+        backend = self._stills_backend if index_device is None else self._backends[index_device]
 
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_still()
         try:
-            return self._stills_backend.wait_for_still_file()
+            return backend.wait_for_still_file(index_subdevice=index_subdevice)
         except Exception as exc:
             # self._stills_backend.recover()  # TODO: verify
             raise exc
         finally:
             # ensure even if failed, the wled is set to standby again
             pluggy_pm.hook.acq_after_shot()
-        # for _ in range(retries): # TODO: add retries?
-        #     try:
-        #         img_bytes = self._capture_lores(index_subdevice=index_subdevice)  # blocks 0.5s usually. 10 retries default wait time=5s
-        #         img = set_exif_orientation(img_bytes, self._orientation)
-        #         return img
-        #     except TimeoutError as exc:
-        #         if self.is_started():
-        #             continue
-        #         else:
-        #             logger.debug("device not alive any more, stopping early lores image delivery.")
-        #             raise StopIteration from exc
-        #     except Exception as exc:
-        #         # other exceptions fail immediately
-        #         logger.warning("device raised exception (maybe lost connection to device?)")
-        #         raise exc
 
-        # # max attempts reached.
-        # raise RuntimeError(f"failed getting images after {retries} attempts.")
-
-    def wait_for_multicam_files(self):
-        """
-        function blocks until high quality image is available
-        """
+    def wait_for_multicam_files(self, index_device: int | None = 0):
+        backend = self._multicam_backend if index_device is None else self._backends[index_device]
 
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_multicam()
 
         try:
-            return self._multicam_backend.wait_for_multicam_files()
+            return backend.wait_for_multicam_files()
         except Exception as exc:
             # self._multicam_backend.recover()  # TODO: verify.
             raise exc
@@ -221,36 +173,3 @@ class AcquisitionService(BaseService):
 
         module = import_module(module_path, package=pkg)
         return getattr(module, class_name)
-
-    @staticmethod
-    @cache
-    def _substitute_image(caption: str = "Error", message: str = "Something happened!", mirror: bool = False) -> bytes:
-        """Create a substitute image in case the stream fails.
-        The image shall clarify some error occured to the user while trying to recover.
-
-        Args:
-            caption (str, optional): Caption in first line. Defaults to "".
-            message (str, optional): Additional error message in second line. Defaults to "".
-            mirror (bool, optional): Flip left/right in case the stream has mirror effect applied. Defaults to False.
-
-        Returns:
-            bytes: _description_
-        """
-        path_font = Path(__file__).parent.joinpath("backends", "assets", "backend_abstract", "fonts", "Roboto-Bold.ttf").resolve()
-        text_fill = "#888"
-        img = Image.new("RGB", (400, 300), "#ddd")
-        img_draw = ImageDraw.Draw(img)
-        font_large = ImageFont.truetype(font=str(path_font), size=22)
-        font_small = ImageFont.truetype(font=str(path_font), size=15)
-        img_draw.text((25, 50), caption, fill=text_fill, font=font_large)
-        img_draw.text((25, 80), message, fill=text_fill, font=font_small)
-        img_draw.text((25, 100), "please check camera and logs", fill=text_fill, font=font_small)
-
-        # flip if mirror effect is on because messages shall be readable on screen
-        if mirror:
-            img = ImageOps.mirror(img)
-
-        # create jpeg
-        jpeg_buffer = BytesIO()
-        img.save(jpeg_buffer, format="jpeg", quality=95)
-        return jpeg_buffer.getvalue()

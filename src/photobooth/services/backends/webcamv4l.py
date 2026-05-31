@@ -6,7 +6,7 @@ import logging
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import cv2
 
@@ -34,8 +34,6 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-modeType = Literal["hires", "lores"]
-
 
 class WebcamV4lBackend(AbstractBackend):
     def __init__(self, config: GroupCameraV4l2):
@@ -50,6 +48,10 @@ class WebcamV4lBackend(AbstractBackend):
 
         self._capture: linuxpy_video_device_type.VideoCapture | None = None
         self._fmt_pixel_format: linuxpy_video_device_type.PixelFormat | None = None
+        self._skip_frames_after_switch: int = 0
+
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self._config.device_identifier}"
 
     def start(self):
         super().start()
@@ -58,26 +60,23 @@ class WebcamV4lBackend(AbstractBackend):
         super().stop()
 
     def _handle_switchmode_video_mode(self):
-        self._set_mode("lores")
+        self._set_mode(self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT)
+        self._skip_frames_after_switch: int = 1
+
         super()._handle_switchmode_video_mode()
 
     def _handle_switchmode_still_mode(self):
-        self._set_mode("hires")
+        self._set_mode(self._config.HIRES_CAM_RESOLUTION_WIDTH, self._config.HIRES_CAM_RESOLUTION_HEIGHT)
+        self._skip_frames_after_switch: int = 1 + self._config.flush_number_frames_after_switch
+
         super()._handle_switchmode_still_mode()
 
     def _handle_switchmode_standby(self):
         super()._handle_switchmode_standby()
 
-    def _set_mode(self, mode: modeType):
+    def _set_mode(self, width: int, height: int):
         assert linuxpy_video_device
         assert self._capture
-
-        logger.info(f"switch_mode to {mode} requested")
-
-        if mode == "hires":
-            width, height = self._config.HIRES_CAM_RESOLUTION_WIDTH, self._config.HIRES_CAM_RESOLUTION_HEIGHT
-        else:
-            width, height = self._config.CAM_RESOLUTION_WIDTH, self._config.CAM_RESOLUTION_HEIGHT
 
         try:
             # pixel_format is handed over to v4l_fourcc, so it needs to be MJPG for MJPEG
@@ -87,8 +86,8 @@ class WebcamV4lBackend(AbstractBackend):
 
         fmt = self._capture.get_format()
         px_fmt_req = linuxpy_video_device.PixelFormat(linuxpy_video_device.raw.v4l2_fourcc(*self._config.pixel_format_fourcc))
-        logger.info(f"requested {mode}-resolution is {width}x{height}, format {px_fmt_req.name}")
-        logger.info(f"   actual {mode}-resolution is {fmt.width}x{fmt.height}, format {fmt.pixel_format.name}")
+        logger.info(f"requested resolution is {width}x{height}, format {px_fmt_req.name}")
+        logger.info(f"   actual resolution is {fmt.width}x{fmt.height}, format {fmt.pixel_format.name}")
 
         # save for later use
         self._fmt_pixel_format = fmt.pixel_format
@@ -122,6 +121,10 @@ class WebcamV4lBackend(AbstractBackend):
         assert linuxpy_video_device
         assert self._fmt_pixel_format is not None
         assert turbojpeg
+
+        if frame.flags & linuxpy_video_device.BufferFlag.ERROR:
+            # This frame is corrupted / incomplete / non-JPEG
+            raise ValueError("Camera delivered an invalid frame (ERROR flag set)")
 
         if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
             return bytes(frame)
@@ -189,61 +192,73 @@ class WebcamV4lBackend(AbstractBackend):
                     req = self._hires_queue.popleft() if self._hires_queue else None
 
                 if req:
+                    self._mode_machine.process_switchmode()
+
                     if isinstance(req, StillRequest):
-                        skip_counter = 0
+                        with self._capture:
+                            for frame in self._capture:
+                                if frame.frame_nb == 0:
+                                    # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
+                                    continue
 
-                        if self._config.switch_to_high_resolution_for_stills:
-                            # self._set_mode(capture, "hires")
-                            self._mode_machine.ensure_still_mode()
-                            skip_counter = self._config.flush_number_frames_after_switch
-                        else:
-                            self._mode_machine.ensure_video_mode()
+                                if frame.frame_nb < self._skip_frames_after_switch:
+                                    continue
 
-                        for frame in device:
-                            # throw away the first x frames to allow the camera to settle again.
-                            if skip_counter > 0:
-                                skip_counter -= 1
-                                continue
+                                logger.info(f"flushed {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
 
-                            logger.info(f"flushed {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+                                with NamedTemporaryFile(
+                                    mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2_", suffix=".jpg"
+                                ) as f:
+                                    f.write(self._frame_to_jpeg(frame))
 
-                            with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2_", suffix=".jpg") as f:
-                                f.write(self._frame_to_jpeg(frame))
+                                logger.info(f"written image to {Path(f.name)}")
 
-                            logger.info(f"written image to {Path(f.name)}")
+                                with req.condition:
+                                    req.result_file = Path(f.name)
+                                    req.condition.notify_all()
 
-                            with req.condition:
-                                req.result_file = Path(f.name)
-                                req.condition.notify_all()
-
-                            # job done
-                            break
+                                # job done
+                                break
 
                     else:
                         logger.warning(f"this backend does not support {type(req)} requests")
                         continue
 
-                else:
-                    self._mode_machine.ensure_video_mode()
+                self._mode_machine.process_switchmode()
 
-                    if self._mode_machine.standby.is_active:  # type: ignore
-                        time.sleep(0.1)
-                        continue
+                if self._mode_machine.active_mode == "standby":
+                    time.sleep(0.1)
+                    continue
 
-                    for frame in device:
+                self._mode_machine.process_switchmode("video")
+
+                with self._capture:
+                    for frame in self._capture:
+                        if frame.frame_nb == 0:
+                            # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
+                            continue
+
+                        if frame.frame_nb < self._skip_frames_after_switch:
+                            continue
+
                         if not self._framerate.should_process_frame(15):
                             continue
 
                         # produce
-                        jpeg_buffer = self._frame_to_jpeg(frame)
+                        try:
+                            jpeg_buffer = self._frame_to_jpeg(frame)
+                        except ValueError as exc:
+                            logger.debug(f"error converting frame to jpeg: {exc}")
+                            continue
+
                         self._frame_tick()
 
                         with self._lores_data[0].condition:
                             self._lores_data[0].data = jpeg_buffer
                             self._lores_data[0].condition.notify_all()
 
-                        # check for standby?
-                        if self._mode_machine.standby.is_active:  # type: ignore
+                        # check for pending mode change? if so break out the stream and switch
+                        if self._mode_machine.is_mode_change_pending:
                             break
 
                         # leave lores in favor to hires still capture for 1 frame.

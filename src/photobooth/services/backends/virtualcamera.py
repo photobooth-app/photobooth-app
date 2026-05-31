@@ -80,7 +80,7 @@ class VirtualCameraBackend(AbstractBackend):
                 req = self._hires_queue.popleft() if self._hires_queue else None
 
             if req:
-                self._mode_machine.ensure_still_mode()
+                self._mode_machine.process_switchmode("still")
 
                 if isinstance(req, StillRequest):
                     file = self._produce_still(req.subdevice_index)
@@ -96,11 +96,13 @@ class VirtualCameraBackend(AbstractBackend):
                     logger.warning(f"this backend does not support {type(req)} requests")
                     continue
 
-            if self._mode_machine.standby.is_active:  # type: ignore
+            self._mode_machine.process_switchmode()
+
+            if self._mode_machine.active_mode == "standby":
                 time.sleep(0.1)
                 continue
 
-            self._mode_machine.ensure_video_mode()
+            self._mode_machine.process_switchmode("video")
 
             self._framerate.wait_until_fps(self._config.framerate)
 
@@ -149,13 +151,10 @@ class VirtualCameraBackend(AbstractBackend):
             return self._lores_data[index_subdevice].data
 
     def _handle_switchmode_video_mode(self):
-        logger.debug("_handle_switchmode_video")
         super()._handle_switchmode_video_mode()
 
     def _handle_switchmode_still_mode(self):
-        logger.debug("_handle_switchmode_hq_capture")
         super()._handle_switchmode_still_mode()
 
     def _handle_switchmode_standby(self):
-        logger.debug("_handle_switchmode_standby")
         super()._handle_switchmode_standby()

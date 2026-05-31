@@ -179,7 +179,7 @@ class WigglecamBackend(AbstractBackend):
                 req = self._hires_queue.popleft() if self._hires_queue else None
 
             if req:
-                self._mode_machine.ensure_still_mode()
+                self._mode_machine.process_switchmode("still")
 
                 if isinstance(req, StillRequest):
                     file = self._capture_still(req.subdevice_index)
@@ -195,11 +195,11 @@ class WigglecamBackend(AbstractBackend):
                     logger.warning(f"this backend does not support {type(req)} requests")
                     continue
 
-            if self._mode_machine.standby.is_active:  # type: ignore
+            self._mode_machine.process_switchmode()
+
+            if self._mode_machine.active_mode == "standby":
                 time.sleep(0.1)
                 continue
-
-            self._mode_machine.ensure_video_mode()
 
             # "produce" next lores-frame
             try:
