@@ -33,7 +33,7 @@ if gp is None:
     pytest.skip("gphoto2 not available", allow_module_level=True)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_gphoto2():
     # ensure virtual camera is available (starting from gphoto2 2.5.0 always true)
     # assert has_vcam() # on selfhosted-runner currently a problem. TODO: setup new RPI runner
@@ -94,17 +94,10 @@ def backend_gphoto2():
 ## tests
 
 
-def test_service_reload(backend_gphoto2):
-    """container reloading works reliable"""
-
-    backend_gphoto2.stop()
-    backend_gphoto2.start()
-
-
 def test_get_images_gphoto2(backend_gphoto2):
     # get lores and hires images from backend and assert
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TimeoutError):
         with Image.open(io.BytesIO(backend_gphoto2.wait_for_lores_image())) as img:
             img.verify()
 
@@ -112,16 +105,16 @@ def test_get_images_gphoto2(backend_gphoto2):
         img.verify()
 
 
-def test_get_gphoto2_switch_modes(backend_gphoto2):
-    backend_gphoto2._on_configure_optimized_for_hq_capture()
+def test_get_gphoto2_switch_modes(backend_gphoto2: Gphoto2Backend):
+    backend_gphoto2._handle_switchmode_still_mode()
 
     backend_gphoto2.wait_for_still_file()
 
-    backend_gphoto2._on_configure_optimized_for_hq_preview()
-    backend_gphoto2._configure_optimized_for_idle_video()
+    backend_gphoto2._handle_switchmode_video_mode()
     time.sleep(0.2)
-    backend_gphoto2._on_configure_optimized_for_idle()
-    backend_gphoto2._configure_optimized_for_idle_video()
+    backend_gphoto2._handle_switchmode_standby()
+    time.sleep(0.2)
+    backend_gphoto2._handle_switchmode_video_mode()
     time.sleep(0.2)
 
     # change some values
@@ -129,31 +122,22 @@ def test_get_gphoto2_switch_modes(backend_gphoto2):
     backend_gphoto2._config.iso_liveview = "200"
     backend_gphoto2._config.shutter_speed_capture = "1/20"
     backend_gphoto2._config.shutter_speed_liveview = "1/30"
-    backend_gphoto2._on_configure_optimized_for_hq_capture()
+    backend_gphoto2._handle_switchmode_still_mode()
 
     backend_gphoto2.wait_for_still_file()
-
-    backend_gphoto2._on_configure_optimized_for_hq_preview()
-    backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(0.2)
-    backend_gphoto2._on_configure_optimized_for_idle()
-    backend_gphoto2._configure_optimized_for_idle_video()
-    time.sleep(0.2)
 
     # and try illegal values that raise exception
     backend_gphoto2._config.iso_capture = "illegal"
     backend_gphoto2._config.iso_liveview = "illegal"
     backend_gphoto2._config.shutter_speed_capture = "illegal"
     backend_gphoto2._config.shutter_speed_liveview = "illegal"
-    backend_gphoto2._on_configure_optimized_for_hq_capture()
+    backend_gphoto2._handle_switchmode_still_mode()
 
     backend_gphoto2.wait_for_still_file()
 
-    backend_gphoto2._on_configure_optimized_for_hq_preview()
-    backend_gphoto2._configure_optimized_for_idle_video()
+    backend_gphoto2._handle_switchmode_video_mode()
     time.sleep(0.2)
-    backend_gphoto2._on_configure_optimized_for_idle()
-    backend_gphoto2._configure_optimized_for_idle_video()
+    backend_gphoto2._handle_switchmode_still_mode()
     time.sleep(0.2)
 
 

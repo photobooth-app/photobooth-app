@@ -6,8 +6,6 @@ from unittest.mock import patch
 import pytest
 from PIL import Image, ImageOps
 
-from photobooth.database.types import DimensionTypes
-from photobooth.services.collection import MAP_DIMENSION_TO_PIXEL
 from photobooth.utils.media_resizer import (
     resize,
     resize_animation_pillow,
@@ -27,12 +25,6 @@ except Exception:
     pytest.skip("turbojpeg is not avail on this system", allow_module_level=True)
 
 logger = logging.getLogger(name=None)
-
-
-def test_mapping_avail():
-    assert isinstance(MAP_DIMENSION_TO_PIXEL.get(DimensionTypes.full, None), int)
-    assert isinstance(MAP_DIMENSION_TO_PIXEL.get(DimensionTypes.preview, None), int)
-    assert isinstance(MAP_DIMENSION_TO_PIXEL.get(DimensionTypes.thumbnail, None), int)
 
 
 def test_resize_jpg(tmp_path):

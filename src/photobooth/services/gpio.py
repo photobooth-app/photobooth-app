@@ -13,6 +13,8 @@ from typing import Any, get_args
 from gpiozero import Button as ZeroButton
 from gpiozero.exc import BadPinFactory
 
+from photobooth.services.config.groups.hardwareinputoutput import GroupHardwareInputOutput
+
 from ..appconfig import appconfig
 from .base import BaseService
 from .collection import MediacollectionService
@@ -122,12 +124,19 @@ class PinHandler:
 
 
 class GpioService(BaseService):
-    def __init__(self, processing_service: ProcessingService, share_service: ShareService, mediacollection_service: MediacollectionService):
+    def __init__(
+        self,
+        processing_service: ProcessingService,
+        share_service: ShareService,
+        mediacollection_service: MediacollectionService,
+        config: GroupHardwareInputOutput | None = None,
+    ):
         super().__init__()
 
         self._processing_service = processing_service
         self._share_service = share_service
         self._mediacollection_service = mediacollection_service
+        self._config: GroupHardwareInputOutput = config if config else appconfig.hardwareinputoutput
 
     def _handle_shutdown(self):
         logger.info("Shutting down host")
@@ -140,7 +149,7 @@ class GpioService(BaseService):
     def _handle_action_button(self, action_type: ActionType, action_index: int):
         logger.debug(f"trigger callback for {action_type}:{action_index}")
 
-        if not self._processing_service._is_occupied():
+        if not self._processing_service.is_occupied():
             self._processing_service.trigger_action(action_type, action_index)
         else:
             logger.info("ignored gpio action button because there is still a job going on")
@@ -167,11 +176,11 @@ class GpioService(BaseService):
             self._processing_service.abort_process()
 
     def init_io(self):
-        shutdown_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN)
+        shutdown_btn = PinHandler(self._config.gpio_pin_shutdown, hold_time=HOLD_TIME_SHUTDOWN)
         if shutdown_btn:
             shutdown_btn.register_callback("longpress", self._handle_shutdown)
 
-        reboot_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot, hold_time=HOLD_TIME_SHUTDOWN)
+        reboot_btn = PinHandler(self._config.gpio_pin_reboot, hold_time=HOLD_TIME_SHUTDOWN)
         if reboot_btn:
             reboot_btn.register_callback("longpress", self._handle_reboot)
 
@@ -190,15 +199,15 @@ class GpioService(BaseService):
             if share_btn:
                 share_btn.register_callback(gpio_trigger.trigger_on, self._handle_share_button, index)
 
-        job_next_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_next, hold_time=0.6)
+        job_next_btn = PinHandler(self._config.gpio_pin_job_next, hold_time=0.6)
         if job_next_btn:
             job_next_btn.register_callback("pressed", self._handle_processing_next_confirm_button)
 
-        job_reject_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_reject, hold_time=0.6)
+        job_reject_btn = PinHandler(self._config.gpio_pin_job_reject, hold_time=0.6)
         if job_reject_btn:
             job_reject_btn.register_callback("pressed", self._handle_processing_reject_button)
 
-        job_abort_btn = PinHandler(appconfig.hardwareinputoutput.gpio_pin_job_abort, hold_time=0.6)
+        job_abort_btn = PinHandler(self._config.gpio_pin_job_abort, hold_time=0.6)
         if job_abort_btn:
             job_abort_btn.register_callback("pressed", self._handle_processing_abort_button)
 
@@ -207,7 +216,7 @@ class GpioService(BaseService):
     def start(self):
         super().start()
 
-        if not appconfig.hardwareinputoutput.gpio_enabled:
+        if not self._config.gpio_enabled:
             super().disabled()
             return
 

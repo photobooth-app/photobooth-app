@@ -8,12 +8,11 @@ import time
 from itertools import cycle
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from threading import Condition
 
 from ...utils.helper import filename_str_time
 from ...utils.stoppablethread import StoppableThread
 from ..config.groups.cameras import GroupCameraVirtual
-from .abstractbackend import AbstractBackend, GeneralBytesResult
+from .abstractbackend import AbstractBackend, MulticamRequest, StillRequest
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +55,10 @@ class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: GroupCameraVirtual):
         # print(VirtualCameraBackend.__mro__)
         self._config: GroupCameraVirtual = config
-        super().__init__(orientation=config.orientation)
+        super().__init__(orientation=config.orientation, num_subdevices=self._config.emulate_multicam_capture_devices)
 
         self._images_iterator = CyclicImageSource().images()
-        self._lores_data: GeneralBytesResult = GeneralBytesResult(data=b"", condition=Condition())
+        # self._enable_producer: bool = False
         self._worker_thread: StoppableThread | None = None
 
     def start(self):
@@ -75,39 +74,67 @@ class VirtualCameraBackend(AbstractBackend):
         pass
 
     def run_service(self):
-        last_time_frame = time.time()
+
         while not self._stop_event.is_set():
-            now_time = time.time()
-            if (now_time - last_time_frame) <= (1.0 / self._config.framerate):
-                # limit max framerate to every ~5ms
-                time.sleep(0.005)
+            with self._hires_lock:
+                req = self._hires_queue.popleft() if self._hires_queue else None
+
+            if req:
+                self._mode_machine.process_switchmode("still")
+
+                if isinstance(req, StillRequest):
+                    file = self._produce_still(req.subdevice_index)
+                    with req.condition:
+                        req.result_file = file
+                        req.condition.notify_all()
+                elif isinstance(req, MulticamRequest):
+                    files = self._produce_multicam()
+                    with req.condition:
+                        req.result_files = files
+                        req.condition.notify_all()
+                else:
+                    logger.warning(f"this backend does not support {type(req)} requests")
+                    continue
+
+            self._mode_machine.process_switchmode()
+
+            if self._mode_machine.active_mode == "standby":
+                time.sleep(0.1)
                 continue
-            last_time_frame = now_time
 
-            # success
-            with self._lores_data.condition:
-                self._lores_data.data = next(self._images_iterator)
-                self._lores_data.condition.notify_all()
+            self._mode_machine.process_switchmode("video")
 
+            self._framerate.wait_until_fps(self._config.framerate)
+
+            # "produce" next lores-frame
+            frame = next(self._images_iterator)
             self._frame_tick()
 
-        logger.info("virtualcamera thread finished")
+            for dev_idx in range(self._config.emulate_multicam_capture_devices):
+                with self._lores_data[dev_idx].condition:
+                    self._lores_data[dev_idx].data = frame
+                    self._lores_data[dev_idx].condition.notify_all()
 
-    def postprocess_multicam_set(self, files_in: list[Path], out_dir: Path) -> list[Path]:
-        return files_in
+        logger.debug("virtualcamera thread finished")
 
-    def _wait_for_multicam_files(self) -> list[Path]:
+    def _produce_multicam(self) -> list[Path]:
         files: list[Path] = []
 
-        for _ in range(self._config.emulate_multicam_capture_devices):
-            files.append(self._wait_for_still_file())
+        for i in range(self._config.emulate_multicam_capture_devices):
+            files.append(self._produce_still(i))
 
         return files
 
-    def _wait_for_still_file(self) -> Path:
+    def _produce_still(self, index_subdevice: int = 0) -> Path:
         """for other threads to receive a hq JPEG image"""
 
-        with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_virtualcamera_", suffix=".jpg") as f:
+        with NamedTemporaryFile(
+            mode="wb",
+            delete=False,
+            dir="tmp",
+            prefix=f"{filename_str_time()}_virtualcamera_subdevice{index_subdevice}_",
+            suffix=".jpg",
+        ) as f:
             if self._config.emulate_hires_static_still:
                 with open(Path(__file__).parent.joinpath("assets", "backend_virtualcamera", "video", "hires.jpg").resolve(), "rb") as f_hires:
                     f.write(f_hires.read())
@@ -116,17 +143,18 @@ class VirtualCameraBackend(AbstractBackend):
 
             return Path(f.name)
 
-    def _wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
-        with self._lores_data.condition:
-            if not self._lores_data.condition.wait(timeout=0.5):
+    def _capture_lores(self, index_subdevice: int = 0) -> bytes:
+        with self._lores_data[index_subdevice].condition:
+            if not self._lores_data[index_subdevice].condition.wait(timeout=0.5):
                 raise TimeoutError("timeout receiving frames")
 
-            return self._lores_data.data
+            return self._lores_data[index_subdevice].data
 
-    def _on_configure_optimized_for_idle(self): ...
+    def _handle_switchmode_video_mode(self):
+        super()._handle_switchmode_video_mode()
 
-    def _on_configure_optimized_for_hq_preview(self): ...
+    def _handle_switchmode_still_mode(self):
+        super()._handle_switchmode_still_mode()
 
-    def _on_configure_optimized_for_hq_capture(self): ...
-
-    def _on_configure_optimized_for_livestream_paused(self): ...
+    def _handle_switchmode_standby(self):
+        super()._handle_switchmode_standby()

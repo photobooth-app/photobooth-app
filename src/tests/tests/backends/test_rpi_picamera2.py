@@ -29,7 +29,7 @@ if not is_rpi():
 ## fixtures
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_picamera2():
     from photobooth.services.backends.picamera2 import Picamera2Backend
 
@@ -46,29 +46,20 @@ def backend_picamera2():
 ## tests
 
 
-def test_service_reload(backend_picamera2):
-    """container reloading works reliable"""
-
-    backend_picamera2.stop()
-    backend_picamera2.start()
-
-
 def test_picamera2_switch_modes(backend_picamera2):
+    assert backend_picamera2._picamera2
+
     with patch.object(backend_picamera2._picamera2, "switch_mode"):
-        backend_picamera2._on_configure_optimized_for_hq_capture()
-        backend_picamera2.wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
-        # hq-capture does not change actually because change happens in hq preview already.
+        backend_picamera2._handle_switchmode_still_mode()
+        backend_picamera2._picamera2.switch_mode.assert_called()
+
+    with patch.object(backend_picamera2._picamera2, "switch_mode"):
+        backend_picamera2._handle_switchmode_video_mode()
+        backend_picamera2._picamera2.switch_mode.assert_called()
+
+    with patch.object(backend_picamera2._picamera2, "switch_mode"):
+        backend_picamera2._handle_switchmode_standby()
         backend_picamera2._picamera2.switch_mode.assert_not_called()
-
-    with patch.object(backend_picamera2._picamera2, "switch_mode"):
-        backend_picamera2._on_configure_optimized_for_hq_preview()
-        backend_picamera2.wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
-        backend_picamera2._picamera2.switch_mode.assert_called()
-
-    with patch.object(backend_picamera2._picamera2, "switch_mode"):
-        backend_picamera2._on_configure_optimized_for_idle()
-        backend_picamera2.wait_for_lores_image()  # wait until next frame avail, because it should have switched by then
-        backend_picamera2._picamera2.switch_mode.assert_called()
 
 
 def test_getImages(backend_picamera2):

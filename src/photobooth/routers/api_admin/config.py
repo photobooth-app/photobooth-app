@@ -56,5 +56,5 @@ def api_post_config_current(configurable: str, updated_config: dict[AnyStr, Any]
         raise RequestValidationError(exc.errors()) from exc
 
     if reload:
-        logger.info("reload paramter is set, so all registered services are reloaded now. This may take some time...")
+        logger.info("reload parameter is set, so all registered services are reloaded now. This may take some time...")
         container.reload()

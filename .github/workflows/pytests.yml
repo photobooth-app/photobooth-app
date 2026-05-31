@@ -69,7 +69,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-linux-${{ matrix.python-version }}
           path: coverage.xml
@@ -102,7 +102,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-windows-${{ matrix.python-version }}
           path: coverage.xml
@@ -135,7 +135,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-hosted-macos-${{ matrix.python-version }}
           path: coverage.xml
@@ -143,8 +143,8 @@ jobs:
   tests-hardware-rpi:
     env:
       ## Sets environment variable
-      wled-wled_enabled: True
-      wled-wled_serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Ser_-if00-port0
+      wled-enabled: True
+      wled-serial_port: /dev/serial/by-id/usb-1a86_USB2.0-Ser_-if00-port0
 
       # use system python to allow for picamera2 to import
       UV_PYTHON: 3.13
@@ -160,7 +160,7 @@ jobs:
       - name: Test with pytest
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-selfhosted-rpi
           path: ./coverage.xml
@@ -173,8 +173,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -78,11 +78,12 @@ def get_printer_status_windows(printer_name):
     if sys.platform != "win32":
         raise RuntimeError("Windows-only function")
 
+    import pywintypes
     import win32print
 
     try:
         handle = win32print.OpenPrinter(printer_name)
-    except win32print.error as exc:
+    except pywintypes.error as exc:
         raise RuntimeError(f"Error opening printer '{printer_name}' to get status") from exc
 
     try:

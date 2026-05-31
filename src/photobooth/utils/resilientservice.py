@@ -140,11 +140,21 @@ class ResilientService(ABC):
             self._thread.join()
             self._started = False
 
-    def restart(self):
-        logger.info(f"{self}-resilient service restarting")
+    def recover(self):
+        with self._lock:
+            logger.warning(f"{self}-resilient service trying to recover")
 
-        self.stop()
-        self.start()
+            if not self._started:
+                logger.warning("can only recover if service started previously")
+                return
+
+            if self._thread:
+                self._stop_event.set()
+                self._thread.join()
+
+            self._stop_event.clear()
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
 
     def is_started(self):
         # resource is only foreseen to start, Thread(run) might not have been called once yet, same for setup_resource.

@@ -76,9 +76,8 @@ def backend_digicamcontrol_emulated(httpserver: HTTPServer):
 
 
 def test_optimize_mode(backend_digicamcontrol_emulated: DigicamcontrolBackend):
-    backend_digicamcontrol_emulated._on_configure_optimized_for_hq_capture()
-    backend_digicamcontrol_emulated._on_configure_optimized_for_hq_preview()
-    backend_digicamcontrol_emulated._on_configure_optimized_for_idle()
+    backend_digicamcontrol_emulated._handle_switchmode_still_mode()
+    backend_digicamcontrol_emulated._handle_switchmode_video_mode()
 
 
 def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digicamcontrol_emulated: DigicamcontrolBackend):
@@ -94,7 +93,7 @@ def test_emulated_get_images_disable_liveview_recovery_more_retries(backend_digi
 
     # check if recovers, but with some more retries for slow test-computer
     try:
-        with Image.open(io.BytesIO(backend_digicamcontrol_emulated.wait_for_lores_image(20))) as img:
+        with Image.open(io.BytesIO(backend_digicamcontrol_emulated.wait_for_lores_image(0))) as img:
             img.verify()
     except Exception as exc:
         raise AssertionError(f"backend did not return valid image bytes, {exc}") from exc

@@ -28,13 +28,6 @@ from .sse.sse_ import SseEventDbInsert, SseEventDbRemove, SseEventDbUpdate
 logger = logging.getLogger(__name__)
 
 
-MAP_DIMENSION_TO_PIXEL = {
-    DimensionTypes.full: appconfig.mediaprocessing.full_still_length,
-    DimensionTypes.preview: appconfig.mediaprocessing.preview_still_length,
-    DimensionTypes.thumbnail: appconfig.mediaprocessing.thumbnail_still_length,
-}
-
-
 class Database:
     def __init__(self): ...
 
@@ -143,7 +136,7 @@ class Cache:
         self._lock_cache_check: Lock = Lock()
 
     def get_cached_repr(self, item: Mediaitem, dimension: DimensionTypes, processed: bool = True) -> Cacheditem:
-        dimension_pixel = MAP_DIMENSION_TO_PIXEL.get(dimension, None)
+        dimension_pixel = getattr(appconfig.mediaprocessing, f"{dimension.value}_still_length", None)
 
         if not item.id:
             raise ValueError("there is no item.id given - cannot create cached representation without id!")

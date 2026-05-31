@@ -16,13 +16,11 @@ logger = logging.getLogger(name=None)
 # need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
 def _container() -> Generator[Container, None, None]:
-    # setup
-    container.start()
+    container.reload()
 
     # ensure video backend is running, otherwise tests can fail on slower devices like rpi4
     block_until_device_is_running(container.acquisition_service._video_backend)
 
-    # deliver
     yield container
     container.stop()
 
@@ -147,11 +145,10 @@ def test_animation(_container: Container):
 
 
 def test_video(_container: Container):
-    _container.processing_service.trigger_action("video", 0)
-
-    assert _container.processing_service._workflow_jobmodel is not None
     number_of_images_before = _container.mediacollection_service.count()
 
+    _container.processing_service.trigger_action("video", 0)
+    assert _container.processing_service._workflow_jobmodel is not None
     _container.processing_service.wait_until_job_finished()
 
     assert _container.processing_service._workflow_jobmodel is None
@@ -177,14 +174,6 @@ def test_video_stop_early(_container: Container):
 
     assert _container.processing_service._workflow_jobmodel is not None
     number_of_images_before = _container.mediacollection_service.count()
-
-    # wait until actually recording
-    timeout_counter = 0
-    while not _container.acquisition_service.is_recording():
-        time.sleep(0.05)
-        timeout_counter += 0.05
-        if timeout_counter > 10:
-            raise RuntimeError("timed out waiting for record to start!")
 
     # recording active, wait 1 secs before stopping.
     desired_video_duration = 1

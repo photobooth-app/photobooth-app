@@ -82,7 +82,7 @@ class LoggingService(BaseService):
         # latest basicConfig adds a streamHandler output to console if not automatically called
         # earlier by some .warn .info or other
         # force=False because otherwise the pytest console logger stream handler gets deleted
-        logging.basicConfig(level=logging.DEBUG, format=fmt, force=False, encoding="utf-8")
+        logging.basicConfig(level=logging.DEBUG, format=fmt, force=False)
 
         self.logging_level = appconfig.common.logging_level
 
@@ -164,6 +164,7 @@ class LoggingService(BaseService):
             "urllib3_future",
             "pynng",
             "python_multipart.multipart",
+            "statemachine",
         ]:
             # mute some other logger, by raising their debug level to INFO
             lgr = logging.getLogger(name=name)

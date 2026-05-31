@@ -29,7 +29,6 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
     def on_enter_counting(self):
         self._acquisition_service.thrill_video()
-        self._acquisition_service.signalbackend_configure_optimized_for_video()
 
         super().on_enter_counting()
 
@@ -54,11 +53,10 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
     def on_exit_approval(self, event: Event): ...
 
     def on_enter_completed(self):
-        super().on_enter_completed()
 
         # postprocess each video
         capture_to_process = self._capture_sets[0].captures[0].filepath
-        logger.debug(f"recorded to {capture_to_process=}")
+        logger.debug(f"recorded to {capture_to_process}")
 
         original_filenamepath = Path(filename_str_time()).with_suffix(".mp4")
 

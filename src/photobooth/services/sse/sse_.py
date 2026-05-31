@@ -69,8 +69,8 @@ class SseEventTranslateableFrontendNotification(SseEventBase):
 class SseEventProcessStateinfo(SseEventBase):
     """_summary_"""
 
-    source: State
-    target: State
+    source: State | None
+    target: State | None
     jobmodel: JobModelBase | None
 
     @property
@@ -79,8 +79,8 @@ class SseEventProcessStateinfo(SseEventBase):
 
     @property
     def data(self) -> str:
-        # logger.debug(self.jobmodel.export()
-        if self.jobmodel:
+        # either have it all or nothing
+        if self.jobmodel and self.source and self.target:
             return json.dumps(
                 dict(
                     source=self.source.id,

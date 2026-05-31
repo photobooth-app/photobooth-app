@@ -22,14 +22,15 @@ def process_pyav(tmp_path):
     input = av.open("src/tests/assets/input_lores.jpg")
     frame_input = next(input.decode())
 
-    container = av.open(tmp_path / "pyav.mp4", mode="w")
+    container = av.open(tmp_path / "pyav.mp4", mode="w", options={"movflags": "faststart"})
 
     stream = container.add_stream("h264", rate=25)
     stream.width = frame_input.width
     stream.height = frame_input.height
     # stream.pix_fmt = "yuv420p"
-    stream.codec_context.options["movflags"] = "faststart"
     stream.codec_context.options["preset"] = "veryfast"
+    stream.codec_context.thread_type = "AUTO"
+    stream.codec_context.thread_count = 0  # let FFmpeg decide
     # stream.codec_context.options["tune"] = "zerolatency"
     # stream.codec_context.profile = "Main"
     stream.codec_context.bit_rate = 2500000

@@ -43,7 +43,6 @@ def pyav_h264_scale(tmp_path, thread_type, threading_number):
     out_height = int(output_stream.width * (input_stream.height / input_stream.width))
     out_height += out_height % 2  # round up to nearest even number
     output_stream.height = out_height
-    output_stream.codec_context.options["movflags"] = "+faststart"
     output_stream.codec_context.options["preset"] = "veryfast"
     output_stream.codec_context.bit_rate = 5000000  # 5000k==5Mbps seems reasonable for simple streams in the 1080range
     # output_stream.codec_context.profile = "Main"  # print(output_stream.codec_context.profiles) baseline, ...

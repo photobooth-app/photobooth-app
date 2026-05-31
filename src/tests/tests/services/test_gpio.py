@@ -8,26 +8,34 @@ import pytest
 from gpiozero.pins.mock import MockPin
 
 from photobooth.appconfig import appconfig
-from photobooth.container import Container, container
-from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN, PinHandler
+from photobooth.services.config.groups.hardwareinputoutput import GroupHardwareInputOutput
+from photobooth.services.gpio import DEBOUNCE_TIME, HOLD_TIME_REBOOT, HOLD_TIME_SHUTDOWN, GpioService, PinHandler
 from photobooth.services.processing import ActionType
 
 logger = logging.getLogger(name=None)
 
 
-# need fixture on module scope otherwise tests fail because GPIO lib gets messed up
 @pytest.fixture(scope="module")
-def _container() -> Generator[Container, None, None]:
-    # setup
+def gpio_service():
+    # ensure GPIO is enabled
+    cfg = GroupHardwareInputOutput(gpio_enabled=True)
 
-    # tests fail if not enabled
-    appconfig.hardwareinputoutput.gpio_enabled = True
+    # mock dependencies
+    processing = MagicMock()
+    processing.is_occupied.return_value = False
+    share = MagicMock()
+    mediacollection = MagicMock()
 
-    container.start()
+    service = GpioService(processing, share, mediacollection, cfg)
 
-    # deliver
-    yield container
-    container.stop()
+    # reset PinHandler global state
+    PinHandler._teardown()
+
+    service.start()
+
+    yield service, processing, share, mediacollection
+
+    service.stop()
 
 
 @pytest.fixture(scope="function")
@@ -44,7 +52,7 @@ def pinhandler1() -> Generator[PinHandler, None, None]:
 def test_pinhandler_singleton(pinhandler1: PinHandler):
     pinhandler1_1 = pinhandler1
     pinhandler1_2 = PinHandler(1, 1)
-    pinhandler2_1 = PinHandler(2, 1)
+    pinhandler2_1 = PinHandler(3, 1)
 
     assert pinhandler1_1 is pinhandler1_2
     assert pinhandler1_1 is not pinhandler2_1
@@ -100,8 +108,9 @@ def test_pinhandler_register_longpress(pinhandler1: PinHandler):
 
 
 @patch("subprocess.check_call")
-def test_button_shutdown(mock_check_call, _container: Container):
-    ph = PinHandler(appconfig.hardwareinputoutput.gpio_pin_shutdown)
+def test_button_shutdown(mock_check_call, gpio_service):
+    service, processing, share, mediacollection = gpio_service
+    ph = PinHandler(service._config.gpio_pin_shutdown)
     assert ph  # only assert because we assume always to have this configured and tested
 
     cast(MockPin, ph.button.pin).drive_low()
@@ -114,10 +123,11 @@ def test_button_shutdown(mock_check_call, _container: Container):
 
 
 @patch("subprocess.check_call")
-def test_button_reboot(mock_check_call, _container: Container):
+def test_button_reboot(mock_check_call, gpio_service):
+    service, processing, share, mediacollection = gpio_service
     # assert _container.gpio_service.reboot_btn
     # emulate gpio active low driven (simulates button press)
-    ph = PinHandler(appconfig.hardwareinputoutput.gpio_pin_reboot)
+    ph = PinHandler(service._config.gpio_pin_reboot)
     assert ph  # only assert because we assume always to have this configured and tested
 
     cast(MockPin, ph.button.pin).drive_low()
@@ -129,34 +139,35 @@ def test_button_reboot(mock_check_call, _container: Container):
     mock_check_call.assert_called()
 
 
-def test_button_action_buttons(_container: Container):
+def test_action_buttons(gpio_service):
+    service, processing, share, mediacollection = gpio_service
+
     for action_type in get_args(ActionType):
-        with patch.object(_container.processing_service, "trigger_action") as mock:
-            for config in getattr(appconfig.actions, action_type):
-                ph = PinHandler(config.trigger.gpio_trigger.pin)
-                if ph:
-                    cast(MockPin, ph.button.pin).drive_low()
+        for index, config in enumerate(getattr(appconfig.actions, action_type)):
+            pin = config.trigger.gpio_trigger.pin
+            if not pin:
+                continue
 
-                # wait debounce time
-                time.sleep(DEBOUNCE_TIME + 0.1)
+            ph = PinHandler(pin)
+            assert ph
 
-                enabled_triggers = sum([True for cfg in getattr(appconfig.actions, action_type) if cfg.trigger.gpio_trigger.pin != ""])
-                assert mock.call_count > 0  # ensure at least one was tested
-                assert enabled_triggers == mock.call_count
+            # simulate button press
+            cast(MockPin, ph.button.pin).drive_low()
+            time.sleep(DEBOUNCE_TIME + 0.1)
+
+            processing.trigger_action.assert_any_call(action_type, index)
 
 
-@patch("subprocess.run")
-def test_button_share(mock_run: MagicMock, _container: Container):
-    appconfig.share.sharing_enabled = True
+def test_button_share(gpio_service):
+    service, processing, share, mediacollection = gpio_service
 
-    for config in appconfig.share.actions:
+    for index, config in enumerate(appconfig.share.actions):
         ph = PinHandler(config.trigger.gpio_trigger.pin)
         if ph:
             cast(MockPin, ph.button.pin).drive_low()
 
-        # wait debounce time
-        time.sleep(DEBOUNCE_TIME + 0.1)
+            # wait debounce time
+            time.sleep(DEBOUNCE_TIME + 0.1)
+            share.share.assert_any_call(mediacollection.get_item_latest(), index)
 
-    enabled_triggers = sum([True for cfg in appconfig.share.actions if cfg.trigger.gpio_trigger.pin != ""])
-    assert mock_run.call_count > 0  # ensure at least one was tested
-    assert enabled_triggers == mock_run.call_count
+    assert share.share.called

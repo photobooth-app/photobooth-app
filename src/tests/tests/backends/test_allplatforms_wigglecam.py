@@ -11,7 +11,7 @@ from tests.tests.util import block_until_device_is_running, get_images
 logger = logging.getLogger(name=None)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def wiggle_node_proc():
     proc = subprocess.Popen([sys.executable, "-m", "wigglecam", "--device-id", "0", "--base-port", "5560"])
     yield proc
@@ -19,7 +19,7 @@ def wiggle_node_proc():
     proc.wait()
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def backend_wigglecam():
     backend = WigglecamBackend(GroupCameraWigglecam(devices=[WigglecamNodes(description="wigglenodes", address="127.0.0.1", base_port=5560)]))
 

@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 from uuid import UUID, uuid4
 
 from statemachine import Event
@@ -13,7 +15,6 @@ from ...database.models import Mediaitem, MediaitemTypes
 from ...utils.countdowntimer import CountdownTimer
 from ...utils.helper import filename_str_time
 from ...utils.media_resizer import resize
-from ..acquisition import AcquisitionService
 from ..config.groups.actions import (
     BaseConfigurationSet,
     MulticameraJobControl,
@@ -25,6 +26,9 @@ from ..config.groups.actions import (
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..mediaprocessing.processes import process_phase1images
 from .machine.processingmachine import ProcessingMachine
+
+if TYPE_CHECKING:
+    from ..acquisition import AcquisitionService
 
 logger = logging.getLogger(__name__)
 
@@ -147,8 +151,9 @@ class JobModelBase(ABC, Generic[T]):
 
     @abstractmethod
     def on_enter_completed(self):
+        ...
         # when completed, signal backends to idle again
-        self._acquisition_service.signalbackend_configure_optimized_for_idle()
+        # self._acquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
     def on_exit_completed(self): ...

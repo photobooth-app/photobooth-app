@@ -1,8 +1,7 @@
 import asyncio
 import logging
-from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, WebSocket, status
 from fastapi.responses import FileResponse, StreamingResponse
@@ -10,55 +9,51 @@ from starlette.websockets import WebSocketDisconnect
 
 from ...appconfig import appconfig
 from ...container import container
+from ...services.sse import sse_service
+from ...services.sse.sse_ import SseEventTranslateableFrontendNotification
+from ...utils.exceptions import BackendNotRunning
 from ...utils.helper import filenames_sanitize
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/aquisition", tags=["aquisition"])
 
 
-async def wrap_iter(iterable: Generator[bytes, Any, None]) -> AsyncGenerator[bytes]:
-    """
-    convert sync function in async generator
-    https://stackoverflow.com/questions/57835872/send-data-via-websocket-from-synchronous-iterator-in-starlette
-    """
-
-    def get_next_item():
-        # Get the next item synchronously.  We cannot call next(it) directly because StopIteration cannot be transferred
-        # across an "await". So we detect StopIteration and convert it to a sentinel object.
-        try:
-            return next(iter(iterable))
-        except StopIteration:
-            return None
-
-    while True:
-        # Submit execution of next(it) to another thread and resume when it's done. await will suspend the coroutine and
-        # allow other tasks to execute while waiting.
-        next_item = await asyncio.to_thread(get_next_item)
-        if next_item is None:
-            break
-
-        yield next_item
-
-
 @router.websocket("/stream")
-async def websocket_endpoint(websocket: WebSocket, index_device: int = 0, index_subdevice: int = 0):
+async def websocket_endpoint(websocket: WebSocket, index_device: int | None = None, index_subdevice: int = 0):
+    if not appconfig.backends.enable_livestream:
+        raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
+
     await websocket.accept()
 
-    async for frame in wrap_iter(container.acquisition_service.gen_stream(index_device, index_subdevice)):
+    while True:
         try:
-            await websocket.send_bytes(frame)
+            # jpeg_bytes = await get_lores_image_with_retry(container.acquisition_service.wait_for_lores_image, 3, index_device, index_subdevice)
+            jpeg_bytes = await asyncio.to_thread(container.acquisition_service.wait_for_lores_image, index_device, index_subdevice)
+        except TimeoutError:
+            # a timeouterror can occur during mode switches of the backend - the frontend will just wait for another frame
+            continue
+        except BackendNotRunning:
+            logger.info("stop streaming because backend is not running")
+            break
+        except Exception as exc:
+            logger.warning(exc)
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="acquisition.stream_error"))
+            break
+
+        try:
+            await websocket.send_bytes(jpeg_bytes)
         except WebSocketDisconnect as exc:
             logger.debug(f"client disconnected code: {exc.code}, reason: {exc.reason}")
-            break
+            return  # return because disconnected already and below would handle disconnect otherwise again which fails for sure.
         except Exception as exc:
             logger.info(f"error sending data: {exc}")
             break
-    else:
-        # when for ends (None is returned/stream break), close the connection server side so client can retry connecting)
-        try:
-            await websocket.close(code=1001, reason="backend stopped delivering")
-        except Exception as exc:
-            logger.warning(f"websocket failed closing: {exc}")
+
+    # when for ends (None is returned/stream break), close the connection server side so client can retry connecting)
+    try:
+        await websocket.close(code=1001, reason="backend stopped delivering")
+    except Exception as exc:
+        logger.warning(f"websocket failed closing: {exc}")
 
 
 @router.get("/stream.mjpg")
@@ -67,8 +62,22 @@ def video_stream(index_device: int = 0, index_subdevice: int = 0):
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
 
     def gen_multipart():
-        for jpeg_bytes in container.acquisition_service.gen_stream(index_device, index_subdevice):
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n\r\n")
+
+        while True:
+            try:
+                jpeg_bytes = container.acquisition_service.wait_for_lores_image(index_device, index_subdevice)
+                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n\r\n")
+            except TimeoutError:
+                # a timeouterror can occur during mode switches of the backend - the frontend will just wait for another frame
+                continue
+            except BackendNotRunning:
+                logger.info("stop streaming because backend is not running")
+                break
+            except Exception as exc:
+                logger.warning(exc)
+                sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="acquisition.stream_error"))
+
+                break
 
     try:
         headers = {"Age": "0", "Cache-Control": "no-cache, private", "Pragma": "no-cache"}
@@ -103,14 +112,12 @@ def api_multicam_loadfile_get(file_path: Path):
     return FileResponse(filepath_sanitized, filename=filepath_sanitized.name)  # cannot catch exceptions here since async internally.
 
 
-@router.get("/mode/{mode}", status_code=status.HTTP_202_ACCEPTED)
-def api_cmd_aquisition_capturemode_get(mode: Literal["preview", "capture", "video", "idle"] = "preview"):
+@router.get("/mode/{backend_index}/{mode}", status_code=status.HTTP_202_ACCEPTED)
+def api_cmd_aquisition_capturemode_get(backend_index: int = 0, mode: Literal["capture", "video", "standby"] = "video"):
     """set backends to preview or capture mode (usually automatically switched as needed by processingservice)"""
     if mode == "capture":
-        container.acquisition_service.signalbackend_configure_optimized_for_hq_capture()
-    elif mode == "preview":
-        container.acquisition_service.signalbackend_configure_optimized_for_hq_preview()
+        container.acquisition_service._backends[backend_index]._mode_machine.request_still()
     elif mode == "video":
-        container.acquisition_service.signalbackend_configure_optimized_for_video()
-    elif mode == "idle":
-        container.acquisition_service.signalbackend_configure_optimized_for_idle()
+        container.acquisition_service._backends[backend_index]._mode_machine.request_video()
+    elif mode == "standby":
+        container.acquisition_service._backends[backend_index]._mode_machine.request_standby()

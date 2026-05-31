@@ -10,6 +10,9 @@ from photobooth.appconfig import appconfig
 from photobooth.application import app
 from photobooth.container import container
 from photobooth.database.database import create_db_and_tables
+from photobooth.database.types import MediaitemTypes
+from photobooth.services.collection import MediacollectionService
+from tests.tests.util import dummy_mediaitem
 
 logger = logging.getLogger(name=None)
 
@@ -25,7 +28,7 @@ def client() -> Generator[TestClient, None, None]:
 
         yield client
 
-        container.stop()
+        assert container.is_started(), "container need to be in started state until the very end! otherwise it might reveal issues with the tests."
 
 
 @pytest.fixture
@@ -38,15 +41,23 @@ def client_authenticated(client: TestClient) -> Generator[TestClient, None, None
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup1():
-    if container.mediacollection_service.count() == 0:
-        logger.info("no mediaitem in collection, creating one image")
-        if not container.is_started():
-            container.start()
+    mcs = MediacollectionService()
 
-        if container.mediacollection_service.count() == 0:
-            container.processing_service.trigger_action("image", 0)
-            container.processing_service.wait_until_job_finished()
-        container.stop()
+    create = False
+    try:
+        latest = mcs.get_item_latest()
+
+        if latest.media_type is not MediaitemTypes.image:
+            create = True
+    except FileNotFoundError:
+        create = True
+
+    if create:
+        logger.info("no mediaitem in collection, creating one image")
+
+        dummy_item = dummy_mediaitem()
+
+        mcs.add_item(dummy_item)
 
     yield
 

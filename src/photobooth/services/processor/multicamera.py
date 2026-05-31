@@ -28,7 +28,6 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
 
     def on_enter_counting(self):
         self._acquisition_service.thrill_multicam()
-        self._acquisition_service.signalbackend_configure_optimized_for_hq_preview()
 
         super().on_enter_counting()
 
@@ -37,8 +36,6 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
 
     def on_enter_capture(self):
         logger.info(f"current capture ({self.captures_taken + 1}/{self.total_captures_to_take}, remaining {self.remaining_captures_to_take - 1})")
-
-        self._acquisition_service.signalbackend_configure_optimized_for_hq_capture()
 
         captureset = CaptureSet([Capture(captured_file) for captured_file in self._acquisition_service.wait_for_multicam_files()])
 
@@ -56,7 +53,6 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         super().on_exit_approval(event)
 
     def on_enter_completed(self):
-        super().on_enter_completed()
         capture_set = self._capture_sets[0]  # for now only 1 set supported...
         files_to_process = [capture.filepath for capture in capture_set.captures]
 

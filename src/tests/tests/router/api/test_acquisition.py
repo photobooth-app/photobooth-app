@@ -9,8 +9,10 @@ from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.services.acquisition import AcquisitionService
+from photobooth.utils.exceptions import BackendNotRunning
 
 logger = logging.getLogger(name=None)
+DUMMY_JPEG = b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
 
 
 def capture(client: TestClient):
@@ -25,7 +27,7 @@ def capture(client: TestClient):
 
 
 def test_aquire_still_capturemode(client: TestClient):
-    response = client.get("/aquisition/mode/capture")
+    response = client.get("/aquisition/mode/0/capture")
     assert response.status_code == 202
 
     response = client.get("/aquisition/still")
@@ -44,7 +46,7 @@ def test_aquire_still_exception(client: TestClient):
 
 def test_aquire_multiple_withmodechange(client: TestClient):
     for _i in range(4):
-        response = client.get("/aquisition/mode/capture")
+        response = client.get("/aquisition/mode/0/capture")
         assert response.status_code == 202
 
         # virtual countdown
@@ -52,7 +54,7 @@ def test_aquire_multiple_withmodechange(client: TestClient):
 
         capture(client)
 
-        response = client.get("/aquisition/mode/preview")
+        response = client.get("/aquisition/mode/0/video")
         assert response.status_code == 202
 
 
@@ -62,27 +64,23 @@ def test_aquire_multiple_nomodechange(client: TestClient):
 
 
 def test_invalid_test_all_modes(client: TestClient):
-    response = client.get("/aquisition/mode/capture")
+    response = client.get("/aquisition/mode/0/capture")
     assert response.is_success
-    response = client.get("/aquisition/mode/preview")
+    response = client.get("/aquisition/mode/0/video")
     assert response.is_success
-    response = client.get("/aquisition/mode/video")
-    assert response.is_success
-    response = client.get("/aquisition/mode/idle")
+    response = client.get("/aquisition/mode/0/standby")
     assert response.is_success
 
 
 def test_invalid_modechange(client: TestClient):
-    response = client.get("/aquisition/mode/invalidmode")
+    response = client.get("/aquisition/mode/0/invalidmode")
     assert response.status_code == 422
 
 
-def fake_gen_stream(index_device: int = 0, index_subdevice: int = 0):
-    # Minimal valid JPEG: start + padding + end
-    yield b"\xff\xd8" + b"\x00" * 200 + b"\xff\xd9"
-
-
-@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
+)
 def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 200
@@ -99,7 +97,10 @@ def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     assert len(frame) > 100
 
 
-@patch("photobooth.services.acquisition.AcquisitionService.gen_stream", side_effect=fake_gen_stream)
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
+)
 def test_websocket_stream(mock_gen_stream, client: TestClient):
     with client.websocket_connect("ws://test/api/aquisition/stream") as websocket:
         # Receive one frame
