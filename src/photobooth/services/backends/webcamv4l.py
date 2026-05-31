@@ -46,6 +46,7 @@ class WebcamV4lBackend(AbstractBackend):
         if turbojpeg is None:
             raise ModuleNotFoundError("Backend is not available because turbojpeg library is not found - either wrong platform or not installed!")
 
+        self._device: linuxpy_video_device_type.Device | None = None
         self._capture: linuxpy_video_device_type.VideoCapture | None = None
         self._fmt_pixel_format: linuxpy_video_device_type.PixelFormat | None = None
         self._skip_frames_after_switch: int = 0
@@ -164,110 +165,109 @@ class WebcamV4lBackend(AbstractBackend):
             return linuxpy_video_device.Device(device_text)
 
     def setup_resource(self):
-        self._capture = None
+        assert linuxpy_video_device
+
+        self._device = self._get_device(self._config.device_identifier)
+        self._device.open()
+        self._capture = linuxpy_video_device.VideoCapture(self._device)
+
+        try:
+            self._capture.set_fps(25)
+        except OSError as exc:
+            logger.warning(f"cannot set_fps due to error: {exc}")
+            # continue even if error occured, camera might not support fps setting...
 
     def teardown_resource(self):
-        self._capture = None
+        if self._device:
+            self._device.close()
 
     def run_service(self):
         assert linuxpy_video_device
-        self._capture = None
+        assert self._device
+        assert self._capture
 
-        logger.info(f"trying to open camera index={self._config.device_identifier=}")
-        with self._get_device(self._config.device_identifier) as device:
-            logger.info(f"webcam device index: {self._config.device_identifier}")
-            logger.info(f"webcam name: {device.info.card if device.info else 'unknown'}")
+        logger.info(f"webcam device index: {self._config.device_identifier}")
+        logger.info(f"webcam name: {self._device.info.card if self._device.info else 'unknown'}")
 
-            self._capture = linuxpy_video_device.VideoCapture(device)
-            assert self._capture
+        while not self._stop_event.is_set():
+            with self._hires_lock:
+                req = self._hires_queue.popleft() if self._hires_queue else None
 
-            try:
-                self._capture.set_fps(25)
-            except OSError as exc:
-                logger.warning(f"cannot set_fps due to error: {exc}")
-                # continue even if error occured, camera might not support fps setting...
-
-            while not self._stop_event.is_set():
-                with self._hires_lock:
-                    req = self._hires_queue.popleft() if self._hires_queue else None
-
-                if req:
-                    self._mode_machine.process_switchmode()
-
-                    if isinstance(req, StillRequest):
-                        with self._capture:
-                            for frame in self._capture:
-                                if frame.frame_nb == 0:
-                                    # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
-                                    continue
-
-                                if frame.frame_nb < self._skip_frames_after_switch:
-                                    continue
-
-                                logger.info(f"flushed {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
-
-                                with NamedTemporaryFile(
-                                    mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2_", suffix=".jpg"
-                                ) as f:
-                                    f.write(self._frame_to_jpeg(frame))
-
-                                logger.info(f"written image to {Path(f.name)}")
-
-                                with req.condition:
-                                    req.result_file = Path(f.name)
-                                    req.condition.notify_all()
-
-                                # job done
-                                break
-
-                    else:
-                        logger.warning(f"this backend does not support {type(req)} requests")
-                        continue
-
+            if req:
                 self._mode_machine.process_switchmode()
 
-                if self._mode_machine.active_mode == "standby":
-                    time.sleep(0.1)
+                if isinstance(req, StillRequest):
+                    with self._capture:
+                        for frame in self._capture:
+                            if frame.frame_nb == 0:
+                                # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
+                                continue
+
+                            if frame.frame_nb < self._skip_frames_after_switch:
+                                continue
+
+                            logger.info(f"flushed {self._config.flush_number_frames_after_switch} frames before capture high resolution image")
+
+                            with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_v4l2_", suffix=".jpg") as f:
+                                f.write(self._frame_to_jpeg(frame))
+
+                            logger.info(f"written image to {Path(f.name)}")
+
+                            with req.condition:
+                                req.result_file = Path(f.name)
+                                req.condition.notify_all()
+
+                            # job done
+                            break
+
+                else:
+                    logger.warning(f"this backend does not support {type(req)} requests")
                     continue
 
-                self._mode_machine.process_switchmode("video")
+            self._mode_machine.process_switchmode()
 
-                with self._capture:
-                    for frame in self._capture:
-                        if frame.frame_nb == 0:
-                            # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
-                            continue
+            if self._mode_machine.active_mode == "standby":
+                time.sleep(0.1)
+                continue
 
-                        if frame.frame_nb < self._skip_frames_after_switch:
-                            continue
+            self._mode_machine.process_switchmode("video")
 
-                        if not self._framerate.should_process_frame(15):
-                            continue
+            with self._capture:
+                for frame in self._capture:
+                    if frame.frame_nb == 0:
+                        # always flush the very first frame. some cameras might send garbage (here Insta360 Link 2C Pro)
+                        continue
 
-                        # produce
-                        try:
-                            jpeg_buffer = self._frame_to_jpeg(frame)
-                        except ValueError as exc:
-                            logger.debug(f"error converting frame to jpeg: {exc}")
-                            continue
+                    if frame.frame_nb < self._skip_frames_after_switch:
+                        continue
 
-                        self._frame_tick()
+                    if not self._framerate.should_process_frame(15):
+                        continue
 
-                        with self._lores_data[0].condition:
-                            self._lores_data[0].data = jpeg_buffer
-                            self._lores_data[0].condition.notify_all()
+                    # produce
+                    try:
+                        jpeg_buffer = self._frame_to_jpeg(frame)
+                    except ValueError as exc:
+                        logger.debug(f"error converting frame to jpeg: {exc}")
+                        continue
 
-                        # check for pending mode change? if so break out the stream and switch
-                        if self._mode_machine.is_mode_change_pending:
+                    self._frame_tick()
+
+                    with self._lores_data[0].condition:
+                        self._lores_data[0].data = jpeg_buffer
+                        self._lores_data[0].condition.notify_all()
+
+                    # check for pending mode change? if so break out the stream and switch
+                    if self._mode_machine.is_mode_change_pending:
+                        break
+
+                    # leave lores in favor to hires still capture for 1 frame.
+                    with self._hires_lock:
+                        if self._hires_queue:
                             break
 
-                        # leave lores in favor to hires still capture for 1 frame.
-                        with self._hires_lock:
-                            if self._hires_queue:
-                                break
-
-                        # abort streaming on shutdown so process can join and close
-                        if self._stop_event.is_set():
-                            break
+                    # abort streaming on shutdown so process can join and close
+                    if self._stop_event.is_set():
+                        break
 
         logger.info("v4l_img_acquisition finished, exit")
