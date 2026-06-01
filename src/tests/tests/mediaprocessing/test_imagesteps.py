@@ -241,7 +241,6 @@ def test_img_background_stage(pil_image: Image.Image):
 
 
 def test_img_background_stage_rgb_skip_process(pil_image: Image.Image):
-    pil_image = pil_image
     assert pil_image.mode == "RGB"  # before process it's RGB
 
     context = ImageContext(pil_image)
