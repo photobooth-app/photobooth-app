@@ -47,9 +47,9 @@ class PinHandler:
     _instances: dict[str, "PinHandler"] = {}  # Class-level cache for pin instances
 
     def __new__(cls, pin_number: str | int, hold_time=1.0):
-        if pin_number == "" or None:
+        if pin_number in ("", None):  # "0" or 0 are valid pin_number
             logger.info("Ignored setup gpio-pinhandler because the pin_number given is empty.")
-            return
+            return None
         # ensure it's str always
         pin_number = str(pin_number)  # doesn't harm underlying gpiozero lib but instances[] lookup works
 

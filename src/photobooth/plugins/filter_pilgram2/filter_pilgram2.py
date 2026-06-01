@@ -35,6 +35,8 @@ class FilterPilgram2(BaseFilter[FilterPilgram2Config]):
         if filter:  # if anything, then filter, else for None this plugin is not requested, leave.
             return self.do_filter(image, cast(available_filter, filter))
 
+        return None
+
     def do_filter(self, image: Image.Image, filter: available_filter) -> Image.Image:
         try:
             pilgram2_filter_fun = getattr(pilgram2, filter)

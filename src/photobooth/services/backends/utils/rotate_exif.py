@@ -17,7 +17,7 @@ def set_exif_orientation(jpeg_image: bytes, orientation_choice) -> bytes:
     pass
 
 
-def set_exif_orientation(jpeg_image: Path | bytes, orientation_choice: Orientation) -> Path | bytes:
+def set_exif_orientation(jpeg_image: Path | bytes | bytearray, orientation_choice: Orientation) -> Path | bytes:
     """inserts updated orientation flag in given filepath.
     ref https://sirv.com/help/articles/rotate-photos-to-be-upright/
 
@@ -42,9 +42,10 @@ def set_exif_orientation(jpeg_image: Path | bytes, orientation_choice: Orientati
         # File case: update in place
         piexif.insert(_get_updated_exif_bytes(str(jpeg_image), orientation_choice), str(jpeg_image))
         return jpeg_image
-    elif isinstance(jpeg_image, (bytes, bytearray)):
+    if isinstance(jpeg_image, (bytes, bytearray)):
         # Bytes case: return new data
         output = io.BytesIO()
         piexif.insert(_get_updated_exif_bytes(jpeg_image, orientation_choice), jpeg_image, output)
         return output.getvalue()
-    # else: ...           #not going to happen as per type
+
+    raise TypeError(f"Unsupported jpeg_image type: {type(jpeg_image)}")

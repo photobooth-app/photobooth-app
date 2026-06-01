@@ -57,6 +57,8 @@ def get_user(db: dict[str, UserInDB], user_id: str) -> UserInDB | None:
     if user_id in db:
         return db[user_id]
 
+    return None
+
 
 def authenticate_user(users_db, user_id: str, password: str):
     user = get_user(users_db, user_id)
