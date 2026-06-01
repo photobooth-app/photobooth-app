@@ -12,7 +12,7 @@ from rclone_api.api import RcloneApi
 from photobooth.plugins.synchronizer_rclone.utils import get_corresponding_remote_file
 
 from .config import RemoteConfig
-from .types import CopyOperation, DeleteOperation, JobResult, JobStatus, OperationTypes, TaskCopy, TaskDelete, TaskSyncType
+from .types import CopyOperation, DeleteOperation, JobResult, JobStatus, TaskCopy, TaskDelete
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class PipelineStats:
 class PrioritizedJob:
     priority: int
     job_id: int = field(compare=False)
-    operation: OperationTypes = field(compare=False)
+    operation: CopyOperation | DeleteOperation = field(compare=False)
 
     def __str__(self):
         return f"{self.operation} @prio {self.priority:>2}"
@@ -85,7 +85,7 @@ class ThreadedImmediateSyncPipeline:
     # --------------------------------------------------------
     # Public API
     # --------------------------------------------------------
-    def submit(self, task: TaskSyncType, priority: int = 10):
+    def submit(self, task: TaskCopy | TaskDelete, priority: int = 10):
 
         for r in self.remotes:
             # translate task to rclone operation for all remotes listed here

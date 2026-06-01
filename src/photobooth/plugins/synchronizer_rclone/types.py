@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TypeAlias
 
 
 class JobStatus(Enum):
@@ -38,9 +37,6 @@ class DeleteOperation:
         return f"{self.__class__.__name__}: {self.dst_fs}{self.dst_remote}"
 
 
-OperationTypes: TypeAlias = CopyOperation | DeleteOperation
-
-
 @dataclass
 class TaskCopy:
     """Copy to remove, update if needed."""
@@ -59,6 +55,3 @@ class TaskDelete:
 
     def __str__(self):
         return str(self.file.absolute())
-
-
-TaskSyncType: TypeAlias = TaskCopy | TaskDelete

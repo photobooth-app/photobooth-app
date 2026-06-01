@@ -25,6 +25,7 @@ def serial_ports() -> list[str]:
             serial_byid_paths = [str(path) for path in sorted(Path("/dev/serial/by-id/").glob("*"))]
             logger.info(f"found serial by-id ports: {serial_byid_paths}")
         except Exception:
+            # if the list cmd errors, we ignore it
             pass
 
         return serial_byid_paths + pyserial_ports
