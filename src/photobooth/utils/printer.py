@@ -135,9 +135,7 @@ def monitor_printer(printer_name, callback, interval=1.0):
 # Example usage
 # -------------------------
 if __name__ == "__main__":
-    PRINTER = "Brother_MFC_L2720DW_series"
-    PRINTER = "Canon_SELPHY_CP1300"
-    PRINTER = "PDF"
+    PRINTER = "PDF"  # or "Brother_MFC_L2720DW_series" or "Canon_SELPHY_CP1300"
 
     def on_state_change(event: PrinterStateChange):
         print(f"[STATE CHANGE] {event.printer}: {event.old} → {event.new}")
