@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class AutoPivotPointStep(PipelineStep):
-    def __init__(self) -> None: ...
+    def __init__(self) -> None:
+        pass
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
         def find_good_features(img: Image.Image, roi_center: tuple[int, int], roi_size: int = 100, max_corners: int = 20) -> npt.NDArray[np.float32]:
@@ -79,7 +80,8 @@ class AutoPivotPointStep(PipelineStep):
 class OffsetPerOpticalFlowStep(PipelineStep):
     """Align next_img to prev_img using optical flow of multiple pivot points."""
 
-    def __init__(self) -> None: ...
+    def __init__(self) -> None:
+        pass
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
         relative_offsets: list[tuple[int, int]] = []
@@ -152,7 +154,8 @@ class OffsetPerOpticalFlowStep(PipelineStep):
 class CropCommonAreaStep(PipelineStep):
     """Align next_img to prev_img using optical flow of pivot point."""
 
-    def __init__(self) -> None: ...
+    def __init__(self) -> None:
+        pass
 
     def __call__(self, context: MulticameraContext, next_step: NextStep) -> None:
         assert len(context.images) >= 2, "need at least 2 images!"

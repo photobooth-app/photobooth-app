@@ -42,9 +42,11 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
         # logger.info(f"captureset {captureset} successful") # not helpful to output normally.
 
-    def on_exit_capture(self): ...
+    def on_exit_capture(self):
+        pass
 
-    def on_enter_approval(self): ...
+    def on_enter_approval(self):
+        pass
 
     def on_exit_approval(self, event: Event):
         super().on_exit_approval(event)
@@ -61,6 +63,8 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
         logger.info(f"capture {mediaitem.processed} processed")
 
-    def on_exit_completed(self): ...
+    def on_exit_completed(self):
+        pass
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        pass

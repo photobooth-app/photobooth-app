@@ -8,9 +8,13 @@ from photobooth.services.config.groups.cameras import Orientation
 
 
 @overload
-def set_exif_orientation(jpeg_image: Path, orientation_choice) -> Path: ...
+def set_exif_orientation(jpeg_image: Path, orientation_choice) -> Path:
+    pass
+
+
 @overload
-def set_exif_orientation(jpeg_image: bytes, orientation_choice) -> bytes: ...
+def set_exif_orientation(jpeg_image: bytes, orientation_choice) -> bytes:
+    pass
 
 
 def set_exif_orientation(jpeg_image: Path | bytes, orientation_choice: Orientation) -> Path | bytes:

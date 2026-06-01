@@ -167,7 +167,8 @@ class Picamera2Backend(AbstractBackend):
         logger.debug("change to capture mode requested")
         self._switch_mode(self._still_configuration)
 
-    def _handle_switchmode_standby(self): ...
+    def _handle_switchmode_standby(self):
+        pass
 
     def _switch_mode(self, config):
         assert self._picamera2

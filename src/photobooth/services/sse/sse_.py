@@ -31,11 +31,13 @@ class SseEventBase(ABC):
 
     @property
     @abstractmethod
-    def event(self) -> str: ...
+    def event(self) -> str:
+        pass
 
     @property
     @abstractmethod
-    def data(self) -> str: ...
+    def data(self) -> str:
+        pass
 
 
 @dataclass

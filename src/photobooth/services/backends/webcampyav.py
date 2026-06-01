@@ -67,9 +67,11 @@ class WebcamPyavBackend(AbstractBackend):
     def _handle_switchmode_standby(self):
         super()._handle_switchmode_standby()
 
-    def setup_resource(self): ...
+    def setup_resource(self):
+        pass
 
-    def teardown_resource(self): ...
+    def teardown_resource(self):
+        pass
 
     def run_service(self):
         reformatter = VideoReformatter()

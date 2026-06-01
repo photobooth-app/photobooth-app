@@ -45,9 +45,11 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
 
         # logger.info(f"captureset {captureset} successful")
 
-    def on_exit_capture(self): ...
+    def on_exit_capture(self):
+        pass
 
-    def on_enter_approval(self): ...
+    def on_enter_approval(self):
+        pass
 
     def on_exit_approval(self, event: Event):
         super().on_exit_approval(event)
@@ -95,6 +97,8 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
         # out to db/ui
         self.set_results([*phase1_mediaitems, phase2_mediaitem], phase2_mediaitem.id)
 
-    def on_exit_completed(self): ...
+    def on_exit_completed(self):
+        pass
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        pass

@@ -64,12 +64,14 @@ class DigicamcontrolBackend(AbstractBackend):
     # INTERNAL FUNCTIONS
     #
 
-    def _handle_switchmode_still_mode(self): ...
+    def _handle_switchmode_still_mode(self):
+        pass
 
     def _handle_switchmode_video_mode(self):
         self._enable_liveview()
 
-    def _handle_switchmode_standby(self): ...
+    def _handle_switchmode_standby(self):
+        pass
 
     def _enable_liveview(self):
         logger.debug("enable liveview and minimize windows")
@@ -85,7 +87,8 @@ class DigicamcontrolBackend(AbstractBackend):
         else:
             logger.debug("set preview mode successful")
 
-    def setup_resource(self): ...
+    def setup_resource(self):
+        pass
 
     def teardown_resource(self):
         # when stopping the backend also stop the livestream by following command.

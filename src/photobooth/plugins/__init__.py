@@ -104,7 +104,9 @@ class PluginAcquisitionSpec:
 
 class PluginMediaprocessingSpec:
     @hookspec(firstresult=True)  # apply image filter
-    def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: Enum, preview: bool) -> Image.Image: ...
+    def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: Enum, preview: bool) -> Image.Image | None:
+        """via hook the filter pipeline step is called. all hooks will be triggered but the filter determines which one shall return an image.
+        the other one return None which will be filtered"""
 
     @hookspec
     def mp_avail_filter(self) -> list[str]:

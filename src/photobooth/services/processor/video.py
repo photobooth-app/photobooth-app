@@ -48,9 +48,11 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
         logger.info(f"captureset {self._capture_sets} successful")
 
-    def on_enter_approval(self): ...
+    def on_enter_approval(self):
+        pass
 
-    def on_exit_approval(self, event: Event): ...
+    def on_exit_approval(self, event: Event):
+        pass
 
     def on_enter_completed(self):
 
@@ -85,6 +87,8 @@ class JobModelVideo(JobModelBase[VideoConfigurationSet]):
 
         logger.info(f"capture {mediaitem=} successful")
 
-    def on_exit_completed(self): ...
+    def on_exit_completed(self):
+        pass
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        pass

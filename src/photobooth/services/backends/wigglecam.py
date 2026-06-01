@@ -223,8 +223,11 @@ class WigglecamBackend(AbstractBackend):
 
         logger.debug("run_service loop exited")
 
-    def _handle_switchmode_video_mode(self): ...
+    def _handle_switchmode_video_mode(self):
+        pass
 
-    def _handle_switchmode_still_mode(self): ...
+    def _handle_switchmode_still_mode(self):
+        pass
 
-    def _handle_switchmode_standby(self): ...
+    def _handle_switchmode_standby(self):
+        pass

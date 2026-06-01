@@ -47,7 +47,8 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
 
         logger.info(f"captureset {captureset} successful")
 
-    def on_exit_capture(self): ...
+    def on_exit_capture(self):
+        pass
 
     def on_enter_approval(self):
         # set an uuid of capture to approve
@@ -113,6 +114,8 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
         # out to db/ui
         self.set_results([*phase1_mediaitems, phase2_mediaitem], phase2_mediaitem.id)
 
-    def on_exit_completed(self): ...
+    def on_exit_completed(self):
+        pass
 
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        pass
