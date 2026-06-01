@@ -9,13 +9,15 @@ logger = logging.getLogger(__name__)
 class PermanentFault(Exception):
     """Raised from within the services when the service should not attempt recovery."""
 
-    ...
+
+class ServiceCrashedTemporarily(Exception):
+    """Raised when the service probably only crashes temporarily and there is a chance to recover.
+    can be raised from within service logic"""
 
 
-class ServiceCrashedTemporarily(Exception): ...
-
-
-class ServiceCrashedPermanently(Exception): ...
+class ServiceCrashedPermanently(Exception):
+    """Raised when the service probably crashes permanently and will do so after a restart again.
+    can be raised from within service logic"""
 
 
 class ResilientService(ABC):
@@ -32,13 +34,16 @@ class ResilientService(ABC):
 
     # ---- Subclass Overrides ----
     @abstractmethod
-    def setup_resource(self): ...
+    def setup_resource(self):
+        """setup the resource right before run_service logic"""
 
     @abstractmethod
-    def teardown_resource(self): ...
+    def teardown_resource(self):
+        """tear down the resource right after run_service logic and in case of crashes"""
 
     @abstractmethod
-    def run_service(self): ...
+    def run_service(self):
+        """service logic to be run when the service is started"""
 
     # ----------------------------
 

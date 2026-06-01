@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    def __init__(self): ...
+    def __init__(self):
+        pass
 
     def add_item(self, item: Mediaitem):
         # add to db and notify

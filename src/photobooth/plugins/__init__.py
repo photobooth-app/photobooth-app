@@ -25,91 +25,96 @@ hookimpl = pluggy.HookimplMarker("photobooth-app")
 
 class PluginManagementSpec:
     @hookspec
-    def init(self) -> None: ...
+    def init(self) -> None:
+        """init is run on app initialization. plugins are reinitialized on container reload also."""
 
     @hookspec
-    def start(self) -> None: ...
+    def start(self) -> None:
+        """plugin start is called in last step during container.start"""
 
     @hookspec
-    def stop(self) -> None: ...
+    def stop(self) -> None:
+        """plugin stop is called in first step during container.stop"""
 
     @hookspec
-    def get_stats(self) -> GenericStats | None: ...
+    def get_stats(self) -> GenericStats | None:
+        """the information service requests reqular statistics from the plugin to display in the admin frontend.
+        this function shall return quick and do not use heavy calculations"""
 
 
 class PluginStatemachineSpec:
     @hookspec
-    def sm_before_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None: ...
+    def sm_before_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+        """job processor before a transition takes place. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None: ...
+    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+        """job processor when exit a state. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None: ...
+    def sm_on_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+        """job processor on the transition. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None: ...
+    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+        """job processor when the new state is entered. for details see python statemachine library"""
 
     @hookspec
-    def sm_after_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None: ...
+    def sm_after_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+        """job processor after a transition took place. for details see python statemachine library"""
 
 
 class PluginAcquisitionSpec:
     @hookspec
     def acq_before_shot(self) -> None:
         """triggers before a shot"""
-        ...
 
     @hookspec
     def acq_before_get_still(self) -> None:
         """triggers before a still only"""
-        ...
 
     @hookspec
     def acq_before_get_video(self) -> None:
         """triggers before a video only"""
-        ...
 
     @hookspec
     def acq_before_get_multicam(self) -> None:
         """triggers before a multicam still only"""
-        ...
 
     @hookspec
     def acq_after_shot(self) -> None:
         """triggers after a capture still event"""
-        ...
 
     @hookspec
     def acq_thrill(self) -> None:
         """triggers at the start of a any countdown event"""
-        ...
 
     @hookspec
     def acq_thrill_still(self) -> None:
         """triggers at the start of a still countdown event"""
-        ...
 
     @hookspec
     def acq_thrill_video(self) -> None:
         """triggers at the start of a video countdown event"""
-        ...
 
     @hookspec
     def acq_thrill_multicam(self) -> None:
         """triggers at the start of a still countdown event"""
-        ...
 
 
 class PluginMediaprocessingSpec:
     @hookspec(firstresult=True)  # apply image filter
     def mp_filter_pipeline_step(self, image: Image.Image, plugin_filter: Enum, preview: bool) -> Image.Image: ...
 
-    @hookspec  # gather all avail filter provided by plugins
-    def mp_avail_filter(self) -> list[str]: ...
+    @hookspec
+    def mp_avail_filter(self) -> list[str]:
+        """gather all avail filter provided by plugins"""
+        return []
 
-    @hookspec  # gather all filter to be displayed by plugins
-    def mp_userselectable_filter(self) -> list[str]: ...
+    @hookspec
+    def mp_userselectable_filter(self) -> list[str]:
+        """gather all filter to be displayed by plugins"""
+        return []
 
 
 class PluginMediacollectionSpec:
@@ -117,16 +122,19 @@ class PluginMediacollectionSpec:
     def collection_files_added(self, files: list[Path], priority_modifier: int) -> None:
         """files added to collection. priority modifier allows sync queues to upload originals later while presented items come first.
         0 is no modification, - number: higher prio, + number: lower prio"""
-        ...
 
-    @hookspec  # list of files that were updated (example, filter applied)
-    def collection_files_updated(self, files: list[Path]) -> None: ...
+    @hookspec
+    def collection_files_updated(self, files: list[Path]) -> None:
+        """# list of files that were updated (example, filter applied)"""
 
-    @hookspec  # deleted a file from collection
-    def collection_files_deleted(self, files: list[Path]) -> None: ...
+    @hookspec
+    def collection_files_deleted(self, files: list[Path]) -> None:
+        """deleted a file from collection"""
 
-    @hookspec  # share backends shall create a link to the mediaitem ressource so it can be used in qr codes, ...
-    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]: ...
+    @hookspec
+    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
+        """share backends shall create a link to the mediaitem ressource so it can be used in qr codes, ..."""
+        return []
 
 
 pm.add_hookspecs(PluginManagementSpec)

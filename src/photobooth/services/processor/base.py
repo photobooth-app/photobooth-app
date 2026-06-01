@@ -116,16 +116,21 @@ class JobModelBase(ABC, Generic[T]):
         self.wait_countdown_finished()  # blocking call
 
     @abstractmethod
-    def on_enter_capture(self): ...
+    def on_enter_capture(self):
+        """capture now (enter)"""
 
     @abstractmethod
-    def on_exit_capture(self): ...
+    def on_exit_capture(self):
+        """capture now (exit)"""
 
     @abstractmethod
-    def on_enter_approval(self): ...
+    def on_enter_approval(self):
+        """ask for approval"""
 
     @abstractmethod
     def on_exit_approval(self, event: Event):
+        """eval user / automated input got from transition"""
+
         def remove_files(capture_set: CaptureSet):
             for capture in capture_set.captures:
                 try:
@@ -150,19 +155,21 @@ class JobModelBase(ABC, Generic[T]):
 
     @abstractmethod
     def on_enter_completed(self):
-        ...
-        # when completed, signal backends to idle again
+        """when ALL captures are completed for the job"""
         # self._acquisition_service.signalbackend_configure_optimized_for_idle()
 
     @abstractmethod
-    def on_exit_completed(self): ...
+    def on_exit_completed(self):
+        """when ALL captures are completed for the job"""
 
     @abstractmethod
-    def on_enter_finished(self): ...
+    def on_enter_finished(self):
+        """the very last step, used to notify the ui the statemachin is going done now"""
 
     @property
     @abstractmethod
-    def total_captures_to_take(self) -> int: ...
+    def total_captures_to_take(self) -> int:
+        """number of captures to take during a job"""
 
     @property
     def captures_taken(self) -> int:
