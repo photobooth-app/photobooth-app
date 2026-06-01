@@ -57,4 +57,5 @@ def main(args=None, run_server: bool = True):
 
 
 if __name__ == "__main__":
-    sys.exit(main(args=sys.argv[1:]))  # for testing
+    main(args=sys.argv[1:])  # for testing
+    sys.exit(None)
