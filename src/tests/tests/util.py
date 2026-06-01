@@ -149,5 +149,5 @@ def get_impl_func_for_plugin(plugin, hook):
         if hookimpl.plugin == plugin:  # Match specific plugin instance
             return hookimpl
 
-    else:
-        raise RuntimeError("Plugin's hook implementation was not found!")
+    # if no plugin matched, we raise an error
+    raise AssertionError("Plugin's hook implementation was not found!")
