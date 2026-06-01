@@ -93,7 +93,7 @@ def test_update_item(cs: MediacollectionService):
 
 
 def test_update_item_nochange_no_updated_at(cs: MediacollectionService):
-    dummy_item = dummy_item = dummy_mediaitem()
+    dummy_item = dummy_mediaitem()
     cs.add_item(dummy_item)
     updated_at_before_update = dummy_item.updated_at
 

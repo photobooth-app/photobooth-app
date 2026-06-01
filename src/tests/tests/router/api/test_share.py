@@ -72,7 +72,8 @@ def test_print_check_blocking(mock_run: mock.Mock, modules_client: TestClient):
     container.processing_service.trigger_action("image", 0)
     container.processing_service.wait_until_job_finished()
 
-    response = modules_client.post("/share/actions/latest/0")
+    # initial request so the next one in block_time/2 blocks.
+    modules_client.post("/share/actions/latest/0")
 
     time.sleep(appconfig.share.actions[0].processing.share_blocked_time / 2)
 
