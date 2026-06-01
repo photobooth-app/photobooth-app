@@ -89,12 +89,12 @@ class Container:
             try:
                 self.stop()
             except Exception:
-                ...
+                pass
 
             try:
                 self.start()
             except Exception:
-                ...
+                pass
 
 
 container = Container()

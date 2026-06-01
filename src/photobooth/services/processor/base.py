@@ -135,7 +135,6 @@ class JobModelBase(ABC, Generic[T]):
 
         if event == self._status_sm.next:
             logger.info("approved captureset")
-            pass
 
         if event == self._status_sm.reject:
             logger.info("rejected captureset, remove last captureset")

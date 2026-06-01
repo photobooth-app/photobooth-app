@@ -24,20 +24,12 @@ class ShareService(BaseService):
     def __init__(self):
         super().__init__()
 
-        # common objects
-        pass
-
-        # custom service objects
-        pass
-
     def start(self):
         super().start()
-        pass
         super().started()
 
     def stop(self):
         super().stop()
-        pass
         super().stopped()
 
     def share(self, mediaitem: Mediaitem, config_index: int = 0, parameters: dict[str, str] | None = None):

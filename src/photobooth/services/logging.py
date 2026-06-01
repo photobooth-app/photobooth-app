@@ -127,16 +127,10 @@ class LoggingService(BaseService):
 
     def start(self):
         super().start()
-
-        pass
-
         super().started()
 
     def stop(self):
         super().stop()
-
-        pass
-
         super().stopped()
 
     def remove_old_logs(self):

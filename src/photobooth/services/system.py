@@ -29,12 +29,10 @@ class SystemService(BaseService):
 
     def start(self):
         super().start()
-        pass
         super().started()
 
     def stop(self):
         super().stop()
-        pass
         super().stopped()
 
     def util_systemd_control(self, state: Literal["start", "stop", "restart"]):

@@ -112,16 +112,10 @@ class ProcessingService(BaseService):
 
     def start(self):
         super().start()
-
-        pass
-
         super().started()
 
     def stop(self):
         super().stop()
-
-        pass
-
         super().stopped()
 
     def is_occupied(self) -> bool:
