@@ -83,7 +83,7 @@ class FillBackgroundStep(PipelineStep):
         bg_filled_img.paste(context.image, mask=context.image)
 
         context.image = bg_filled_img
-        bg_filled_img = None
+        del bg_filled_img
 
         next_step(context)
 
@@ -170,8 +170,8 @@ class ImageFrameStep(PipelineStep):
         result_image.paste(image_frame, mask=image_frame)  # second paste frame with transparency mask on top
 
         context.image = result_image
-        image_fitted = None
-        image_frame = None
+        del image_fitted
+        del image_frame
 
         next_step(context)
 
@@ -212,7 +212,7 @@ class TextStep(PipelineStep):
             )
 
         context.image = updated_image
-        updated_image = None
+        del updated_image
 
         next_step(context)
 
@@ -266,7 +266,7 @@ class RemovebgStep(PipelineStep):
             assert cutout_image is not context.image
 
             context.image = cutout_image
-            cutout_image = None  # only if assert abotve is correct.
+            del cutout_image  # only if assert abotve is correct.
 
         except Exception as exc:
             logger.error(f"could not remove background, error {exc}")

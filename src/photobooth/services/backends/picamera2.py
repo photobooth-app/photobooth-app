@@ -312,7 +312,7 @@ class Picamera2Backend(AbstractBackend):
                         ).name
                     )
                     # https://github.com/raspberrypi/picamera2/issues/1125#issuecomment-2387829290 fixed now, so use simple capture_file again
-                    _metadata = self._picamera2.capture_file(filepath, wait=1.5)  # type: ignore
+                    _ = self._picamera2.capture_file(filepath, wait=1.5)  # type: ignore
 
                     with req.condition:
                         req.result_file = filepath
