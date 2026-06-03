@@ -85,7 +85,8 @@ class Database:
 
 
 class Files:
-    def __init__(self): ...
+    def __init__(self):
+        pass
 
     def check_representing_files_raise(self, item: Mediaitem):
         if not item.unprocessed.is_file():
