@@ -271,21 +271,11 @@ class AbstractBackend(ResilientService, ABC):
     def start(self):
         """To start the backend to serve"""
 
-        # reset the request for this backend to deliver lores frames
-        # self._last_requested_timestamp = None
-
-        # self._liveview_idle_thread = StoppableThread(name="_liveview_idle_fun", target=self._liveview_idle_fun, daemon=True)
-        # self._liveview_idle_thread.start()
-
         super().start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-
-        # if self._liveview_idle_thread:
-        #     self._liveview_idle_thread.stop()
-        #     self._liveview_idle_thread.join()
 
         super().stop()
 

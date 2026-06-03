@@ -226,11 +226,6 @@ class CropCommonAreaStep(PipelineStep):
         draw.rectangle(box, outline=color, width=width)
         return img_copy
 
-    # @staticmethod
-    # def recenter_image_chops(img, offset: tuple[int, int]):
-    #     dx, dy = offset
-    #     return ImageChops.offset(img, -dx, -dy)
-
 
 class AlignAsPerCalibrationStep(PipelineStep):
     """Calibration is part of the backends and currently only for the multicam, so we can keep it here.

@@ -49,13 +49,3 @@ def test_optimize_mode(backend_pyav: WebcamPyavBackend):
 def test_get_images_webcampyav(backend_pyav: WebcamPyavBackend):
     """get lores and hires images from backend and assert"""
     get_images(backend_pyav)
-
-
-# Takes long time until fails - does it add to coverage actually?
-# def test_device_wrong_id_fails(backend_pyav: WebcamPyavBackend):
-#     backend_pyav.stop()
-#     backend_pyav._config.device_identifier = "999"
-#     backend_pyav.start()
-
-#     with pytest.raises(RuntimeError):
-#         backend_pyav.wait_for_still_file(retries=1)

@@ -120,7 +120,4 @@ def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
             # trigger virtual camera to send fault flag - this should result in supervisor stopping device, restart and continue deliver
             _acqs._video_backend.recover()
 
-        # if i >= 30:
-        #     g_stream.close()
-
     assert i == 10
