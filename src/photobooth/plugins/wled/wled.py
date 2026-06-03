@@ -88,6 +88,7 @@ class Wled(ResilientService, BasePlugin[WledConfig]):
                 # send none to stop waiting for any further events and immediate shutdown
                 self._queue.put_nowait(None)
             except Exception:
+                # failing to put None shall not raise an Expection during teardown
                 pass
 
         if self._serial:

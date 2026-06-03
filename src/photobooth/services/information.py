@@ -206,15 +206,15 @@ class InformationService(BaseService):
         return psutil.disk_usage(str(Path.cwd().absolute()))._asdict()
 
     def _gather_model(self) -> str:
-        model = "unknown"
-
         if platform.system() == "Linux":
             # try to get raspberry model
             try:
                 with open("/proc/device-tree/model") as f:
                     model = f.read().strip("\x00\n")  # strip nulls and newlines
             except Exception:
-                pass
+                model = "unknown"
+        else:
+            model = "unknown"
 
         return model
 

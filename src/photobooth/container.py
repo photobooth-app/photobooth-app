@@ -86,15 +86,8 @@ class Container:
     def reload(self):
         """stop all services first (reverse order), then start them again."""
         with self._lock_reload:  # lock reload so multiple calls cannot interfere and mess with the sequence
-            try:
-                self.stop()
-            except Exception:
-                pass
-
-            try:
-                self.start()
-            except Exception:
-                pass
+            self.stop()
+            self.start()
 
 
 container = Container()
