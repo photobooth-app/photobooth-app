@@ -115,16 +115,33 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"pyav packet received: {next(input_device.demux())}")
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
-                try:
-                    frame = next(input_device.decode(input_stream))
-                    logger.info(f"pyav frame received: {frame}")
-                    logger.info(f"frame format: {frame.format}")
-                except Exception as exc:
-                    raise PermanentFault("Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)") from exc
+                # wait for first frame. macos might return eagain (BlockingIOError) initially
+                while not self._stop_event.is_set():
+                    try:
+                        frame = next(input_device.decode(input_stream))
+                        logger.info(f"pyav frame received: {frame}")
+                        logger.info(f"frame format: {frame.format}")
+                        break
+                    except BlockingIOError:
+                        time.sleep(0.01)
+                        continue
+                    except Exception as exc:
+                        raise PermanentFault(
+                            "Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)"
+                        ) from exc
 
                 codec_name = input_stream.codec.name
 
-                for frame in input_device.decode(input_stream):
+                def _frame_generator(device, stream):
+                    # wrapper to catch temporary eagain on macos without breaking the loop
+                    while not self._stop_event.is_set():
+                        try:
+                            yield from device.decode(stream)
+                            break
+                        except BlockingIOError:
+                            continue
+
+                for frame in _frame_generator(input_device, input_stream):
                     with self._hires_lock:
                         req = self._hires_queue.popleft() if self._hires_queue else None
 
