@@ -286,8 +286,6 @@ class Picamera2Backend(AbstractBackend):
     def run_service(self):
         assert self._picamera2
 
-        _metadata = None
-
         while not self._stop_event.is_set():  # repeat until stopped
             self._mode_machine.process_switchmode()
 

@@ -120,13 +120,11 @@ def test_admin_files_upload_internalerror(client_authenticated: TestClient):
             response = client_authenticated.post(
                 "/admin/files/file/upload",
                 data={"upload_target_folder": "./"},
-                files={"uploaded_files": ("testupload_automated.jpg", f, "image/jpeg")},
+                files={"uploaded_files": ("testupload_automated1.jpg", f, "image/jpeg")},
             )
 
-            try:
-                os.unlink("./testupload_automated.jpg")  # fails if file was not created.
-            except Exception:
-                pass
+            # despite mock the file is copied anyways, so we delete it but fail in silence if it
+            os.unlink("./testupload_automated1.jpg")  # fails if file was not created.
 
             assert response.status_code == 500
             assert "detail" in response.json()
