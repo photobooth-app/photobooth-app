@@ -12,7 +12,7 @@ from tempfile import NamedTemporaryFile
 import av
 from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
-from av.video.reformatter import Interpolation, VideoReformatter
+from av.video.reformatter import ColorRange, Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
 from ...utils.helper import filename_str_time
@@ -78,6 +78,7 @@ class WebcamPyavBackend(AbstractBackend):
         options = {
             "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",
             "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
+            # "input_format": "yuyv422",
         }
         if self._config.cam_framerate > 0:
             # avfoundation has ntsc as default. webcams refuse to work with that framerate, so allow to set it explicit
@@ -112,6 +113,7 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"input_stream: {input_stream}")
                 logger.info(f"input_stream codec: {input_stream.codec}")
                 logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
+                logger.info(f"color_range: {ColorRange(input_stream.color_range).name} (Range JPEG=full, MPEG=limited)")
                 logger.info(f"pyav packet received: {next(input_device.demux())}")
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
@@ -167,13 +169,21 @@ class WebcamPyavBackend(AbstractBackend):
 
                     if self._config.preview_resolution_reduce_factor > 1:
                         out_frame = reformatter.reformat(
-                            frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuvj420p"
+                            frame,
+                            width=rW,
+                            height=rH,
+                            interpolation=Interpolation.BILINEAR,
+                            format="yuv420p",
+                            src_color_range=input_stream.color_range,
+                            dst_color_range=ColorRange.JPEG,  # simplejpeg is full range
                         ).to_ndarray()
                     else:
-                        if frame.format.name != "yuvj420p":
-                            out_frame = reformatter.reformat(frame, format="yuvj420p").to_ndarray()
-                        else:
-                            out_frame = frame.to_ndarray()
+                        out_frame = reformatter.reformat(
+                            frame,
+                            format="yuv420p",
+                            src_color_range=input_stream.color_range,
+                            dst_color_range=ColorRange.JPEG,  # simplejpeg is full range
+                        ).to_ndarray()
 
                     # compress raw YUV420p to JPEG
                     jpeg_bytes = encode_jpeg_yuv_planes(
