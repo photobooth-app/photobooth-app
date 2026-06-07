@@ -118,7 +118,7 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
                 try:
-                    frame = next(input_device.decode(input_stream))
+                    frame = next(input_device.demux(input_stream)).decode()[0]
                     logger.info(f"pyav frame received: {frame}")
                     logger.info(f"frame format: {frame.format}")
                 except Exception as exc:
@@ -126,7 +126,12 @@ class WebcamPyavBackend(AbstractBackend):
 
                 codec_name = input_stream.codec.name
 
-                for frame in input_device.decode(input_stream):
+                for packet in input_device.demux(input_stream):
+                    # for the rawvideo types and the mjpeg type, the camera packets consist of always 1 frame.
+                    # the packet is the jpeg data to be received using bytes(packet) or the raw yuv data.
+                    # in case we use mjpeg, we use the jpeg directly if possible. if we have rawvideo, we get the frame decoded
+                    # using packet.decode() and process the frame pixel data
+
                     with self._hires_lock:
                         req = self._hires_queue.popleft() if self._hires_queue else None
 
@@ -134,8 +139,9 @@ class WebcamPyavBackend(AbstractBackend):
                     if req:
                         if isinstance(req, StillRequest):
                             if codec_name == "mjpeg":
-                                jpeg_bytes_hires = bytes(next(input_device.demux()))
+                                jpeg_bytes_hires = bytes(packet)
                             elif codec_name == "rawvideo":
+                                frame = next(input_device.decode(input_stream))
                                 image_bytesio = io.BytesIO()
                                 frame.to_image().save(image_bytesio, format="JPEG", quality=90)
                                 jpeg_bytes_hires = image_bytesio.getvalue()
@@ -143,12 +149,20 @@ class WebcamPyavBackend(AbstractBackend):
                                 raise PermanentFault(f"The webcam's codec {codec_name} is not supported!")
 
                             # only capture one pic and return to lores streaming afterwards
-                            with NamedTemporaryFile(mode="wb", delete=False, dir="tmp", prefix=f"{filename_str_time()}_pyav_", suffix=".jpg") as f:
+                            with NamedTemporaryFile(
+                                mode="wb",
+                                delete=False,
+                                dir="tmp",
+                                prefix=f"{filename_str_time()}_pyav_",
+                                suffix=".jpg",
+                            ) as f:
                                 f.write(jpeg_bytes_hires)
 
                             with req.condition:
                                 req.result_file = Path(f.name)
                                 req.condition.notify_all()
+
+                            continue
                         else:
                             logger.warning(f"this backend does not support {type(req)} requests")
                             continue
@@ -166,6 +180,8 @@ class WebcamPyavBackend(AbstractBackend):
 
                     if not self._framerate.should_process_frame(15):
                         continue
+
+                    frame = next(input_device.decode(input_stream))
 
                     if self._config.preview_resolution_reduce_factor > 1:
                         out_frame = reformatter.reformat(
