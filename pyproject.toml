@@ -137,7 +137,7 @@ dev = [
   "pytest-asyncio",
   "pytest-benchmark[histogram]>=5.1.0",
   "coverage[toml]",
-  "httpx",
+  "httpx2",
   "httpx-sse",
   "pydot",
   "pre-commit",

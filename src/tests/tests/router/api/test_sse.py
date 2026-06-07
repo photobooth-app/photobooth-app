@@ -18,7 +18,7 @@ def test_sse_stream(client: TestClient):
     # start a job so there will be some Process StateInfo
     container.processing_service.trigger_action("image", 0)
 
-    with connect_sse(client, "GET", "/sse") as event_source:
+    with connect_sse(client, "GET", "/sse") as event_source:  # type: ignore
         for sse in event_source.iter_sse():
             if sse.event == "ProcessStateinfo":
                 processstateinfo_counter += 1
