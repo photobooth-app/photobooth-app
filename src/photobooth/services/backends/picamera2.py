@@ -48,7 +48,11 @@ class Picamera2Backend(AbstractBackend):
         self._config: GroupCameraPicamera2 = config
 
         # for picamera there is only 1-4 supported (no 90°/270° rotation as it's not exposed by picamera2)
-        super().__init__(orientation="1: 0°", num_subdevices=1)
+        super().__init__(
+            orientation="1: 0°",
+            num_subdevices=1,
+            idle_timeout=self._config.camera_standby_when_inactive_time if self._config.camera_standby_when_inactive else None,
+        )
 
         exif_orientation = int(config.orientation[0])
 

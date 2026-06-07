@@ -55,7 +55,11 @@ class VirtualCameraBackend(AbstractBackend):
     def __init__(self, config: GroupCameraVirtual):
         # print(VirtualCameraBackend.__mro__)
         self._config: GroupCameraVirtual = config
-        super().__init__(orientation=config.orientation, num_subdevices=self._config.emulate_multicam_capture_devices)
+        super().__init__(
+            orientation=config.orientation,
+            num_subdevices=self._config.emulate_multicam_capture_devices,
+            idle_timeout=self._config.camera_standby_when_inactive_time if self._config.camera_standby_when_inactive else None,
+        )
 
         self._images_iterator = CyclicImageSource().images()
         # self._enable_producer: bool = False

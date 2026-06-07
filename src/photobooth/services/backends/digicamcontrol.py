@@ -52,7 +52,11 @@ class DigicamcontrolBackend(AbstractBackend):
 
     def __init__(self, config: GroupCameraDigicamcontrol):
         self._config: GroupCameraDigicamcontrol = config
-        super().__init__(orientation=config.orientation, num_subdevices=1)
+        super().__init__(
+            orientation=config.orientation,
+            num_subdevices=1,
+            idle_timeout=self._config.camera_standby_when_inactive_time if self._config.camera_standby_when_inactive else None,
+        )
 
     def start(self):
         super().start()

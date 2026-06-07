@@ -30,7 +30,11 @@ logger = logging.getLogger(__name__)
 class WebcamV4lBackend(AbstractBackend):
     def __init__(self, config: GroupCameraV4l2):
         self._config: GroupCameraV4l2 = config
-        super().__init__(orientation=config.orientation, num_subdevices=1)
+        super().__init__(
+            orientation=config.orientation,
+            num_subdevices=1,
+            idle_timeout=self._config.camera_standby_when_inactive_time if self._config.camera_standby_when_inactive else None,
+        )
 
         if linuxpy_video_device is None:
             raise ModuleNotFoundError("Backend is not available because linuxpy is not found - either wrong platform or not installed!")

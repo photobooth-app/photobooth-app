@@ -17,7 +17,11 @@ CALIBRATION_DATA_PATH = Path(DATABASE_PATH, "multicam_calibration_data")
 class WigglecamBackend(AbstractBackend):
     def __init__(self, config: GroupCameraWigglecam):
         self._config = config
-        super().__init__(config.orientation, len(self.expected_device_ids()))
+        super().__init__(
+            orientation=config.orientation,
+            num_subdevices=len(self.expected_device_ids()),
+            idle_timeout=self._config.camera_standby_when_inactive_time if self._config.camera_standby_when_inactive else None,
+        )
 
         self._pub_trigger: pynng.Pub0 | None = None
         self._sub_lores: pynng.Sub0 | None = None

@@ -128,7 +128,7 @@ class ModeController:
     - automatischem Standby nach Idle
     """
 
-    def __init__(self, backend: "AbstractBackend", idle_timeout: float = 5.0):
+    def __init__(self, backend: "AbstractBackend", idle_timeout: float | None = None):
         self.backend = backend
         self.idle_timeout = idle_timeout
 
@@ -137,7 +137,10 @@ class ModeController:
         self.active_mode: Modes | None = None
         self._last_live_request: float | None = time.monotonic()
 
-        threading.Thread(target=self._idle_monitor, daemon=True).start()
+        if self.idle_timeout:
+            assert self.idle_timeout > 5, "The idle timeout to set the camera to standby needs to be disabled or at least 5s."
+
+            threading.Thread(target=self._idle_monitor, daemon=True).start()
 
     # ---------------------------------------------------------
     # Öffentliche API (kann aus jedem Thread aufgerufen werden)
@@ -171,6 +174,8 @@ class ModeController:
 
     def _idle_monitor(self):
         """Monitor thread function to request standby if no livestream is requested for idle_timeout seconds"""
+        assert self.idle_timeout
+
         logger.info(f"pausing livestream on backend {self.backend} after {self.idle_timeout}s is enabled.")
 
         while True:
@@ -230,15 +235,16 @@ class AbstractBackend(ResilientService, ABC):
         """called externally via events and used to change to a capture mode if necessary"""
 
     @abstractmethod
-    def __init__(self, orientation: Orientation, num_subdevices: int):
+    def __init__(self, orientation: Orientation, num_subdevices: int, idle_timeout: float | None):
         # init
         self._orientation: Orientation = orientation
         self._num_subdevices = num_subdevices
+        self._idle_timeout = idle_timeout
 
         # statisitics attributes
         self._framerate: Framerate = Framerate()
 
-        self._mode_machine = ModeController(self, idle_timeout=5)
+        self._mode_machine = ModeController(self, idle_timeout=self._idle_timeout)
 
         # lores broadcast and ...
         self._lores_data = [LoresBroadcastRes(data=b"", condition=threading.Condition()) for _ in range(self._num_subdevices)]
