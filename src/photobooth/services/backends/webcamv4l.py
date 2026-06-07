@@ -125,11 +125,6 @@ class WebcamV4lBackend(AbstractBackend):
             V = arr[h * w + (h // 2) * (w // 2) :].reshape((h // 2, w // 2))
             encoded = simplejpeg.encode_jpeg_yuv_planes(Y=Y, U=U, V=V, quality=90, fastdct=True)
 
-            # h, w = frame.height, frame.width
-            # yuv = frame.array.tobytes()  # ensure contiguous bytes
-            # encoded = turbojpeg.encode_from_yuv(yuv, h, w, quality=90)
-            # assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
-
             return encoded
         elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUYV:  # v4l raw int enum 16  YUV 4:2:2
             data = frame.array.reshape(frame.height, frame.width, -1)
