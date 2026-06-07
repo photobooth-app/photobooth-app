@@ -114,7 +114,6 @@ class WebcamPyavBackend(AbstractBackend):
                 logger.info(f"input_stream codec: {input_stream.codec}")
                 logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
                 logger.info(f"color_range: {ColorRange(input_stream.color_range).name} (Range JPEG=full, MPEG=limited)")
-                logger.info(f"pyav packet received: {next(input_device.demux())}")
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
                 try:
