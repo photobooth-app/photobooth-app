@@ -1,14 +1,13 @@
 import logging
 
 from fastapi.testclient import TestClient
-from httpx_sse import connect_sse
 
 from photobooth.container import container
 
 logger = logging.getLogger(name=None)
 
 
-def test_sse_stream(client: TestClient):
+def test_sse_stream1(client: TestClient):
     processstateinfo_counter = 0
     logrecord_counter = 0
     onetimeinformationrecord_counter = 0
@@ -18,20 +17,23 @@ def test_sse_stream(client: TestClient):
     # start a job so there will be some Process StateInfo
     container.processing_service.trigger_action("image", 0)
 
-    with connect_sse(client, "GET", "/sse") as event_source:  # pyright: ignore[reportArgumentType]
-        for sse in event_source.iter_sse():
-            if sse.event == "ProcessStateinfo":
-                processstateinfo_counter += 1
-            if sse.event == "LogRecord":
-                logrecord_counter += 1
-            if sse.event == "OnetimeInformationRecord":
-                onetimeinformationrecord_counter += 1
-            if sse.event == "IntervalInformationRecord":
-                intervalinformationrecord_counter += 1
-            if sse.event == "ping":
-                ping_counter += 1
+    # with httpx2.Client(transport=SSETransport()) as client:
+    with client.stream("GET", "/sse") as response:
+        for line in response.iter_lines():
+            # logger.warning(line)
+            if line.startswith("event:"):
+                event = line[len("event:") :].lstrip()
 
-            logger.debug(f"{sse.event=}, {sse.data=}, {sse.id=}, {sse.retry=}")
+                if event == "ProcessStateinfo":
+                    processstateinfo_counter += 1
+                if event == "LogRecord":
+                    logrecord_counter += 1
+                if event == "OnetimeInformationRecord":
+                    onetimeinformationrecord_counter += 1
+                if event == "IntervalInformationRecord":
+                    intervalinformationrecord_counter += 1
+                if event == "ping":
+                    ping_counter += 1
 
     logger.info(
         f"seen {processstateinfo_counter} processstateinfos, {logrecord_counter} logrecords, "

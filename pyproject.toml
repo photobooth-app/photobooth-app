@@ -138,7 +138,6 @@ dev = [
   "pytest-benchmark[histogram]>=5.1.0",
   "coverage[toml]",
   "httpx2",
-  "httpx-sse",
   "pydot",
   "pre-commit",
   "pyright",
