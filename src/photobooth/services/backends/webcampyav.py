@@ -174,6 +174,7 @@ class WebcamPyavBackend(AbstractBackend):
 
                     # abort streaming on shutdown so process can join and close
                     if self._stop_event.is_set():
+                        del packet  # del packet to allow buffer release in c ffmpeg python
                         break
 
                     self._mode_machine.process_switchmode()
