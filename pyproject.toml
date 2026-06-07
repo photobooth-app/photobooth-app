@@ -56,7 +56,6 @@ dependencies = [
   "piexif>=1.1.3",
   "SQLAlchemy>=2.0.37",
   "simplejpeg>=1.8.2",
-  "pyturbojpeg~=1.8.0",
   "pluggy>=1.5.0",
   "av>=17.0.1,<17.1",
   "alembic>=1.15.2",
@@ -144,7 +143,8 @@ dev = [
   "pre-commit",
   "pyright",
   "poethepoet",
-  "wigglecam[node]"
+  "wigglecam[node]",
+  "pyturbojpeg~=1.8.0",
 ]
 
 

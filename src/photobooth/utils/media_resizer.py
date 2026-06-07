@@ -5,18 +5,9 @@ import av
 import piexif
 from av import VideoStream
 from PIL import Image, ImageOps, ImageSequence
+from simplejpeg import decode_jpeg, decode_jpeg_header, encode_jpeg
 
 logger = logging.getLogger(__name__)
-try:
-    from turbojpeg import TurboJPEG
-
-    turbojpeg = TurboJPEG()
-    print("using turbojpeg to scale images")  # print because log at this point not yet active...
-except Exception as exc:
-    turbojpeg = None
-
-    print("cannot find turbojpeg lib, falling back to slower pillow scale algorithm. If you want to use turbojpeg install the library.")
-    print(exc)
 
 
 def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
@@ -42,27 +33,25 @@ def resize_jpeg_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length:
     image.save(filepath_out, quality=85)
 
 
-def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    assert turbojpeg is not None
+def resize_jpeg_simplejpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
     with open(filepath_in, "rb") as file_in:
         jpeg_bytes_in = file_in.read()
 
-    (width, height, _, _) = turbojpeg.decode_header(jpeg_bytes_in)  # type: ignore
-
-    original_length = max(width, height)  # scale for the max length
+    height, width, _, _ = decode_jpeg_header(jpeg_bytes_in)
+    original_length = max(int(width), int(height))  # scale for the max length
     scaling_factor = scaled_min_length / original_length
 
-    # TurboJPEG only allows for decent factors.
-    factor_list = [item[0] / item[1] for item in turbojpeg.scaling_factors]
-    (index, factor) = min(enumerate(factor_list), key=lambda x: abs(x[1] - scaling_factor))
+    # simplejpeg will pick the closest fast scaling factor (1/2, 1/4, 1/8)
+    target_height = int(int(height) * scaling_factor)
+    target_width = int(int(width) * scaling_factor)
 
-    # logger.debug(f"scaling img by factor {factor}, {original_length=} -> {scaled_min_length=}")
-    if factor > 1:
+    if scaling_factor > 1:
         logger.warning("scale factor bigger than 1 - consider optimize config, usually images shall shrink, resizing skipped")
         buffer_out = jpeg_bytes_in
     else:
-        buffer_out = turbojpeg.scale_with_quality(jpeg_bytes_in, scaling_factor=list(turbojpeg.scaling_factors)[index], quality=85)
+        decoded_img = decode_jpeg(jpeg_bytes_in, min_height=target_height, min_width=target_width, fastdct=True)
+        buffer_out = encode_jpeg(decoded_img, quality=85, fastdct=True)
 
     with open(filepath_out, "wb") as file_out:
         file_out.write(buffer_out)
@@ -73,10 +62,8 @@ def resize_jpeg_turbojpeg(filepath_in: Path, filepath_out: Path, scaled_min_leng
 
 
 def resize_jpeg(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
-    if turbojpeg:
-        resize_jpeg_turbojpeg(filepath_in, filepath_out, scaled_min_length)
-    else:
-        resize_jpeg_pillow(filepath_in, filepath_out, scaled_min_length)
+    resize_jpeg_simplejpeg(filepath_in, filepath_out, scaled_min_length)  # faster
+    # resize_jpeg_pillow(filepath_in, filepath_out, scaled_min_length) # possibly better quality and more accurate dimensions
 
 
 def resize_animation_pillow(filepath_in: Path, filepath_out: Path, scaled_min_length: int):

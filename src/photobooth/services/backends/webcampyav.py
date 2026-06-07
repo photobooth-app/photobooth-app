@@ -95,7 +95,7 @@ class WebcamPyavBackend(AbstractBackend):
                 continue
 
             try:
-                logger.info(f"trying to open camera index={self._config.device_identifier=}")
+                logger.info(f"trying to open camera '{self._config.device_identifier}'")
                 input_device = av.open(self._device_name_platform(), format=input_ffmpeg_device, options=options)
             except Exception as exc:
                 logger.critical(f"cannot open camera, error {exc}. Likely the parameter set are not supported by the camera or camera name wrong.")

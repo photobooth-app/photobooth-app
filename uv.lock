@@ -1014,7 +1014,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "python-statemachine" },
-    { name = "pyturbojpeg" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "rclone-bin-api" },
     { name = "requests" },
@@ -1039,6 +1038,7 @@ dev = [
     { name = "pytest-benchmark", extra = ["histogram"] },
     { name = "pytest-cov" },
     { name = "pytest-httpserver" },
+    { name = "pyturbojpeg" },
     { name = "ruff" },
     { name = "wigglecam", extra = ["node"] },
 ]
@@ -1069,7 +1069,6 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "python-statemachine", specifier = "~=3.1.0" },
-    { name = "pyturbojpeg", specifier = "~=1.8.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "rclone-bin-api", specifier = ">=1.0.4" },
     { name = "requests" },
@@ -1094,6 +1093,7 @@ dev = [
     { name = "pytest-benchmark", extras = ["histogram"], specifier = ">=5.1.0" },
     { name = "pytest-cov" },
     { name = "pytest-httpserver" },
+    { name = "pyturbojpeg", specifier = "~=1.8.0" },
     { name = "ruff" },
     { name = "wigglecam", extras = ["node"] },
 ]
