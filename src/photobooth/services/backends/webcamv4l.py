@@ -9,6 +9,7 @@ from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
 import cv2
+import simplejpeg
 
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraV4l2
@@ -22,15 +23,6 @@ except ImportError:
 if TYPE_CHECKING:
     import linuxpy.video.device as linuxpy_video_device_type  # type: ignore
 
-try:
-    # try to import the mandatory turbojpeg for this backend. it's guarded so reading this module on app init
-    # doesn't fail for example on windows where turbojpeg libs doesn't need to be installed.
-    # during backend init, check for None and fail if None.
-    from turbojpeg import TurboJPEG
-
-    turbojpeg = TurboJPEG()
-except Exception:
-    turbojpeg = None
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +34,6 @@ class WebcamV4lBackend(AbstractBackend):
 
         if linuxpy_video_device is None:
             raise ModuleNotFoundError("Backend is not available because linuxpy is not found - either wrong platform or not installed!")
-
-        if turbojpeg is None:
-            raise ModuleNotFoundError("Backend is not available because turbojpeg library is not found - either wrong platform or not installed!")
 
         self._device: linuxpy_video_device_type.Device | None = None
         self._capture: linuxpy_video_device_type.VideoCapture | None = None
@@ -121,7 +110,6 @@ class WebcamV4lBackend(AbstractBackend):
         # https://github.com/tiagocoutinho/linuxpy/blob/d223fa2b9078fd5b0ba1415ddea5c38f938398c5/examples/video/web/common.py#L29
         assert linuxpy_video_device
         assert self._fmt_pixel_format is not None
-        assert turbojpeg
 
         if frame.flags & linuxpy_video_device.BufferFlag.ERROR:
             # This frame is corrupted / incomplete / non-JPEG
@@ -130,26 +118,29 @@ class WebcamV4lBackend(AbstractBackend):
         if self._fmt_pixel_format in (linuxpy_video_device.PixelFormat.MJPEG, linuxpy_video_device.PixelFormat.JPEG):
             return bytes(frame)
         elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUV420:  # v4l raw int enum 12  YUV 4:2:0
-            # h, w = frame.height, frame.width
-            # arr = frame.array
-            # Y = arr[0 : h * w].reshape((h, w))
-            # U = arr[h * w : h * w + (h // 2) * (w // 2)].reshape((h // 2, w // 2))
-            # V = arr[h * w + (h // 2) * (w // 2) :].reshape((h // 2, w // 2))
-            # encoded = simplejpeg.encode_jpeg_yuv_planes(Y=Y, U=U, V=V, quality=85, fastdct=True)
-
             h, w = frame.height, frame.width
-            yuv = frame.array.tobytes()  # ensure contiguous bytes
-            encoded = turbojpeg.encode_from_yuv(yuv, h, w, quality=90)
-            assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
+            arr = frame.array
+            Y = arr[0 : h * w].reshape((h, w))
+            U = arr[h * w : h * w + (h // 2) * (w // 2)].reshape((h // 2, w // 2))
+            V = arr[h * w + (h // 2) * (w // 2) :].reshape((h // 2, w // 2))
+            encoded = simplejpeg.encode_jpeg_yuv_planes(Y=Y, U=U, V=V, quality=90, fastdct=True)
+
+            # h, w = frame.height, frame.width
+            # yuv = frame.array.tobytes()  # ensure contiguous bytes
+            # encoded = turbojpeg.encode_from_yuv(yuv, h, w, quality=90)
+            # assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
+
             return encoded
         elif self._fmt_pixel_format == linuxpy_video_device.PixelFormat.YUYV:  # v4l raw int enum 16  YUV 4:2:2
-            data = frame.array
-            data.shape = frame.height, frame.width, -1
-            # turbojpeg.encode_from_yuv would be most efficient but needs planar data YUV, but webcam YUVY is non-planar.
+            data = frame.array.reshape(frame.height, frame.width, -1)
+
+            # simplejpeg.encode_jpeg_yuv_planes would be most efficient but needs planar data,
+            # but webcam YUVY is non-planar and also full range (not limited quantisation).
+            # It was tested to convert YUYV data using numpy and feed to yuv_encode directly with not performance benefit.
             # cv2 to convert to planar YUV would be most efficient but is not avail :(
-            bgr = cv2.cvtColor(data, cv2.COLOR_YUV2BGR_YUYV)
-            encoded = turbojpeg.encode(bgr, quality=90)
-            assert isinstance(encoded, bytes), "Expected bytes from turbojpeg.encode"
+            bgr = cv2.cvtColor(data, cv2.COLOR_YUV2RGB_YUYV)
+            encoded = simplejpeg.encode_jpeg(bgr, quality=90, fastdct=True)
+
             return encoded
         else:
             raise RuntimeError(f"pixel_format {self._fmt_pixel_format} not supported")
