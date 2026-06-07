@@ -120,6 +120,7 @@ class WebcamPyavBackend(AbstractBackend):
                     frame = next(input_device.demux(input_stream)).decode()[0]
                     logger.info(f"pyav frame received: {frame}")
                     logger.info(f"frame format: {frame.format}")
+                    del frame
                 except Exception as exc:
                     raise PermanentFault("Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)") from exc
 
@@ -144,6 +145,7 @@ class WebcamPyavBackend(AbstractBackend):
                                 image_bytesio = io.BytesIO()
                                 frame.to_image().save(image_bytesio, format="JPEG", quality=90)
                                 jpeg_bytes_hires = image_bytesio.getvalue()
+                                del frame
                             else:
                                 raise PermanentFault(f"The webcam's codec {codec_name} is not supported!")
 
@@ -175,6 +177,7 @@ class WebcamPyavBackend(AbstractBackend):
                     if self._mode_machine.active_mode == "standby":
                         # no need to sleep here, because while loop is called on every frame only. otherwise pyav internal buffer runs full
                         # and floods logging
+                        del packet  # del packet to allow buffer release in c ffmpeg python
                         break
 
                     if not self._framerate.should_process_frame(15):
@@ -208,8 +211,7 @@ class WebcamPyavBackend(AbstractBackend):
                         quality=85,
                         fastdct=True,
                     )
-                    # Alternative approach using turbojpeg. speed is actually the same but simplejpeg comes with turbojpeg libs bundled for windows
-                    # jpeg_bytes = turbojpeg.encode_from_yuv(out_frame, rH, rW, quality=85, flags=TJFLAG_FASTDCT)
+                    del out_frame, frame
 
                     with self._lores_data[0].condition:
                         self._lores_data[0].data = jpeg_bytes
