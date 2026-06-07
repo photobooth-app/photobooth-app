@@ -1,4 +1,3 @@
-import importlib
 import logging
 from pathlib import Path
 from unittest.mock import patch
@@ -6,14 +5,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image, ImageOps
 
-from photobooth.utils.media_resizer import (
-    resize,
-    resize_animation_pillow,
-    resize_jpeg,
-    resize_jpeg_pillow,
-    resize_jpeg_turbojpeg,
-    resize_mp4,
-)
+from photobooth.utils.media_resizer import resize, resize_animation_pillow, resize_jpeg, resize_jpeg_pillow, resize_jpeg_simplejpeg, resize_mp4
 
 from ..util import dummy_animation, get_exiforiented_jpeg, get_jpeg
 
@@ -37,37 +29,11 @@ def test_resize_jpg(tmp_path):
         img.verify()
 
 
-def test_resize_jpg_autofallback(tmp_path):
-    import turbojpeg
-
-    import photobooth.utils.media_resizer
-
-    with patch.object(turbojpeg, "TurboJPEG", side_effect=ModuleNotFoundError("fake turbojpeg not avail")):
-        # need to reload the lib because for the turbojpeg module is checked for availability on import
-
-        importlib.reload(photobooth.utils.media_resizer)
-
-        # ensure turbojpeg has not been loaded
-        assert photobooth.utils.media_resizer.turbojpeg is None
-
-        input = Path("src/tests/assets/input.jpg")
-        output = tmp_path / "output.jpg"
-
-        resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
-
-        # ensure the resized image was generated despite turbojpeg not avail.
-        with Image.open(output) as img:
-            img.verify()
-
-    # reload again outside of patch to ensure following tests have the turbojpeg available again if needed.
-    importlib.reload(photobooth.utils.media_resizer)
-
-
-def test_resize_jpg_force_turbojpeg(tmp_path):
+def test_resize_jpg_force_simplejpeg(tmp_path):
     input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
-    resize_jpeg_turbojpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    resize_jpeg_simplejpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
