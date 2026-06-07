@@ -73,60 +73,50 @@ class Gphoto2Backend(AbstractBackend):
         super().stop()
 
     def _handle_switchmode_video_mode(self):
-        # idle and hq_preview are same settings for this backend.
         logger.debug("configure camera optimized for idle/video")
 
-        self._set_config("iso", self._config.iso_liveview)
-        self._set_config("shutterspeed", self._config.shutter_speed_liveview)
+        for cfg in self._config.parameterset_video:
+            if cfg.enabled:
+                self._set_config(cfg.name, cfg.value)
 
-        if self._config.canon_eosmoviemode:
-            self._set_config("eosmoviemode", 1)
         super()._handle_switchmode_video_mode()
 
     def _handle_switchmode_still_mode(self):
         logger.debug("configure camera optimized for still capture")
 
-        # disable viewfinder;
-        # allows camera to autofocus fast in native mode not contrast mode
-        if self._config.disable_viewfinder_before_capture:
-            logger.info("disable viewfinder before capture")
-            self._set_config("viewfinder", 0)
-
-        self._set_config("iso", self._config.iso_capture)
-        self._set_config("shutterspeed", self._config.shutter_speed_capture)
-
-        if self._config.canon_eosmoviemode:
-            self._set_config("eosmoviemode", 0)
+        for cfg in self._config.parameterset_still:
+            if cfg.enabled:
+                self._set_config(cfg.name, cfg.value)
 
         super()._handle_switchmode_still_mode()
 
     def _handle_switchmode_standby(self):
         logger.debug("configure camera optimized for livestream paused")
 
-        # pause is to stop streaming from the camera to avoid overheating of the sensor
-        # this is an internal event so no flag reset, it's handled differently
-
-        # disable viewfinder;
-        self._set_config("viewfinder", 0)
-
-        if self._config.canon_eosmoviemode:
-            self._set_config("eosmoviemode", 0)
+        for cfg in self._config.parameterset_standby:
+            if cfg.enabled:
+                self._set_config(cfg.name, cfg.value)
 
         super()._handle_switchmode_standby()
 
-    def _set_config(self, field: str, val: str | int = ""):
+    def _set_config(self, name: str, val: str | int = ""):
         assert gp
 
-        if val == "":  # 0 is not considered empty, so its not "not val"
-            logger.debug(f"{field} value empty, ignore")
+        if name == "":
+            logger.debug(f"{name} name empty, ignored")
             return
+
+        if val == "":  # 0 is not considered empty, so its not "not val"
+            logger.debug(f"{name} value empty, ignored")
+            return
+
         try:
-            logger.info(f"setting {field} to {val}")
-            self._gp_set_config(field, val)
+            logger.info(f"set_config '{name}' to '{val}'")
+            self._gp_set_config(name, val)
         except gp.GPhoto2Error as exc:
-            logger.warning(f"cannot set {field} to {val}, command ignored {exc}")
+            logger.warning(f"cannot set '{name}' to '{val}'! Command ignored, error: {exc}")
         except AttributeError as exc:
-            logger.info(f"cannot set config because camera is not yet available, error {exc}")
+            logger.info(f"cannot set config because the camera is not yet available, error: {exc}")
 
     def _gp_set_config(self, name, val):
         config = self._camera.get_config(self._camera_context)

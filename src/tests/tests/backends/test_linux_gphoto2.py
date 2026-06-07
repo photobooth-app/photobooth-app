@@ -8,7 +8,7 @@ from PIL import Image
 
 from photobooth.appconfig import appconfig
 from photobooth.services.backends.gphoto2 import Gphoto2Backend, gp
-from photobooth.services.config.groups.cameras import GroupCameraGphoto2
+from photobooth.services.config.groups.cameras import Gphoto2Parameters, GroupCameraGphoto2
 from photobooth.utils.enumerate import dslr_gphoto2 as enumerate_dslr_gphoto2
 
 from ..util import block_until_device_is_running
@@ -118,19 +118,12 @@ def test_get_gphoto2_switch_modes(backend_gphoto2: Gphoto2Backend):
     time.sleep(0.2)
 
     # change some values
-    backend_gphoto2._config.iso_capture = "auto"
-    backend_gphoto2._config.iso_liveview = "200"
-    backend_gphoto2._config.shutter_speed_capture = "1/20"
-    backend_gphoto2._config.shutter_speed_liveview = "1/30"
     backend_gphoto2._handle_switchmode_still_mode()
 
     backend_gphoto2.wait_for_still_file()
 
     # and try illegal values that raise exception
-    backend_gphoto2._config.iso_capture = "illegal"
-    backend_gphoto2._config.iso_liveview = "illegal"
-    backend_gphoto2._config.shutter_speed_capture = "illegal"
-    backend_gphoto2._config.shutter_speed_liveview = "illegal"
+    backend_gphoto2._config.parameterset_still.append(Gphoto2Parameters(enabled=True, name="iso", value="illegal"))
     backend_gphoto2._handle_switchmode_still_mode()
 
     backend_gphoto2.wait_for_still_file()
