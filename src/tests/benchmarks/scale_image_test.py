@@ -6,7 +6,7 @@ import cv2
 import numpy
 import pytest
 from PIL import Image
-from simplejpeg import decode_jpeg, encode_jpeg
+from simplejpeg import decode_jpeg, decode_jpeg_header, encode_jpeg
 from turbojpeg import TJFLAG_FASTDCT, TurboJPEG
 
 turbojpeg = TurboJPEG()
@@ -14,7 +14,14 @@ logger = logging.getLogger(name=None)
 
 
 def simplejpeg_scale(jpeg_bytes, tmp_path):
-    decoded_img = decode_jpeg(jpeg_bytes, min_height=1300)  # half the height of original
+    # 1. Get original dimensions without full decoding
+    height, width, _, _ = decode_jpeg_header(jpeg_bytes)
+
+    # 2. Calculate target dimensions for 50% reduction
+    # simplejpeg will pick the closest fast scaling factor (1/2, 1/4, 1/8)
+    target_height = int(height) // 2
+    target_width = int(width) // 2
+    decoded_img = decode_jpeg(jpeg_bytes, min_height=target_height, min_width=target_width, fastdct=True)  # half the height of original
     bytes = encode_jpeg(
         decoded_img,
         quality=85,
