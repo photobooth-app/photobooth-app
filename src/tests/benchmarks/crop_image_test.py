@@ -13,7 +13,7 @@ logger = logging.getLogger(name=None)
 
 
 def turbojpeg_crop(jpeg_bytes, tmp_path):
-    bytes = turbojpeg.crop(jpeg_bytes, 8, 8, 64, 64, copynone=True)
+    bytes = turbojpeg.crop(jpeg_bytes, 8, 8, 512, 512, copynone=True)
 
     return bytes
 
@@ -24,7 +24,7 @@ def pillow_crop(jpeg_bytes, tmp_path):
 
     # scale by 0.5
 
-    image = image.crop((8, 8, 64, 64))
+    image = image.crop((8, 8, 512, 512))
 
     # encode to jpeg again
     byte_io = io.BytesIO()
@@ -40,7 +40,7 @@ def cv2_crop(jpeg_bytes, tmp_path):
     img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     assert img_np is not None
 
-    cropped_img = img_np[8 : 8 + 64, 8 : 8 + 64]
+    cropped_img = img_np[8 : 8 + 512, 8 : 8 + 512]
 
     # and encode to jpeg again
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
