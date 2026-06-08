@@ -12,6 +12,7 @@ from tempfile import NamedTemporaryFile
 import av
 from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
+from av.container import InputContainer
 from av.video.reformatter import ColorRange, Interpolation, VideoReformatter
 from simplejpeg import encode_jpeg_yuv_planes
 
@@ -77,6 +78,45 @@ class WebcamPyavBackend(AbstractBackend):
     def teardown_resource(self):
         pass
 
+    def frame_generator(self, input_device: InputContainer, input_stream: av.VideoStream):
+        consecutive_errors = 0
+
+        demuxer = input_device.demux(input_stream)
+
+        while not self._stop_event.is_set():
+            try:
+                packet = next(demuxer)
+                consecutive_errors = 0
+
+                yield packet
+
+            except BlockingIOError as exc:
+                # Catching specific PyAV exception mapping to EAGAIN on Mac
+                consecutive_errors += 1
+                if consecutive_errors > 100:
+                    raise RuntimeError(f"Stream stalled. Too many consecutive blocking errors: {exc}") from exc
+
+                time.sleep(0.01)
+
+                continue
+            except StopIteration:
+                break
+            except Exception as exc:
+                raise PermanentFault("Error decoding camera frame! Check the camera settings (device name, fps, resolution, ...)") from exc
+
+    def decode_frame(self, packet: av.Packet[av.VideoStream]):
+        # for the rawvideo types and the mjpeg type, the camera packets consist of always 1 frame.
+        # the packet is the jpeg data to be received using bytes(packet) or the raw yuv data.
+        # in case we use mjpeg, we use the jpeg directly if possible. if we have rawvideo, we get the frame decoded
+        # using packet.decode() and process the frame pixel data
+
+        try:
+            return packet.decode()[0]
+
+        except Exception as exc:
+            del packet
+            raise PermanentFault("Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)") from exc
+
     def run_service(self):
         reformatter = VideoReformatter()
         options = {
@@ -108,34 +148,17 @@ class WebcamPyavBackend(AbstractBackend):
 
             with input_device:
                 input_stream = input_device.streams.video[0]
-                # shall speed up processing, ... lets keep an eye on this one...
-                input_stream.thread_type = "AUTO"
-                input_stream.thread_count = 0
+                input_stream.thread_type = "AUTO"  # speed up processing
+                input_stream.thread_count = 0  # speed up processing
+                codec_name = input_stream.codec.name
 
                 # 1 loop to spit out packet and frame information
                 logger.info(f"input_device: {input_device}")
                 logger.info(f"input_stream: {input_stream}")
-                logger.info(f"input_stream codec: {input_stream.codec}")
-                logger.info(f"input_stream pix_fmt: {input_stream.pix_fmt}")
                 logger.info(f"color_range: {ColorRange(input_stream.color_range).name} (Range JPEG=full, MPEG=limited)")
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
-                try:
-                    frame = next(input_device.demux(input_stream)).decode()[0]
-                    logger.info(f"pyav frame received: {frame}")
-                    logger.info(f"frame format: {frame.format}")
-                    del frame
-                except Exception as exc:
-                    raise PermanentFault("Error decoding camera frame! Ensure the settings are correct (device name, fps, resolution, ...)") from exc
-
-                codec_name = input_stream.codec.name
-
-                for packet in input_device.demux(input_stream):
-                    # for the rawvideo types and the mjpeg type, the camera packets consist of always 1 frame.
-                    # the packet is the jpeg data to be received using bytes(packet) or the raw yuv data.
-                    # in case we use mjpeg, we use the jpeg directly if possible. if we have rawvideo, we get the frame decoded
-                    # using packet.decode() and process the frame pixel data
-
+                for packet in self.frame_generator(input_device, input_stream):
                     with self._hires_lock:
                         req = self._hires_queue.popleft() if self._hires_queue else None
 
@@ -145,7 +168,7 @@ class WebcamPyavBackend(AbstractBackend):
                             if codec_name == "mjpeg":
                                 jpeg_bytes_hires = bytes(packet)
                             elif codec_name == "rawvideo":
-                                frame = next(input_device.decode(input_stream))
+                                frame = self.decode_frame(packet)
                                 image_bytesio = io.BytesIO()
                                 frame.to_image().save(image_bytesio, format="JPEG", quality=90)
                                 jpeg_bytes_hires = image_bytesio.getvalue()
@@ -188,7 +211,7 @@ class WebcamPyavBackend(AbstractBackend):
                     if not self._framerate.should_process_frame(15):
                         continue
 
-                    frame = next(input_device.decode(input_stream))
+                    frame = self.decode_frame(packet)
 
                     if self._config.preview_resolution_reduce_factor > 1:
                         out_frame = reformatter.reformat(
