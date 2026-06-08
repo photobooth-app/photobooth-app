@@ -104,7 +104,7 @@ class WebcamPyavBackend(AbstractBackend):
             except Exception as exc:
                 raise PermanentFault("Error decoding camera frame! Check the camera settings (device name, fps, resolution, ...)") from exc
 
-    def decode_frame(self, packet: av.Packet[av.VideoStream]):
+    def decode_frame(self, packet: av.Packet):
         # for the rawvideo types and the mjpeg type, the camera packets consist of always 1 frame.
         # the packet is the jpeg data to be received using bytes(packet) or the raw yuv data.
         # in case we use mjpeg, we use the jpeg directly if possible. if we have rawvideo, we get the frame decoded
