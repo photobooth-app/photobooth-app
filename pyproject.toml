@@ -57,7 +57,7 @@ dependencies = [
   "SQLAlchemy>=2.0.37",
   "simplejpeg>=1.8.2",
   "pluggy>=1.5.0",
-  "av>=17.0.1,<17.1",
+  "av>=17.0.1,<17.2",
   "alembic>=1.15.2",
   "onnxruntime",
   "rclone-bin-api>=1.0.4",
