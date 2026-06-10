@@ -10,6 +10,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import av
+import av.error
 from av.codec import Capabilities, Codec
 from av.codec.codec import UnknownCodecError
 from av.container import InputContainer
@@ -90,17 +91,16 @@ class WebcamPyavBackend(AbstractBackend):
 
                 yield packet
 
-            except BlockingIOError as exc:
+            except (av.error.BlockingIOError, av.error.EOFError, StopIteration) as exc:
                 # Catching specific PyAV exception mapping to EAGAIN on Mac
                 consecutive_errors += 1
-                if consecutive_errors > 100:
+                if consecutive_errors > 200:
                     raise RuntimeError(f"Stream stalled. Too many consecutive blocking errors: {exc}") from exc
 
                 time.sleep(0.01)
 
                 continue
-            except StopIteration:
-                break
+
             except Exception as exc:
                 raise PermanentFault("Error decoding camera frame! Check the camera settings (device name, fps, resolution, ...)") from exc
 
@@ -121,9 +121,13 @@ class WebcamPyavBackend(AbstractBackend):
         reformatter = VideoReformatter()
         options = {
             "video_size": f"{self._config.cam_resolution_width}x{self._config.cam_resolution_height}",
-            "input_format": "mjpeg",  # or h264 if supported is also possible but seems it has no effect (tested on windows dshow only)
-            # "input_format": "yuyv422",
         }
+
+        if sys.platform == "darwin":
+            options["pixel_format"] = self._config.pixel_format
+        else:
+            options["input_format"] = self._config.pixel_format  # or h264 if supported is also possible, but there would be delay and non-keyframes
+
         if self._config.cam_framerate > 0:
             # avfoundation has ntsc as default. webcams refuse to work with that framerate, so allow to set it explicit
             # dshow/v4l usually dont need this configured because their default seems reasonable.
