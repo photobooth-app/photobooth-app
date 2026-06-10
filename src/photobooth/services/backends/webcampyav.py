@@ -91,7 +91,12 @@ class WebcamPyavBackend(AbstractBackend):
 
                 yield packet
 
-            except (av.error.BlockingIOError, av.error.EOFError, StopIteration) as exc:
+            except StopIteration:
+                time.sleep(0.01)
+
+                break  # demuxer exhausted, outer loop in run_service will reopen the camera
+
+            except (av.error.BlockingIOError, av.error.EOFError) as exc:
                 # Catching specific PyAV exception mapping to EAGAIN on Mac
                 consecutive_errors += 1
                 if consecutive_errors > 200:
@@ -125,6 +130,8 @@ class WebcamPyavBackend(AbstractBackend):
 
         if sys.platform == "darwin":
             options["pixel_format"] = self._config.pixel_format
+            options["probesize"] = "10000000"
+            options["analyzeduration"] = "2000000"
         else:
             options["input_format"] = self._config.pixel_format  # or h264 if supported is also possible, but there would be delay and non-keyframes
 
