@@ -187,6 +187,12 @@ class GroupCameraGphoto2(BaseModelCamera):
     )
 
 
+if sys.platform == "darwin":
+    BackendPyavInputFormat = Literal["auto", "yuyv422", "uyvy422", "nv12"]
+else:
+    BackendPyavInputFormat = Literal["auto", "mjpeg", "yuyv422", "uyvy422", "nv12"]
+
+
 class GroupCameraPyav(BaseModelCamera):
     model_config = ConfigDict(title="PyAV")
     backend_type: Literal["WebcamPyav"] = "WebcamPyav"
@@ -196,8 +202,9 @@ class GroupCameraPyav(BaseModelCamera):
         description="Device name (Windows) or index (Linux, Mac) of the webcam.",
         json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
-    pixel_format: Literal["mjpeg", "yuyv422", "uyvy422", "nv12"] = Field(
-        default="mjpeg",
+
+    pixel_format: BackendPyavInputFormat = Field(
+        default="auto",
         description="mjpeg is preferred usually. Some cameras (especially virtual cameras) or systems (Mac) do not support MJPG, so you can fall back to uncompressed rawvideo types here.",
         json_schema_extra={"computeIntense": True},
     )

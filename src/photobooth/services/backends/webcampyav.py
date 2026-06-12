@@ -91,14 +91,31 @@ class WebcamPyavBackend(AbstractBackend):
 
                 yield packet
 
-            except StopIteration:
-                time.sleep(0.01)
+            except StopIteration as exc:  # EOFError in FFmpeg is raised by demux() as StopIteration (break while -> stop yield)
+                if sys.platform == "darwin":
+                    # macOS seems it exhausts the iterator mid-stream.
+                    # Do not break directly but retry several times.
 
-                break  # demuxer exhausted, outer loop in run_service will reopen the camera
+                    consecutive_errors += 1
 
-            except (av.error.BlockingIOError, av.error.EOFError) as exc:
+                    if consecutive_errors > 200:
+                        # Genuine hardware loss: The device/demuxer is considered as finally dead
+                        raise RuntimeError("Stream stalled. Too many consecutive StopIteration errors.") from exc
+
+                    time.sleep(0.01)
+                    demuxer = input_device.demux(input_stream)  # try to recreate iterator without reopening device
+
+                    continue
+                else:
+                    # On Linux/Windows, if the demuxer exhausted,
+                    # outer loop in run_service will try to reopen the camera if the service should still run
+                    break
+
+            except av.error.BlockingIOError as exc:
                 # Catching specific PyAV exception mapping to EAGAIN on Mac
+
                 consecutive_errors += 1
+
                 if consecutive_errors > 200:
                     raise RuntimeError(f"Stream stalled. Too many consecutive blocking errors: {exc}") from exc
 
@@ -129,11 +146,15 @@ class WebcamPyavBackend(AbstractBackend):
         }
 
         if sys.platform == "darwin":
-            options["pixel_format"] = self._config.pixel_format
+            if self._config.pixel_format != "auto":  # if auto, set nothing let's avfoundation choose
+                options["pixel_format"] = self._config.pixel_format
             options["probesize"] = "10000000"
             options["analyzeduration"] = "2000000"
         else:
-            options["input_format"] = self._config.pixel_format  # or h264 if supported is also possible, but there would be delay and non-keyframes
+            if self._config.pixel_format == "auto":
+                options["input_format"] = "mjpeg"
+            else:
+                options["input_format"] = self._config.pixel_format
 
         if self._config.cam_framerate > 0:
             # avfoundation has ntsc as default. webcams refuse to work with that framerate, so allow to set it explicit
@@ -165,7 +186,7 @@ class WebcamPyavBackend(AbstractBackend):
 
                 # 1 loop to spit out packet and frame information
                 logger.info(f"input_device: {input_device}")
-                logger.info(f"input_stream: {input_stream}")
+                logger.info(f"input_stream: {input_stream} (configured pixel_format: {self._config.pixel_format})")
                 logger.info(f"color_range: {ColorRange(input_stream.color_range).name} (Range JPEG=full, MPEG=limited)")
                 logger.info(f"livestream resolution: {rW}x{rH}")
 
