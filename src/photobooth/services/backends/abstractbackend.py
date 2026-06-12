@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from photobooth.utils.stoppablethread import StoppableThread
+
 from ...utils.resilientservice import ResilientService
 from ..config.groups.cameras import Orientation
 from .utils.rotate_exif import set_exif_orientation
@@ -136,11 +138,19 @@ class ModeController:
         self.requested_mode: Modes = "standby"
         self.active_mode: Modes | None = None
         self._last_live_request: float | None = time.monotonic()
+        self._monitor_thread: StoppableThread | None = None
 
+    def start(self):
         if self.idle_timeout:
             assert self.idle_timeout > 5, "The idle timeout to set the camera to standby needs to be disabled or at least 5s."
 
-            threading.Thread(target=self._idle_monitor, daemon=True).start()
+            self._monitor_thread = StoppableThread(target=self._idle_monitor, daemon=True)
+            self._monitor_thread.start()
+
+    def stop(self):
+        if self._monitor_thread:
+            self._monitor_thread.stop()
+            self._monitor_thread.join()
 
     # ---------------------------------------------------------
     # Öffentliche API (kann aus jedem Thread aufgerufen werden)
@@ -175,10 +185,11 @@ class ModeController:
     def _idle_monitor(self):
         """Monitor thread function to request standby if no livestream is requested for idle_timeout seconds"""
         assert self.idle_timeout
+        assert self._monitor_thread
 
         logger.info(f"pausing livestream on backend {self.backend} after {self.idle_timeout}s is enabled.")
 
-        while True:
+        while not self._monitor_thread.stopped():
             time.sleep(1)
 
             if self._last_live_request is None:
@@ -276,13 +287,13 @@ class AbstractBackend(ResilientService, ABC):
     @abstractmethod
     def start(self):
         """To start the backend to serve"""
-
+        self._mode_machine.start()
         super().start()
 
     @abstractmethod
     def stop(self):
         """To stop the backend to serve"""
-
+        self._mode_machine.stop()
         super().stop()
 
     def wait_for_multicam_files(self) -> list[Path]:
