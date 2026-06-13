@@ -1,0 +1,1 @@
+function e(e){if(!e)return!1;let t=e.split(`.`).pop().toLowerCase();return[`mp4`,`mov`,`webm`,`avi`,`mkv`].includes(t)}function t(e){if(!e)return!1;let t=e.split(`.`).pop().toLowerCase();return[`jpg`,`jpeg`,`png`,`webp`,`gif`,`avif`].includes(t)}function n(e){if(!e)return!1;let t=e.split(`.`).pop().toLowerCase();return[`jpg`,`jpeg`,`png`].includes(t)}export{n,e as r,t};
