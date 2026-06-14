@@ -25,31 +25,62 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
 
     await websocket.accept()
 
+    retries = 3
+
     while True:
         try:
-            # jpeg_bytes = await get_lores_image_with_retry(container.acquisition_service.wait_for_lores_image, 3, index_device, index_subdevice)
-            jpeg_bytes = await asyncio.to_thread(container.acquisition_service.wait_for_lores_image, index_device, index_subdevice)
-        except TimeoutError:
-            # a timeouterror can occur during mode switches of the backend - the frontend will just wait for another frame
-            continue
-        except BackendNotRunning:
-            logger.info("stop streaming because backend is not running")
-            break
-        except Exception as exc:
-            logger.warning(exc)
-            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="acquisition.stream_error"))
-            break
+            msg = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
 
-        try:
-            await websocket.send_bytes(jpeg_bytes)
-        except WebSocketDisconnect as exc:
-            logger.debug(f"client disconnected code: {exc.code}, reason: {exc.reason}")
+        except WebSocketDisconnect:
+            logger.debug("client disconnected while waiting for the ready signal to send the next frame")
             return  # return because disconnected already and below would handle disconnect otherwise again which fails for sure.
-        except Exception as exc:
-            logger.info(f"error sending data: {exc}")
-            break
+        except TimeoutError:
+            # logger.debug("timed out while waiting for the ready signal to send the next frame, continue waiting...")
+            continue
 
-    # when for ends (None is returned/stream break), close the connection server side so client can retry connecting)
+        if msg != "ready":
+            logger.warning(f"invalid message from client: {msg}")
+            continue
+
+        jpeg_bytes = None
+
+        for attempt in range(retries):
+            try:
+                jpeg_bytes = await asyncio.to_thread(container.acquisition_service.wait_for_lores_image, index_device, index_subdevice)
+                break  # success, don't execute for...else:
+
+            except TimeoutError:  # backend timeout (mode switching, ...)
+                logger.debug(f"camera timeout ({attempt + 1}/{retries})")
+                continue  # retry
+            except BackendNotRunning:
+                logger.info("backend stopped, closing stream")
+
+                await websocket.close(code=1001, reason="backend stopped")
+                return  # stop
+            except Exception as exc:
+                logger.error(exc)
+                continue  # retry, but likely to fail and then exchaust the retry loop crit
+        else:
+            # retry loop exhausted
+            logger.error("failed to get frame after max retries, closing stream")
+            sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="acquisition.stream_error"))
+
+            await websocket.close(code=1011, reason="camera failed")
+            return
+
+        # print(time.monotonic())
+
+        if jpeg_bytes:
+            try:
+                await websocket.send_bytes(jpeg_bytes)
+            except WebSocketDisconnect:
+                logger.debug("client disconnected while sending a frame")
+                return  # return because disconnected already and below would handle disconnect otherwise again which fails for sure.
+            except Exception as exc:
+                logger.info(f"error sending data: {exc}")
+                break
+
+    # when while ends, close the connection server side so client can retry connecting)
     try:
         await websocket.close(code=1001, reason="backend stopped delivering")
     except Exception as exc:
