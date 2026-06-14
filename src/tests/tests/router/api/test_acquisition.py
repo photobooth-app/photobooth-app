@@ -1,9 +1,11 @@
+import asyncio
 import io
 import logging
 import time
 from unittest import mock
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -97,13 +99,31 @@ def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     assert len(frame) > 100
 
 
+@pytest.mark.asyncio
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG],
+)
+async def test_websocket_stream_stall_if_no_ready_from_client(mock_gen_stream, client: TestClient):
+
+    with client.websocket_connect("ws://test/api/aquisition/stream") as websocket:
+        # if there is no "ready" sent from client, it will not deliver a frame and receivebytes should timeout
+
+        with pytest.raises(TimeoutError):
+            await asyncio.wait_for(asyncio.to_thread(websocket.receive_bytes), timeout=2)
+
+
 @patch(
     "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
     side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
 )
 def test_websocket_stream(mock_gen_stream, client: TestClient):
+
     with client.websocket_connect("ws://test/api/aquisition/stream") as websocket:
         # Receive one frame
+
+        websocket.send_text("ready")
+
         frame = websocket.receive_bytes()
         assert frame.startswith(b"\xff\xd8")
         assert frame.endswith(b"\xff\xd9")
