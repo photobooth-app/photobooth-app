@@ -6,6 +6,7 @@ Picamera2 backend implementation
 import io
 import logging
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Lock
@@ -19,7 +20,7 @@ from picamera2.outputs import FileOutput, PyavOutput  # type: ignore
 from ...appconfig import appconfig
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraPicamera2
-from .abstractbackend import AbstractBackend, StillRequest
+from .abstractbackend import AbstractBackend, BackendStats, StillRequest
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,17 @@ class PicamLoresData(io.BufferedIOBase):
             self.lores_data[0].condition.notify_all()
 
         return len(buf)
+
+
+@dataclass
+class Picamera2Stats(BackendStats):
+    exposure_time_ms: float | None = None
+    lens_position: float | None = None
+    again: float | None = None
+    dgain: float | None = None
+    lux: float | None = None
+    colour_temperature: int | None = None
+    sharpness: int | None = None
 
 
 class Picamera2Backend(AbstractBackend):
@@ -71,6 +83,7 @@ class Picamera2Backend(AbstractBackend):
         # private props
         self._picamera2: Picamera2 | None = None
         self._mjpeg_encoder: MJPEGEncoder | None = None  # livestream encoder
+        self._metadata: dict | None = None
 
         # video related variables. picamera2 uses local recording implementation and overrides abstractbackend
         self._video_encoder = None
@@ -216,6 +229,24 @@ class Picamera2Backend(AbstractBackend):
 
         logger.debug("autofocus set")
 
+    def _extend_stats(self, base: BackendStats) -> BackendStats:
+        if self._metadata:
+            exposure_time = self._metadata.get("ExposureTime", None)
+            exposure_time_ms_raw = exposure_time / 1000 if exposure_time is not None else None
+
+            return Picamera2Stats(
+                **base.__dict__,
+                exposure_time_ms=self._round_none(exposure_time_ms_raw, 1),
+                lens_position=self._round_none(self._metadata.get("LensPosition", None), 2),
+                again=self._round_none(self._metadata.get("AnalogueGain", None), 1),
+                dgain=self._round_none(self._metadata.get("DigitalGain", None), 1),
+                lux=self._round_none(self._metadata.get("Lux", None), 1),
+                colour_temperature=self._metadata.get("ColourTemperature", None),
+                sharpness=self._metadata.get("FocusFoM", None),
+            )
+
+        return base
+
     def setup_resource(self):
         if self._picamera2:
             logger.info("closing camera before starting to ensure it's available")
@@ -290,7 +321,7 @@ class Picamera2Backend(AbstractBackend):
     def run_service(self):
         assert self._picamera2
 
-        _metadata = None
+        self._metadata = None
 
         while not self._stop_event.is_set():  # repeat until stopped
             self._mode_machine.process_switchmode()
@@ -328,7 +359,7 @@ class Picamera2Backend(AbstractBackend):
             else:
                 # capture metadata blocks until new metadata is avail
                 try:
-                    _ = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]
+                    self._metadata = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]
                     # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
                     # stalling
                     self._frame_tick()

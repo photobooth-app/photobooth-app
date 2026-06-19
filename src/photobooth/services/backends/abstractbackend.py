@@ -275,13 +275,16 @@ class AbstractBackend(ResilientService, ABC):
         return f"{self.__class__.__name__}"
 
     def get_stats(self) -> BackendStats:
-        stats = BackendStats(
+        base = BackendStats(
             backend_name=self.__class__.__name__,
-            mode=self._mode_machine.active_mode if self._mode_machine.active_mode else "unknown",
+            mode=self._mode_machine.active_mode or "unknown",
             device_fps=self._framerate.fps,
         )
 
-        return stats
+        return self._extend_stats(base)
+
+    def _extend_stats(self, base: BackendStats) -> BackendStats:
+        return base  # default: no extension, otherwise override in the backend
 
     def _frame_tick(self):
         """call by backends implementation when frame is delivered, so the fps can be calculated..."""
