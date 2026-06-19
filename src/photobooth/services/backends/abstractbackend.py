@@ -210,7 +210,10 @@ class ModeController:
         """Wird im stream-thread aufgerufen, wenn es passend für einen potentiellen mode-switch ist"""
 
         with self._lock:
-            req = self.requested_mode if not immediate_forced_mode else immediate_forced_mode
+            if immediate_forced_mode:
+                self.requested_mode = immediate_forced_mode
+
+            req = self.requested_mode
             act = self.active_mode
 
         # Kein Modewechsel nötig
