@@ -60,18 +60,17 @@ class ThreadedRegularSync:
             full_sync_jobids: list[int] = []
 
             for remote in self.remotes:
-                if remote.upload_only:
+                if remote.copy_only_mode:
                     logger.info(f"copy files to remote '{remote.name}'")
-                    job = self.rclone.copy_async(
-                        str(Path(MEDIA_PATH).absolute()),
-                        f"{remote.name}{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
-                    )
+                    fn_op = self.rclone.copy_async
                 else:
                     logger.info(f"sync files with '{remote.name}'")
-                    job = self.rclone.sync_async(
-                        str(Path(MEDIA_PATH).absolute()),
-                        f"{remote.name}{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
-                    )
+                    fn_op = self.rclone.sync_async
+
+                job = fn_op(
+                    str(Path(MEDIA_PATH).absolute()),
+                    f"{remote.name}{Path(remote.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
+                )
 
                 full_sync_jobids.append(job.jobid)
 

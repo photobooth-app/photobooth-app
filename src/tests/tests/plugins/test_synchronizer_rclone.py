@@ -162,8 +162,8 @@ def test_collection_hooks(sync: SynchronizerRclone):
 
 def test_immediateSnycPipeline_skip_delete_op_when_upload_only_is_enabled():
     remotes = [
-        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", upload_only=True, shareconfig=ShareConfig()),
-        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", upload_only=False, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", copy_only_mode=True, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", copy_only_mode=False, shareconfig=ShareConfig()),
     ]
 
     pipeline = ThreadedImmediateSyncPipeline(rclone=MagicMock(), remotes=remotes, max_concurrency=0)
@@ -180,8 +180,8 @@ def test_immediateSnycPipeline_skip_delete_op_when_upload_only_is_enabled():
 
 def test_regularSync_uses_copy_for_upload_only_remotes():
     remotes = [
-        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", upload_only=True, shareconfig=ShareConfig()),
-        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", upload_only=False, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="backup", name="backup:", subdir="archive", copy_only_mode=True, shareconfig=ShareConfig()),
+        RemoteConfig(enabled=True, description="sync", name="sync:", subdir="archive", copy_only_mode=False, shareconfig=ShareConfig()),
     ]
 
     rclone = MagicMock()
