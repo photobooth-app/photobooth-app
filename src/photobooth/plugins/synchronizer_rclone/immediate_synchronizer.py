@@ -93,10 +93,9 @@ class ThreadedImmediateSyncPipeline:
                 op = CopyOperation(
                     str(Path.cwd().absolute()), f"{task.file}", r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix()
                 )
-            elif isinstance(task, TaskDelete) and not r.upload_only:
+            elif isinstance(task, TaskDelete) and not r.copy_only_mode:
                 op = DeleteOperation(r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix())
             else:
-                logger.info(f"no operation found for remote '{r.name}' and task '{task!r}' (upload only: {r.upload_only})")
                 continue
 
             job_id = next(self._job_counter)
