@@ -18,7 +18,7 @@ class BaseModelCamera(BaseModel):
     )
 
     camera_standby_when_inactive: bool = Field(
-        default=False,
+        default=True,
         description="When enabled, the app tries to disable the cameras livestream when no livestream is requested. It helps to avoid sensor overheating for older cameras by setting viewfinder=0.",
     )
     camera_standby_when_inactive_time: int = Field(
