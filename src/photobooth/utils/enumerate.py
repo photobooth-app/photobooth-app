@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import subprocess
@@ -51,15 +52,19 @@ def webcameras() -> list[str]:
         try:
             # PowerShell command to fetch usb webcams (1st line) as well as internal cameras (2nd line)
             pwsh = r"""
-            $pnpdevs = Get-PnpDevice -Status OK | Where-Object { $_.Class -in @("Camera","Image") } | Select-Object -ExpandProperty FriendlyName
-            $cimdevs = Get-CimInstance Win32_PnPEntity |
-                Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } |
-                Select-Object -ExpandProperty Name
+            $pnpdevs = @(Get-PnpDevice -Status OK |
+                Where-Object { $_.Class -in @("Camera","Image") } |
+                Select-Object -ExpandProperty FriendlyName)
 
-            # Combine first, then sort, then stream each element as its own line
+            $cimdevs = @(Get-CimInstance Win32_PnPEntity |
+                Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } |
+                Select-Object -ExpandProperty Name)
+
+
+            # Combine first, then sort, then convert to json
             ($pnpdevs + $cimdevs) |
                 Sort-Object -Unique |
-                Out-String -Stream
+                ConvertTo-Json
             """
 
             result = subprocess.run(
@@ -69,7 +74,8 @@ def webcameras() -> list[str]:
                 check=True,
             )
 
-            devices += [line.strip() for line in result.stdout.split("\n") if line.strip()]
+            devices = json.loads(result.stdout)
+
         except Exception as exc:
             logger.warning(f"error enumerating webcams: {exc}")
 
