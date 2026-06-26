@@ -142,7 +142,7 @@ dev = [
   "pyright",
   "poethepoet",
   "wigglecam[node]",
-  "pyturbojpeg~=1.8.0",
+  "pyturbojpeg>=1.8,<2.5",
 ]
 
 
