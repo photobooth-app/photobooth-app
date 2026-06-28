@@ -59,7 +59,7 @@ dependencies = [
   "av>=17.0.1,<17.2",
   "alembic>=1.15.2",
   "onnxruntime",
-  "rclone-bin-api>=1.0.4",
+  "rclone-bin-api>=1.0.5",
   "wigglecam>=0.4.1",                                                                      # to use the imagemessagedataclass, no dependencies in base module
   "pynng~=0.9.0",                                                                          # needs python3-dev package
   "requests",

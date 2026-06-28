@@ -1111,7 +1111,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "python-statemachine", specifier = ">=3.1,<3.3" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "rclone-bin-api", specifier = ">=1.0.4" },
+    { name = "rclone-bin-api", specifier = ">=1.0.5" },
     { name = "requests" },
     { name = "simplejpeg", specifier = ">=1.8.2" },
     { name = "sqlalchemy", specifier = ">=2.0.37" },
@@ -1840,16 +1840,16 @@ wheels = [
 
 [[package]]
 name = "rclone-bin-api"
-version = "1.0.4"
+version = "1.0.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/02/7e/5666126792955a3ef4668f2c7e84910a2bf1471ad89ef748af2a62994a63/rclone_bin_api-1.0.4.tar.gz", hash = "sha256:0a0f2ba22fbe5d7c497e9f9d34d8153f9b14d6f91573283a87b881ecaddef7d7", size = 11302, upload-time = "2026-02-13T20:06:44.516Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/23/80d1c011c485aa24fdbe3e3d5bacddc2b6ac6453f41384f112f9d7cf1b96/rclone_bin_api-1.0.5.tar.gz", hash = "sha256:ba7f620670c78ddde679a99e8862b0916ead68f6879d846d9d5daf4571f88f56", size = 11979, upload-time = "2026-06-28T20:42:33.469Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/5e/e9ef662dc880dfddf1e9df3c597947a52ed5e19928e9f99a7b0a096d3d8e/rclone_bin_api-1.0.4-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:4a4ec924745dab82952955f9d5a3bd1e77c6e58d42eefa2626361d178bc6c617", size = 29248747, upload-time = "2026-02-13T20:06:49.387Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/56/457fe985d2229fd8b2e753f45277d703e36a424b74499f1933ce1dafaa66/rclone_bin_api-1.0.4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:1c37617d127d7ff12330188e0e51313ae5e12c9d69702bdc69704213ae6ab057", size = 27057295, upload-time = "2026-02-13T20:06:46.758Z" },
-    { url = "https://files.pythonhosted.org/packages/e4/82/2d693a4b1952f7d2272462b058b9f9b7b94d447c64f7061d39f69559c3e0/rclone_bin_api-1.0.4-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:05a1ae0d4e18654a3196287b0e7e6c14d5002ecdac511a2e78149c5d722d233b", size = 23461046, upload-time = "2026-02-13T20:06:58.081Z" },
-    { url = "https://files.pythonhosted.org/packages/b5/41/3eba154268b1178e00ec1af185117cb245ed47c1c9df449c5a93b7847d1b/rclone_bin_api-1.0.4-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:977b17dc5ab9270a79f1ce1dbeb269209847f2849b2ab50fdde177856c07b935", size = 26003274, upload-time = "2026-02-13T20:06:41.354Z" },
-    { url = "https://files.pythonhosted.org/packages/27/2f/3d0aa026a77ae6f850d46430b554b119634525cdf0486c88f5eff012dd35/rclone_bin_api-1.0.4-py3-none-win_amd64.whl", hash = "sha256:48e80b0d062a9e0e31b90c8f6ce94cef2d36bcd0e8e26cc970871bdf0ff5dd36", size = 25936087, upload-time = "2026-02-13T20:06:52.576Z" },
-    { url = "https://files.pythonhosted.org/packages/ac/36/90b1efc0304a133385fe6878b408c06a9682b63461abfcf8325fdc93faec/rclone_bin_api-1.0.4-py3-none-win_arm64.whl", hash = "sha256:4305a555382cd1f5a63c7800a32ea4f39b96544b52f2c1001deede4060fc9f4c", size = 23199345, upload-time = "2026-02-13T20:06:55.545Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/87/a7a54a8675846e9d2fb063602e6dbe20b61d7ba50afe176ad1630fc8b400/rclone_bin_api-1.0.5-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:4f3310965d0b5915d7d54a3a427a6747c2c92f82c6ea2940771e0a3538b0008c", size = 30365270, upload-time = "2026-06-28T20:42:16.051Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/60/79e8fc52c93914dbccf758e1158786d2ae85e3ab09744c9ac5335044d858/rclone_bin_api-1.0.5-py3-none-macosx_11_0_arm64.whl", hash = "sha256:eb8e306319411c558a616ef8f707a40660c9fdf62288b42480cc6dc210bcabe1", size = 28053365, upload-time = "2026-06-28T20:42:19.289Z" },
+    { url = "https://files.pythonhosted.org/packages/12/85/cccc306e7facd467d1353c28b013e9c19d9f69b1879fd33545b659445b09/rclone_bin_api-1.0.5-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:f6521bca85a3bd8e5f67ccc61ab9c5f0df5e62f35656916409a886f8a599e86c", size = 24380248, upload-time = "2026-06-28T20:42:22.514Z" },
+    { url = "https://files.pythonhosted.org/packages/48/27/d52cadaa5ca833fe70cc023602f863fd3b196bbb5fe42a5caf2df30010c8/rclone_bin_api-1.0.5-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:986d705d91d3c6f404ffac983d9817d656c831fdbd2350e5133d4b61d6f7e62f", size = 27053711, upload-time = "2026-06-28T20:42:25.565Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/99/a1c2a93feda12a30fd28f735ab051a0df406657c84f99b43ef9d0b8b9fbd/rclone_bin_api-1.0.5-py3-none-win_amd64.whl", hash = "sha256:69ff5fd76dd7bef528e1d1494cfa85250c2fa67d794ffbc33f37a191f27611cf", size = 27066492, upload-time = "2026-06-28T20:42:28.643Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/ee/4dfad4ed1071c7db421eff071f555b413296f8d059a637dbfcc845048677/rclone_bin_api-1.0.5-py3-none-win_arm64.whl", hash = "sha256:c28d417e2b75068e325b70f381dae325d60c39f4f6a25f662dab1961c5bbe40f", size = 24179165, upload-time = "2026-06-28T20:42:31.689Z" },
 ]
 
 [[package]]
