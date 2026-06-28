@@ -8,5 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: chartboost/ruff-action@v1
+      - uses: astral-sh/ruff-action@v4.0.0
+      - run: ruff check
       
