@@ -101,7 +101,7 @@ def webcameras() -> list[str]:
         else:
             raise OSError("platform not supported to enumerate")
 
-    logger.debug([device.name for device in devices])
+    logger.debug(devices)
     return [device.name for device in devices if "video" in device.media_types]
 
 
