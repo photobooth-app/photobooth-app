@@ -6,6 +6,7 @@ import subprocess
 import uuid
 from pathlib import Path
 
+import av
 import cv2
 
 from .... import LOG_PATH
@@ -13,6 +14,71 @@ from ..context import VideoContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
+
+
+class BoomerangStepPyav(PipelineStep):
+    def __init__(self, boomerang_speed: float) -> None:
+        self.boomerang_speed: float = boomerang_speed
+
+    def __call__(self, context: VideoContext, next_step: NextStep) -> None:
+
+        input_path = Path(context.video_in)
+        output_path = Path("tmp", f"boomerang_{uuid.uuid4().hex}").with_suffix(".mp4")
+
+        # --- PASS 1: decode all frames into RAM ---
+        in_container = av.open(str(input_path))
+        in_stream = in_container.streams.video[0]
+
+        frames = []
+        for frame in in_container.decode(in_stream):
+            frames.append(frame.reformat(format="yuv420p"))
+
+        in_container.close()
+
+        if len(frames) < 3:
+            raise RuntimeError("Video too short for boomerang")
+
+        # trim first and last
+        middle_frames = frames[1:-1]
+
+        # --- PASS 2: encode forward + reversed ---
+        out_container = av.open(str(output_path), mode="w")
+        out_stream = out_container.add_stream("h264", rate=in_stream.average_rate)
+        out_stream.pix_fmt = "yuv420p"
+        out_stream.options = {"movflags": "+faststart"}
+
+        speed = round(1 / self.boomerang_speed, 1)
+        time_base = in_stream.time_base
+        frame_duration = int((1 / in_stream.average_rate) / time_base)
+
+        pts = 0
+
+        def encode_frame(f):
+            nonlocal pts
+            f.pts = pts
+            pts += int(frame_duration * speed)
+            pkt = out_stream.encode(f)
+            if pkt:
+                out_container.mux(pkt)
+
+        # forward
+        for f in middle_frames:
+            encode_frame(f)
+
+        # reversed
+        for f in reversed(middle_frames):
+            encode_frame(f)
+
+        # flush encoder
+        pkt = out_stream.encode(None)
+        if pkt:
+            out_container.mux(pkt)
+
+        out_container.close()
+
+        context.video_processed = output_path
+
+        next_step(context)
 
 
 class BoomerangStep(PipelineStep):
