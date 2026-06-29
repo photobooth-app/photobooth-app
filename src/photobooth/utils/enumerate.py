@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from threading import Lock
 
+import av
 import serial.tools.list_ports
 from rclone_api.api import RcloneApi
 
@@ -92,13 +93,16 @@ def webcameras() -> list[str]:
 
     with enumerate_lock:
         if sys.platform == "win32":
-            return _webcameras_windows()
+            devices = av.enumerate_input_devices("dshow")
         elif sys.platform == "linux":
-            return _webcameras_linux()
+            devices = av.enumerate_input_devices("v4l2")
         elif sys.platform == "darwin":
-            return _webcameras_darwin()
+            devices = av.enumerate_input_devices("avfoundation")
         else:
             raise OSError("platform not supported to enumerate")
+
+    logger.debug([device.name for device in devices])
+    return [device.name for device in devices if "video" in device.media_types]
 
 
 def dslr_gphoto2() -> list[int]:
