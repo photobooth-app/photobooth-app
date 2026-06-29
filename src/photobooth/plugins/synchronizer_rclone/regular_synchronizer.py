@@ -61,10 +61,10 @@ class ThreadedRegularSync:
 
             for remote in self.remotes:
                 if remote.copy_only_mode:
-                    logger.info(f"copy files to remote '{remote.name}'")
+                    logger.info(f"copy files to '{remote.name}' in '{remote.subdir}'")
                     fn_op = self.rclone.copy_async
                 else:
-                    logger.info(f"sync files with '{remote.name}'")
+                    logger.info(f"sync files to '{remote.name}' in '{remote.subdir}'")
                     fn_op = self.rclone.sync_async
 
                 job = fn_op(

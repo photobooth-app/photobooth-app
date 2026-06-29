@@ -7,12 +7,13 @@ from sqlalchemy import create_engine, inspect
 
 from .. import DATABASE_PATH
 
-# import here, because create_all then creates all models that were imported.
-from .models import Base  # noqa: F401
+# import here, because create_all/alembic then creates all models that were imported.
+from . import models
+
+_ = models.Base.metadata  # touch Base so linters see usage
 
 SQLALCHEMY_DATABASE_FILE = f"{DATABASE_PATH}/database.sqlite"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLALCHEMY_DATABASE_FILE}"
-
 
 connect_args = {"check_same_thread": False}
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)  # , echo=True)
