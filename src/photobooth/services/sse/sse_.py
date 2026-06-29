@@ -9,7 +9,6 @@ import os
 import time
 import uuid
 from abc import ABC, abstractmethod
-from asyncio import Queue, QueueFull
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -248,7 +247,7 @@ class Client:
     """Class each individual client connected"""
 
     request: Request
-    queue: Queue[ServerSentEvent]
+    queue: asyncio.Queue[ServerSentEvent]
 
 
 class SseService:
@@ -293,7 +292,7 @@ class SseService:
                     )
                 )
 
-            except QueueFull:
+            except asyncio.QueueFull:
                 # fail in silence if queue is full - though is critical for init sse messages.
                 # on the other side, queue better not infinite if disconnect is not working proper and queue remains getting larger
                 pass
