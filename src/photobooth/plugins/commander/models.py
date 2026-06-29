@@ -46,7 +46,7 @@ class TaskBase(BaseModel):
     )
 
     @field_validator("event", mode="before")
-    def _map_deprecated_record(self, v):
+    def _map_deprecated_record(cls, v):
         return ["capture_video" if x == "record" else x for x in v]
 
     delay_before: float = Field(

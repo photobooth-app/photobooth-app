@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image, ImageOps
 
-from photobooth.utils.media_resizer import resize, resize_animation_pillow, resize_jpeg, resize_jpeg_pillow, resize_jpeg_simplejpeg, resize_mp4
+import photobooth.utils.media_resizer as mr
 
 from ..util import dummy_animation, get_exiforiented_jpeg, get_jpeg
 
@@ -23,7 +23,7 @@ def test_resize_jpg(tmp_path):
     input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
-    resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_jpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -33,7 +33,7 @@ def test_resize_jpg_force_simplejpeg(tmp_path):
     input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
-    resize_jpeg_simplejpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_jpeg_simplejpeg(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -43,7 +43,7 @@ def test_resize_jpg_force_pillow(tmp_path):
     input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
-    resize_jpeg_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_jpeg_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -54,7 +54,7 @@ def test_resize_gif(tmp_path):
     output = tmp_path / "animation.gif"
     dummy_animation(input)
 
-    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -65,7 +65,7 @@ def test_resize_webp(tmp_path):
     output = tmp_path / "animation.webp"
     dummy_animation(input)
 
-    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -76,7 +76,7 @@ def test_resize_avif(tmp_path):
     output = tmp_path / "animation.avif"
     dummy_animation(input)
 
-    resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_animation_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:
         img.verify()
@@ -86,42 +86,41 @@ def test_resize_mp4(tmp_path):
     input = Path("src/tests/assets/video.mp4")
     output = tmp_path / "video.mp4"
 
-    resize_mp4(filepath_in=input, filepath_out=output, scaled_min_length=100)
+    mr.resize_mp4(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     assert output.is_file()
 
 
 def test_generate_resized():
-    import photobooth.utils.media_resizer
 
-    with patch.object(photobooth.utils.media_resizer, "resize_jpeg") as mock:
-        resize(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_jpeg") as mock:
+        mr.resize(filepath_in=Path("somefile.jpg"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.media_resizer, "resize_jpeg") as mock:
-        resize(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_jpeg") as mock:
+        mr.resize(filepath_in=Path("somefile.jpeg"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
-        resize(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_animation_pillow") as mock:
+        mr.resize(filepath_in=Path("somefile.gif"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
-        resize(filepath_in=Path("somefile.webp"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_animation_pillow") as mock:
+        mr.resize(filepath_in=Path("somefile.webp"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.media_resizer, "resize_animation_pillow") as mock:
-        resize(filepath_in=Path("somefile.avif"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_animation_pillow") as mock:
+        mr.resize(filepath_in=Path("somefile.avif"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
-    with patch.object(photobooth.utils.media_resizer, "resize_mp4") as mock:
-        resize(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
+    with patch.object(mr, "resize_mp4") as mock:
+        mr.resize(filepath_in=Path("somefile.mp4"), filepath_out=Path("dontcare"), scaled_min_length=100)
         mock.assert_called_once()
 
 
 def test_generate_resized_raise_nonavail_format():
     with pytest.raises(RuntimeError):
-        resize(filepath_in=Path("somefile.unknownextension"), filepath_out=Path("dontcare"), scaled_min_length=100)
+        mr.resize(filepath_in=Path("somefile.unknownextension"), filepath_out=Path("dontcare"), scaled_min_length=100)
 
 
 def test_exif_transpose():
