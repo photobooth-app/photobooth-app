@@ -3,6 +3,7 @@ Testing Mediaprocessing collage
 """
 
 import logging
+import shutil
 from pathlib import Path
 
 import pytest
@@ -36,18 +37,19 @@ def test_video_boomerang_stage():
 
 def test_video_boomerangPyav_stage():
     video_in = Path("src/tests/assets/video.mp4")
+    boomerang_speed = 3
 
     context = VideoContext(video_in)
-    steps = [BoomerangStepPyav(1)]
+    steps = [BoomerangStepPyav(boomerang_speed)]
     pipeline = Pipeline[VideoContext](*steps)
     pipeline(context)
     assert context.video_processed
     video_out = context.video_processed
 
-    # shutil.copy(video_out, "./boomerangsteppyav.mp4")
+    shutil.copy(video_out, "./boomerangsteppyav.mp4")
 
     # boomerang reverses video so double length
     in_dur = video_duration(video_in)
     out_dur = video_duration(video_out)
 
-    assert out_dur == pytest.approx(in_dur * 2.0, abs=0.5)
+    assert out_dur == pytest.approx(in_dur * 2.0 * (1.0 / boomerang_speed), abs=0.5)
