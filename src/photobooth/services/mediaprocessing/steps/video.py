@@ -15,10 +15,9 @@ from ..context import VideoContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
-logging.getLogger(__name__)
 
 
-class BoomerangStepPyav(PipelineStep):
+class BoomerangStep(PipelineStep):
     def __init__(self, boomerang_speed: float) -> None:
         self.boomerang_speed: float = boomerang_speed
 
@@ -42,10 +41,9 @@ class BoomerangStepPyav(PipelineStep):
         out_container = av.open(str(output_path), mode="w")
 
         # base fps from input, scaled by boomerang speed
-        in_fps = in_stream.base_rate
+        in_fps = in_stream.base_rate or in_stream.average_rate
+        assert in_fps is not None, "could not determine the input video fps."
         out_fps = in_fps * Fraction(self.boomerang_speed).limit_denominator(10000)
-        logger.warning(in_fps)
-        logger.warning(out_fps)
 
         out_stream = out_container.add_stream("h264", rate=out_fps)
         out_stream.pix_fmt = "yuv420p"
@@ -55,9 +53,44 @@ class BoomerangStepPyav(PipelineStep):
         pts = 0
 
         def clone_frame(f: av.VideoFrame) -> av.VideoFrame:
+            """clone the frame so forward and backward encoding use fresh frames. this is needed because during
+            encoding the pts/dts and some metadata might be changed internally and the second encoding pass fails.
+            all this is very efficient and consumes only microseconds usually
+
+            Tested alternative is following, but does not work, maybe revisit in future?
+            This simple clone method does not work, because the line_size is not respected.
+            source line_size could be padded to match being divisible by 16, newly created frame not.
+
             new = av.VideoFrame(f.width, f.height, f.format.name)
+
+            logger.warning(f"{f=}, {f.planes[0].line_size=}, {new=}, {new.planes[0].line_size=}, {f.format.name}")
+
             for dst, src in zip(new.planes, f.planes, strict=True):
-                dst.update(bytes(src))
+                print(src)
+                print(src.line_size)
+                print(src.buffer_size)
+                print(dst)
+                print(dst.line_size)
+                print(dst.buffer_size)
+
+                dst.update(src)  # type: ignore # https://github.com/PyAV-Org/PyAV/pull/1286/changes
+            return new
+
+            """
+            new = av.VideoFrame(f.width, f.height, f.format.name)
+
+            for dst, src in zip(new.planes, f.planes, strict=True):
+                src_mv = memoryview(src)
+                dst_mv = memoryview(dst)
+
+                src_stride = src.line_size
+                dst_stride = dst.line_size
+
+                for row in range(dst.height):
+                    src_row = src_mv[row * src_stride : row * src_stride + dst_stride]
+                    dst_row = dst_mv[row * dst_stride : (row + 1) * dst_stride]
+                    dst_row[:] = src_row
+
             return new
 
         def encode_frame(f: av.VideoFrame) -> None:
@@ -88,7 +121,7 @@ class BoomerangStepPyav(PipelineStep):
         next_step(context)
 
 
-class BoomerangStep(PipelineStep):
+class BoomerangStepFormerFfmpeg(PipelineStep):
     def __init__(self, boomerang_speed: float) -> None:
         self.boomerang_speed: float = boomerang_speed
 
