@@ -34,6 +34,8 @@ def serial_ports() -> list[str]:
 
 
 def webcameras() -> list[str]:
+    devices = []
+
     def _webcameras_linux() -> list[str]:
         devices: list[str] = []
 
@@ -91,17 +93,21 @@ def webcameras() -> list[str]:
         camera_names: list[str] = re.findall(r"^\s{4}([^\n:]+):\s*$", result.stdout, re.MULTILINE)
         return [name.strip() for name in camera_names]
 
+    assert sys.platform in ("win32", "linux", "darwin"), "platform not supported to enumerate"
+
     with enumerate_lock:
-        if sys.platform == "win32":
-            devices = av.enumerate_input_devices("dshow")
-        elif sys.platform == "linux":
-            devices = av.enumerate_input_devices("v4l2")
-        elif sys.platform == "darwin":
-            devices = av.enumerate_input_devices("avfoundation")
-        else:
-            raise OSError("platform not supported to enumerate")
+        try:
+            if sys.platform == "win32":
+                devices = av.enumerate_input_devices("dshow")
+            elif sys.platform == "linux":
+                devices = av.enumerate_input_devices("v4l2")
+            elif sys.platform == "darwin":
+                devices = av.enumerate_input_devices("avfoundation")
+        except Exception as exc:
+            logger.warning(f"error enumerating webcams: {exc}")
 
     logger.debug(devices)
+
     return [device.name for device in devices if "video" in device.media_types]
 
 
