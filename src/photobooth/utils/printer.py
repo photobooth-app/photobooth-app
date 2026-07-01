@@ -75,6 +75,9 @@ def classify_windows(status_flags: int):
 
 
 def get_printer_status_windows(printer_name: str) -> tuple[PrinterStatus, int]:
+    if sys.platform != "win32":
+        raise RuntimeError("Windows-only function")  # to guard the below imports on other systems than win32, keep pyright happy
+
     import pywintypes
     import win32print
 
