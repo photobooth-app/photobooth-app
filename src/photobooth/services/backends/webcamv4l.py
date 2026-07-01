@@ -144,7 +144,7 @@ class WebcamV4lBackend(AbstractBackend):
         else:
             raise RuntimeError(f"pixel_format {self._fmt_pixel_format} not supported")
 
-    def _get_device(self, device_text: str | int):
+    def _get_device(self, device_text: str | int) -> linuxpy_video_device_type.Device:
         # translate id or /dev/v4l/xxx to Device
         # https://github.com/tiagocoutinho/linuxpy/blob/d223fa2b9078fd5b0ba1415ddea5c38f938398c5/examples/video/video_capture.py#L47
 
@@ -158,8 +158,10 @@ class WebcamV4lBackend(AbstractBackend):
         assert linuxpy_video_device
 
         self._device = self._get_device(self._config.device_identifier)
+        assert self._device  # needed for win pyright
         self._device.open()
         self._capture = linuxpy_video_device.VideoCapture(self._device)
+        assert self._capture  # needed for win pyright
 
         try:
             self._capture.set_fps(25)
