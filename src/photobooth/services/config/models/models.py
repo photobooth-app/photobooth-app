@@ -15,7 +15,8 @@ class TextsConfig(BaseModel):
     rotate: int = 0
     font_size: PositiveInt = 40
     font: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
+        # factories are not part of json schema export. path is not json convertible so it would warn and not include the default. using factory, we skip the warning for same outcome.
+        default_factory=lambda: Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     color: Color = Color("#cd1c18")

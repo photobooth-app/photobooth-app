@@ -81,7 +81,8 @@ class GroupUiSettings(BaseModel):
         description="Enable to overlay livestream_frameoverlay_image the livestream.",
     )
     livestream_frameoverlay_image: Annotated[FilePath | None, BeforeValidator(ensure_demoassets)] = Field(
-        default=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
+        # factories are not part of json schema export. path is not json convertible so it would warn and not include the default. using factory, we skip the warning for same outcome.
+        default_factory=lambda: Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
         description="When enabled, the frame is overlayed the livestream. This image is not used in the postprocessing. If mirroreffect is on, it will also be mirrored. Text in the frame appears in the wrong direction but the final image is correct.",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
