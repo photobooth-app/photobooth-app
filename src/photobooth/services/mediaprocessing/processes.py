@@ -88,7 +88,8 @@ def process_phase1images(file_in: Path, mediaitem: Mediaitem):
 
     ## final: save full result and create scaled versions
     # complete processed version (unprocessed and processed are different here)
-    encode([manipulated_image], mediaitem.processed)
+    with MetricsTimer(f"{process_phase1images.__name__} {encode.__name__}"):
+        encode([manipulated_image], mediaitem.processed)
 
     return mediaitem
 
@@ -165,7 +166,8 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
 
     ## create mediaitem
     canvas = canvas.convert("RGB") if canvas.mode in ("RGBA", "P") else canvas
-    encode([canvas], mediaitem.unprocessed)
+    with MetricsTimer(f"{process_and_generate_collage.__name__} {encode.__name__}"):
+        encode([canvas], mediaitem.unprocessed)
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
@@ -191,7 +193,8 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
         pipeline(context)
 
     ## create mediaitem
-    encode(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
+    with MetricsTimer(f"{process_and_generate_animation.__name__} {encode.__name__}"):
+        encode(context.images, mediaitem.unprocessed, durations=[definition.duration for definition in config.merge_definition])
     # complete processed version (unprocessed and processed are same here for this one)
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
@@ -223,7 +226,8 @@ def process_and_generate_wigglegram(files_in: list[Path], mediaitem: Mediaitem):
     # sequence like 1-2-3-4-3-2-restart
     sequence_images = manipulated_image
     sequence_images = sequence_images + list(reversed(sequence_images[1 : len(sequence_images) - 1]))  # add reversed list except first+last item
-    encode(sequence_images, mediaitem.unprocessed, durations=config.duration)
+    with MetricsTimer(f"{process_and_generate_wigglegram.__name__} {encode.__name__}"):
+        encode(sequence_images, mediaitem.unprocessed, durations=config.duration)
     # unprocessed and processed are same here for now
     shutil.copy2(mediaitem.unprocessed, mediaitem.processed)
 
