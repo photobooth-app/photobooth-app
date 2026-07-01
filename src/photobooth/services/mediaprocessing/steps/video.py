@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import subprocess
 import uuid
 from fractions import Fraction
@@ -15,6 +16,67 @@ from ..context import VideoContext
 from ..pipeline import NextStep, PipelineStep
 
 logger = logging.getLogger(__name__)
+
+
+class LoopStep(PipelineStep):
+    def __init__(self, loops: int) -> None:
+        self.loops: int = loops
+
+    def __call__(self, context: VideoContext, next_step: NextStep) -> None:
+        input_path = Path(context.video_in)
+        output_path = Path("tmp", f"loop_{uuid.uuid4().hex}").with_suffix(".mp4")
+
+        if self.loops < 1:
+            raise ValueError("loops must be at least 1")
+        elif self.loops == 1:
+            shutil.copy(input_path, output_path)
+
+            context.video_processed = output_path
+            next_step(context)
+
+            return  # exit early.
+
+        in_container = av.open(input_path)
+        out_container = av.open(output_path, mode="w")
+
+        in_stream = in_container.streams.video[0]
+        out_stream = out_container.add_stream_from_template(template=in_stream)
+
+        # compute duration in ticks; it is assumed that pts and dts have same duration, TODO: verify.
+        dts_values = [p.dts for p in in_container.demux(in_stream) if p.dts is not None]
+        duration_ts = max(dts_values) - min(dts_values)
+
+        in_fps = in_stream.base_rate or in_stream.average_rate
+        assert in_fps is not None, "could not determine the input video fps."
+        assert in_stream.time_base is not None, "could not determine the input video time_base."
+        frame_duration_s = 1 / in_fps
+        frame_duration_ts = int(frame_duration_s / in_stream.time_base)
+
+        # --- PASS 2: loop packets ---
+        in_container.seek(0)
+        for loop_index in range(self.loops):
+            ts_offset = loop_index * (duration_ts + frame_duration_ts)
+
+            for packet in in_container.demux(in_stream):
+                # for packet in packets:
+                if packet.dts is None:
+                    continue
+                if packet.pts is None:
+                    continue
+
+                packet.stream = out_stream
+                packet.pts = packet.pts + ts_offset
+                packet.dts = packet.dts + ts_offset
+
+                out_container.mux(packet)
+
+            in_container.seek(0)
+
+        out_container.close()
+        in_container.close()
+
+        context.video_processed = output_path
+        next_step(context)
 
 
 class BoomerangStep(PipelineStep):
