@@ -87,11 +87,78 @@ class BoomerangStep(PipelineStep):
         input_path = Path(context.video_in)
         output_path = Path("tmp", f"boomerang_{uuid.uuid4().hex}").with_suffix(".mp4")
 
-        # --- PASS 1: decode all frames into RAM ---
-        in_container = av.open(str(input_path))
-        in_stream = in_container.streams.video[0]
+        # setup in/out containers
+        in_container = av.open(input_path)
+        out_container = av.open(output_path, mode="w")
 
+        # setup in/out streams
+        in_stream = in_container.streams.video[0]
+        in_stream.codec_context.thread_type = "AUTO"
+        in_stream.codec_context.thread_count = 0
+
+        # base fps from input, scaled by boomerang speed
+        in_fps = in_stream.base_rate or in_stream.average_rate
+        assert in_fps is not None, "could not determine the input video fps."
+        out_fps = in_fps * Fraction(self.boomerang_speed).limit_denominator(10000)
+        timebase_res = 1 / out_fps
+        logger.warning(out_fps)
+
+        out_stream = out_container.add_stream("h264", rate=out_fps)
+        out_stream.width = in_stream.width
+        out_stream.height = in_stream.height
+        out_stream.time_base = timebase_res
+        out_stream.options = {"movflags": "+faststart"}
+        out_stream.pix_fmt = "yuv420p"
+        out_stream.codec_context.options["tune"] = "zerolatency"  # Optional: faster encoding for real-time
+        out_stream.codec_context.options["preset"] = "veryfast"
+        out_stream.codec_context.thread_type = "AUTO"
+        out_stream.codec_context.thread_count = 0
+        out_stream.codec_context.time_base = timebase_res  # Critical to sync timebase for stream/codec!
+
+        # alt way, but not working properly, maybe there is too much garbage copied from the input stream, so we use the above method instead.
+        # out_stream = out_container.add_stream_from_template(template=in_stream, rate=out_fps, pix_fmt="yuv420p", options={"movflags": "+faststart"})
+        # out_stream.codec_context.options["tune"] = "zerolatency"  # Optional: faster encoding for real-time
+        # out_stream.codec_context.options["preset"] = "veryfast"
+        # out_stream.codec_context.thread_type = "AUTO"
+        # out_stream.codec_context.thread_count = 0
+        # out_stream.pix_fmt = "yuv420p"
+        # out_stream.options = {"movflags": "+faststart"}
+        # out_stream.time_base = 1 / out_fps
+        # out_stream.codec_context.time_base = 1 / out_fps  # Critical to sync timebase for stream/codec!
+
+        logger.warning(out_stream)
+
+        logger.warning(in_stream.bit_rate)
+        logger.warning(out_stream.bit_rate)
+
+        logger.warning(out_stream.frames)
+        logger.warning(out_stream.time_base)
+        logger.warning(out_stream.guessed_rate)
+        logger.warning(out_stream.base_rate)
+        logger.warning(out_stream.average_rate)
+        logger.warning(out_stream.codec)
+        logger.warning(out_stream.codec_context)
+        logger.warning(out_stream.metadata)
+        logger.warning(out_stream.duration)
+        logger.warning(out_stream.frames)
+        logger.warning(out_stream.type)
+
+        logger.warning(out_stream.height)
+        logger.warning(out_stream.width)
+        logger.warning(out_stream.codec_context.height)
+        logger.warning(out_stream.codec_context.width)
+        logger.warning(out_stream.codec_context.framerate)
+        logger.warning(out_stream.codec_context.rate)
+        logger.warning(out_stream.codec_context.pix_fmt)
+
+        # logger.warning(out_stream)
+        # logger.warning(out_stream.framerate)
+
+        # --- PASS 1: decode all frames into RAM ---
         frames: list[av.VideoFrame] = [frame.reformat(format="yuv420p") for frame in in_container.decode(in_stream)]
+
+        # no need for further processing, just keep the frames in memory and encode them in the next pass.
+        # This is a bit memory intensive, but for small videos it should be fine.
         in_container.close()
 
         if len(frames) < 3:
@@ -100,18 +167,6 @@ class BoomerangStep(PipelineStep):
         middle_frames: list[av.VideoFrame] = frames[1:-1]
 
         # --- PASS 2: encode forward + reversed ---
-        out_container = av.open(str(output_path), mode="w")
-
-        # base fps from input, scaled by boomerang speed
-        in_fps = in_stream.base_rate or in_stream.average_rate
-        assert in_fps is not None, "could not determine the input video fps."
-        out_fps = in_fps * Fraction(self.boomerang_speed).limit_denominator(10000)
-
-        out_stream = out_container.add_stream("h264", rate=out_fps)
-        out_stream.pix_fmt = "yuv420p"
-        out_stream.options = {"movflags": "+faststart"}
-        out_stream.time_base = 1 / out_fps
-
         pts = 0
 
         def clone_frame(f: av.VideoFrame) -> av.VideoFrame:
