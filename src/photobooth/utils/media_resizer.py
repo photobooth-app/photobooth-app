@@ -129,6 +129,8 @@ def resize_mp4(filepath_in: Path, filepath_out: Path, scaled_min_length: int):
 
     output_container = av.open(filepath_out, mode="w", options={"movflags": "faststart"})
     output_stream: VideoStream = output_container.add_stream("h264", rate=input_stream.codec_context.framerate)  # rate is fps
+    output_stream.thread_type = "AUTO"  # speed up encoding
+    output_stream.thread_count = 0
     output_stream.width = ow
     output_stream.height = oh
     output_stream.codec_context.options["preset"] = "veryfast"
