@@ -149,7 +149,7 @@ dev = [
   # "zuban>=0.9.0",
   "poethepoet",
   "wigglecam[node]",
-  "pyturbojpeg~=1.8.0",
+  "pyturbojpeg>=1.8,<2.6",
 ]
 
 
