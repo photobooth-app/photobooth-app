@@ -143,7 +143,7 @@ dev = [
   "coverage[toml]",
   "httpx2",
   "pydot",
-  "pre-commit",
+  # "pre-commit",
   "basedpyright>=1.39.9",
   # "pyright",
   # "zuban>=0.9.0",
