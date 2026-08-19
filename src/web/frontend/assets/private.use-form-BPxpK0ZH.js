@@ -1,1 +1,0 @@
-import{B as e,g as t}from"./runtime-core.esm-bundler-DTnvIjeT.js";var n={name:String};function r(e){return t(()=>({type:`hidden`,name:e.name,value:e.modelValue}))}function i(t={}){return(n,r,i)=>{n[r](e(`input`,{class:`hidden`+(i||``),...t.value}))}}function a(e){return t(()=>e.name||e.for)}export{n as i,i as n,a as r,r as t};
