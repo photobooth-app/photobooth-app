@@ -104,7 +104,7 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
 
 
 @router.get("/stream.mjpg")
-def video_stream(index_device: int = 0, index_subdevice: int = 0):
+def video_stream(index_device: int | None = None, index_subdevice: int = 0):
     if not appconfig.cameras.enable_livestream:
         raise HTTPException(status.HTTP_405_METHOD_NOT_ALLOWED, "preview not enabled")
 
