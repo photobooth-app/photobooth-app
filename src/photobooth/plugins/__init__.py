@@ -118,6 +118,11 @@ class PluginMediaprocessingSpec:
         """gather all filter to be displayed by plugins"""
         return []
 
+    @hookspec
+    def mp_long_running_filter(self) -> list[str]:
+        """gather all long-running/AI filters provided by plugins"""
+        return []
+
 
 class PluginMediacollectionSpec:
     @hookspec  # list of files added to the collection

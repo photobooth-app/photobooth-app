@@ -24,6 +24,7 @@ from ..config.groups.actions import (
 )
 from ..config.models.models import AnimationMergeDefinition, CollageMergeDefinition
 from ..mediaprocessing.processes import process_phase1images
+from ..mediaprocessing.steps.image import get_plugin_long_running_filters
 from .machine.processingmachine import ProcessingMachine
 from .models import CaptureSet, UiCaptureDefinition, UiFrameOverlay, UiJobModel
 
@@ -78,6 +79,25 @@ class JobModelBase(ABC, Generic[T]):
     def __repr__(self):
         return f"<{self.__class__.__name__}> job-id={self._job_identifier} total captures to take={self.total_captures_to_take}"
 
+    @property
+    def is_long_running_filter(self) -> bool:
+        long_running_filters = get_plugin_long_running_filters()
+        if not long_running_filters:
+            return False
+
+        if hasattr(self._configuration_set, "processing") and hasattr(self._configuration_set.processing, "image_filter"):
+            filter_val = self._configuration_set.processing.image_filter
+            filter_name = filter_val.value if hasattr(filter_val, "value") else str(filter_val)
+            if filter_name in long_running_filters:
+                return True
+        return False
+
+    @property
+    def latest_capture_id(self) -> str | None:
+        if self._capture_sets and self._capture_sets[-1].captures:
+            return str(self._capture_sets[-1].captures[-1].uuid)
+        return None
+
     def export(self) -> UiJobModel:
         """Export model as dict for UI (needs to be jsonserializable)"""
         return UiJobModel(
@@ -90,6 +110,8 @@ class JobModelBase(ABC, Generic[T]):
             approval_id=str(self._approval_id) if self._approval_id else None,
             frame_overlay=self.frame_overlay,
             captures_definition=self.captures_definition,
+            is_long_running_filter=self.is_long_running_filter,
+            latest_capture_id=self.latest_capture_id,
         )
 
     ## states logic to implement by the models

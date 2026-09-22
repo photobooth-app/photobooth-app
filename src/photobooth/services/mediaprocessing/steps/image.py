@@ -40,6 +40,10 @@ def get_plugin_userselectable_filters():
     return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*pm.hook.mp_userselectable_filter()))
 
 
+def get_plugin_long_running_filters() -> list[str]:
+    return list(chain(*pm.hook.mp_long_running_filter()))
+
+
 PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)
 
 
