@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field, FilePath
+from pydantic import BaseModel, Field
+
+from .models import FilePathOrNone
 
 
 class FrameOverlay(BaseModel):
@@ -6,7 +8,7 @@ class FrameOverlay(BaseModel):
         default=False,
         description="Enable to overlay to be displayed.",
     )
-    image: FilePath | None = Field(
+    image: FilePathOrNone = Field(
         # factories are not part of json schema export. path is not json convertible so it would warn and not include the default. using factory, we skip the warning for same outcome.
         default=None,
         description="This image frame is overlayed the camera images. This image determines the output image size and aspect ratio during image processing. Photos are visible through transparant parts, so the overlay should be in PNG format usually.",
