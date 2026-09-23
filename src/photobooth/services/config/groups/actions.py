@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 from pydantic_extra_types.color import Color
 
 from ..models.frameoverlay import FrameOverlay
-from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PluginFilters, TextsConfig
+from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, FilePathOrNone, PluginFilters, TextsConfig
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
 
 
@@ -114,7 +114,7 @@ class SingleImageProcessing(BaseModel):
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
-    img_background_file: FilePath | None = Field(
+    img_background_file: FilePathOrNone = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
@@ -165,7 +165,7 @@ class CollageProcessing(BaseModel):
         default=False,
         description="Add image from file to background (useful only if image is extended or background removed)",
     )
-    capture_img_background_file: FilePath | None = Field(
+    capture_img_background_file: FilePathOrNone = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
@@ -196,7 +196,7 @@ class CollageProcessing(BaseModel):
         default=False,
         description="Add image from file to background.",
     )
-    canvas_img_background_file: FilePath | None = Field(
+    canvas_img_background_file: FilePathOrNone = Field(
         default=None,
         description="Image file to use as background filling transparent area. File needs to be located in userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
@@ -205,7 +205,7 @@ class CollageProcessing(BaseModel):
         default=False,
         description="Overlay image on canvas image.",
     )
-    canvas_img_front_file: FilePath | None = Field(
+    canvas_img_front_file: FilePathOrNone = Field(
         default=None,
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},

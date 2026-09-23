@@ -1,9 +1,29 @@
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import BaseModel, Field, FilePath, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, BeforeValidator, Field, NonNegativeInt, PositiveInt
 from pydantic_extra_types.color import Color
 
 from ...mediaprocessing.steps.image import PluginFilters
+
+
+def _empty_str_to_path(v: str | Path | None) -> Path | None:
+    """Convert empty strings to None, validate non-empty paths exist as files."""
+    if v is None:
+        return None
+    if isinstance(v, Path):
+        if not v.is_file():
+            raise ValueError(f"Path does not point to a file: {v}")
+        return v
+    if isinstance(v, str) and v.strip() == "":
+        return None
+    path = Path(v)
+    if not path.is_file():
+        raise ValueError(f"Path does not point to a file: {path}")
+    return path
+
+
+FilePathOrNone = Annotated[Path | None, BeforeValidator(_empty_str_to_path)]
 
 
 class TextsConfig(BaseModel):
@@ -12,7 +32,7 @@ class TextsConfig(BaseModel):
     pos_y: NonNegativeInt = 50
     rotate: int = 0
     font_size: PositiveInt = 40
-    font: FilePath | None = Field(
+    font: FilePathOrNone = Field(
         # factories are not part of json schema export. path is not json convertible so it would warn and not include the default. using factory, we skip the warning for same outcome.
         default_factory=lambda: Path("userdata/demoassets/fonts/Roboto-Bold.ttf"),
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
@@ -49,7 +69,7 @@ class CollageMergeDefinition(BaseModel):
         default=0,
         description="Rotate the image before merging. Positive numbers rotate counterclockwise, negative clockwise.",
     )
-    predefined_image: FilePath | None = Field(
+    predefined_image: FilePathOrNone = Field(
         default=None,
         description="Use a predefined image instead of a capture from camera for static content.",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
@@ -61,7 +81,7 @@ class CollageMergeDefinition(BaseModel):
 
 class AnimationMergeDefinition(BaseModel):
     duration: NonNegativeInt = 2000
-    predefined_image: FilePath | None = Field(
+    predefined_image: FilePathOrNone = Field(
         default=None,
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
