@@ -83,6 +83,26 @@ def test_invalid_modechange(client: TestClient):
     "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
     side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
 )
+def test_mjpeg_stream_uses_configured_video_backend(mock_gen_stream, client: TestClient):
+    """Without an explicit index_device the stream must use the configured video backend.
+
+    AcquisitionService.wait_for_lores_image selects the backend configured via
+    index_backend_video when index_device is None, and a positional backend
+    otherwise. The endpoint therefore has to pass None, not 0, or the
+    configuration is silently bypassed.
+    """
+    response = client.get("/aquisition/stream.mjpg")
+    assert response.status_code == 200
+    # consume the generator so the mocked call actually happens
+    _ = response.content
+
+    mock_gen_stream.assert_called_with(None, 0)
+
+
+@patch(
+    "photobooth.services.acquisition.AcquisitionService.wait_for_lores_image",
+    side_effect=[DUMMY_JPEG, BackendNotRunning("simulate backend stop")],
+)
 def test_mjpeg_stream(mock_gen_stream, client: TestClient):
     response = client.get("/aquisition/stream.mjpg")
     assert response.status_code == 200
