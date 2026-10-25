@@ -23,6 +23,13 @@ def test_get_avail_filter(client: TestClient):
     assert response.is_success
 
 
+def test_get_long_running_filters(client: TestClient):
+    response = client.get("/filter/long_running")
+
+    assert response.is_success
+    assert isinstance(response.json(), list)
+
+
 def test_get_avail_filter_err(client: TestClient):
     # https://docs.python.org/3/library/unittest.mock.html#where-to-patch
     with patch.object(photobooth.routers.api.filter, "get_plugin_userselectable_filters", side_effect=RuntimeError("mock")):

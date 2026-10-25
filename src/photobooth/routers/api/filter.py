@@ -8,7 +8,7 @@ from ...container import container
 from ...services.config.groups.actions import SingleImageProcessing
 from ...services.config.models.models import PluginFilters
 from ...services.mediaprocessing.processes import process_image_inner, process_phase1images
-from ...services.mediaprocessing.steps.image import get_plugin_userselectable_filters
+from ...services.mediaprocessing.steps.image import get_plugin_long_running_filters, get_plugin_userselectable_filters
 from ...utils.exceptions import PipelineError
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,16 @@ def api_get_userselectable_filters():
 
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting selected filters: {exc}") from exc
+
+    return plugin_results
+
+
+@router.get("/long_running")
+def api_get_long_running_filters():
+    try:
+        plugin_results: list[str] = get_plugin_long_running_filters()
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error getting long running filters: {exc}") from exc
 
     return plugin_results
 

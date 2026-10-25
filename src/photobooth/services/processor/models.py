@@ -27,6 +27,8 @@ class UiJobModel:
     approval_id: str | None
     captures_definition: UiCaptureDefinition | None
     frame_overlay: UiFrameOverlay | None
+    is_long_running_filter: bool = False
+    latest_capture_id: str | None = None
 
 
 @dataclass
