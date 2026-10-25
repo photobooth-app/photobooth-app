@@ -199,7 +199,7 @@ class ModeController:
                 idle = time.monotonic() - self._last_live_request
                 act = self.active_mode
 
-            if idle > self.idle_timeout and act == "video":
+            if idle > self.idle_timeout and act in ("video", "still"):
                 logger.info(f"pause camera stream after {self.idle_timeout} idle timeout.")
 
                 self._last_live_request = None
@@ -353,6 +353,11 @@ class AbstractBackend(ResilientService, ABC):
 
         with req.condition:
             ok = req.condition.wait(timeout=8)
+
+            # TODO: add logic to return to standby or video if this backend is NOT the livestream-backend.
+            # reason: if it is the livestream backend, the frontend would ask for a stream and the camera switch to video
+            # for DSLR usually the viewfinder is reset when reverting to video again and the camera is ready for the next capture.
+            self._mode_machine.request_standby()
 
             if not ok:
                 raise TimeoutError("timeout waiting for hires frame")
