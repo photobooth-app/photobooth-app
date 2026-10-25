@@ -50,23 +50,15 @@ def webcameras() -> list[str]:
         return devices
 
     def _webcameras_windows() -> list[str]:
-        devices = []
+        devices: list[str] = []
         try:
-            # PowerShell command to fetch usb webcams (1st line) as well as internal cameras (2nd line)
             pwsh = r"""
-            $pnpdevs = @(Get-PnpDevice -Status OK |
-                Where-Object { $_.Class -in @("Camera","Image") } |
+            $cameras = @(Get-PnpDevice -Class "Camera" -Status OK |
                 Select-Object -ExpandProperty FriendlyName)
 
-            $cimdevs = @(Get-CimInstance Win32_PnPEntity |
-                Where-Object { $_.Name -match "Camera" -or $_.Caption -match "Camera" } |
-                Select-Object -ExpandProperty Name)
-
-
-            # Combine first, then sort, then convert to json
-            ($pnpdevs + $cimdevs) |
-                Sort-Object -Unique |
-                ConvertTo-Json
+            [pscustomobject]@{
+                devices = @($cameras | Sort-Object -Unique)
+            } | ConvertTo-Json -Compress
             """
 
             result = subprocess.run(
@@ -75,8 +67,7 @@ def webcameras() -> list[str]:
                 text=True,
                 check=True,
             )
-
-            devices = json.loads(result.stdout)
+            devices = json.loads(result.stdout)["devices"]
 
         except Exception as exc:
             logger.warning(f"error enumerating webcams: {exc}")
