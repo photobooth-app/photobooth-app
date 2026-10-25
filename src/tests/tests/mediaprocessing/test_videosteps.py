@@ -40,8 +40,6 @@ def test_video_boomerang_stage():
 
         logger.warning(container_in.format)
         logger.warning(container_in.bit_rate)
-        logger.warning(container_in.metadata_encoding)
-        logger.warning(container_in.stream_options)
         logger.warning(container_in.options)
         logger.warning(container_in.container_options)
         logger.warning(container_in.streams[0])

@@ -141,7 +141,8 @@ class BoomerangStep(PipelineStep):
             assert in_time_base, "cannot determine timebase of input stream"
             assert in_stream_duration, "cannot determine duration of input stream"
             frame_duration_ts = int((1 / in_fps) / in_time_base)
-            out_scaled_time_base = in_time_base / Fraction(self.boomerang_speed).limit_denominator(100)
+            in_time_base_fraction = Fraction(in_time_base.numerator, in_time_base.denominator)
+            out_scaled_time_base = in_time_base_fraction / Fraction(self.boomerang_speed).limit_denominator(100)
 
             out_stream = output.add_stream("h264", rate=in_fps)
             out_stream.width = in_stream.width
