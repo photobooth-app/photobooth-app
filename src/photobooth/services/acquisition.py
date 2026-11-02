@@ -13,6 +13,7 @@ from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import BackendNotRunning
 from .backends.abstractbackend import AbstractBackend
 from .backends.encoder.video import SoftwareVideoRecorder
+from .backends.olympus import OlympusBackend
 from .base import BaseService
 
 logger = logging.getLogger(f"{__name__}-app")
@@ -164,7 +165,11 @@ class AcquisitionService(BaseService):
     @staticmethod
     def _import_backend(backend: str):
         # dynamic import of backend
-
+    # Ajoutez la condition pour Olympus :
+        if backend in ("Olympus", "OlympusBackend"):
+            from .backends.olympus import OlympusBackend
+            return OlympusBackend
+        
         module_path = f".backends.{backend.lower()}"
         class_name = f"{backend}Backend"
         pkg = ".".join(__name__.split(".")[:-1])  # to allow relative imports

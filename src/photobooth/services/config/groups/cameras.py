@@ -155,6 +155,22 @@ class Gphoto2Parameters(BaseModel):
         description="A field just for you to keep track why you chose a setting.",
     )
 
+# 1. Définissez la configuration de l'Olympus :
+class GroupCameraOlympus(BaseModel):
+    model_config = ConfigDict(title="Olympus")
+    backend_type: Literal["Olympus"] = "Olympus"
+    device_ip: str = Field(
+        default="192.168.0.10",
+        description="Adresse IP Wi-Fi de l'appareil photo Olympus.",
+    )
+    liveview_port: int = Field(
+        default=40000,
+        description="Port UDP local utilisé pour le flux LiveView RTP.",
+    )
+    capture_timeout: float = Field(
+        default=10.0,
+        description="Délai maximum de téléchargement de l'image (secondes).",
+    )
 
 class GroupCameraGphoto2(BaseModelCamera):
     model_config = ConfigDict(title="Gphoto2")
@@ -340,7 +356,7 @@ class GroupCameraWigglecam(BaseModelCamera):
 
 
 BackendsBase = GroupCameraVirtual | GroupCameraPyav | GroupCameraWigglecam
-BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2
+BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2 | GroupCameraOlympus
 BackendsWindows = GroupCameraDigicamcontrol
 BackendsDarwin = GroupCameraGphoto2
 if sys.platform == "win32":
@@ -431,3 +447,4 @@ class GroupCameras(BaseModel):
         description="Configure the cameras here. Typical is only one camera, but it is also possible to use a DSLR for stills and another camera for the livestream.",
         title="List of Camera Backends",
     )
+

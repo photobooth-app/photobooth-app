@@ -1178,6 +1178,18 @@ wheels = [
 ]
 
 [[package]]
+name = "olympuswifi"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pillow" },
+    { name = "requests" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/2a/f2b1b83b33895b68a68c7ec311232a55eebb26dad2895e018832e3e392bd/olympuswifi-1.0.1-py3-none-any.whl", hash = "sha256:d351e8ea08e09bc1604e79d707f80f42b5ed18d72591d78e467c3e169d2e1c74", size = 21351, upload-time = "2026-02-26T16:22:27.22Z" },
+]
+
+[[package]]
 name = "onnxruntime"
 version = "1.31.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1271,6 +1283,7 @@ dependencies = [
     { name = "linuxpy", marker = "sys_platform == 'linux'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "olympuswifi" },
     { name = "onnxruntime" },
     { name = "opencv-python-headless" },
     { name = "piexif" },
@@ -1324,6 +1337,7 @@ requires-dist = [
     { name = "jsonref", specifier = ">=1.1.0" },
     { name = "linuxpy", marker = "sys_platform == 'linux'", specifier = ">=0.10.0" },
     { name = "numpy", specifier = ">=2.0.0" },
+    { name = "olympuswifi", specifier = ">=1.0.1" },
     { name = "onnxruntime", specifier = ">=1.29.0,<1.32.0" },
     { name = "opencv-python-headless", specifier = "~=5.0.0" },
     { name = "piexif", specifier = ">=1.1.3" },

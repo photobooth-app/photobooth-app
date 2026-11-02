@@ -66,6 +66,7 @@ dependencies = [
   "pywin32; platform_system == 'Windows'",
   # "pyqt5>=5.15.11",
   # "tzlocal>=5.4.4",
+  "olympuswifi>=1.0.1",
 ]
 
 [project.scripts]
