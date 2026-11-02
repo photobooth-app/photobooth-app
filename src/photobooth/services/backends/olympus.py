@@ -7,128 +7,215 @@ from typing import Optional
 
 from olympuswifi.camera import OlympusCamera
 from olympuswifi.liveview import LiveViewReceiver
-from pydantic import BaseModel, Field
 
-from ..config.groups.cameras import GroupCameraOlympus
+from ..config.groups.cameras import GroupCameraOlympus, Orientation
 from .abstractbackend import AbstractBackend
 
 logger = logging.getLogger(__name__)
 
-
-
 class OlympusBackend(AbstractBackend):
-    def __init__(self, config: GroupCameraOlympus):
-        super().__init__(config)
-        self._config: GroupCameraOlympus = config
+    def __init__(self, config1: GroupCameraOlympus):
+        # On transmet num_subdevices=1 et idle_timeout attendus par AbstractBackend
+        num_subdevices: int = 1
+        idle_timeout: float = getattr(config1, "idle_timeout", 30.0)
+        super().__init__(
+            num_subdevices=num_subdevices,
+            idle_timeout=idle_timeout,
+            orientation="1: 0°", 
+        )
+
+        self._config: GroupCameraOlympus = config1
         self._camera: Optional[OlympusCamera] = None
         self._receiver: Optional[LiveViewReceiver] = None
         self._receiver_thread: Optional[threading.Thread] = None
         self._frame_queue: queue.SimpleQueue = queue.SimpleQueue()
-        self._run_flag: bool = False
+        self._worker_thread: Optional[threading.Thread] = None
+        self._stop_event = threading.Event()
 
-    def _device_connect(self):
-        """Initialise la communication avec l'appareil."""
-        logger.info(f"Connexion à l'appareil Olympus sur {self._config.device_ip}...")
+    # -------------------------------------------------------------------------
+    # Gestion de la connexion avec tolérance de panne
+    # -------------------------------------------------------------------------
+    def _connect_camera(self) -> bool:
+        """Tente d'établir la connexion avec l'appareil sans lever d'exception bloquante."""
+        if self._camera is not None:
+            return True
+
         try:
-            self._camera = OlympusCamera(server=self._config.device_ip)
-            # Met l'appareil en mode télécommande (rec/standalone) si nécessaire
-            model_info = self._camera.get_camera_info()
-            logger.info(f"Appareil Olympus connecté : {model_info}")
+            logger.info(f"Tentative de détection Olympus sur {self._config.device_ip}...")
+            cam = OlympusCamera(server=self._config.device_ip)
+            # Teste si la caméra répond effectivement
+            cam.get_camera_info()
+            self._camera = cam
+            logger.info("Appareil Olympus détecté et connecté avec succès.")
+            return True
         except Exception as exc:
-            logger.critical(f"Impossible de joindre l'appareil Olympus : {exc}")
-            raise ConnectionError(f"Échec de connexion Olympus : {exc}") from exc
+            logger.warning(
+                f"Appareil Olympus non joignable ({self._config.device_ip}) : {exc}. "
+                "L'application continue, tentative de reconnexion en arrière-plan."
+            )
+            self._camera = None
+            return False
 
-    def _device_disconnect(self):
-        """Arrête la prévisualisation et ferme la connexion."""
-        self._run_flag = False
+    # -------------------------------------------------------------------------
+    # Cycle de vie et ressources
+    # -------------------------------------------------------------------------
+    def setup_resource(self):
+        """Initialise la mémoire sans faire planter Photobooth si la caméra est éteinte."""
+        self._frame_queue = queue.SimpleQueue()
+        self._receiver = LiveViewReceiver(self._frame_queue)
+
+        # On tente une première connexion, mais sans bloquer si elle échoue
+        self._connect_camera()
+
+    def teardown_resource(self):
+        """Nettoie proprement toutes les connexions."""
+        if self._receiver:
+            try:
+                self._receiver.shut_down()
+            except Exception as exc:
+                logger.debug(f"Erreur arrêt receiver : {exc}")
+            self._receiver = None
+
         if self._camera:
             try:
                 self._camera.stop_liveview()
             except Exception as exc:
-                logger.debug(f"Erreur lors de l'arrêt du liveview: {exc}")
+                logger.debug(f"Erreur coupure liveview : {exc}")
             self._camera = None
 
-    def _device_start(self):
-        """Démarre le flux vidéo temps réel (RTP over UDP)."""
-        if not self._camera:
-            self._device_connect()
-
-        self._run_flag = True
-        self._frame_queue = queue.SimpleQueue()
-
-        # Démarrage du récepteur RTP LiveView
-        self._receiver = LiveViewReceiver(self._frame_queue, port=self._config.liveview_port)
-        self._receiver_thread = threading.Thread(
-            target=self._receiver.receive_packets,
+    def start(self):
+        self._stop_event.clear()
+        self.setup_resource()
+        self._worker_thread = threading.Thread(
+            target=self.run_service,
+            name="OlympusBackendWorker",
             daemon=True,
-            name="OlympusLiveViewReceiver",
         )
-        self._receiver_thread.start()
+        self._worker_thread.start()
+        logger.info("Service OlympusBackend prêt.")
 
-        # Commande à l'appareil d'envoyer le flux vers notre port UDP
-        self._camera.start_liveview(port=self._config.liveview_port)
-        logger.info(f"Liveview Olympus démarré sur le port UDP {self._config.liveview_port}")
+    def stop(self):
+        self._stop_event.set()
+        if self._worker_thread and self._worker_thread.is_alive():
+            self._worker_thread.join(timeout=3.0)
+        self.teardown_resource()
+        logger.info("Service OlympusBackend arrêté.")
 
-    def _device_stop(self):
-        """Arrête le worker de réception vidéo."""
-        self._run_flag = False
-        if self._receiver:
-            self._receiver.shut_down()
-        if self._receiver_thread and self._receiver_thread.is_alive():
-            self._receiver_thread.join(timeout=2.0)
-        self._device_disconnect()
+    # -------------------------------------------------------------------------
+    # Boucle de streaming et reconnexion automatique
+    # -------------------------------------------------------------------------
+    def run_service(self):
+        logger.info("Boucle de surveillance Olympus active.")
+        last_reconnect_try = 0.0
 
-    def _wait_for_lores_frame(self) -> bytes:
-        """
-        Appelé en boucle par le service d'acquisition pour alimenter le stream MJPEG
-        de l'interface web.
-        """
+        while not self._stop_event.is_set():
+            # Si la caméra n'est pas connectée, réessaie toutes les 5 secondes
+            if self._camera is None:
+                now = time.time()
+                if (now - last_reconnect_try) > 5.0:
+                    last_reconnect_try = now
+                    if self._connect_camera() and self._is_video_mode_requested:
+                        # Si le liveview avait déjà été demandé par l'IHM, on le lance
+                        self._handle_switchmode_video_mode()
+                time.sleep(0.5)
+                continue
+
+            try:
+                # Lecture des trames UDP LiveView
+                frame = self._frame_queue.get(block=True, timeout=0.5)
+                jpeg_bytes = frame.jpeg
+
+                if hasattr(self, "_publish_lores_frame"):
+                    self._publish_lores_frame(jpeg_bytes)
+                elif hasattr(self, "_pub_lores_frame"):
+                    self._pub_lores_frame(jpeg_bytes)
+
+            except queue.Empty:
+                continue
+            except Exception as exc:
+                logger.debug(f"Perte temporaire de flux liveview : {exc}")
+                time.sleep(0.1)
+
+    # -------------------------------------------------------------------------
+    # Transitions de mode
+    # -------------------------------------------------------------------------
+    def _handle_switchmode_init(self):
+        logger.debug("Olympus: transition INIT")
+
+    def _handle_switchmode_standby(self):
+        self._is_video_mode_requested = False
+        if self._camera:
+            try:
+                self._camera.stop_liveview()
+            except Exception as exc:
+                logger.debug(f"Erreur arrêt liveview : {exc}")
+
+    def _handle_switchmode_video_mode(self):
+        self._is_video_mode_requested = True
+        if self._camera is None:
+            if not self._connect_camera():
+                return
+
         try:
-            # Récupère l'image JPEG la plus récente de la file
-            # Timeout court pour ne pas bloquer le thread si des paquets sont perdus
-            frame_item = self._frame_queue.get(block=True, timeout=1.0)
-            # L'objet retourné par LiveViewReceiver contient l'attribut .jpeg (bytes JPEG)
-            return frame_item.jpeg
-        except queue.Empty:
-            raise TimeoutError("Délai dépassé lors de l'attente d'une frame LiveView Olympus.")
+            # Démarre le thread de réception UDP s'il n'est pas actif
+            if self._receiver and (self._receiver_thread is None or not self._receiver_thread.is_alive()):
+                self._receiver_thread = threading.Thread(
+                    target=self._receiver.receive_packets,
+                    name="OlympusLiveViewUDP",
+                    daemon=True,
+                )
+                self._receiver_thread.start()
 
+            self._camera.start_liveview(port=self._config.liveview_port)
+            logger.info("Olympus: flux LiveView démarré.")
+        except Exception as exc:
+            logger.warning(f"Impossible de démarrer le liveview Olympus : {exc}")
+            self._camera = None  # Marque la caméra comme déconnectée pour retenter
+
+    def _handle_switchmode_still_mode(self):
+        logger.info("Olympus: préparation déclenchement (still mode)")
+        if self._camera:
+            try:
+                self._camera.stop_liveview()
+            except Exception:
+                pass
+
+    # -------------------------------------------------------------------------
+    # Prise de vue
+    # -------------------------------------------------------------------------
     def _wait_for_still_file(self) -> Path:
-        """
-        Déclenche la prise de vue, télécharge l'image haute définition
-        et renvoie le chemin vers le fichier local.
-        """
-        if not self._camera:
-            raise RuntimeError("L'appareil Olympus n'est pas initialisé.")
+        """Déclenche la capture. Si l'appareil est éteint, lève une erreur gérée par l'IHM."""
+        if self._camera is None and not self._connect_camera():
+            raise ConnectionError("L'appareil photo Olympus n'est pas joignable (éteint ou Wi-Fi déconnecté).")
 
-        logger.info("Déclenchement de la prise de vue sur l'appareil Olympus...")
+        logger.info("Déclenchement de la photo Olympus...")
+        try:
+            existing_images = self._camera.list_images()
+            last_image = existing_images[-1] if existing_images else None
 
-        # 1. Lister les photos existantes pour identifier le nouveau fichier
-        existing_images = self._camera.list_images()
-        last_known_image = existing_images[-1] if existing_images else None
+            self._camera.take_picture()
 
-        # 2. Prendre la photo
-        self._camera.take_picture()
+            start_time = time.time()
+            new_file = None
+            while (time.time() - start_time) < self._config.capture_timeout:
+                time.sleep(0.5)
+                images = self._camera.list_images()
+                if images and images[-1] != last_image:
+                    new_file = images[-1]
+                    break
 
-        # 3. Attendre l'apparition du nouveau fichier sur la carte SD
-        start_time = time.time()
-        new_image_name = None
+            if not new_file:
+                raise TimeoutError("Délai dépassé : aucune nouvelle photo trouvée sur l'Olympus.")
 
-        while (time.time() - start_time) < self._config.capture_timeout:
-            time.sleep(0.5)
-            updated_images = self._camera.list_images()
-            if updated_images and updated_images[-1] != last_known_image:
-                new_image_name = updated_images[-1]
-                break
+            dest_dir = Path("/tmp/photobooth_olympus")
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_file = dest_dir / Path(new_file).name
 
-        if not new_image_name:
-            raise TimeoutError("L'appareil Olympus n'a pas enregistré de nouvelle image dans le temps imparti.")
+            logger.info(f"Téléchargement de {new_file} vers {dest_file}...")
+            self._camera.download_image(new_file, str(dest_file))
+            return dest_file
 
-        # 4. Télécharger l'image dans le dossier temporaire du photobooth
-        tmp_target_dir = Path("/tmp/photobooth_olympus")
-        tmp_target_dir.mkdir(parents=True, exist_ok=True)
-        local_filepath = tmp_target_dir / Path(new_image_name).name
-
-        logger.info(f"Téléchargement de {new_image_name} vers {local_filepath}...")
-        self._camera.download_image(new_image_name, str(local_filepath))
-
-        return local_filepath
+        except Exception as exc:
+            # Marque la caméra déconnectée en cas de coupure brutale (batterie vide, etc.)
+            self._camera = None
+            raise RuntimeError(f"Erreur durant la capture Olympus : {exc}") from exc
