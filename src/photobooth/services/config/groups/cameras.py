@@ -160,8 +160,8 @@ class GroupCameraOlympus(BaseModel):
     model_config = ConfigDict(title="Olympus")
     backend_type: Literal["Olympus"] = "Olympus"
     device_ip: str = Field(
-        default="192.168.0.10",
-        description="Adresse IP Wi-Fi de l'appareil photo Olympus.",
+            default="192.168.0.10",
+            description="Adresse IP Wi-Fi de l'appareil photo Olympus.",
     )
     liveview_port: int = Field(
         default=40000,
@@ -171,6 +171,20 @@ class GroupCameraOlympus(BaseModel):
         default=10.0,
         description="Délai maximum de téléchargement de l'image (secondes).",
     )
+    camera_settle_after_capture: float = Field(
+        default=1.5,
+        ge=0.0,
+        description="Durée de stabilisation après une photo avant la reprise du livestream (secondes).",
+    )
+    camera_standby_when_inactive: bool = Field(
+        default=True,
+        description="Mettre en veille le streaming en cas d'inactivité.",
+    )
+    camera_standby_when_inactive_time: float = Field(
+        default=30.0,
+        description="Délai d'inactivité avant veille (secondes).",
+    )
+
 
 class GroupCameraGphoto2(BaseModelCamera):
     model_config = ConfigDict(title="Gphoto2")
