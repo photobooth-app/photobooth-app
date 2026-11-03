@@ -159,6 +159,10 @@ class Gphoto2Parameters(BaseModel):
 class GroupCameraOlympus(BaseModel):
     model_config = ConfigDict(title="Olympus")
     backend_type: Literal["Olympus"] = "Olympus"
+    orientation: Orientation = Field(
+        default="1: 0°",
+        description="Choisissez l'orientation de l'appareil photo. 0° est l'orientation par défaut (aucun ajustement). L'orientation est écrite dans les métadonnées EXIF pour des transformations sans perte.",
+    )
     device_ip: str = Field(
             default="192.168.0.10",
             description="Adresse IP Wi-Fi de l'appareil photo Olympus.",

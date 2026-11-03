@@ -2,9 +2,8 @@
 
 Drives a wifi-enabled Olympus camera through the ``olympuswifi`` library
 (https://olympus-wifi.readthedocs.io). The camera acts as its own wifi access
-point and always exposes its control interface at 192.168.0.10, so the backend
-connects directly to that address (the ``device_ip`` config value is only
-informational for this backend).
+point and normally exposes its control interface at 192.168.0.10; the
+``device_ip`` config value lets this backend override that address.
 
 How it works:
     - liveview (``wait_for_lores_image``): the camera streams MJPEG over
@@ -36,8 +35,55 @@ from .abstractbackend import AbstractBackend, StillRequest
 
 logger = logging.getLogger(__name__)
 
-# Fixed well-known address of an Olympus wifi camera.
-CAMERA_WIFI_IP = "192.168.0.10"
+
+def run_bounded(fn, *args, timeout: float = 3.0, desc: str = "camera command", **kwargs):
+    """Run a camera call with a hard time cap.
+
+    ``olympuswifi`` issues HTTP requests without a timeout, so a call against an
+    unreachable camera could block the worker (and therefore shutdown, whose
+    ``ResilientService`` join is unbounded) for a very long time. This runs the
+    call on a daemon thread and gives up after ``timeout`` seconds, raising
+    ``TimeoutError``. On a real exception inside the call, it is re-raised.
+    """
+    result: dict = {}
+
+    def target():
+        try:
+            result["value"] = fn(*args, **kwargs)
+        except BaseException as exc:  # noqa: BLE001 - propagate whatever failed
+            result["error"] = exc
+
+    thread = threading.Thread(target=target, daemon=True)
+    thread.start()
+    thread.join(timeout)
+
+    if thread.is_alive():
+        raise TimeoutError(f"Olympus {desc} timed out after {timeout}s (camera unreachable?)")
+    if "error" in result:
+        raise result["error"]
+    return result.get("value")
+
+
+# Default well-known address of an Olympus wifi camera.
+DEFAULT_CAMERA_WIFI_IP = "192.168.0.10"
+
+
+def create_olympus_camera(ip: str) -> OlympusCamera:
+    """Build an ``OlympusCamera`` bound to the given wifi address.
+
+    ``olympuswifi`` hardcodes the camera address in the class attributes
+    ``URL_PREFIX`` and ``HEADERS['Host']`` and contacts it from the constructor,
+    so we override those attributes on a small subclass *before* instantiation.
+    This keeps ``device_ip`` meaningful while leaving the library class untouched.
+    """
+    ip = (ip or DEFAULT_CAMERA_WIFI_IP).strip()
+    base = OlympusCamera
+
+    class ConfigurableOlympusCamera(base):
+        URL_PREFIX = f"http://{ip}/"
+        HEADERS = {**base.HEADERS, "Host": ip}
+
+    return ConfigurableOlympusCamera()
 
 
 def select_liveview_quality(camera: OlympusCamera) -> str:
@@ -78,8 +124,7 @@ class OlympusBackend(AbstractBackend):
 
     def __init__(self, config: GroupCameraOlympus):
         super().__init__(
-            # GroupCameraOlympus has no orientation field yet; keep a sane default.
-            orientation=getattr(config, "orientation", "1: 0°"),
+            orientation=config.orientation,
             num_subdevices=1,
             idle_timeout=(
                 config.camera_standby_when_inactive_time
@@ -137,26 +182,55 @@ class OlympusBackend(AbstractBackend):
         if self._camera is not None:
             return True
 
+        ip = self._config.device_ip or DEFAULT_CAMERA_WIFI_IP
         try:
-            camera = OlympusCamera()  # contacts http://192.168.0.10/
+            # The OlympusCamera constructor itself performs an unbounded HTTP
+            # request (get_commandlist). It must be capped too, otherwise a
+            # reconnect attempt at shutdown blocks the worker and hangs stop().
+            camera = run_bounded(
+                create_olympus_camera,
+                ip,
+                timeout=5.0,
+                desc="connect/get_commandlist",
+            )
+            if camera is None:
+                raise RuntimeError("Olympus: connect returned no camera object.")
             info = camera.get_camera_info()
             if not info or "model" not in info:
-                logger.warning(f"Olympus camera did not answer on {CAMERA_WIFI_IP}.")
+                logger.warning(f"Olympus camera did not answer on {ip}.")
                 return False
 
             self._camera = camera
             self._lvqty = select_liveview_quality(camera)
             self._liveview_active = False  # fresh camera object -> fresh state
-            logger.info(f"Connected to Olympus {info.get('model')}.")
+            logger.info(f"Connected to Olympus {info.get('model')} on {ip}.")
             return True
         except Exception as exc:
-            logger.warning(f"Olympus camera not reachable ({CAMERA_WIFI_IP}): {exc}")
+            logger.warning(f"Olympus camera not reachable ({ip}): {exc}")
             self._camera = None
             return False
 
     # ------------------------------------------------------------------
     # Liveview
     # ------------------------------------------------------------------
+    def _ensure_receiver(self) -> None:
+        """Make sure the UDP liveview receiver thread is running.
+
+        ``receive_packets(port)`` binds the socket, hence the explicit port.
+        Self-healing: if the thread died (socket error), this recreates it so
+        the stream resumes without a full backend restart.
+        """
+        if self._receiver is None:
+            self._receiver = LiveViewReceiver(self._frame_queue)
+        if self._receiver_thread is None or not self._receiver_thread.is_alive():
+            self._receiver_thread = threading.Thread(
+                target=self._receiver.receive_packets,
+                args=(self._config.liveview_port,),
+                name="OlympusLiveViewUDP",
+                daemon=True,
+            )
+            self._receiver_thread.start()
+
     def _start_liveview(self) -> None:
         if self._liveview_active:
             return
@@ -176,22 +250,15 @@ class OlympusBackend(AbstractBackend):
 
         try:
             # The UDP receiver must bind the local port before the camera is
-            # told to broadcast, so start it first. receive_packets(port) binds
-            # the socket, hence the explicit port argument.
-            if self._receiver is None:
-                self._receiver = LiveViewReceiver(self._frame_queue)
-            if self._receiver_thread is None or not self._receiver_thread.is_alive():
-                self._receiver_thread = threading.Thread(
-                    target=self._receiver.receive_packets,
-                    args=(self._config.liveview_port,),
-                    name="OlympusLiveViewUDP",
-                    daemon=True,
-                )
-                self._receiver_thread.start()
+            # told to broadcast, so start it first.
+            self._ensure_receiver()
 
-            self._camera.start_liveview(
-                port=self._config.liveview_port,
-                lvqty=self._lvqty or OlympusCamera.DEFAULT_RES,
+            run_bounded(
+                self._camera.start_liveview,
+                self._config.liveview_port,
+                self._lvqty or OlympusCamera.DEFAULT_RES,
+                timeout=3.0,
+                desc="start_liveview",
             )
             self._liveview_active = True
             logger.info("Olympus: liveview started.")
@@ -203,7 +270,11 @@ class OlympusBackend(AbstractBackend):
     def _stop_liveview(self) -> None:
         if self._camera:
             try:
-                self._camera.stop_liveview()
+                run_bounded(
+                    self._camera.stop_liveview,
+                    timeout=2.0,
+                    desc="stop_liveview",
+                )
             except Exception as exc:
                 logger.debug(f"Olympus: error stopping liveview: {exc}")
         self._liveview_active = False
@@ -220,8 +291,9 @@ class OlympusBackend(AbstractBackend):
         if not self._connect():
             # Raising lets ResilientService retry periodically in the
             # background, so the app keeps loading while the camera is off.
+            ip = self._config.device_ip or DEFAULT_CAMERA_WIFI_IP
             raise ConnectionError(
-                f"Olympus camera not reachable on {CAMERA_WIFI_IP}. "
+                f"Olympus camera not reachable on {ip}. "
                 "Is the camera in wifi mode?"
             )
 
@@ -233,11 +305,8 @@ class OlympusBackend(AbstractBackend):
         self._receiver_thread = None
         self._receiver = None
 
-        if self._camera:
-            try:
-                self._camera.stop_liveview()
-            except Exception as exc:
-                logger.debug(f"Olympus: error stopping liveview: {exc}")
+        # stop the liveview, bounded so shutdown cannot hang on an unreachable camera
+        self._stop_liveview()
         self._camera = None
         self._lvqty = None
         self._liveview_active = False
@@ -283,6 +352,9 @@ class OlympusBackend(AbstractBackend):
                 time.sleep(0.2)
                 continue
 
+            # self-heal: restart the UDP thread if it died while in video mode
+            self._ensure_receiver()
+
             try:
                 frame = self._frame_queue.get(timeout=0.2)
             except queue.Empty:
@@ -303,8 +375,11 @@ class OlympusBackend(AbstractBackend):
     def _capture_still(self, req: StillRequest) -> None:
         """Fire the shutter, download the newest image and deliver it to ``req``.
 
-        Any error propagates out of ``run_service`` so that ResilientService
-        tears down (closing a possibly stale connection) and reconnects.
+        A genuine connection error propagates out of ``run_service`` so that
+        ResilientService tears down and reconnects. A timeout (the camera is
+        alive but produced no image) just returns, leaving the request
+        unsatisfied so ``wait_for_still_file`` raises its own ``TimeoutError``;
+        the connection is kept.
         """
         if self._camera is None and not self._connect():
             raise ConnectionError("Olympus camera is not reachable (off or wifi disconnected).")
@@ -316,34 +391,58 @@ class OlympusBackend(AbstractBackend):
                 self._mode_machine.process_switchmode("still")
 
             # remember which files already exist on the card before shooting
-            before = {image.file_name for image in self._camera.list_images()}
+            before_files = run_bounded(
+                self._camera.list_images,
+                timeout=3.0,
+                desc="list_images(initial)",
+            ) or []
+            before = {img.file_name: img.date_time for img in before_files}
+
+            # Cap the poll below the contract timeout (wait_for_still_file waits
+            # at most 8s) so a found file still has time to be downloaded.
+            poll_timeout = min(self._config.capture_timeout, 6.0)
 
             logger.info("Olympus: triggering shutter...")
-            self._camera.take_picture()
+            run_bounded(self._camera.take_picture, timeout=5.0, desc="take_picture")
 
-            new_file = None
-            deadline = time.time() + self._config.capture_timeout
-            while time.time() < deadline:
+            poll_deadline = time.time() + poll_timeout
+
+            new_image = None
+            while time.time() < poll_deadline:
                 time.sleep(0.5)
                 try:
-                    images = self._camera.list_images()
+                    images = run_bounded(
+                        self._camera.list_images,
+                        timeout=2.0,
+                        desc="list_images(poll)",
+                    ) or []
                 except Exception as exc:
                     logger.debug(f"Olympus: list_images during capture failed: {exc}")
                     continue
-                added = [image.file_name for image in images if image.file_name not in before]
+                added = [img for img in images if img.file_name not in before]
                 if added:
-                    # camera filenames are sequential -> first new one is the shot
-                    new_file = added[0]
+                    # pick the most recent new file: robust to JPG+RAW and to
+                    # the camera reporting files out of order.
+                    new_image = max(added, key=lambda img: (img.date_time, img.file_name))
                     break
 
-            if new_file is None:
+            if new_image is None:
+                # leave the request unsatisfied; wait_for_still_file raises its
+                # own TimeoutError. The camera is fine, so don't reset it.
                 raise TimeoutError(
-                    f"Olympus: no new image appeared within {self._config.capture_timeout}s."
+                    f"Olympus: no new image appeared within {poll_timeout:.1f}s."
                 )
 
-            logger.info(f"Olympus: downloading {new_file}...")
+            logger.info(f"Olympus: downloading {new_image.file_name}...")
             # download_image(path) returns the full-size JPEG as bytes
-            jpeg_bytes = self._camera.download_image(new_file)
+            jpeg_bytes = run_bounded(
+                self._camera.download_image,
+                new_image.file_name,
+                timeout=20.0,
+                desc=f"download_image({new_image.file_name})",
+            )
+            if jpeg_bytes is None:
+                raise RuntimeError("Olympus: download_image returned no data.")
 
             with NamedTemporaryFile(
                 mode="wb",
@@ -368,6 +467,12 @@ class OlympusBackend(AbstractBackend):
             except Exception as exc:
                 logger.debug(f"Olympus: error stopping liveview after capture: {exc}")
             self._still_until = time.monotonic() + self._settle_after_capture
+        except TimeoutError:
+            # camera alive but produced no image within the budget
+            logger.warning(
+                f"Olympus: capture timed out after {poll_timeout:.1f}s without a new image."
+            )
+            return
         except Exception as exc:
             # mark the camera as disconnected so a fresh connection is created
             # on the next attempt (e.g. battery died mid-capture)
