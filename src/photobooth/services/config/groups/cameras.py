@@ -176,9 +176,9 @@ class GroupCameraOlympus(BaseModel):
         description="Délai maximum de téléchargement de l'image (secondes).",
     )
     camera_settle_after_capture: float = Field(
-        default=1.5,
+        default=1.0,
         ge=0.0,
-        description="Durée de stabilisation après une photo avant la reprise du livestream (secondes).",
+        description="Durée de stabilisation après une photo avant la reprise du livestream (secondes). Minime (0.5-1s) pour reprendre le vrai flux et cadrer la prise suivante ; le téléchargement garde déjà une frame d'attente.",
     )
     camera_standby_when_inactive: bool = Field(
         default=True,

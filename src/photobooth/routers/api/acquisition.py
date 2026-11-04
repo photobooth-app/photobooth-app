@@ -68,6 +68,27 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
         return
 
     # --- normal ready → acquire → send loop ---
+    async def send_current_frame() -> bool:
+        """Acquire a fresh lores frame and push it to the client.
+
+        Returns ``False`` when the connection is over (caller must return).
+        """
+        jpeg_bytes = await acquire_frame_with_retries()
+        if jpeg_bytes is None:
+            # helper already closed + logged
+            return False
+
+        try:
+            await websocket.send_bytes(jpeg_bytes)
+        except WebSocketDisconnect:
+            logger.debug("client disconnected while sending a frame")
+            return False
+        except Exception as exc:
+            logger.info(f"error sending data: {exc}")
+            await websocket.close(code=1011, reason="send failed")
+            return False
+        return True
+
     while True:
         # wait for ready
         try:
@@ -79,28 +100,25 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
             logger.debug("client disconnected while waiting for ready signal")
             return
         except TimeoutError:
-            logger.debug("timed out while waiting for the ready signal from the client, continue waiting...")
+            # The protocol is client-pulled (ready -> frame -> ready...). If a
+            # single ready is lost (busy tab, worker hiccup, frame during a mode
+            # switch) the chain deadlocks: the server waits for ready while the
+            # client waits for a frame. Re-sync by pushing the current frame;
+            # the client renders it and answers with the next ready, resuming
+            # the loop. Harmless if the client is merely idle: it just ignores
+            # the pushed frame (and this only fires once every 5s).
+            logger.debug("client stalled (no ready), pushing a frame to re-sync the stream")
+            if not await send_current_frame():
+                return
             continue
         except BackendNotRunning:
             logger.info("backend stopped, closing stream")
             await websocket.close(code=1001, reason="backend stopped")
             return
 
-        # acquire next frame with same retry semantics
-        jpeg_bytes = await acquire_frame_with_retries()
-        if jpeg_bytes is None:
-            # helper already closed + logged
+        # pull-handshake answered -> send the next frame
+        if not await send_current_frame():
             return
-
-        # send frame
-        try:
-            await websocket.send_bytes(jpeg_bytes)
-        except WebSocketDisconnect:
-            logger.debug("client disconnected while sending a frame")
-            return
-        except Exception as exc:
-            logger.info(f"error sending data: {exc}")
-            await websocket.close(code=1011, reason="send failed")
 
 
 @router.get("/stream.mjpg")
