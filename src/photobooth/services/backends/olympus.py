@@ -119,8 +119,37 @@ def _pixels(resolution: str) -> int:
         return 0
 
 
+def make_placeholder_jpeg() -> bytes | None:
+    """Return a small solid \"busy\" JPEG to serve during a still capture.
+
+    Served to the lores stream so the frontend websocket stays fed (no retry
+    timeouts) without showing a live picture while a photo is being taken and
+    its photo is being displayed. ``None`` when Pillow is unavailable: the
+    backend then simply serves no frames during the capture. Best-effort.
+    """
+    try:
+        from io import BytesIO
+
+        from PIL import Image, ImageDraw
+
+        img = Image.new("RGB", (640, 480), (18, 22, 28))
+        draw = ImageDraw.Draw(img)
+        draw.text((16, 8), "Olympus - photo in progress...", fill=(180, 190, 200))
+        buffer = BytesIO()
+        img.save(buffer, "JPEG", quality=70)
+        return buffer.getvalue()
+    except Exception as exc:  # noqa: BLE001 - placeholder is best-effort
+        logger.debug(f"Olympus: could not build placeholder frame: {exc}")
+        return None
+
+
 class OlympusBackend(AbstractBackend):
     """Backend for wifi-enabled Olympus cameras via the ``olympuswifi`` library."""
+
+    # A still capture polls for the new file and then downloads it over the
+    # camera's own (slow) wifi AP; the whole thing can take far longer than the
+    # default 8s budget, so wait up to a minute before giving up.
+    STILL_WAIT_TIMEOUT: float = 60.0
 
     def __init__(self, config: GroupCameraOlympus):
         super().__init__(
@@ -145,7 +174,19 @@ class OlympusBackend(AbstractBackend):
         # post-capture settle: the backend stays out of liveview for a short
         # beat after a still, so the after-screen is not flooded with frames.
         self._settle_after_capture: float = config.camera_settle_after_capture
-        self._still_until: float = 0.0
+        # Liveview freeze: while a still is downloading, and for a short
+        # "display" beat after it, the backend serves a static placeholder to
+        # the lores stream instead of live frames. This keeps the frontend
+        # websocket fed (no retry timeouts) while showing only the photo, and
+        # stops the livestream from jumping back in before the capture ends.
+        self._capture_in_progress: bool = False
+        self._capture_req: StillRequest | None = None
+        self._freeze_until: float = 0.0
+        self._placeholder: bytes | None = None
+        # consecutive failed liveview (re)starts, used to back off the retry
+        # loop so a camera that is busy after a capture does not sit in a tight
+        # reconnect churn (the "stuck / no stream" pit state).
+        self._liveview_start_failures: int = 0
 
     # ------------------------------------------------------------------
     # Lifecycle hooks (delegated to the base classes)
@@ -235,13 +276,12 @@ class OlympusBackend(AbstractBackend):
         if self._liveview_active:
             return
 
-        # enforce a short post-capture hold before the livestream resumes, so
-        # the captured photo stays on the after-screen a moment longer.
-        remaining = self._still_until - time.monotonic()
-        if remaining > 0:
-            logger.debug(f"Olympus: holding {remaining:.2f}s before resuming liveview")
-            if self._stop_event.wait(timeout=remaining):
-                return  # shutdown requested while waiting
+        # while a capture is downloading, or during the post-capture display
+        # freeze, the livestream stays suppressed (the loop serves a placeholder
+        # instead), so the frontend shows only the photo.
+        if self._is_frozen():
+            logger.debug("Olympus: liveview suppressed during capture/display freeze")
+            return
 
         if self._camera is None and not self._connect():
             return
@@ -310,7 +350,11 @@ class OlympusBackend(AbstractBackend):
         self._camera = None
         self._lvqty = None
         self._liveview_active = False
-        self._still_until = 0.0
+        self._liveview_start_failures = 0
+        self._freeze_until = 0.0
+        self._capture_in_progress = False
+        self._capture_req = None
+        self._placeholder = None
 
         # Invalidate the mode machine so it re-initializes on the next start
         # (needed for liveview to be restarted after a reconnect).
@@ -331,26 +375,63 @@ class OlympusBackend(AbstractBackend):
         self._mode_machine.process_switchmode()
 
         while not self._stop_event.is_set():
-            # 1) pending hires capture request (from wait_for_still_file)
+            # ------------------------------------------------------------------
+            # 1) a still capture is downloading in its own background thread:
+            #    freeze the livestream and serve a placeholder so the frontend
+            #    never times out or sees a live feed during the download.
+            # ------------------------------------------------------------------
+            if self._capture_in_progress:
+                self._publish_placeholder()
+                time.sleep(0.05)
+                continue
+
+            # 2) pending hires capture request (from wait_for_still_file)
             with self._hires_lock:
                 req = self._hires_queue.popleft() if self._hires_queue else None
 
             if req:
                 if isinstance(req, StillRequest):
-                    self._capture_still(req)
+                    self._begin_capture(req)
                 else:
                     logger.warning(f"Olympus backend does not support {type(req)} requests")
                 continue
 
-            # 2) apply any requested mode change
+            # 3) apply any requested mode change
             self._mode_machine.process_switchmode()
 
-            # 3) serve liveview frames only while in video mode. In still mode
-            #    the frontend shows the captured photo, so no frames flow and
-            #    the livestream does not jump back in immediately after a shot.
+            # 4) during the post-capture display freeze, keep serving the
+            #    placeholder instead of live frames.
+            if self._is_frozen():
+                self._publish_placeholder()
+                time.sleep(0.05)
+                continue
+
+            # 5) serve liveview frames only while in video mode.
             if self._mode_machine.active_mode != "video":
                 time.sleep(0.2)
                 continue
+
+            # make sure the liveview is actually streaming (it started on the
+            # transition to video mode, but ensure it here too in case a drop)
+            self._start_liveview()
+            if not self._liveview_active:
+                # While we wait to (re)start the stream (a camera busy after a
+                # capture can take a while to answer start_liveview), keep
+                # serving the placeholder so the websocket never times out and
+                # closes the stream — otherwise the frontend falls into the
+                # stuck "no stream" state during the second collage shot.
+                self._publish_placeholder()
+                # back off with bounds instead of hammering a tight reconnect
+                # loop.
+                self._liveview_start_failures += 1
+                delay = self._liveview_retry_delay()
+                logger.debug(
+                    f"Olympus: liveview not active (failure #{self._liveview_start_failures}), retrying in {delay:.1f}s"
+                )
+                if self._stop_event.wait(timeout=delay):
+                    return  # shutdown requested while waiting
+                continue
+            self._liveview_start_failures = 0
 
             # self-heal: restart the UDP thread if it died while in video mode
             self._ensure_receiver()
@@ -370,23 +451,72 @@ class OlympusBackend(AbstractBackend):
             self._framerate.wait_until_fps(15)
 
     # ------------------------------------------------------------------
+    # Liveview freeze helpers
+    # ------------------------------------------------------------------
+    def _is_frozen(self) -> bool:
+        """True while a still is downloading or during the post-capture freeze."""
+        return self._capture_in_progress or time.monotonic() < self._freeze_until
+
+    def _liveview_retry_delay(self) -> float:
+        """Exponential backoff (bounded) before retrying a failed liveview start."""
+        return min(0.2 * (2 ** min(self._liveview_start_failures, 4)), 5.0)
+
+    def _publish_placeholder(self) -> None:
+        """Broadcast a static \"busy\" frame to the lores stream.
+
+        Keeps the frontend websocket fed (so it never runs into its retry
+        timeouts) while the camera feed is intentionally suppressed during a
+        capture and its display. Does nothing if building the frame failed.
+        """
+        if self._placeholder is None:
+            self._placeholder = make_placeholder_jpeg()
+        if not self._placeholder:
+            return
+        with self._lores_data[0].condition:
+            self._lores_data[0].data = self._placeholder
+            self._lores_data[0].condition.notify_all()
+
+    # ------------------------------------------------------------------
     # Still capture
     # ------------------------------------------------------------------
-    def _capture_still(self, req: StillRequest) -> None:
-        """Fire the shutter, download the newest image and deliver it to ``req``.
+    def _begin_capture(self, req: StillRequest) -> None:
+        """Start a still capture in a background thread and freeze the liveview.
 
-        A genuine connection error propagates out of ``run_service`` so that
-        ResilientService tears down and reconnects. A timeout (the camera is
-        alive but produced no image) just returns, leaving the request
-        unsatisfied so ``wait_for_still_file`` raises its own ``TimeoutError``;
-        the connection is kept.
+        The shutter + poll + wifi download run in a dedicated thread so the
+        worker loop can keep serving the placeholder to the lores stream; the
+        frontend is never left timing out during the (multi-second) download.
         """
-        if self._camera is None and not self._connect():
-            raise ConnectionError("Olympus camera is not reachable (off or wifi disconnected).")
+        self._capture_in_progress = True
+        self._capture_req = req
+        thread = threading.Thread(
+            target=self._capture_worker,
+            name="OlympusStillCapture",
+            daemon=True,
+        )
+        thread.start()
 
-        assert self._camera is not None
+    def _capture_worker(self) -> None:
+        """Shutter, download and deliver a still, off the worker thread.
+
+        Runs in a background thread (see ``_begin_capture``). The result is
+        delivered via the request; a timeout (camera alive but no image) or a
+        connection error leaves the request unsatisfied so ``wait_for_still_file``
+        raises its own ``TimeoutError``.
+        """
+        req = self._capture_req
+        if req is None:
+            return
+
+        poll_timeout = min(self._config.capture_timeout, 15.0)
 
         try:
+            if self._camera is None and not self._connect():
+                raise ConnectionError(
+                    "Olympus camera is not reachable (off or wifi disconnected)."
+                )
+
+            assert self._camera is not None
+
             with self._mode_machine.ext_mode_switch_lock:
                 self._mode_machine.process_switchmode("still")
 
@@ -398,27 +528,47 @@ class OlympusBackend(AbstractBackend):
             ) or []
             before = {img.file_name: img.date_time for img in before_files}
 
-            # Cap the poll below the contract timeout (wait_for_still_file waits
-            # at most 8s) so a found file still has time to be downloaded.
-            poll_timeout = min(self._config.capture_timeout, 6.0)
-
             logger.info("Olympus: triggering shutter...")
-            run_bounded(self._camera.take_picture, timeout=5.0, desc="take_picture")
+            run_bounded(self._camera.take_picture, timeout=12.0, desc="take_picture")
+
+            # freeze the live stream now that the shutter fired: the frontend is
+            # served the placeholder for the rest of the capture + display.
+            self._stop_liveview()
 
             poll_deadline = time.time() + poll_timeout
 
             new_image = None
+            busy_streak = 0
             while time.time() < poll_deadline:
-                time.sleep(0.5)
+                time.sleep(0.8)
+                if self._camera is None:
+                    if not self._connect():
+                        logger.warning("Olympus: camera not reachable during capture poll")
+                        continue
+                    if self._camera is None:
+                        continue
                 try:
                     images = run_bounded(
                         self._camera.list_images,
-                        timeout=2.0,
+                        timeout=4.0,
                         desc="list_images(poll)",
                     ) or []
                 except Exception as exc:
-                    logger.debug(f"Olympus: list_images during capture failed: {exc}")
+                    busy_streak += 1
+                    logger.debug(f"Olympus: list_images during capture failed ({busy_streak}): {exc}")
+                    # Repeated errors (esp. OSC errorcode=1001 = camera busy)
+                    # mean the camera is still finishing the capture or stuck in
+                    # a record/shutter mode where get_imglist is refused. Reset
+                    # the connection instead of hammering the same wedged
+                    # session - a fresh object re-reads the camera state and
+                    # mode, so the next list_images has a clean shot.
+                    if busy_streak >= 5:
+                        busy_streak = 0
+                        logger.warning("Olympus: persistent busy during capture poll, resetting connection")
+                        self._camera = None
+                        self._liveview_active = False
                     continue
+                busy_streak = 0
                 added = [img for img in images if img.file_name not in before]
                 if added:
                     # pick the most recent new file: robust to JPG+RAW and to
@@ -435,6 +585,7 @@ class OlympusBackend(AbstractBackend):
 
             logger.info(f"Olympus: downloading {new_image.file_name}...")
             # download_image(path) returns the full-size JPEG as bytes
+            assert self._camera is not None
             jpeg_bytes = run_bounded(
                 self._camera.download_image,
                 new_image.file_name,
@@ -458,24 +609,25 @@ class OlympusBackend(AbstractBackend):
                 req.result_file = filepath
                 req.condition.notify_all()
 
-            # post-capture settling: stop the liveview and stay out of it for a
-            # short beat so the captured photo is shown before liveview resumes.
-            # Stopping after delivery ensures the shutter had the liveview it
-            # may need, and keeps the camera out of record mode between shots.
+            logger.info("Olympus: still delivered.")
+        except TimeoutError:
+            logger.warning(
+                f"Olympus: capture timed out after {poll_timeout:.1f}s without a new image."
+            )
+        except Exception as exc:
+            logger.error(f"Olympus: capture failed: {exc}")
+            self._camera = None
+            self._liveview_active = False
+        finally:
+            # ensure the liveview stays off and the display freeze starts, so
+            # the livestream does not jump back in before the photo is shown.
             try:
                 self._stop_liveview()
             except Exception as exc:
                 logger.debug(f"Olympus: error stopping liveview after capture: {exc}")
-            self._still_until = time.monotonic() + self._settle_after_capture
-        except TimeoutError:
-            # camera alive but produced no image within the budget
-            logger.warning(
-                f"Olympus: capture timed out after {poll_timeout:.1f}s without a new image."
+            self._capture_in_progress = False
+            self._capture_req = None
+            self._freeze_until = time.monotonic() + self._settle_after_capture
+            logger.debug(
+                f"Olympus: capture done, live frozen {self._settle_after_capture:.1f}s for display"
             )
-            return
-        except Exception as exc:
-            # mark the camera as disconnected so a fresh connection is created
-            # on the next attempt (e.g. battery died mid-capture)
-            self._camera = None
-            self._liveview_active = False
-            raise RuntimeError(f"Olympus capture failed: {exc}") from exc
