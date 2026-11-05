@@ -108,8 +108,8 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
             # the loop. Harmless if the client is merely idle: it just ignores
             # the pushed frame (and this only fires once every 5s).
             logger.debug("client stalled (no ready), pushing a frame to re-sync the stream")
-            if not await send_current_frame():
-                return
+#            if not await send_current_frame():
+#                return
             continue
         except BackendNotRunning:
             logger.info("backend stopped, closing stream")

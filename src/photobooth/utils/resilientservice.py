@@ -175,7 +175,14 @@ class ResilientService(ABC):
 
             assert self._thread
             self._stop_event.set()
-            self._thread.join()
+            # Bounded join: a worker stuck in an unbounded resource call must
+            # never hang shutdown (Ctrl+C). The worker is a daemon thread, so
+            # abandoning it is safe for process exit.
+            self._thread.join(timeout=10)
+            if self._thread.is_alive():
+                logger.warning(
+                    f"{self}: worker thread did not stop within 10s, abandoning it (daemon)"
+                )
             self._started = False
 
     def recover(self):
@@ -188,7 +195,12 @@ class ResilientService(ABC):
 
             if self._thread:
                 self._stop_event.set()
-                self._thread.join()
+                self._thread.join(timeout=10)
+                if self._thread.is_alive():
+                    logger.warning(
+                        f"{self}: worker thread did not stop within 10s while recovering; skipping restart"
+                    )
+                    return
 
             self._stop_event.clear()
             self._thread = threading.Thread(name=self.__class__.__name__, target=self._run, daemon=True)

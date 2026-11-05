@@ -173,7 +173,12 @@ class GroupCameraOlympus(BaseModel):
     )
     capture_timeout: float = Field(
         default=10.0,
-        description="Délai maximum de téléchargement de l'image (secondes).",
+        description="Délai maximum de scrutation de l'apparition de la nouvelle image après le déclenchement (secondes).",
+    )
+    download_timeout: float = Field(
+        default=20.0,
+        ge=1.0,
+        description="Délai maximum de téléchargement de l'image depuis l'appareil (secondes). À augmenter pour un transfert Wi-Fi lent ; le temps total d'une prise reste borné par le timeout d'attente du backend.",
     )
     camera_settle_after_capture: float = Field(
         default=1.0,
@@ -186,6 +191,8 @@ class GroupCameraOlympus(BaseModel):
     )
     camera_standby_when_inactive_time: float = Field(
         default=30.0,
+        ge=10,
+        le=300,
         description="Délai d'inactivité avant veille (secondes).",
     )
 

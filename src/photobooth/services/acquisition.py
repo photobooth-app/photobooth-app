@@ -13,7 +13,6 @@ from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import BackendNotRunning
 from .backends.abstractbackend import AbstractBackend
 from .backends.encoder.video import SoftwareVideoRecorder
-from .backends.olympus import OlympusBackend
 from .base import BaseService
 
 logger = logging.getLogger(f"{__name__}-app")
