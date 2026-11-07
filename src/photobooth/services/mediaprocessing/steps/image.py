@@ -40,7 +40,7 @@ def get_plugin_userselectable_filters():
     return (("original", "original"),) + tuple(((f, f"{f}")) for f in chain(*pm.hook.mp_userselectable_filter()))
 
 
-PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)
+PluginFilters = Enum("PluginFilters", get_plugin_avail_filters(), type=str)  # pyrefly: ignore [invalid-argument]
 
 
 class PluginFilterStep(PipelineStep):

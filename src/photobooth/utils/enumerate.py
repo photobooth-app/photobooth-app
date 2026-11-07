@@ -100,7 +100,7 @@ def dslr_gphoto2() -> list[int]:
 
         import gphoto2 as gp
 
-        camera_list = gp.Camera.autodetect()  # pyright: ignore [reportAttributeAccessIssue]
+        camera_list = gp.Camera.autodetect()  # pyrefly: ignore [missing-attribute]
         if len(camera_list) == 0:
             logger.info("no camera detected")
             return []

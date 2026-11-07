@@ -101,11 +101,8 @@ concurrency = ["thread", "multiprocessing"]
 #[tool.zuban] 
 #mode = "default"
 
-[tool.basedpyright]
-venvPath = "."
-venv = ".venv"
-ignore = ["./experimental/"]
-typeCheckingMode = "standard"
+[tool.pyrefly]
+project-excludes = ["experimental/**"]
 
 
 [tool.ruff]
@@ -144,8 +141,7 @@ dev = [
   "httpx2",
   "pydot",
   # "pre-commit",
-  "basedpyright>=1.39.9",
-  # "pyright",
+  "pyrefly",
   # "zuban>=0.9.0",
   "poethepoet",
   "wigglecam[node]",
@@ -162,7 +158,7 @@ default-groups = [
 # uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
 [tool.poe.tasks]
 lint = [
-  { cmd = "uv run basedpyright" },
+  { cmd = "uv run pyrefly check" },
   { cmd = "uv run ruff check" },
   { cmd = "uv run ruff format --check" },
 ]

@@ -35,7 +35,7 @@ def turbojpeg_inplace_encode(frame_from_camera):
     # in-place encoding with default settings.
     # buffer_size = turbojpeg.buffer_size(frame_from_camera)
     # dest_buf = bytearray(buffer_size)
-    result, n_byte = turbojpeg.encode(frame_from_camera, dst=inplace_buffer, flags=TJFLAG_FASTDCT)  # pyright: ignore[reportGeneralTypeIssues]
+    result, n_byte = turbojpeg.encode(frame_from_camera, dst=inplace_buffer, flags=TJFLAG_FASTDCT)
 
     # return value is the dest_buf argument value
     assert id(result) == id(inplace_buffer)

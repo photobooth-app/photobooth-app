@@ -75,8 +75,8 @@ def classify_windows(status_flags: int):
 
 
 def get_printer_status_windows(printer_name: str) -> tuple[PrinterStatus, int]:
-    import pywintypes  # pyright: ignore[reportMissingModuleSource]
-    import win32print  # pyright: ignore[reportMissingModuleSource]
+    import pywintypes  # pyrefly: ignore [missing-import]
+    import win32print  # pyrefly: ignore [missing-import]
 
     try:
         handle = win32print.OpenPrinter(printer_name)

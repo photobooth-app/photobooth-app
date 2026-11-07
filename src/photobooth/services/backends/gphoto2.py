@@ -54,22 +54,22 @@ class Gphoto2Backend(AbstractBackend):
         if gp is None:
             raise ModuleNotFoundError("Backend is not available - either wrong platform or not installed!")
 
-        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
-        self._camera_context = gp.Context()  # pyright: ignore [reportAttributeAccessIssue]
+        self._camera = gp.Camera()  # pyrefly: ignore [missing-attribute]
+        self._camera_context = gp.Context()
 
         logger.info(f"python-gphoto2: {gp.__version__}")
-        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
-        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")  # pyright: ignore [reportAttributeAccessIssue]
+        logger.info(f"libgphoto2: {gp.gp_library_version(gp.GP_VERSION_VERBOSE)}")  # pyrefly: ignore [missing-attribute]
+        logger.info(f"libgphoto2_port: {gp.gp_port_library_version(gp.GP_VERSION_VERBOSE)}")  # pyrefly: ignore [missing-attribute]
 
         # enable logging to python. need to store callback, otherwise logging does not work.
         # gphoto2 logging is too verbose, reduce mapping
         self._logger_callback = gp.check_result(
             gp.use_python_logging(
                 mapping={
-                    gp.GP_LOG_ERROR: logging.INFO,  # pyright: ignore [reportAttributeAccessIssue]
-                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,  # pyright: ignore [reportAttributeAccessIssue]
-                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,  # pyright: ignore [reportAttributeAccessIssue]
-                    gp.GP_LOG_DATA: logging.DEBUG - 6,  # pyright: ignore [reportAttributeAccessIssue]
+                    gp.GP_LOG_ERROR: logging.INFO,  # pyrefly: ignore [missing-attribute]
+                    gp.GP_LOG_DEBUG: logging.DEBUG - 1,  # pyrefly: ignore [missing-attribute]
+                    gp.GP_LOG_VERBOSE: logging.DEBUG - 3,  # pyrefly: ignore [missing-attribute]
+                    gp.GP_LOG_DATA: logging.DEBUG - 6,  # pyrefly: ignore [missing-attribute]
                 }
             )
         )
@@ -153,17 +153,13 @@ class Gphoto2Backend(AbstractBackend):
 
         # try open cam. if fails it raises an exception and the supvervisor tries to restart.
         # better use fresh object.
-        self._camera = gp.Camera()  # pyright: ignore [reportAttributeAccessIssue]
+        self._camera = gp.Camera()  # pyrefly: ignore [missing-attribute]
         try:
             self._camera.init()  # if init was success, the backend is ready to deliver, no additional later checks needed.
         except gp.GPhoto2Error as exc:
             # logger.error(f"could not get camera information, error {exc}")
             logger.debug("error occured, please check https://photobooth-app.org/help/faq/#gphoto2-camera-found-but-no-access for troubleshooting.")
             raise ConnectionError(f"Could not connect to camera, error: {exc}") from exc
-
-        # info output
-        # camera_config = self._camera.get_config()
-        # self.display_config(camera_config.get_children())
 
     def display_config(self, camera_config):
         for child in camera_config:
@@ -209,9 +205,7 @@ class Gphoto2Backend(AbstractBackend):
                         self._mode_machine.process_switchmode("still")
 
                         try:
-                            # file_path = self._camera.capture(gp.GP_CAPTURE_IMAGE)  # pyright: ignore [reportAttributeAccessIssue]
-                            # captured_files.append((file_path.folder, file_path.name))
-                            self._camera.trigger_capture()  # pyright: ignore [reportAttributeAccessIssue]
+                            self._camera.trigger_capture()
                         except gp.GPhoto2Error as exc:
                             logger.critical(f"error capture! check logs for errors. {exc}")
 
@@ -243,7 +237,7 @@ class Gphoto2Backend(AbstractBackend):
                     file_to_download = None
                     for captured_file in captured_files:
                         _, file_extension = os.path.splitext(captured_file[1])  # get file extension (including .)
-                        if str(file_extension).lower() in (".jpg", ".jpeg"):
+                        if file_extension.lower() in (".jpg", ".jpeg"):
                             file_to_download = captured_file
 
                             logger.info(f"determined {file_to_download=}")
@@ -270,7 +264,7 @@ class Gphoto2Backend(AbstractBackend):
                             ).name
                         )
 
-                        camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyright: ignore [reportAttributeAccessIssue]
+                        camera_file = self._camera.file_get(file_to_download[0], file_to_download[1], gp.GP_FILE_TYPE_NORMAL)  # pyrefly: ignore [missing-attribute]
                         camera_file.save(str(filepath))
 
                     except gp.GPhoto2Error as exc:

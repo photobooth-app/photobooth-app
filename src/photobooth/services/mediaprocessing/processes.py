@@ -37,35 +37,32 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     ImageOps.exif_transpose(image, in_place=True)  # to correct for any orientation set.
 
     context = ImageContext(image, preview)
-    steps = []
+    pipeline = Pipeline[ImageContext]()
 
     # assemble pipeline
     if config.remove_background and not preview:
-        steps.append(RemovebgStep(model_name=appconfig.mediaprocessing.remove_background_model))
+        pipeline.append(RemovebgStep(model_name=appconfig.mediaprocessing.remove_background_model))
 
     if config.img_background_enable:
         if not config.img_background_file:
             raise ValueError("image background enabled, but no file given")
-        steps.append(ImageMountStep(config.img_background_file))
+        pipeline.append(ImageMountStep(config.img_background_file))
 
     if config.fill_background_enable:
-        steps.append(FillBackgroundStep(config.fill_background_color))
+        pipeline.append(FillBackgroundStep(config.fill_background_color))
 
     if config.image_filter:
-        steps.append(PluginFilterStep(config.image_filter))
+        pipeline.append(PluginFilterStep(config.image_filter))
 
     if config.img_frame.enable:
         if not config.img_frame.image:
             raise ValueError("image frame enabled, but no file given")
-        steps.append(ImageFrameStep(config.img_frame.image))
+        pipeline.append(ImageFrameStep(config.img_frame.image))
 
     if config.texts_enable:
-        steps.append(TextStep(config.texts))
+        pipeline.append(TextStep(config.texts))
 
     # finished assembly
-
-    # setup pipeline.
-    pipeline = Pipeline[ImageContext](*steps)
 
     def _error_handler(error: Exception, context: ImageContext, next_step: NextStep) -> None:
         traceback.print_exception(error)
@@ -179,12 +176,10 @@ def process_and_generate_animation(files_in: list[Path], mediaitem: Mediaitem):
     animation_images: list[Image.Image] = [Image.open(image_in) for image_in in files_in]
 
     context = AnimationContext(animation_images)
-    steps = []
-    steps.append(AddPredefinedImagesStep(config.merge_definition))
-    steps.append(PostPredefinedImagesStep(config.merge_definition))
-    steps.append(AlignSizesStep(canvas_size))
-
-    pipeline = Pipeline[AnimationContext](*steps)
+    pipeline = Pipeline[AnimationContext]()
+    pipeline.append(AddPredefinedImagesStep(config.merge_definition))
+    pipeline.append(PostPredefinedImagesStep(config.merge_definition))
+    pipeline.append(AlignSizesStep(canvas_size))
     with MetricsTimer(process_and_generate_animation.__name__):
         pipeline(context)
 

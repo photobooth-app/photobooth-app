@@ -9,6 +9,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from .. import LOG_PATH
 from ..appconfig import appconfig
@@ -67,7 +68,7 @@ class ConsoleColorFormatter(logging.Formatter):
 class LoggingService(BaseService):
     """_summary_"""
 
-    logging_level = logging.DEBUG
+    logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "DEBUG"
 
     def __init__(self):
         super().__init__()

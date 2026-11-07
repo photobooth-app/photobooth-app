@@ -357,7 +357,7 @@ class Picamera2Backend(AbstractBackend):
             else:
                 # capture metadata blocks until new metadata is avail
                 try:
-                    self._metadata = self._picamera2.capture_metadata(wait=1.5)  # pyright: ignore[reportArgumentType, reportCallIssue]
+                    self._metadata = self._picamera2.capture_metadata(wait=1.5)
                     # waiting for only 1.5s instead indefinite might cover underlying issues with the camera system but prevents the app from
                     # stalling
                     self._frame_tick()

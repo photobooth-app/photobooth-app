@@ -108,7 +108,7 @@ class OffsetPerOpticalFlowStep(PipelineStep):
                 gray_base_arr,
                 gray_next_arr,
                 base_pts,  # always refer to the first image
-                None,  # type: ignore[arg-type]
+                base_pts.copy(),  # output buffer for tracked points
                 winSize=(21, 21),
                 maxLevel=3,
                 criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01),
