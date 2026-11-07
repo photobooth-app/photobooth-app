@@ -44,7 +44,7 @@ jobs:
       - name: Install system apt dependencies
         run: |
           sudo apt update
-          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev ffmpeg rclone
+          sudo apt -y install libturbojpeg0 python3-pip libgl1 git libcap-dev ffmpeg rclone
       - name: install the project
         run: |
           uv sync --all-extras --dev
