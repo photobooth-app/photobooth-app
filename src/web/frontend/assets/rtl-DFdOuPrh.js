@@ -1,1 +1,0 @@
-var e=!1;{let t=document.createElement(`div`);t.setAttribute(`dir`,`rtl`),Object.assign(t.style,{width:`1px`,height:`1px`,overflow:`auto`});let n=document.createElement(`div`);Object.assign(n.style,{width:`1000px`,height:`1px`}),document.body.append(t),t.append(n),t.scrollLeft=-1e3,e=t.scrollLeft>=0,t.remove()}export{e as t};
