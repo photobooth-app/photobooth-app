@@ -256,11 +256,6 @@ class ModeController:
 
 
 class AbstractBackend(ResilientService, ABC):
-    # upper time bound a caller waits for a still/multicam delivery. Backends
-    # with slow capture paths (e.g. a wifi camera downloading over its own AP)
-    # override this to a larger value.
-    STILL_WAIT_TIMEOUT: float = 8.0
-
     @abstractmethod
     def _handle_switchmode_init(self):
         """called during device setup"""
@@ -344,7 +339,7 @@ class AbstractBackend(ResilientService, ABC):
             self._hires_queue.append(req)
 
         with req.condition:
-            ok = req.condition.wait(timeout=self.STILL_WAIT_TIMEOUT)
+            ok = req.condition.wait(timeout=8)
 
             if not ok:
                 raise TimeoutError("timeout waiting for hires frame")
@@ -366,7 +361,7 @@ class AbstractBackend(ResilientService, ABC):
             self._hires_queue.append(req)
 
         with req.condition:
-            ok = req.condition.wait(timeout=self.STILL_WAIT_TIMEOUT)
+            ok = req.condition.wait(timeout=8)
 
             if not ok:
                 raise TimeoutError("timeout waiting for hires frame")
