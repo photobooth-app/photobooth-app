@@ -1309,7 +1309,7 @@ requires-dist = [
     { name = "jsonref", specifier = ">=1.1.0" },
     { name = "linuxpy", marker = "sys_platform == 'linux'", specifier = ">=0.10.0" },
     { name = "numpy", specifier = ">=2.0.0" },
-    { name = "olympuswifi", specifier = ">=1.0.1" },
+    { name = "olympuswifi" },
     { name = "onnxruntime", specifier = ">=1.29.0,<1.32.0" },
     { name = "opencv-python-headless", specifier = "~=5.0.0" },
     { name = "piexif", specifier = ">=1.1.3" },
