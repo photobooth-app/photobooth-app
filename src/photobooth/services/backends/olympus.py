@@ -234,11 +234,6 @@ def make_placeholder_jpeg() -> bytes | None:
 class OlympusBackend(AbstractBackend):
     """Backend for wifi-enabled Olympus cameras via the ``olympuswifi`` library."""
 
-    # A still capture polls for the new file and then downloads it over the
-    # camera's own (slow) wifi AP; the whole thing can take far longer than the
-    # default 8s budget, so wait up to a minute before giving up.
-    STILL_WAIT_TIMEOUT: float = 60.0
-
     # If the camera stops sending RTP for this long while liveview is active
     # (power cycle, lost liveview subscription, camera busy), the stream is
     # declared stalled and liveview is resubscribed instead of treating every
@@ -275,7 +270,6 @@ class OlympusBackend(AbstractBackend):
         # websocket fed (no retry timeouts) while showing only the photo, and
         # stops the livestream from jumping back in before the capture ends.
         self._capture_in_progress: bool = False
-        self._capture_req: StillRequest | None = None
         self._capture_thread: threading.Thread | None = None
         # Generation token: bumped each time a capture starts or teardown runs.
         # An in-flight capture worker compares its own token against this one
@@ -490,7 +484,6 @@ class OlympusBackend(AbstractBackend):
         self._capture_thread = None
         self._freeze_until = 0.0
         self._capture_in_progress = False
-        self._capture_req = None
         self._placeholder = None
 
         # Invalidate the mode machine so it re-initializes on the next start
@@ -650,7 +643,6 @@ class OlympusBackend(AbstractBackend):
         """
         self._capture_generation += 1
         gen = self._capture_generation
-        self._capture_req = req
         self._capture_in_progress = True
         self._capture_thread = threading.Thread(
             target=self._capture_worker,
@@ -692,14 +684,7 @@ class OlympusBackend(AbstractBackend):
                 self._mode_machine.process_switchmode("still")
 
             # remember which files already exist on the card before shooting
-            before_files = (
-                run_bounded(
-                    self._camera.list_images,
-                    timeout=3.0,
-                    desc="list_images(initial)",
-                )
-                or []
-            )
+            before_files = run_bounded(self._camera.list_images, timeout=3.0, desc="list_images(initial)") or []
             before = {img.file_name: img.date_time for img in before_files}
             if self._capture_stale(gen):
                 return
@@ -825,7 +810,7 @@ class OlympusBackend(AbstractBackend):
                     self._stop_liveview()
                 except Exception as exc:
                     logger.debug(f"Olympus: error stopping liveview after capture: {exc}")
-                self._capture_req = None
+
                 self._freeze_until = time.monotonic() + self._settle_after_capture
                 self._capture_in_progress = False
                 logger.debug(f"Olympus: capture done, live frozen {self._settle_after_capture:.1f}s for display")
