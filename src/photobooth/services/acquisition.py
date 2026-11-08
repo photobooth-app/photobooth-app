@@ -47,6 +47,9 @@ class AcquisitionService(BaseService):
         self._video_backend = self._get_backend("index_backend_video")
         self._multicam_backend = self._get_backend("index_backend_multicam")
 
+        for backend in self._backends:
+            backend.is_video_backend = backend is self._video_backend
+
         # it's not a copy, it's a ref we hold.
         assert self._stills_backend is self._backends[appconfig.cameras.index_backend_stills]
 

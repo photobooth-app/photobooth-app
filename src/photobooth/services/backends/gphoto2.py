@@ -277,6 +277,9 @@ class Gphoto2Backend(AbstractBackend):
                     with req.condition:
                         req.result_file = filepath
                         req.condition.notify_all()
+
+                    if not self.is_video_backend and self._config.camera_standby_when_inactive:
+                        self._mode_machine.request_standby_if_not_video_requested()
                 else:
                     logger.warning(f"this backend does not support {type(req)} requests")
                     continue
@@ -285,7 +288,7 @@ class Gphoto2Backend(AbstractBackend):
 
                 self._mode_machine.process_switchmode()
 
-                if self._mode_machine.active_mode == "standby":
+                if self._mode_machine.active_mode != "video":
                     time.sleep(0.2)
                     continue
 
