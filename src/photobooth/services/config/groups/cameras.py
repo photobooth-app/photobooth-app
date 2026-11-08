@@ -155,47 +155,6 @@ class Gphoto2Parameters(BaseModel):
         description="A field just for you to keep track why you chose a setting.",
     )
 
-# 1. Définissez la configuration de l'Olympus :
-class GroupCameraOlympus(BaseModel):
-    model_config = ConfigDict(title="Olympus")
-    backend_type: Literal["Olympus"] = "Olympus"
-    orientation: Orientation = Field(
-        default="1: 0°",
-        description="Choisissez l'orientation de l'appareil photo. 0° est l'orientation par défaut (aucun ajustement). L'orientation est écrite dans les métadonnées EXIF pour des transformations sans perte.",
-    )
-    device_ip: str = Field(
-            default="192.168.0.10",
-            description="Adresse IP Wi-Fi de l'appareil photo Olympus.",
-    )
-    liveview_port: int = Field(
-        default=40000,
-        description="Port UDP local utilisé pour le flux LiveView RTP.",
-    )
-    capture_timeout: float = Field(
-        default=10.0,
-        description="Délai maximum de scrutation de l'apparition de la nouvelle image après le déclenchement (secondes).",
-    )
-    download_timeout: float = Field(
-        default=20.0,
-        ge=1.0,
-        description="Délai maximum de téléchargement de l'image depuis l'appareil (secondes). À augmenter pour un transfert Wi-Fi lent ; le temps total d'une prise reste borné par le timeout d'attente du backend.",
-    )
-    camera_settle_after_capture: float = Field(
-        default=1.0,
-        ge=0.0,
-        description="Durée de stabilisation après une photo avant la reprise du livestream (secondes). Minime (0.5-1s) pour reprendre le vrai flux et cadrer la prise suivante ; le téléchargement garde déjà une frame d'attente.",
-    )
-    camera_standby_when_inactive: bool = Field(
-        default=True,
-        description="Mettre en veille le streaming en cas d'inactivité.",
-    )
-    camera_standby_when_inactive_time: float = Field(
-        default=30.0,
-        ge=10,
-        le=300,
-        description="Délai d'inactivité avant veille (secondes).",
-    )
-
 
 class GroupCameraGphoto2(BaseModelCamera):
     model_config = ConfigDict(title="Gphoto2")
@@ -380,6 +339,34 @@ class GroupCameraWigglecam(BaseModelCamera):
     )
 
 
+class GroupCameraOlympus(BaseModelCamera):
+    model_config = ConfigDict(title="Olympus")
+    backend_type: Literal["Olympus"] = "Olympus"
+
+    device_ip: str = Field(
+        default="192.168.0.10",
+        description="Wi-Fi IP address of the Olympus camera.",
+    )
+    liveview_port: int = Field(
+        default=40000,
+        description="Local UDP port used for the RTP LiveView stream.",
+    )
+    capture_timeout: float = Field(
+        default=15.0,
+        description="Maximum time to poll for the new image to appear after capture (seconds).",
+    )
+    download_timeout: float = Field(
+        default=20.0,
+        ge=1.0,
+        description="Maximum time to download the image from the camera (seconds). Increase this for slow Wi-Fi transfers; the total capture time remains bounded by the backend wait timeout.",
+    )
+    camera_settle_after_capture: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Stabilization time after a photo before resuming the live stream (seconds). Keep it short (0.5-1s) to resume the actual stream and frame the next shot; the download already waits for a frame.",
+    )
+
+
 BackendsBase = GroupCameraVirtual | GroupCameraPyav | GroupCameraWigglecam
 BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2 | GroupCameraOlympus
 BackendsWindows = GroupCameraDigicamcontrol
@@ -472,4 +459,3 @@ class GroupCameras(BaseModel):
         description="Configure the cameras here. Typical is only one camera, but it is also possible to use a DSLR for stills and another camera for the livestream.",
         title="List of Camera Backends",
     )
-
