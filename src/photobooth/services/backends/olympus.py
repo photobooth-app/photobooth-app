@@ -61,14 +61,12 @@ class _CameraCallPool:
     """
 
     def __init__(self, max_workers: int = 4):
-        self._q: "queue.Queue[dict]" = queue.Queue(maxsize=64)
+        self._q: queue.Queue[dict] = queue.Queue(maxsize=64)
         self._gen = 0
         self._lock = threading.Lock()
         self._workers: list[threading.Thread] = []
         for i in range(max_workers):
-            t = threading.Thread(
-                target=self._run, daemon=True, name=f"OlympusCamCall-{i}"
-            )
+            t = threading.Thread(target=self._run, daemon=True, name=f"OlympusCamCall-{i}")
             t.start()
             self._workers.append(t)
 
@@ -114,14 +112,10 @@ class _CameraCallPool:
         }
         try:
             self._q.put(box, timeout=1.0)
-        except queue.Full:
-            raise TimeoutError(
-                f"Olympus {desc}: camera call queue full (camera unresponsive?)"
-            )
+        except queue.Full as exc:
+            raise TimeoutError(f"Olympus {desc}: camera call queue full (camera unresponsive?)") from exc
         if not box["done"].wait(timeout):
-            raise TimeoutError(
-                f"Olympus {desc} timed out after {timeout}s (camera unreachable?)"
-            )
+            raise TimeoutError(f"Olympus {desc} timed out after {timeout}s (camera unreachable?)")
         if box["error"] is not None:
             raise box["error"]
         return box["value"]
@@ -197,11 +191,7 @@ def select_liveview_quality(camera: OlympusCamera) -> str:
         mode = args.get("mode") if args else None
         rec = mode.get("rec") if mode else None
         lvqty = rec.get("lvqty") if rec else None
-        resolutions = [
-            str(option)
-            for option in (lvqty or {})
-            if isinstance(option, str) and re.fullmatch(r"\d+x\d+", option)
-        ]
+        resolutions = [option for option in (lvqty or {}) if isinstance(option, str) and re.fullmatch(r"\d+x\d+", option)]
         if resolutions:
             return max(resolutions, key=lambda res: _pixels(res))
     except (AttributeError, KeyError, TypeError):
@@ -260,11 +250,7 @@ class OlympusBackend(AbstractBackend):
         super().__init__(
             orientation=config.orientation,
             num_subdevices=1,
-            idle_timeout=(
-                config.camera_standby_when_inactive_time
-                if config.camera_standby_when_inactive
-                else None
-            ),
+            idle_timeout=(config.camera_standby_when_inactive_time if config.camera_standby_when_inactive else None),
         )
         self._config = config
 
@@ -427,11 +413,7 @@ class OlympusBackend(AbstractBackend):
             self._ensure_receiver()
 
             run_bounded(
-                self._camera.start_liveview,
-                self._config.liveview_port,
-                self._lvqty or OlympusCamera.DEFAULT_RES,
-                timeout=3.0,
-                desc="start_liveview",
+                self._camera.start_liveview, self._config.liveview_port, self._lvqty or OlympusCamera.DEFAULT_RES, timeout=3.0, desc="start_liveview"
             )
             self._liveview_active = True
             self._last_frame_time = time.monotonic()
@@ -445,11 +427,7 @@ class OlympusBackend(AbstractBackend):
     def _stop_liveview(self) -> None:
         if self._camera:
             try:
-                run_bounded(
-                    self._camera.stop_liveview,
-                    timeout=2.0,
-                    desc="stop_liveview",
-                )
+                run_bounded(self._camera.stop_liveview, timeout=2.0, desc="stop_liveview")
             except Exception as exc:
                 logger.debug(f"Olympus: error stopping liveview: {exc}")
         self._liveview_active = False
@@ -467,10 +445,7 @@ class OlympusBackend(AbstractBackend):
             # Raising lets ResilientService retry periodically in the
             # background, so the app keeps loading while the camera is off.
             ip = self._config.device_ip or DEFAULT_CAMERA_WIFI_IP
-            raise ConnectionError(
-                f"Olympus camera not reachable on {ip}. "
-                "Is the camera in wifi mode?"
-            )
+            raise ConnectionError(f"Olympus camera not reachable on {ip}. Is the camera in wifi mode?")
 
     def teardown_resource(self):
         # Stop the broadcast FIRST. ``LiveViewReceiver.receive_packets`` re-reads
@@ -517,7 +492,7 @@ class OlympusBackend(AbstractBackend):
         self._capture_in_progress = False
         self._capture_req = None
         self._placeholder = None
-        
+
         # Invalidate the mode machine so it re-initializes on the next start
         # (needed for liveview to be restarted after a reconnect).
         self._mode_machine.active_mode = None
@@ -587,9 +562,7 @@ class OlympusBackend(AbstractBackend):
                 # loop.
                 self._liveview_start_failures += 1
                 delay = self._liveview_retry_delay()
-                logger.debug(
-                    f"Olympus: liveview not active (failure #{self._liveview_start_failures}), retrying in {delay:.1f}s"
-                )
+                logger.debug(f"Olympus: liveview not active (failure #{self._liveview_start_failures}), retrying in {delay:.1f}s")
                 if self._stop_event.wait(timeout=delay):
                     return  # shutdown requested while waiting
                 continue
@@ -609,15 +582,8 @@ class OlympusBackend(AbstractBackend):
                 # never reconnect. Detect the stall, drop _liveview_active so the
                 # next iteration resubscribes (serving the placeholder + backoff
                 # meanwhile).
-                if (
-                    self._liveview_active
-                    and self._last_frame_time
-                    and (time.monotonic() - self._last_frame_time > self.LIVEVIEW_STALL_TIMEOUT)
-                ):
-                    logger.warning(
-                        "Olympus: liveview stalled "
-                        f"({time.monotonic() - self._last_frame_time:.0f}s without a frame); resubscribing"
-                    )
+                if self._liveview_active and self._last_frame_time and (time.monotonic() - self._last_frame_time > self.LIVEVIEW_STALL_TIMEOUT):
+                    logger.warning(f"Olympus: liveview stalled ({time.monotonic() - self._last_frame_time:.0f}s without a frame); resubscribing")
                     self._liveview_active = False
                     self._liveview_start_failures = 0
                     # drop stale frames from the dead stream
@@ -628,10 +594,10 @@ class OlympusBackend(AbstractBackend):
                         pass
                 continue
             while True:
-                 try:
-                     frame = self._frame_queue.get_nowait()
-                 except queue.Empty:
-                     break
+                try:
+                    frame = self._frame_queue.get_nowait()
+                except queue.Empty:
+                    break
 
             with self._lores_data[0].condition:
                 self._lores_data[0].data = frame.jpeg
@@ -712,13 +678,11 @@ class OlympusBackend(AbstractBackend):
         if self._capture_stale(gen):
             return
 
-        poll_timeout = min(self._config.capture_timeout, 15.0)
+        poll_timeout = self._config.capture_timeout
 
         try:
             if self._camera is None and not self._connect():
-                raise ConnectionError(
-                    "Olympus camera is not reachable (off or wifi disconnected)."
-                )
+                raise ConnectionError("Olympus camera is not reachable (off or wifi disconnected).")
             if self._capture_stale(gen):
                 return
 
@@ -728,11 +692,14 @@ class OlympusBackend(AbstractBackend):
                 self._mode_machine.process_switchmode("still")
 
             # remember which files already exist on the card before shooting
-            before_files = run_bounded(
-                self._camera.list_images,
-                timeout=3.0,
-                desc="list_images(initial)",
-            ) or []
+            before_files = (
+                run_bounded(
+                    self._camera.list_images,
+                    timeout=3.0,
+                    desc="list_images(initial)",
+                )
+                or []
+            )
             before = {img.file_name: img.date_time for img in before_files}
             if self._capture_stale(gen):
                 return
@@ -759,11 +726,14 @@ class OlympusBackend(AbstractBackend):
                     if self._camera is None:
                         continue
                 try:
-                    images = run_bounded(
-                        self._camera.list_images,
-                        timeout=4.0,
-                        desc="list_images(poll)",
-                    ) or []
+                    images = (
+                        run_bounded(
+                            self._camera.list_images,
+                            timeout=4.0,
+                            desc="list_images(poll)",
+                        )
+                        or []
+                    )
                 except Exception as exc:
                     busy_streak += 1
                     logger.debug(f"Olympus: list_images during capture failed ({busy_streak}): {exc}")
@@ -781,12 +751,7 @@ class OlympusBackend(AbstractBackend):
                         self._liveview_active = False
                     continue
                 busy_streak = 0
-                added = [
-                    img
-                    for img in images
-                    if img.file_name not in before
-                    and Path(img.file_name).suffix.lower() in (".jpg", ".jpeg")
-                ]
+                added = [img for img in images if img.file_name not in before and Path(img.file_name).suffix.lower() in (".jpg", ".jpeg")]
                 if added:
                     # pick the most recent new JPEG: robust to JPG+RAW and to
                     # the camera reporting files out of order.
@@ -799,9 +764,7 @@ class OlympusBackend(AbstractBackend):
             if new_image is None:
                 # leave the request unsatisfied; wait_for_still_file raises its
                 # own TimeoutError. The camera is fine, so don't reset it.
-                raise TimeoutError(
-                    f"Olympus: no new image appeared within {poll_timeout:.1f}s."
-                )
+                raise TimeoutError(f"Olympus: no new image appeared within {poll_timeout:.1f}s.")
 
             if self._capture_stale(gen):
                 return
@@ -843,9 +806,7 @@ class OlympusBackend(AbstractBackend):
 
             logger.info("Olympus: still delivered.")
         except TimeoutError:
-            logger.warning(
-                f"Olympus: capture timed out after {poll_timeout:.1f}s without a new image."
-            )
+            logger.warning(f"Olympus: capture timed out after {poll_timeout:.1f}s without a new image.")
         except Exception as exc:
             logger.error(f"Olympus: capture failed: {exc}")
             if not self._capture_stale(gen):
@@ -867,6 +828,4 @@ class OlympusBackend(AbstractBackend):
                 self._capture_req = None
                 self._freeze_until = time.monotonic() + self._settle_after_capture
                 self._capture_in_progress = False
-                logger.debug(
-                    f"Olympus: capture done, live frozen {self._settle_after_capture:.1f}s for display"
-                )
+                logger.debug(f"Olympus: capture done, live frozen {self._settle_after_capture:.1f}s for display")
