@@ -52,12 +52,10 @@ def test_pipeline_multicamera(dummy_images: list[Image.Image], tmp_path: Path):
         img.save(f"tmp/input_{num}.jpg")
 
     context = MulticameraContext(dummy_images)
-    steps = []
-    steps.append(AutoPivotPointStep())
-    steps.append(OffsetPerOpticalFlowStep())
-    steps.append(CropCommonAreaStep())
-
-    pipeline = Pipeline[MulticameraContext](*steps)
+    pipeline = Pipeline[MulticameraContext]()
+    pipeline.append(AutoPivotPointStep())
+    pipeline.append(OffsetPerOpticalFlowStep())
+    pipeline.append(CropCommonAreaStep())
     pipeline(context)
 
     # sequence like 1-2-3-4-3-2-restart

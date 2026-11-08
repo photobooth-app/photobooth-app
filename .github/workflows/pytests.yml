@@ -44,7 +44,7 @@ jobs:
       - name: Install system apt dependencies
         run: |
           sudo apt update
-          sudo apt -y install libturbojpeg python3-pip libgl1 git libcap-dev ffmpeg rclone
+          sudo apt -y install libturbojpeg0 python3-pip libgl1 git libcap-dev ffmpeg rclone
       - name: install the project
         run: |
           uv sync --all-extras --dev
@@ -83,6 +83,9 @@ jobs:
         run: |
           uv sync --all-extras --dev
       - name: Run pytest
+        env:
+          COLUMNS: "120" # fix an issue with python 3.14 and latest windows when logging from pynng callback
+          LINES: "40"
         run: |
           uv run pytest --basetemp=./tests_tmp/ -v ./src/tests/tests --cov-report=term --cov-report=xml:coverage.xml --cov
       - uses: actions/upload-artifact@v7

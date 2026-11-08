@@ -34,7 +34,7 @@ def set_exif_orientation(jpeg_image: Path | bytes | bytearray, orientation_choic
             raise ValueError(f"invalid orientation choice {orientation_choice} results in invalid value: {orientation}.")
 
         exif_dict = piexif.load(maybe_image)
-        exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation
+        exif_dict["0th"][piexif.ImageIFD.Orientation] = orientation  # pyrefly: ignore [unsupported-operation]
 
         return piexif.dump(exif_dict)
 

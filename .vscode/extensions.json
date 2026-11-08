@@ -3,6 +3,6 @@
     "ms-python.python",
     "charliermarsh.ruff",
     "ryanluker.vscode-coverage-gutters",
-    "detachhead.basedpyright"
+    "meta.pyrefly"
   ]
 }

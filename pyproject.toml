@@ -1,6 +1,6 @@
 [project]
 name = "photobooth-app"
-version = "v9.0.0"
+version = "v9.0.1"
 requires-python = ">=3.11"
 description = "Photobooth app written in Python supporting DSLR, picamera2 and webcameras"
 authors = [{ name = "Michael G", email = "me@mgineer85.de" }]
@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Multimedia :: Graphics",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Multimedia :: Graphics :: Capture :: Digital Camera",
@@ -64,9 +65,6 @@ dependencies = [
   "pynng~=0.9.0",                                                                          # needs python3-dev package
   "requests",
   "pywin32; platform_system == 'Windows'",
-  # "pyqt5>=5.15.11",
-  # "tzlocal>=5.4.4",
-  "olympuswifi>=1.0.1",
 ]
 
 [project.scripts]
@@ -102,11 +100,8 @@ concurrency = ["thread", "multiprocessing"]
 #[tool.zuban] 
 #mode = "default"
 
-[tool.basedpyright]
-venvPath = "."
-venv = ".venv"
-ignore = ["./experimental/"]
-typeCheckingMode = "standard"
+[tool.pyrefly]
+project-excludes = ["experimental/**"]
 
 
 [tool.ruff]
@@ -145,8 +140,7 @@ dev = [
   "httpx2",
   "pydot",
   # "pre-commit",
-  "basedpyright>=1.39.9",
-  # "pyright",
+  "pyrefly",
   # "zuban>=0.9.0",
   "poethepoet",
   "wigglecam[node]",
@@ -163,7 +157,7 @@ default-groups = [
 # uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
 [tool.poe.tasks]
 lint = [
-  { cmd = "uv run basedpyright" },
+  { cmd = "uv run pyrefly check" },
   { cmd = "uv run ruff check" },
   { cmd = "uv run ruff format --check" },
 ]
@@ -178,7 +172,7 @@ list_outdated = [{ cmd = "uv pip list --outdated" }]
 
 
 [build-system]
-requires = ["uv_build>=0.11.0,<0.13.0"]
+requires = ["uv_build>=0.11.0,<0.14.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]

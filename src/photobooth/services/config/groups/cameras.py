@@ -243,7 +243,7 @@ class GroupCameraPyav(BaseModelCamera):
         json_schema_extra={"list_api": "/api/admin/enumerate/usbcameras"},
     )
 
-    pixel_format: BackendPyavInputFormat = Field(  # pyright: ignore[reportInvalidTypeForm]
+    pixel_format: BackendPyavInputFormat = Field(
         default="auto",
         description="mjpeg is preferred usually. Some cameras (especially virtual cameras) or systems (Mac) do not support MJPG, so you can fall back to uncompressed rawvideo types here.",
         json_schema_extra={"computeIntense": True},
@@ -423,7 +423,7 @@ class GroupBackend(BaseModel):
 
     description: str = Field(default="backend default name")
 
-    backend_config: BackendsPlatform = Field(discriminator="backend_type")  # pyright: ignore[reportInvalidTypeForm]
+    backend_config: BackendsPlatform = Field(discriminator="backend_type")
 
 
 class GroupCameras(BaseModel):

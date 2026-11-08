@@ -165,18 +165,28 @@ class ModeController:
     def request_video(self):
         """usually requested when creating a video but also for livestream. livestream request video on every frame to reset the timer.
         the stream thread needs to ensure a still capture is not interupted by another request to video!"""
-        self.reset_standby_timer()  # on mode request always reset the timer, to avoid going to standby accidentally in race conditions
-        self.request_mode("video")
+        with self._int_lock:
+            self._last_live_request = time.monotonic()
+            self.requested_mode = "video"
 
     def request_still(self):
-        self.reset_standby_timer()  # on mode request always reset the timer, to avoid going to standby accidentally in race conditions
-        self.request_mode("still")
+        with self._int_lock:
+            self._last_live_request = time.monotonic()
+            self.requested_mode = "still"
 
     def request_standby(self):
         self.request_mode("standby")
 
+    def request_standby_if_not_video_requested(self):
+        with self._int_lock:
+            if self.requested_mode == "video":
+                return
+
+            self.requested_mode = "standby"
+
     def reset_standby_timer(self):
-        self._last_live_request = time.monotonic()
+        with self._int_lock:
+            self._last_live_request = time.monotonic()
 
     @property
     def is_mode_change_pending(self):
@@ -192,19 +202,17 @@ class ModeController:
         while not self._monitor_thread.stopped():
             time.sleep(1)
 
-            if self._last_live_request is None:
-                continue
-
+            should_standby = False
             with self._int_lock:
-                idle = time.monotonic() - self._last_live_request
-                act = self.active_mode
+                if self._last_live_request is not None:
+                    idle = time.monotonic() - self._last_live_request
+                    if idle > self.idle_timeout and self.active_mode in ("video", "still"):
+                        self._last_live_request = None
+                        self.requested_mode = "standby"
+                        should_standby = True
 
-            if idle > self.idle_timeout and act == "video":
+            if should_standby:
                 logger.info(f"pause camera stream after {self.idle_timeout} idle timeout.")
-
-                self._last_live_request = None
-
-                self.request_standby()
 
     def process_switchmode(self, immediate_forced_mode: Modes | None = None):
         """Wird im stream-thread aufgerufen, wenn es passend für einen potentiellen mode-switch ist"""
@@ -275,6 +283,7 @@ class AbstractBackend(ResilientService, ABC):
         self._orientation: Orientation = orientation
         self._num_subdevices = num_subdevices
         self._idle_timeout = idle_timeout
+        self.is_video_backend = True
 
         # statisitics attributes
         self._framerate: Framerate = Framerate()
