@@ -12,7 +12,7 @@ from rclone_api.exceptions import RcloneProcessException
 from ... import MEDIA_PATH
 from ...utils.stoppablethread import StoppableThread
 from .config import RemoteConfig
-from .utils import get_corresponding_remote_file
+from .utils import ensure_remote_base_path, get_corresponding_remote_file
 
 logger = logging.getLogger(__name__)
 
@@ -73,23 +73,28 @@ class ThreadedRegularSync:
 
             for r in self.remotes:
                 try:
+                    # creates bucket/subdir if a bucket is configured, otherwise no-op
+                    ensure_remote_base_path(self.rclone, r)
                     # returns a list of the remote main dir or raises an exception 404 if the folder does not exist
                     # this is used to avoid submitting operations to a usb drive that is not attached currently.
-                    self.rclone.ls(r.name, r.subdir)
+                    self.rclone.ls(r.name, r.base_path)
                 except RcloneProcessException as exc:
-                    logger.error(f"{r.name}{r.subdir} not available, error code {exc.status}, skipping.")
+                    logger.error(f"{r.name}{r.base_path} not available, error code {exc.status}, skipping.")
+                    continue
+                except Exception as exc:
+                    logger.error(f"{r.name}{r.base_path} could not be prepared: {exc}, skipping.")
                     continue
 
                 if r.copy_only_mode:
-                    logger.info(f"copy files to '{r.name}{r.subdir}'")
+                    logger.info(f"copy files to '{r.name}{r.base_path}'")
                     fn_op = self.rclone.copy_async
                 else:
-                    logger.info(f"sync files to '{r.name}{r.subdir}'")
+                    logger.info(f"sync files to '{r.name}{r.base_path}'")
                     fn_op = self.rclone.sync_async
 
                 job = fn_op(
                     str(Path(MEDIA_PATH).absolute()),
-                    f"{r.name}{Path(r.subdir, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
+                    f"{r.name}{Path(r.base_path, get_corresponding_remote_file(Path(MEDIA_PATH))).as_posix()}",
                 )
 
                 full_sync_jobids.append(job.jobid)

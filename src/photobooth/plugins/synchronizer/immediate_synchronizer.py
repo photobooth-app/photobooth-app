@@ -9,7 +9,7 @@ from queue import Empty, PriorityQueue
 
 from rclone_api.api import RcloneApi, RcloneProcessException
 
-from photobooth.plugins.synchronizer.utils import get_corresponding_remote_file
+from photobooth.plugins.synchronizer.utils import ensure_remote_base_path, get_corresponding_remote_file
 
 from .config import RemoteConfig
 from .types import CopyOperation, DeleteOperation, JobResult, JobStatus, TaskCopy, TaskDelete
@@ -91,18 +91,26 @@ class ThreadedImmediateSyncPipeline:
             try:
                 # returns a list of the remote main dir or raises an exception 404 if the folder does not exist
                 # this is used to avoid submitting operations to a usb drive that is not attached currently.
-                self.rclone.ls(r.name, r.subdir)
+                self.rclone.ls(r.name, r.base_path)
             except RcloneProcessException as exc:
-                logger.info(f"{r.name}{r.subdir} not available, error code {exc.status}, skipping.")
-                continue
+                if r.bucket:
+                    # bucket/subdir not existing yet (eg. first run, regular sync not done yet): create it
+                    try:
+                        ensure_remote_base_path(self.rclone, r)
+                    except Exception as exc2:
+                        logger.info(f"{r.name}{r.base_path} not available and could not be created: {exc2}, skipping.")
+                        continue
+                else:
+                    logger.info(f"{r.name}{r.base_path} not available, error code {exc.status}, skipping.")
+                    continue
 
             # translate task to rclone operation for all remotes listed here
             if isinstance(task, TaskCopy):
                 op = CopyOperation(
-                    str(Path.cwd().absolute()), f"{task.file}", r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix()
+                    str(Path.cwd().absolute()), f"{task.file}", r.name, Path(r.base_path, get_corresponding_remote_file(task.file)).as_posix()
                 )
             elif isinstance(task, TaskDelete) and not r.copy_only_mode:
-                op = DeleteOperation(r.name, Path(r.subdir, get_corresponding_remote_file(task.file)).as_posix())
+                op = DeleteOperation(r.name, Path(r.base_path, get_corresponding_remote_file(task.file)).as_posix())
             else:
                 continue
 

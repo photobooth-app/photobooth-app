@@ -196,3 +196,138 @@ def test_regularSync_uses_copy_for_upload_only_remotes():
     assert rclone.sync_async.call_count == 1
     assert rclone.wait_for_jobs.call_count == 1
     assert rclone.wait_for_jobs.call_args.args[0] == [11, 22]
+
+
+@pytest.mark.parametrize(
+    "bucket,subdir,expected",
+    [
+        ("", "", ""),
+        ("", "archive", "archive"),
+        ("mybucket", "", "mybucket"),
+        ("mybucket", "photos/event1", "mybucket/photos/event1"),
+        ("/mybucket/", "/photos/", "mybucket/photos"),
+        ("mybucket", r"photos\event1", "mybucket/photos/event1"),
+    ],
+)
+def test_remoteconfig_base_path(bucket, subdir, expected):
+    r = RemoteConfig(name="s3:", bucket=bucket, subdir=subdir, shareconfig=ShareConfig())
+    assert r.base_path == expected
+
+
+def test_immediateSyncPipeline_uses_bucket_in_paths():
+    remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", subdir="photos", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
+    pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
+
+    rclone.ls.assert_called_once_with("s3:", "mybucket/photos")
+    assert pipeline.queue.get_nowait().operation.dst_remote == "mybucket/photos/media/test.jpg"
+
+
+def test_immediateSyncPipeline_creates_missing_bucket():
+    remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", subdir="photos", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone.ls.side_effect = _process_exc()
+    pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
+    pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
+
+    rclone._post.assert_called_once_with("operations/mkdir", {"fs": "s3:", "remote": "mybucket/photos"})
+    assert pipeline.queue.qsize() == 1
+
+
+def test_immediateSyncPipeline_skips_missing_path_without_bucket():
+    remotes = [RemoteConfig(enabled=True, name="usb:", subdir="drive", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone.ls.side_effect = _process_exc()
+    pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
+    pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
+
+    rclone._post.assert_not_called()
+    assert pipeline.queue.qsize() == 0
+
+
+def test_immediateSyncPipeline_skips_when_bucket_creation_fails():
+    remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone.ls.side_effect = _process_exc()
+    rclone._post.side_effect = Exception("access denied")
+    pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
+    pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
+
+    assert pipeline.queue.qsize() == 0
+
+
+def test_regularSync_ensures_bucket_and_syncs_into_it():
+    remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", subdir="photos", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone.sync_async.return_value = MagicMock(jobid=1)
+
+    regular_sync = ThreadedRegularSync(rclone=rclone, fullsync_remotes=remotes, sync_interval_s=999)
+    regular_sync._worker.join(timeout=1)
+    regular_sync.stop()
+
+    rclone._post.assert_called_once_with("operations/mkdir", {"fs": "s3:", "remote": "mybucket/photos"})
+    assert rclone.sync_async.call_args.args[1] == "s3:mybucket/photos/media"
+
+
+def test_regularSync_skips_remote_if_bucket_creation_fails():
+    remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone._post.side_effect = Exception("access denied")
+
+    regular_sync = ThreadedRegularSync(rclone=rclone, fullsync_remotes=remotes, sync_interval_s=999)
+    regular_sync._worker.join(timeout=1)
+    regular_sync.stop()
+
+    assert rclone.sync_async.call_count == 0
+
+
+def test_regularSync_does_not_create_path_without_bucket():
+    remotes = [RemoteConfig(enabled=True, name="sync:", subdir="archive", shareconfig=ShareConfig())]
+
+    rclone = MagicMock()
+    rclone.sync_async.return_value = MagicMock(jobid=1)
+
+    regular_sync = ThreadedRegularSync(rclone=rclone, fullsync_remotes=remotes, sync_interval_s=999)
+    regular_sync._worker.join(timeout=1)
+    regular_sync.stop()
+
+    rclone._post.assert_not_called()
+    assert rclone.sync_async.call_args.args[1] == "sync:archive/media"
+
+
+def test_sharepage_and_publiclink_use_bucket(sync: Synchronizer):
+    remote = sync._config.remotes[0]
+    remote.name = "s3:"
+    remote.bucket = "mybucket"
+    remote.subdir = "photos"
+
+    sync._copy_sharepage_to_remotes(remote)
+    assert sync._rclone_client.copyfile_async.call_args.args[3] == "mybucket/photos/index.html"  # type: ignore
+
+    remote.shareconfig.enabled = True
+    remote.shareconfig.use_sharepage = False
+    sync._rclone_client.publiclink.return_value.link = "https://remote/link"  # type: ignore
+    sync.get_share_links(Path("media/test.jpg"), uuid4())
+    assert sync._rclone_client.publiclink.call_args.args[1] == "mybucket/photos/media/test.jpg"  # type: ignore
+
+
+def _process_exc():
+    from rclone_api.exceptions import RcloneProcessException
+
+    exc = RcloneProcessException.__new__(RcloneProcessException)
+    Exception.__init__(exc, "not found")
+    exc.status = 404
+    return exc
+
+
+def test_remoteconfig_bucket_is_normalized_to_lowercase():
+    r = RemoteConfig(name="s3:", bucket=" Photobooth-Bucket/ ", subdir="Photos", shareconfig=ShareConfig())
+    assert r.bucket == "photobooth-bucket"
+    assert r.base_path == "photobooth-bucket/Photos"  # subdir is a key prefix, case is kept
