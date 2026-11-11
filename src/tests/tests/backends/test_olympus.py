@@ -3,7 +3,7 @@ import time
 from unittest.mock import patch
 
 import pytest
-from olympuswifi.liveview import LiveViewReceiver
+from olympuswifi.lvreceiver import LiveViewReceiver
 
 from photobooth.services.backends.abstractbackend import StillRequest
 from photobooth.services.backends.olympus import OlympusBackend, SupersededError, _CameraCallPool
