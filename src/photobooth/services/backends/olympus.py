@@ -28,7 +28,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from olympuswifi.camera import OlympusCamera
-from olympuswifi.liveview import LiveViewReceiver
+from olympuswifi.lvreceiver import LiveViewReceiver
 
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraOlympus

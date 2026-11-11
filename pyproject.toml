@@ -65,7 +65,7 @@ dependencies = [
   "pynng~=0.9.0",                                                                          # needs python3-dev package
   "requests",
   "pywin32; platform_system == 'Windows'",
-  "olympuswifi",
+  "olympuswifi>=1.0.2",
 ]
 
 [project.scripts]
