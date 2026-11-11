@@ -14,8 +14,10 @@ def ensure_remote_base_path(rclone, remote) -> None:
     if not remote.bucket:
         return
 
-    # rclone mkdir on s3 creates the bucket if needed; dirs below are implicit/created as needed.
-    rclone.mkdir(remote.name, remote.base_path)
+    # rclone's operations/mkdir (same as `rclone mkdir remote:bucket/subdir`) creates the bucket if missing
+    # and is a no-op if it exists; dirs below are implicit/created as needed.
+    # RcloneApi has no mkdir wrapper (yet), so the rc endpoint is called directly.
+    rclone._post("operations/mkdir", {"fs": remote.name, "remote": remote.base_path})
 
 
 def get_corresponding_remote_file(local_filepath: Path, local_root_dir: Path = Path("./media/")) -> Path:

@@ -233,7 +233,7 @@ def test_immediateSyncPipeline_creates_missing_bucket():
     pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
     pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
 
-    rclone.mkdir.assert_called_once_with("s3:", "mybucket/photos")
+    rclone._post.assert_called_once_with("operations/mkdir", {"fs": "s3:", "remote": "mybucket/photos"})
     assert pipeline.queue.qsize() == 1
 
 
@@ -245,7 +245,7 @@ def test_immediateSyncPipeline_skips_missing_path_without_bucket():
     pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
     pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
 
-    rclone.mkdir.assert_not_called()
+    rclone._post.assert_not_called()
     assert pipeline.queue.qsize() == 0
 
 
@@ -254,7 +254,7 @@ def test_immediateSyncPipeline_skips_when_bucket_creation_fails():
 
     rclone = MagicMock()
     rclone.ls.side_effect = _process_exc()
-    rclone.mkdir.side_effect = Exception("access denied")
+    rclone._post.side_effect = Exception("access denied")
     pipeline = ThreadedImmediateSyncPipeline(rclone=rclone, remotes=remotes, max_concurrency=0)
     pipeline.submit(TaskDelete(Path("media/test.jpg")), priority=19)
 
@@ -271,7 +271,7 @@ def test_regularSync_ensures_bucket_and_syncs_into_it():
     regular_sync._worker.join(timeout=1)
     regular_sync.stop()
 
-    rclone.mkdir.assert_called_once_with("s3:", "mybucket/photos")
+    rclone._post.assert_called_once_with("operations/mkdir", {"fs": "s3:", "remote": "mybucket/photos"})
     assert rclone.sync_async.call_args.args[1] == "s3:mybucket/photos/media"
 
 
@@ -279,7 +279,7 @@ def test_regularSync_skips_remote_if_bucket_creation_fails():
     remotes = [RemoteConfig(enabled=True, name="s3:", bucket="mybucket", shareconfig=ShareConfig())]
 
     rclone = MagicMock()
-    rclone.mkdir.side_effect = Exception("access denied")
+    rclone._post.side_effect = Exception("access denied")
 
     regular_sync = ThreadedRegularSync(rclone=rclone, fullsync_remotes=remotes, sync_interval_s=999)
     regular_sync._worker.join(timeout=1)
@@ -298,7 +298,7 @@ def test_regularSync_does_not_create_path_without_bucket():
     regular_sync._worker.join(timeout=1)
     regular_sync.stop()
 
-    rclone.mkdir.assert_not_called()
+    rclone._post.assert_not_called()
     assert rclone.sync_async.call_args.args[1] == "sync:archive/media"
 
 
