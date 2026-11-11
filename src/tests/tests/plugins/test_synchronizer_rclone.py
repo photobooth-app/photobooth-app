@@ -325,3 +325,9 @@ def _process_exc():
     Exception.__init__(exc, "not found")
     exc.status = 404
     return exc
+
+
+def test_remoteconfig_bucket_is_normalized_to_lowercase():
+    r = RemoteConfig(name="s3:", bucket=" Photobooth-Bucket/ ", subdir="Photos", shareconfig=ShareConfig())
+    assert r.bucket == "photobooth-bucket"
+    assert r.base_path == "photobooth-bucket/Photos"  # subdir is a key prefix, case is kept

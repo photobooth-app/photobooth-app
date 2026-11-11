@@ -3,7 +3,7 @@ import sys
 from platform import node
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from ... import CONFIG_PATH
@@ -145,7 +145,7 @@ class RemoteConfig(BaseModel):
     )
     bucket: str = Field(
         default="",
-        description="Optional bucket (S3 and compatible remotes) to sync into. Used if it exists, created otherwise. Leave empty if the remote has no buckets. Limits the app to this bucket instead of the whole account.",
+        description="Optional bucket (S3 and compatible remotes) to sync into. Used if it exists, created otherwise. Bucket names must be lowercase, so the name is converted to lowercase automatically. Leave empty if the remote has no buckets. Limits the app to this bucket instead of the whole account.",
     )
     subdir: str = Field(
         default="",
@@ -170,6 +170,12 @@ class RemoteConfig(BaseModel):
     )
 
     shareconfig: ShareConfig
+
+    @field_validator("bucket", mode="after")
+    @classmethod
+    def _normalize_bucket(cls, value: str) -> str:
+        # bucket names on S3 and compatible services must be lowercase; normalize instead of failing at startup
+        return value.strip().strip("/").lower()
 
     @property
     def base_path(self) -> str:
