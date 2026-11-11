@@ -206,12 +206,12 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
 
         # add to queue for later upload.
         # this way if no internet the startup is not causing issues preventing the complete app from startup
-        logger.info(f"update shareportal to {remote.name}{remote.subdir}")
+        logger.info(f"update shareportal to {remote.name}{remote.base_path}")
         self._rclone_client.copyfile_async(
             dlportal_source_path.parent.absolute().as_posix(),
             dlportal_source_path.name,
             remote.name,
-            Path(remote.subdir, dlportal_source_path.name).as_posix(),
+            Path(remote.base_path, dlportal_source_path.name).as_posix(),
         )
 
     @hookimpl
@@ -252,7 +252,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
                 try:
                     mediaitem_link = self._rclone_client.publiclink(
                         remote.name,
-                        Path(remote.subdir, get_corresponding_remote_file(filepath_local)).as_posix(),
+                        Path(remote.base_path, get_corresponding_remote_file(filepath_local)).as_posix(),
                     ).link
                 except Exception as exc:
                     logger.error(f"could not create public link due to error: {exc}")
