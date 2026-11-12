@@ -339,8 +339,36 @@ class GroupCameraWigglecam(BaseModelCamera):
     )
 
 
+class GroupCameraOlympus(BaseModelCamera):
+    model_config = ConfigDict(title="Olympus")
+    backend_type: Literal["Olympus"] = "Olympus"
+
+    device_ip: str = Field(
+        default="192.168.0.10",
+        description="Wi-Fi IP address of the Olympus camera.",
+    )
+    liveview_port: int = Field(
+        default=40000,
+        description="Local UDP port used for the RTP LiveView stream.",
+    )
+    capture_timeout: float = Field(
+        default=15.0,
+        description="Maximum time to poll for the new image to appear after capture (seconds).",
+    )
+    download_timeout: float = Field(
+        default=20.0,
+        ge=1.0,
+        description="Maximum time to download the image from the camera (seconds). Increase this for slow Wi-Fi transfers; the total capture time remains bounded by the backend wait timeout.",
+    )
+    camera_settle_after_capture: float = Field(
+        default=1.0,
+        ge=0.0,
+        description="Stabilization time after a photo before resuming the live stream (seconds). Keep it short (0.5-1s) to resume the actual stream and frame the next shot; the download already waits for a frame.",
+    )
+
+
 BackendsBase = GroupCameraVirtual | GroupCameraPyav | GroupCameraWigglecam
-BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2
+BackendsLinux = GroupCameraPicamera2 | GroupCameraV4l2 | GroupCameraGphoto2 | GroupCameraOlympus
 BackendsWindows = GroupCameraDigicamcontrol
 BackendsDarwin = GroupCameraGphoto2
 if sys.platform == "win32":

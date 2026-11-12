@@ -44,8 +44,9 @@ class StillRequest:
     id: uuid.UUID
     subdevice_index: int
     result_file: Path | None = None
-    # error: Exception | None = None
-    condition: threading.Condition = threading.Condition()
+    error: Exception | None = None
+    cancelled: bool = False
+    condition: threading.Condition = field(default_factory=threading.Condition)
 
 
 @dataclass
@@ -53,7 +54,7 @@ class MulticamRequest:
     id: uuid.UUID
     result_files: list[Path] | None = None
     # error: Exception | None = None
-    condition: threading.Condition = threading.Condition()
+    condition: threading.Condition = field(default_factory=threading.Condition)
 
 
 @dataclass
@@ -361,10 +362,17 @@ class AbstractBackend(ResilientService, ABC):
             self._hires_queue.append(req)
 
         with req.condition:
-            ok = req.condition.wait(timeout=8)
+            ok = req.condition.wait_for(
+                lambda: req.result_file is not None or req.error is not None,
+                timeout=self._still_wait_timeout(),
+            )
 
             if not ok:
+                req.cancelled = True
                 raise TimeoutError("timeout waiting for hires frame")
+
+            if req.error is not None:
+                raise req.error
 
             filepath = req.result_file
             assert filepath
@@ -372,6 +380,9 @@ class AbstractBackend(ResilientService, ABC):
             set_exif_orientation(filepath, self._orientation)
 
             return filepath
+
+    def _still_wait_timeout(self) -> float:
+        return 8.0
 
     def wait_for_lores_image(self, index_subdevice: int = 0) -> bytes:
 
