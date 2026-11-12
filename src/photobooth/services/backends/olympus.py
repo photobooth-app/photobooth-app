@@ -24,11 +24,13 @@ import re
 import threading
 import time
 from collections import deque
+from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from olympuswifi.camera import OlympusCamera
 from olympuswifi.lvreceiver import LiveViewReceiver
+from PIL import Image, ImageDraw
 
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import GroupCameraOlympus
@@ -190,7 +192,7 @@ def _pixels(resolution: str) -> int:
         return 0
 
 
-def make_placeholder_jpeg() -> bytes | None:
+def make_placeholder_jpeg() -> bytes:
     """Return a small solid \"busy\" JPEG to serve during a still capture.
 
     Served to the lores stream so the frontend websocket stays fed (no retry
@@ -198,20 +200,12 @@ def make_placeholder_jpeg() -> bytes | None:
     its photo is being displayed. ``None`` when Pillow is unavailable: the
     backend then simply serves no frames during the capture. Best-effort.
     """
-    try:
-        from io import BytesIO
-
-        from PIL import Image, ImageDraw
-
-        img = Image.new("RGB", (640, 480), (18, 22, 28))
-        draw = ImageDraw.Draw(img)
-        draw.text((16, 8), "Olympus - photo in progress...", fill=(180, 190, 200))
-        buffer = BytesIO()
-        img.save(buffer, "JPEG", quality=70)
-        return buffer.getvalue()
-    except Exception as exc:  # noqa: BLE001 - placeholder is best-effort
-        logger.debug(f"Olympus: could not build placeholder frame: {exc}")
-        return None
+    img = Image.new("RGB", (640, 480), (18, 22, 28))
+    draw = ImageDraw.Draw(img)
+    draw.text((16, 8), "Olympus - photo in progress...", fill=(180, 190, 200))
+    buffer = BytesIO()
+    img.save(buffer, "JPEG", quality=70)
+    return buffer.getvalue()
 
 
 class OlympusBackend(AbstractBackend):
@@ -642,8 +636,7 @@ class OlympusBackend(AbstractBackend):
         """
         if self._placeholder is None:
             self._placeholder = make_placeholder_jpeg()
-        if not self._placeholder:
-            return
+
         with self._lores_data[0].condition:
             self._lores_data[0].data = self._placeholder
             self._lores_data[0].condition.notify_all()
