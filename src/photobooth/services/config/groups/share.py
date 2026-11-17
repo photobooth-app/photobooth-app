@@ -120,6 +120,18 @@ class GroupShare(BaseModel):
         description="Enable sharing service in general.",
     )
 
+    check_link_connection: bool = Field(
+        default=True,
+        description="Before a QR code is shown, check that the server behind the link answers (HEAD request). Links to unreachable servers are not displayed, so guests do not scan a dead link.",
+    )
+
+    check_link_timeout: float = Field(
+        default=2.0,
+        ge=0.5,
+        le=10.0,
+        description="Seconds to wait for the answer of the server when checking a link.",
+    )
+
     actions: list[ShareConfigurationSet] = Field(
         default=[
             ShareConfigurationSet(
