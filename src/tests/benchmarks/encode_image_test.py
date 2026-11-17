@@ -58,7 +58,7 @@ def pillow_encode_jpg(frame_from_camera):
 
 
 def cv2_encode_jpg(frame_from_camera):
-    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+    encode_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
     result, encimg = cv2.imencode(".jpg", frame_from_camera, encode_param)
 
     return encimg.tobytes()
@@ -128,13 +128,13 @@ def pillow_encode_avif(frame_from_camera):
 
 
 def cv2_encode_webp(frame_from_camera):
-    encode_params = [int(cv2.IMWRITE_WEBP_QUALITY), 85]  # Qualität 0–100
+    encode_params = [cv2.IMWRITE_WEBP_QUALITY, 85]  # Qualität 0–100
     success, encimg = cv2.imencode(".webp", frame_from_camera, encode_params)
     return encimg.tobytes()
 
 
 def cv2_encode_webp_lossless(frame_from_camera):
-    encode_params = [int(cv2.IMWRITE_WEBP_QUALITY), 100]  # Qualität 0–100, 100 enables lossless
+    encode_params = [cv2.IMWRITE_WEBP_QUALITY, 100]  # Qualität 0–100, 100 enables lossless
     success, encimg = cv2.imencode(".webp", frame_from_camera, encode_params)
     return encimg.tobytes()
 

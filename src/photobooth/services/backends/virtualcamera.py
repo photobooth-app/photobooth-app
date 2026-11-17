@@ -78,7 +78,7 @@ class VirtualCameraBackend(AbstractBackend):
                 accu -= ratio
 
                 self._frame_tick()
-                yield bytes(frame)
+                yield frame
 
                 time.sleep(1.0 / target_fps)
 

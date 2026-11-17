@@ -125,7 +125,7 @@ class ShareService(BaseService):
         share_parameters.pop("filename", None)  # if filename is configured by user, remove it, because the app sets it.
 
         try:
-            formatted_command = str(action_config.processing.share_command).format(
+            formatted_command = action_config.processing.share_command.format(
                 filename=filename,
                 media_type=media_type,
                 action_config_name=action_config_name,

@@ -145,6 +145,8 @@ dev = [
   "poethepoet",
   "wigglecam[node]",
   "pyturbojpeg~=1.8.0",
+  "types-psutil",
+  "types-pyserial"
 ]
 
 

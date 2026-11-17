@@ -142,7 +142,7 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
 
             if DEBUG_TMP:
                 out_path = f"tmp/{fname.stem}_{i}_detector_in.png"
-                cv2.imwrite(str(out_path), img)
+                cv2.imwrite(out_path, img)
 
             corners, ids, _, _ = detector.detectBoard(img)
 
@@ -155,7 +155,7 @@ class SimpleCalibrationUtil(CalibrationBase[CalDataAlign]):
                     debug_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
                     cv2.aruco.drawDetectedCornersCharuco(debug_img, corners, ids)
                     out_path = f"tmp/{fname.stem}_{i}_detected.png"
-                    cv2.imwrite(str(out_path), debug_img)
+                    cv2.imwrite(out_path, debug_img)
 
         if not all_ids:
             raise ValueError("No ChArUco corners detected in any image.")

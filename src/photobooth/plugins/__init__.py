@@ -156,7 +156,7 @@ user_plugins = [importlib.import_module(f"{name}.{name}") for _, name, ispkg in 
 
 # register all plugins
 for discovered_plugin in included_plugins + user_plugins:
-    plugin_class_factory = str(discovered_plugin.__name__).split(".")[-1].title().replace("_", "")
+    plugin_class_factory = discovered_plugin.__name__.split(".")[-1].title().replace("_", "")
 
     try:
         instance = getattr(discovered_plugin, plugin_class_factory)()  # Call the plugins object to instanciate.

@@ -23,8 +23,8 @@ def dummy_image(size: tuple[int, int] = (400, 250), offset_x: int = 0, offset_y:
 
     canvas = Image.new("RGB", size, "green")
 
-    center_x = int(round(size[0] / 2 + offset_x - elli_rad / 2))
-    center_y = int(round(size[1] / 2 + offset_y - elli_rad / 2))
+    center_x = round(size[0] / 2 + offset_x - elli_rad / 2)
+    center_y = round(size[1] / 2 + offset_y - elli_rad / 2)
     canvas.paste(mask, (center_x, center_y), mask=mask)
 
     return canvas

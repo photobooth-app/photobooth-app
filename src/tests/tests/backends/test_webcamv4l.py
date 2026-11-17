@@ -4,7 +4,7 @@ import pytest
 
 try:
     from photobooth.services.backends.webcamv4l import WebcamV4lBackend
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     pytest.skip(reason="linuxpy not available", allow_module_level=True)
 
 from photobooth.appconfig import appconfig
@@ -42,7 +42,7 @@ def backend_v4l():
     logger.info(f"available camera indexes: {_availableCameraIndexes}")
     logger.info(f"using first camera index to test: {cameraIndex}")
 
-    backend._config.device_identifier = str(cameraIndex)
+    backend._config.device_identifier = cameraIndex
 
     # deliver
     backend.start()

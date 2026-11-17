@@ -1294,6 +1294,8 @@ dev = [
     { name = "pytest-httpserver" },
     { name = "pyturbojpeg" },
     { name = "ruff" },
+    { name = "types-psutil" },
+    { name = "types-pyserial" },
     { name = "wigglecam", extra = ["node"] },
 ]
 
@@ -1347,6 +1349,8 @@ dev = [
     { name = "pytest-httpserver" },
     { name = "pyturbojpeg", specifier = "~=1.8.0" },
     { name = "ruff" },
+    { name = "types-psutil" },
+    { name = "types-pyserial" },
     { name = "wigglecam", extras = ["node"] },
 ]
 
@@ -2281,6 +2285,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz", hash = "sha256:30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd", size = 28091, upload-time = "2026-10-12T22:27:31.808Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/e9/3a7820be2bb0fe53b6bc9c3be26d3d1158004e4c3ab953aa6840b955b1e9/truststore-0.10.5-py3-none-any.whl", hash = "sha256:9aaaedaefaf06d8b206278cf8b5012bc897f485a874503501e12d776df78951c", size = 19017, upload-time = "2026-10-12T22:27:30.377Z" },
+]
+
+[[package]]
+name = "types-psutil"
+version = "7.2.2.20261111"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/30/9eb9f10b074aa0cb3456ad3469716169d0af6de58096719f31cb065aac68/types_psutil-7.2.2.20261111.tar.gz", hash = "sha256:d677119c44fb80cc9be41d8ac731f08bf89974bb1daa49b6688665a9d7224f42", size = 27439, upload-time = "2026-11-11T08:32:33.155Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/c2/6a9d0b3e4f55ad008891dda1f9316b077f28c22274c58869f8047f7d6b74/types_psutil-7.2.2.20261111-py3-none-any.whl", hash = "sha256:054f7b635fc908d3d27e49e8d274fbfed115a1a859f2edeae17519c0238286a1", size = 33394, upload-time = "2026-11-11T08:32:32.097Z" },
+]
+
+[[package]]
+name = "types-pyserial"
+version = "3.5.0.20261104"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/12/a7f5c8e6529275da78de98283e407f4ad70612189c8b2c50076595824bde/types_pyserial-3.5.0.20261104.tar.gz", hash = "sha256:8276342a827facb25bd91976f2b2db576b74b3c32777464a5aa8ba6a7b91959f", size = 21336, upload-time = "2026-11-04T08:14:17.383Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/08/16c3bd0453593e058d5e2abedea51cd913db0d0ac9754476d26d58461a2a/types_pyserial-3.5.0.20261104-py3-none-any.whl", hash = "sha256:b31c0b53cd57784db8434fc623a019e4d69b8e88a87796f09fc885d59799b593", size = 25372, upload-time = "2026-11-04T08:14:16.167Z" },
 ]
 
 [[package]]

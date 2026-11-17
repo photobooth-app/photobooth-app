@@ -43,6 +43,7 @@ def test_resize_jpg_force_pillow(tmp_path):
     input = Path("src/tests/assets/input.jpg")
     output = tmp_path / "output.jpg"
 
+    # pyrefly: ignore[deprecated]
     mr.resize_jpeg_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
 
     with Image.open(output) as img:

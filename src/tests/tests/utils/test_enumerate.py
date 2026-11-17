@@ -11,7 +11,7 @@ def test_enum_dslr_gphoto2():
 
     try:
         dslr_gphoto2()
-    except (ImportError, ModuleNotFoundError):
+    except ImportError:
         pytest.skip(reason="gphoto2 not available")
 
 
