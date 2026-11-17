@@ -14,7 +14,11 @@ def resolve_extreme_choice(value, choices: list):
         except ValueError:
             return None
 
-    numeric = [(number(c), c) for c in choices if number(c) is not None]
+    numeric: list[tuple[float, object]] = []
+    for choice in choices:
+        parsed = number(choice)
+        if parsed is not None:
+            numeric.append((parsed, choice))
     if not numeric:
         return value
     return (min if value == "min" else max)(numeric, key=lambda item: item[0])[1]
