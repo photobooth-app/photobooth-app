@@ -8,7 +8,10 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from photobooth.services.acquisition import AcquisitionService
+from photobooth.models.stillretry import StillRetry
+from photobooth.plugins import hookimpl
+from photobooth.plugins import pm as pluggy_pm
+from photobooth.services.acquisition import MAX_STILL_RETRIES, AcquisitionService
 from tests.tests.util import block_until_device_is_running
 
 logger = logging.getLogger(name=None)
@@ -121,3 +124,51 @@ def test_get_livestream_virtualcamera(_acqs: AcquisitionService):
             _acqs._video_backend.recover()
 
     assert i == 10
+
+
+class _RetryPlugin:
+    def __init__(self, retries: int):
+        self.retries = retries
+        self.seen_attempts: list[int] = []
+
+    @hookimpl
+    def acq_still_check(self, file, retry_attempt):
+        self.seen_attempts.append(retry_attempt)
+        if retry_attempt < self.retries:
+            return StillRetry(parameters={"iso": "100"}, reason="test")
+        return None
+
+
+def _run_with_plugin(_acqs: AcquisitionService, plugin: _RetryPlugin):
+    backend = _acqs._stills_backend
+    overrides_during_capture: list[dict] = []
+    original = backend.wait_for_still_file
+
+    def spy(*args, **kwargs):
+        overrides_during_capture.append(dict(backend.still_parameter_overrides))
+        return original(*args, **kwargs)
+
+    pluggy_pm.register(plugin)
+    try:
+        with patch.object(backend, "wait_for_still_file", side_effect=spy):
+            _acqs.wait_for_still_file()
+    finally:
+        pluggy_pm.unregister(plugin)
+
+    return backend, overrides_during_capture
+
+
+def test_still_check_hook_retry_uses_temporary_overrides(_acqs: AcquisitionService):
+    plugin = _RetryPlugin(retries=1)
+    backend, overrides_during_capture = _run_with_plugin(_acqs, plugin)
+
+    assert plugin.seen_attempts == [0, 1]  # original capture and the photo of the retry
+    assert overrides_during_capture == [{}, {"iso": "100"}]  # retry parameters apply to the retry only
+    assert backend.still_parameter_overrides == {}  # and are removed afterwards
+
+
+def test_still_check_hook_retries_are_limited(_acqs: AcquisitionService):
+    plugin = _RetryPlugin(retries=99)
+    _, overrides_during_capture = _run_with_plugin(_acqs, plugin)
+
+    assert len(overrides_during_capture) == 1 + MAX_STILL_RETRIES

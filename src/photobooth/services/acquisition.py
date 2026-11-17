@@ -17,6 +17,8 @@ from .base import BaseService
 
 logger = logging.getLogger(f"{__name__}-app")
 
+MAX_STILL_RETRIES = 2  # limit additional captures requested by plugins via acq_still_check
+
 
 class AcquisitionService(BaseService):
     def __init__(self):
@@ -127,7 +129,24 @@ class AcquisitionService(BaseService):
         pluggy_pm.hook.acq_before_shot()
         pluggy_pm.hook.acq_before_get_still()
         try:
-            return backend.wait_for_still_file(index_subdevice=index_subdevice)
+            file = backend.wait_for_still_file(index_subdevice=index_subdevice)
+
+            # plugins may check the image and request a retry, eg. with other camera parameters if the flash failed.
+            for attempt in range(1, MAX_STILL_RETRIES + 1):
+                retry = pluggy_pm.hook.acq_still_check(file=file, retry_attempt=attempt - 1)
+                if retry is None:
+                    break
+
+                logger.warning(f"plugin requested still retry {attempt}/{MAX_STILL_RETRIES}: {retry.reason or 'no reason given'}")
+                # retry parameters are applied on top of overrides that plugins may have set persistently before.
+                previous_overrides = backend.still_parameter_overrides
+                backend.still_parameter_overrides = {**previous_overrides, **retry.parameters}
+                try:
+                    file = backend.wait_for_still_file(index_subdevice=index_subdevice)
+                finally:
+                    backend.still_parameter_overrides = previous_overrides
+
+            return file
         except Exception as exc:
             raise exc
         finally:
