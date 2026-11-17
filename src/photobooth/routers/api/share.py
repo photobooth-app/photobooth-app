@@ -3,10 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 
+from ...appconfig import appconfig
 from ...container import container
 from ...database.models import Mediaitem
 from ...plugins import pm as pluggy_pm
 from ...utils.exceptions import WrongMediaTypeError
+from ...utils.linkcheck import filter_reachable
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/share", tags=["share"])
@@ -51,5 +53,8 @@ def api_download_item_id_get_sharelinks(id: UUID):  # -> list[str]:
 
     pluggy_links = pluggy_pm.hook.get_share_links(filepath_local=requested_mediaitem.processed, identifier=requested_mediaitem.id)
     pluggy_links_flatten = [x for xs in pluggy_links for x in xs]
+
+    if appconfig.share.check_link_connection:
+        pluggy_links_flatten = filter_reachable(pluggy_links_flatten, appconfig.share.check_link_timeout)
 
     return pluggy_links_flatten
