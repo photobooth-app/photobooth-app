@@ -2,11 +2,11 @@
 
 import logging
 import time
-import urllib.error
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from urllib.parse import urldefrag
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +19,19 @@ _cache_lock = Lock()
 def _check_url(url: str, timeout: float) -> bool:
     """any HTTP answer below 500 proves the server is reachable (a 404 for a file that is not uploaded yet still means the server is there)."""
     for method in ("HEAD", "GET"):
-        request = urllib.request.Request(url, method=method, headers={"User-Agent": "photobooth-app-linkcheck"})
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - urls come from the admin's config
-                return response.status < 500
-        except urllib.error.HTTPError as exc:
-            if exc.code == 405 and method == "HEAD":  # server does not allow HEAD, try GET
-                continue
-            return exc.code < 500
-        except Exception as exc:  # dns error, refused, timeout, ssl error, ...
+            with requests.request(
+                method,
+                url,
+                headers={"User-Agent": "photobooth-app-linkcheck"},
+                timeout=timeout,
+                allow_redirects=True,
+                stream=True,
+            ) as response:
+                if response.status_code == 405 and method == "HEAD":  # server does not allow HEAD, try GET
+                    continue
+                return response.status_code < 500
+        except requests.RequestException as exc:
             logger.debug(f"link check failed for {url}: {exc}")
             return False
     return False
