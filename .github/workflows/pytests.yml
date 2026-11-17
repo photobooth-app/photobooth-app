@@ -37,7 +37,7 @@ jobs:
           mkdir /tmp/srv_php_endpoint
           nohup php -S localhost:8082 -t /tmp/srv_php_endpoint/ > phpd.log 2>&1 &
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -107,7 +107,7 @@ jobs:
       #   with: # v8 not yet avail: https://github.com/AnimMouse/setup-ffmpeg/issues/7
       #     version: 71 # for mac specify without .
       - name: Set up Python and uv ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v8.2.0
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
