@@ -1,5 +1,6 @@
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any
 
 import pytest
 
@@ -11,7 +12,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_response(404 if self.path == "/missing" else 200)
         self.end_headers()
 
-    def log_message(self, *args):
+    def log_message(self, format: str, *args: Any) -> None:
         pass
 
 
