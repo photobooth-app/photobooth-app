@@ -6,7 +6,7 @@ import time
 import requests
 from statemachine import Event, State
 
-from ...database.models import MediaitemTypes
+from ...database.models import Mediaitem, MediaitemTypes
 from ...services.processor.machine.processingmachine import ProcessingMachine
 from .. import hookimpl
 from ..base_plugin import BasePlugin
@@ -16,10 +16,18 @@ from .models import TaskCommand, TaskHttpRequest, eventHooks, requestMethods
 logger = logging.getLogger(__name__)
 
 
+def _format_values(event: eventHooks, mediaitem_type: MediaitemTypes | None, mediaitem: Mediaitem | None) -> dict[str, str | None]:
+    return {
+        "event": event,
+        "mediaitem_type": mediaitem_type if mediaitem_type else None,
+        "filepath": str(mediaitem.processed.resolve()) if mediaitem else "",
+    }
+
+
 class ThreadCommand(threading.Thread):
-    def __init__(self, task: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None):
+    def __init__(self, task: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None, mediaitem: Mediaitem | None = None):
         super().__init__(daemon=True)
-        fmt = {"event": event, "mediaitem_type": mediaitem_type if mediaitem_type else None}
+        fmt = _format_values(event, mediaitem_type, mediaitem)
         self.command = task.command.format(**fmt)
         self.delay_before = task.delay_before
         self.timeout = task.timeout
@@ -51,13 +59,13 @@ class ThreadCommand(threading.Thread):
 
 
 class ThreadUrl(threading.Thread):
-    def __init__(self, task: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None):
+    def __init__(self, task: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None, mediaitem: Mediaitem | None = None):
         super().__init__(daemon=True)
         self.url = str(task.url)
         self.delay_before = task.delay_before
         self.timeout = task.timeout
         self.body_parameters_as_json = task.body_parameters_as_json
-        fmt = {"event": event, "mediaitem_type": mediaitem_type if mediaitem_type else None}
+        fmt = _format_values(event, mediaitem_type, mediaitem)
         self.query_params: dict[str, str] = {param.key: param.value.format(**fmt) for param in task.parameter if param.where == "query"}
         self.body_params: dict[str, str] = {param.key: param.value.format(**fmt) for param in task.parameter if param.where == "body"}
         self.method: requestMethods = task.method
@@ -123,18 +131,18 @@ class Commander(BasePlugin[CommanderConfig]):
 
     ## state machine processing hooks
     @hookimpl
-    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes):
+    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None):
         if target == ProcessingMachine.counting:
-            self.run_task("counting", mediaitem_type)
+            self.run_task("counting", mediaitem_type, mediaitem)
         elif target == ProcessingMachine.finished:
-            self.run_task("finished", mediaitem_type)
+            self.run_task("finished", mediaitem_type, mediaitem)
         elif target == ProcessingMachine.capture:
-            self.run_task("capture", mediaitem_type)
+            self.run_task("capture", mediaitem_type, mediaitem)
 
     @hookimpl
-    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes):
+    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None):
         if source == ProcessingMachine.capture:
-            self.run_task("captured", mediaitem_type)
+            self.run_task("captured", mediaitem_type, mediaitem)
 
     ## acquisition service hooks
     @hookimpl
@@ -149,21 +157,23 @@ class Commander(BasePlugin[CommanderConfig]):
     def acq_before_get_video(self):
         self.run_task("capture_video")
 
-    def invoke_command(self, task_to_run: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None):
-        t = ThreadCommand(task_to_run, event, mediaitem_type)
+    def invoke_command(self, task_to_run: TaskCommand, event: eventHooks, mediaitem_type: MediaitemTypes | None, mediaitem: Mediaitem | None = None):
+        t = ThreadCommand(task_to_run, event, mediaitem_type, mediaitem)
         t.start()
 
         if task_to_run.wait_until_completed:
             t.join()
 
-    def invoke_httprequest(self, task_to_run: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None):
-        t = ThreadUrl(task_to_run, event, mediaitem_type)
+    def invoke_httprequest(
+        self, task_to_run: TaskHttpRequest, event: eventHooks, mediaitem_type: MediaitemTypes | None, mediaitem: Mediaitem | None = None
+    ):
+        t = ThreadUrl(task_to_run, event, mediaitem_type, mediaitem)
         t.start()
 
         if task_to_run.wait_until_completed:
             t.join()
 
-    def run_task(self, event: eventHooks, mediaitem_type: MediaitemTypes | None = None):
+    def run_task(self, event: eventHooks, mediaitem_type: MediaitemTypes | None = None, mediaitem: Mediaitem | None = None):
         if not self._config.enable_tasks_processing:
             # ignore any request if not enabled overall processing...
             return
@@ -178,7 +188,7 @@ class Commander(BasePlugin[CommanderConfig]):
 
         for task_to_run in tasks_to_run:
             if isinstance(task_to_run, TaskCommand):
-                self.invoke_command(task_to_run, event, mediaitem_type)
+                self.invoke_command(task_to_run, event, mediaitem_type, mediaitem)
             elif isinstance(task_to_run, TaskHttpRequest):
-                self.invoke_httprequest(task_to_run, event, mediaitem_type)
+                self.invoke_httprequest(task_to_run, event, mediaitem_type, mediaitem)
             # else cannot happen because of pydantic validation before...

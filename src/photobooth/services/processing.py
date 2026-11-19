@@ -9,6 +9,7 @@ from uuid import UUID
 from statemachine import Event, State
 
 from ..appconfig import appconfig
+from ..database.models import Mediaitem
 from ..plugins import pm as pluggy_pm
 from ..utils.exceptions import ProcessMachineOccupiedError
 from .acquisition import AcquisitionService
@@ -60,19 +61,36 @@ class PluginEventHooks:
         pass
 
     def before_transition(self, source: State, target: State, event: Event, model: JobModelBase):
-        pluggy_pm.hook.sm_before_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
+        pluggy_pm.hook.sm_before_transition(
+            source=source, target=target, event=event, mediaitem_type=model._media_type, mediaitem=self._get_present_mediaitem(model)
+        )
 
     def on_exit_state(self, source: State, target: State, event: Event, model: JobModelBase):
-        pluggy_pm.hook.sm_on_exit_state(source=source, target=target, event=event, mediaitem_type=model._media_type)
+        pluggy_pm.hook.sm_on_exit_state(
+            source=source, target=target, event=event, mediaitem_type=model._media_type, mediaitem=self._get_present_mediaitem(model)
+        )
 
     def on_transition(self, source: State, target: State, event: Event, model: JobModelBase):
-        pluggy_pm.hook.sm_on_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
+        pluggy_pm.hook.sm_on_transition(
+            source=source, target=target, event=event, mediaitem_type=model._media_type, mediaitem=self._get_present_mediaitem(model)
+        )
 
     def on_enter_state(self, source: State, target: State, event: Event, model: JobModelBase):
-        pluggy_pm.hook.sm_on_enter_state(source=source, target=target, event=event, mediaitem_type=model._media_type)
+        pluggy_pm.hook.sm_on_enter_state(
+            source=source, target=target, event=event, mediaitem_type=model._media_type, mediaitem=self._get_present_mediaitem(model)
+        )
 
     def after_transition(self, source: State, target: State, event: Event, model: JobModelBase):
-        pluggy_pm.hook.sm_after_transition(source=source, target=target, event=event, mediaitem_type=model._media_type)
+        pluggy_pm.hook.sm_after_transition(
+            source=source, target=target, event=event, mediaitem_type=model._media_type, mediaitem=self._get_present_mediaitem(model)
+        )
+
+    @staticmethod
+    def _get_present_mediaitem(model: JobModelBase) -> Mediaitem | None:
+        if model._present_mediaitem_id is None or not model._result_mediaitems:
+            return None
+
+        return next((item for item in model._result_mediaitems if item.id == model._present_mediaitem_id), None)
 
 
 class FrontendNotifierEventHooks:

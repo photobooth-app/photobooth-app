@@ -15,6 +15,7 @@ import pluggy
 from PIL import Image
 from statemachine import Event, State
 
+from ..database.models import Mediaitem
 from ..database.types import MediaitemTypes
 from ..models.genericstats import GenericStats
 
@@ -44,23 +45,33 @@ class PluginManagementSpec:
 
 class PluginStatemachineSpec:
     @hookspec
-    def sm_before_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+    def sm_before_transition(
+        self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None
+    ) -> None:
         """job processor before a transition takes place. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_exit_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+    def sm_on_exit_state(
+        self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None
+    ) -> None:
         """job processor when exit a state. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+    def sm_on_transition(
+        self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None
+    ) -> None:
         """job processor on the transition. for details see python statemachine library"""
 
     @hookspec
-    def sm_on_enter_state(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+    def sm_on_enter_state(
+        self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None
+    ) -> None:
         """job processor when the new state is entered. for details see python statemachine library"""
 
     @hookspec
-    def sm_after_transition(self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes) -> None:
+    def sm_after_transition(
+        self, source: State, target: State, event: Event, mediaitem_type: MediaitemTypes, mediaitem: Mediaitem | None = None
+    ) -> None:
         """job processor after a transition took place. for details see python statemachine library"""
 
 
