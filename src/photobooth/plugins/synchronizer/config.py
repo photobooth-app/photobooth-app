@@ -3,7 +3,7 @@ import sys
 from platform import node
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from ... import CONFIG_PATH
@@ -143,9 +143,13 @@ class RemoteConfig(BaseModel):
         description="Name of the remote given during configuration including the ':' at the end. You need to setup the remote separately using the rclone web-ui at http://localhost:5573/. To sync to local folders set '/' (Linux) or 'C:\\' (Windows) and use subdir as target.",
         json_schema_extra={"list_api": "/api/admin/enumerate/rclone_remotes"},
     )
+    bucket: str = Field(
+        default="",
+        description="Optional bucket (S3 and compatible remotes) to sync into. Used if it exists, created otherwise. Bucket names must be lowercase, so the name is converted to lowercase automatically. Leave empty if the remote has no buckets. Limits the app to this bucket instead of the whole account.",
+    )
     subdir: str = Field(
         default="",
-        description="Subdir that is used as base to sync to. In this directory the sharepage (subdir/index.html) and mediafiles (subdir/media/) will be placed. WARNING: This directory is owned by the app - it will delete unknown files!",
+        description="Subdir inside the bucket (or inside the remote if no bucket is given) that is used as base to sync to. In this directory the sharepage (subdir/index.html) and mediafiles (subdir/media/) will be placed. Created if not existing. WARNING: This directory is owned by the app - it will delete unknown files!",
     )
     copy_only_mode: bool = Field(
         default=False,
@@ -166,6 +170,18 @@ class RemoteConfig(BaseModel):
     )
 
     shareconfig: ShareConfig
+
+    @field_validator("bucket", mode="after")
+    @classmethod
+    def _normalize_bucket(cls, value: str) -> str:
+        # bucket names on S3 and compatible services must be lowercase; normalize instead of failing at startup
+        return value.strip().strip("/").lower()
+
+    @property
+    def base_path(self) -> str:
+        """Path on the remote below which all files are placed: bucket/subdir (either may be empty)."""
+        parts = [p.strip("/") for p in (self.bucket, self.subdir.replace("\\", "/")) if p and p.strip("/")]
+        return "/".join(parts)
 
 
 class SynchronizerConfig(BaseConfig):
