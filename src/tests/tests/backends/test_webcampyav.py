@@ -1,7 +1,12 @@
 import logging
-from collections.abc import Generator
+import weakref
+from collections.abc import Generator, Iterator
+from contextlib import closing
+from typing import cast
 
+import av
 import pytest
+from av.container import InputContainer
 
 from photobooth.services.backends.webcampyav import WebcamPyavBackend
 from photobooth.services.config.groups.cameras import GroupCameraPyav
@@ -10,6 +15,44 @@ from photobooth.utils.enumerate import webcameras
 from ..util import block_until_device_is_running, get_images
 
 logger = logging.getLogger(name=None)
+
+
+def test_frame_generator_closes_demuxer():
+    class FakePacket:
+        pass
+
+    class FakeDemuxer(Iterator[av.Packet]):
+        closed = False
+        packet_ref: weakref.ReferenceType[FakePacket] | None = None
+
+        def __iter__(self) -> Iterator[av.Packet]:
+            return self
+
+        def __next__(self) -> av.Packet:
+            packet = FakePacket()
+            self.packet_ref = weakref.ref(packet)
+            return cast(av.Packet, packet)
+
+        def close(self) -> None:
+            self.closed = True
+
+    class FakeInputDevice:
+        def __init__(self, demuxer: FakeDemuxer):
+            self.demuxer = demuxer
+
+        def demux(self, input_stream: av.VideoStream) -> Iterator[av.Packet]:
+            return self.demuxer
+
+    demuxer = FakeDemuxer()
+    backend = WebcamPyavBackend(GroupCameraPyav())
+    packets = backend.frame_generator(cast(InputContainer, FakeInputDevice(demuxer)), cast(av.VideoStream, object()))
+
+    with closing(packets):
+        next(packets)
+
+    assert demuxer.closed
+    assert demuxer.packet_ref is not None
+    assert demuxer.packet_ref() is None
 
 
 @pytest.fixture(scope="module")
