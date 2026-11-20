@@ -46,7 +46,7 @@ class ShareProcessing(BaseModel):
 
     share_command: str = Field(
         default="echo {filename}",
-        description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed. Also available: {printer_name}=given printer name below, {media_type}=[image,collage,video,animation] and {action_config_name} which is the action name defined in the config.",
+        description="Executable and arguments issued to share/print; shell syntax is not supported. Use {filename} as a placeholder for the mediaitem. Also available: {printer_name}, {media_type} and {action_config_name}. Put shell logic in a separate script and invoke that script here.",
     )
     printer_name: str = Field(
         default="PDF",
