@@ -24,13 +24,16 @@ def filename_str_time() -> str:
 def filenames_sanitize(path: Path | str, basepath: Path = Path.cwd()) -> Path:
     """turn strings in paths and sanitize. Used for userinput to check the path is below CWD."""
 
-    base = basepath.resolve()
-    fullpath = (base / path).resolve()
+    base = os.path.realpath(basepath)
+    fullpath = os.path.realpath(os.path.join(base, path))
 
-    if not fullpath.is_relative_to(base):
+    base_normalized = os.path.normcase(base)
+    fullpath_normalized = os.path.normcase(fullpath)
+    base_prefix = base_normalized if base_normalized.endswith(os.sep) else base_normalized + os.sep
+    if fullpath_normalized != base_normalized and not fullpath_normalized.startswith(base_prefix):
         raise ValueError(f"illegal file requested: {fullpath} using basepath {base}")
 
-    return fullpath
+    return Path(fullpath)
 
 
 def is_rpi():
