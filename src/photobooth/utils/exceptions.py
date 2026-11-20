@@ -12,5 +12,13 @@ class WrongMediaTypeError(Exception):
     pass
 
 
+class ShareParameterError(ValueError):
+    pass
+
+
+class ShareCommandError(RuntimeError):
+    pass
+
+
 class BackendNotRunning(Exception):
     pass

@@ -17,7 +17,8 @@ class HttpRequestParameters(BaseModel):
         description="Key name for the http request to make the parameter list.",
     )
     value: str = Field(
-        description="Value assigned to the key in the request (key=value). The placeholder {event} is replaced by the actual event.",
+        description="Value assigned to the key in the request (key=value). Placeholders {event} and {mediaitem_type} are replaced by their values. "
+        "The {filepath} placeholder is the absolute path of the presented mediaitem and is only available for the finished event.",
     )
     where: locationOfAdditionalParameters = Field(
         description="Parameters can be sent in the URL as query parameter (usually for get requests like ?key=value) or "
@@ -87,5 +88,6 @@ class TaskHttpRequest(TaskBase):
 
 class TaskCommand(TaskBase):
     command: str = Field(
-        description="Command to run. The placeholder {event} is replaced by the actual event.",
+        description="Command to run. Placeholders {event} and {mediaitem_type} are replaced by their values. "
+        "The {filepath} placeholder is the absolute path of the presented mediaitem and is only available for the finished event.",
     )

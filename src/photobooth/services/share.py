@@ -1,4 +1,5 @@
 import logging
+import shlex
 import subprocess
 from datetime import datetime
 from typing import cast
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..appconfig import appconfig
 from ..database.database import engine
 from ..database.models import Mediaitem, ShareLimits
-from ..utils.exceptions import WrongMediaTypeError
+from ..utils.exceptions import ShareCommandError, ShareParameterError, WrongMediaTypeError
 from ..utils.printer import PrinterStatus, get_printer_status
 from .base import BaseService
 from .sse import sse_service
@@ -17,6 +18,7 @@ from .sse.sse_ import SseEventTranslateableFrontendNotification
 
 logger = logging.getLogger(__name__)
 TIMEOUT_PROCESS_RUN = 6  # command to print needs to complete within 6 seconds.
+MAX_SHARE_INPUT_LENGTH = 4096
 
 
 class ShareService(BaseService):
@@ -91,9 +93,6 @@ class ShareService(BaseService):
 
             raise BlockingIOError(f"Request ignored! Wait {remaining_s:.0f}s before trying again.")
 
-        filename = mediaitem.processed.absolute()
-        media_type = mediaitem.media_type
-        action_config_name = action_config.name
         printer_name = action_config.processing.printer_name
 
         # once unblocked, also check printer availability if configured:
@@ -115,31 +114,73 @@ class ShareService(BaseService):
                 )
                 raise BlockingIOError(f"Printer {printer_name} is not available! Please check power, connectivity, paper and cartridges.")
 
-        if parameters is None:
-            share_parameters = {parameter.key: parameter.default for parameter in action_config.processing.parameters}
-            logger.info(f"no share parameters given by user, continue using the defaults: {share_parameters}")
-        else:
-            share_parameters = parameters
-            logger.info(f"share parameters given by user: {share_parameters}")
+        builtin_placeholders = {
+            "filename": mediaitem.processed.absolute(),
+            "media_type": mediaitem.media_type,
+            "action_config_name": action_config.name,
+            "printer_name": printer_name,
+        }
 
-        share_parameters.pop("filename", None)  # if filename is configured by user, remove it, because the app sets it.
+        configured_parameters = {}
+        for parameter in action_config.processing.parameters:
+            if parameter.key in builtin_placeholders:
+                raise RuntimeError(f"Share parameter {parameter.key!r} conflicts with a built-in command placeholder.")
+            if parameter.key in configured_parameters:
+                raise RuntimeError(f"Share parameter {parameter.key!r} is configured more than once.")
+            configured_parameters[parameter.key] = parameter
+
+        # built-in placeholders can't be configured, so supplying one is rejected as unknown here
+        supplied_parameters = parameters or {}
+        unknown_parameters = supplied_parameters.keys() - configured_parameters.keys()
+        if unknown_parameters:
+            raise ShareParameterError(f"Unknown share parameter(s): {', '.join(sorted(unknown_parameters))}")
+
+        share_parameters = {key: parameter.default for key, parameter in configured_parameters.items()}
+        for key, value in supplied_parameters.items():
+            parameter = configured_parameters[key]
+            if len(value) > MAX_SHARE_INPUT_LENGTH:
+                raise ShareParameterError(f"Share parameter {key!r} must be at most {MAX_SHARE_INPUT_LENGTH} characters.")
+
+            try:
+                valid_min = int(parameter.valid_min) if parameter.valid_min else None
+                valid_max = int(parameter.valid_max) if parameter.valid_max else None
+            except ValueError as exc:
+                raise RuntimeError(f"Invalid bounds configured for share parameter {key!r}.") from exc
+
+            if parameter.ui_type == "int":
+                try:
+                    int_value = int(value)
+                except ValueError as exc:
+                    raise ShareParameterError(f"Share parameter {key!r} must be an integer.") from exc
+
+                if valid_min is not None and int_value < valid_min:
+                    raise ShareParameterError(f"Share parameter {key!r} must be at least {valid_min}.")
+                if valid_max is not None and int_value > valid_max:
+                    raise ShareParameterError(f"Share parameter {key!r} must be at most {valid_max}.")
+            else:
+                if valid_min is not None and len(value) < valid_min:
+                    raise ShareParameterError(f"Share parameter {key!r} must be at least {valid_min} characters.")
+                if valid_max is not None and len(value) > valid_max:
+                    raise ShareParameterError(f"Share parameter {key!r} must be at most {valid_max} characters.")
+
+            share_parameters[key] = value
+
+        logger.info("share parameters supplied for keys: %s", sorted(supplied_parameters))
 
         try:
-            formatted_command = str(action_config.processing.share_command).format(
-                filename=filename,
-                media_type=media_type,
-                action_config_name=action_config_name,
-                printer_name=action_config.processing.printer_name,
-                **share_parameters,
-            )
+            command_template = shlex.split(action_config.processing.share_command)
+            if not command_template:
+                raise RuntimeError("Share command configuration must not be empty.")
+            format_values = {**builtin_placeholders, **share_parameters}
+            command = [argument.format(**format_values) for argument in command_template]
         except KeyError as exc:
             raise RuntimeError(f"Error in configuration! Parameter {exc} is defined in command but was not configured as parameter!") from exc
         except TypeError as exc:
-            # usually this error is prevented by having the pattern= in the pydantic field in config already.
             raise RuntimeError(f"Error in configuration! Probably illegal parameter name defined, error: {exc}") from exc
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid share command configuration: {exc}") from exc
 
-        # command to be executed
-        logger.info(f"executing command '{formatted_command}'")
+        logger.info("executing share action %r", action_config.name)
 
         sse_service.dispatch_event(
             SseEventTranslateableFrontendNotification(
@@ -152,26 +193,25 @@ class ShareService(BaseService):
 
         try:
             completed_process = subprocess.run(
-                formatted_command,
+                command,
                 capture_output=True,
                 check=True,
                 timeout=TIMEOUT_PROCESS_RUN,
-                shell=True,  # needs to be shell so a string as command is accepted.
             )
 
         except subprocess.CalledProcessError as exc:
-            logger.error(f"Command failed: {exc.cmd}")
-            logger.error(f"Return code: {exc.returncode}")
-            logger.error(f"stdout: {exc.stdout}")
-            logger.error(f"stderr: {exc.stderr}")
+            logger.error("Share command failed with return code %s", exc.returncode)
+            logger.error("stdout: %s", exc.stdout)
+            logger.error("stderr: %s", exc.stderr)
 
             sse_service.dispatch_event(SseEventTranslateableFrontendNotification(color="negative", message_key="share.process_failed"))
 
-            raise RuntimeError(f"Process failed with exit code {exc.returncode}: {exc.stderr or exc.stdout}") from exc
+            raise ShareCommandError("Share command failed.") from exc
 
         except Exception as exc:
             # other errors (timeout, OSError, etc.)
-            raise RuntimeError(f"Unexpected error running command: {exc}") from exc
+            logger.exception("Unexpected error running share command")
+            raise ShareCommandError("Share command failed.") from exc
 
         else:
             logger.info(f"cmd={completed_process.args}")

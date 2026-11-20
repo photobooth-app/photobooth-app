@@ -60,7 +60,7 @@ def pyav_scale_cv2_encode():
             resized_frame = reformatter.reformat(frame, width=rW, height=rH, interpolation=Interpolation.BILINEAR, format="yuv420p").to_ndarray()
 
             # and encode to jpeg again
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            encode_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
             result, encimg = cv2.imencode(".jpg", resized_frame, encode_param)
 
             encimg.tobytes()
@@ -156,7 +156,7 @@ def pyav_cv2_scale():
             img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_LINEAR)
 
             # and encode to jpeg again
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+            encode_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
             result, encimg = cv2.imencode(".jpg", img_np_resized, encode_param)
 
             encimg.tobytes()

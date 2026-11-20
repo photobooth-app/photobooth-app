@@ -27,12 +27,24 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
 
     await websocket.accept()
 
+    last_frame: bytes | None = None
+
+    def backend_busy() -> bool:
+        """true while the backend is capturing a still or switching modes, so missing preview frames are expected"""
+        try:
+            backend = container.acquisition_service._video_backend
+            return backend._mode_machine.is_mode_change_pending or backend._mode_machine.active_mode == "still"
+        except Exception:
+            return False
+
     async def acquire_frame_with_retries() -> bytes | None:
+        nonlocal last_frame
         jpeg_bytes: bytes | None = None
 
         for attempt in range(retries):
             try:
                 jpeg_bytes = await asyncio.to_thread(container.acquisition_service.wait_for_lores_image, index_device, index_subdevice)
+                last_frame = jpeg_bytes
                 return jpeg_bytes  # success
             except TimeoutError:  # backend timeout (mode switching, ...)
                 logger.debug(f"camera livestream timeout ({attempt + 1}/{retries})")
@@ -44,6 +56,11 @@ async def websocket_endpoint(websocket: WebSocket, index_device: int | None = No
             except Exception as exc:
                 logger.error(exc)
                 continue  # retry, but likely to fail and then exhaust the retry loop crit
+
+        if last_frame is not None and backend_busy():
+            # a still capture or mode switch blocks the live view for a few seconds. keep the stream alive and
+            # show the last frame instead of closing the connection, the stream continues as soon as the camera delivers frames again.
+            return last_frame
 
         if jpeg_bytes is None:
             logger.error("failed to get frame after max retries, closing stream")

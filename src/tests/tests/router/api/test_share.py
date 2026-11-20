@@ -1,3 +1,4 @@
+import subprocess
 import time
 from collections.abc import Generator
 from unittest import mock
@@ -54,7 +55,7 @@ def test_print_specific_id(mock_run: mock.Mock, modules_client: TestClient):
 @patch("subprocess.run")
 def test_print_exception(mock_run: mock.Mock, modules_client: TestClient):
     # ensure 500 is sent if exception during enabled printing service (process command fails for example)
-    mock_run.side_effect = Exception("mock error")
+    mock_run.side_effect = subprocess.CalledProcessError(1, ["echo"], stderr=b"private command output")
 
     container.processing_service.trigger_action("image", 0)
     container.processing_service.wait_until_job_finished()
@@ -62,6 +63,8 @@ def test_print_exception(mock_run: mock.Mock, modules_client: TestClient):
     response = modules_client.post("/share/actions/latest/0")
 
     assert response.status_code == 500
+    assert response.json()["detail"] == "Share command failed."
+    assert "private command output" not in response.text
     mock_run.assert_called()
 
 
@@ -105,3 +108,15 @@ def test_id_filenotfound_exception(modules_client: TestClient):
     response = modules_client.post(f"/share/actions/{uuid4()}/0")
     assert response.status_code == 404
     assert "detail" in response.json()
+
+
+def test_share_routes_reject_unconfigured_parameters(modules_client: TestClient):
+    container.processing_service.trigger_action("image", 0)
+    container.processing_service.wait_until_job_finished()
+    mediaitem = container.mediacollection_service.get_item_latest()
+
+    latest_response = modules_client.post("/share/actions/latest/0", json={"unexpected": "value"})
+    specific_response = modules_client.post(f"/share/actions/{mediaitem.id}/0", json={"unexpected": "value"})
+
+    assert latest_response.status_code == 422
+    assert specific_response.status_code == 422

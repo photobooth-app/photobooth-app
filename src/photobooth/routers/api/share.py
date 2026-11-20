@@ -3,10 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 
+from ...appconfig import appconfig
 from ...container import container
 from ...database.models import Mediaitem
 from ...plugins import pm as pluggy_pm
-from ...utils.exceptions import WrongMediaTypeError
+from ...utils.exceptions import ShareCommandError, ShareParameterError, WrongMediaTypeError
+from ...utils.linkcheck import filter_reachable
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/share", tags=["share"])
@@ -15,6 +17,10 @@ router = APIRouter(prefix="/share", tags=["share"])
 def _share(mediaitem: Mediaitem, index: int, parameters: dict[str, str] | None):
     try:
         container.share_service.share(mediaitem, index, parameters)
+    except ShareParameterError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ShareCommandError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Share command failed.") from exc
     except (BlockingIOError, ConnectionRefusedError, WrongMediaTypeError):
         pass  # informed by sepearate sse event
     except Exception as exc:
@@ -51,5 +57,8 @@ def api_download_item_id_get_sharelinks(id: UUID):  # -> list[str]:
 
     pluggy_links = pluggy_pm.hook.get_share_links(filepath_local=requested_mediaitem.processed, identifier=requested_mediaitem.id)
     pluggy_links_flatten = [x for xs in pluggy_links for x in xs]
+
+    if appconfig.share.check_link_connection:
+        pluggy_links_flatten = filter_reachable(pluggy_links_flatten, appconfig.share.check_link_timeout)
 
     return pluggy_links_flatten

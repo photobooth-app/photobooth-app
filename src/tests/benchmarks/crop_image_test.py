@@ -43,7 +43,7 @@ def cv2_crop(jpeg_bytes, tmp_path):
     cropped_img = img_np[8 : 8 + 512, 8 : 8 + 512]
 
     # and encode to jpeg again
-    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+    encode_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
     result, encimg = cv2.imencode(".jpg", cropped_img, encode_param)
 
     return encimg.tobytes()

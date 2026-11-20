@@ -21,7 +21,7 @@ class BaseFilter(BasePlugin[T]):
         return f"{type(self).__name__}.{ambigous_filter}"
 
     def deunify(self, unique_filter: str):
-        (name, filt) = str(unique_filter).split(".", 2)
+        (name, filt) = unique_filter.split(".", 2)
         if name == type(self).__name__:
             return filt
         else:

@@ -46,7 +46,7 @@ class ShareProcessing(BaseModel):
 
     share_command: str = Field(
         default="echo {filename}",
-        description="Command issued to share/print. Use {filename} as placeholder for the mediaitem to be shared/printed. Also available: {printer_name}=given printer name below, {media_type}=[image,collage,video,animation] and {action_config_name} which is the action name defined in the config.",
+        description="Executable and arguments issued to share/print; shell syntax is not supported. Use {filename} as a placeholder for the mediaitem. Also available: {printer_name}, {media_type} and {action_config_name}. Put shell logic in a separate script and invoke that script here.",
     )
     printer_name: str = Field(
         default="PDF",
@@ -118,6 +118,18 @@ class GroupShare(BaseModel):
     sharing_enabled: bool = Field(
         default=True,
         description="Enable sharing service in general.",
+    )
+
+    check_link_connection: bool = Field(
+        default=True,
+        description="Before a QR code is shown, check that the server behind the link answers (HEAD request). Links to unreachable servers are not displayed, so guests do not scan a dead link.",
+    )
+
+    check_link_timeout: float = Field(
+        default=2.0,
+        ge=0.5,
+        le=10.0,
+        description="Seconds to wait for the answer of the server when checking a link.",
     )
 
     actions: list[ShareConfigurationSet] = Field(

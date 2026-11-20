@@ -77,7 +77,7 @@ def cv2_scale(jpeg_bytes, tmp_path):
     img_np_resized = cv2.resize(img_np, dim, interpolation=cv2.INTER_LINEAR)  # bicubic
 
     # and encode to jpeg again
-    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+    encode_param = [cv2.IMWRITE_JPEG_QUALITY, 90]
     result, encimg = cv2.imencode(".jpg", img_np_resized, encode_param)
 
     bytes = encimg.tobytes()

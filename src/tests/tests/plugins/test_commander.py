@@ -1,19 +1,35 @@
 import logging
 import subprocess
 import time
+from pathlib import Path
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 import requests
 from pydantic import HttpUrl
 from statemachine import Event, State
 
+from photobooth.appconfig import appconfig
+from photobooth.database.models import Mediaitem
 from photobooth.plugins.commander.commander import Commander
 from photobooth.plugins.commander.config import CommanderConfig
 from photobooth.plugins.commander.models import HttpRequestParameters, TaskCommand, TaskHttpRequest
-from photobooth.services.processing import ProcessingMachine
+from photobooth.services.acquisition import AcquisitionService
+from photobooth.services.processing import PluginEventHooks, ProcessingMachine
+from photobooth.services.processor.image import JobModelImage
 
 logger = logging.getLogger(name=None)
+
+
+def make_mediaitem(filepath: Path) -> Mediaitem:
+    return Mediaitem(
+        id=uuid4(),
+        media_type="image",
+        processed=filepath,
+        pipeline_config={},
+        show_in_gallery=True,
+    )
 
 
 @pytest.fixture()
@@ -73,21 +89,61 @@ def test_stop(commander_plugin: Commander):
 def test_sm_on_enter_state(commander_plugin: Commander):
     with patch.object(commander_plugin, "run_task") as mock_run_task:
         commander_plugin.sm_on_enter_state(State(), ProcessingMachine.counting, Event(), "image")
-        mock_run_task.assert_called_once_with("counting", "image")
+        mock_run_task.assert_called_once_with("counting", "image", None)
 
     with patch.object(commander_plugin, "run_task") as mock_run_task:
         commander_plugin.sm_on_enter_state(State(), ProcessingMachine.finished, Event(), "image")
-        mock_run_task.assert_called_once_with("finished", "image")
+        mock_run_task.assert_called_once_with("finished", "image", None)
 
     with patch.object(commander_plugin, "run_task") as mock_run_task:
         commander_plugin.sm_on_enter_state(State(), ProcessingMachine.capture, Event(), "image")
-        mock_run_task.assert_called_once_with("capture", "image")
+        mock_run_task.assert_called_once_with("capture", "image", None)
 
 
 def test_sm_on_exit_state(commander_plugin: Commander):
     with patch.object(commander_plugin, "run_task") as mock_run_task:
         commander_plugin.sm_on_exit_state(ProcessingMachine.capture, State(), Event(), "image")
-        mock_run_task.assert_called_once_with("captured", "image")
+        mock_run_task.assert_called_once_with("captured", "image", None)
+
+
+def test_processing_hook_passes_present_mediaitem(tmp_path: Path):
+    mediaitem = make_mediaitem(tmp_path / "photo.jpg")
+    model = JobModelImage(appconfig.actions.image[0], AcquisitionService())
+    model._present_mediaitem_id = mediaitem.id
+    model._result_mediaitems = [mediaitem]
+
+    with patch("photobooth.services.processing.pluggy_pm.hook.sm_on_enter_state") as mock_hook:
+        PluginEventHooks().on_enter_state(State(), ProcessingMachine.finished, Event(), model)
+
+    assert mock_hook.call_args.kwargs["mediaitem"] is mediaitem
+
+
+@pytest.mark.parametrize("with_mediaitem", [True, False])
+def test_invoke_command_formats_filepath(commander_plugin: Commander, tmp_path: Path, with_mediaitem: bool):
+    mediaitem = make_mediaitem(tmp_path / "photo.jpg") if with_mediaitem else None
+    filepath = str(mediaitem.processed.resolve()) if mediaitem else ""
+    task = TaskCommand(command="print {filepath}", wait_until_completed=True)
+
+    with patch.object(subprocess, "run") as mock_subprocess_run:
+        commander_plugin.invoke_command(task, "finished", "image", mediaitem)
+
+    assert mock_subprocess_run.call_args.kwargs["args"] == f"print {filepath}"
+
+
+@pytest.mark.parametrize("with_mediaitem", [True, False])
+def test_invoke_http_formats_filepath(commander_plugin: Commander, tmp_path: Path, with_mediaitem: bool):
+    mediaitem = make_mediaitem(tmp_path / "photo.jpg") if with_mediaitem else None
+    filepath = str(mediaitem.processed.resolve()) if mediaitem else ""
+    task = TaskHttpRequest(
+        url=HttpUrl("http://127.0.0.1/"),
+        parameter=[HttpRequestParameters(key="filepath", value="{filepath}")],
+        wait_until_completed=True,
+    )
+
+    with patch.object(requests, "request") as mock_requests_request:
+        commander_plugin.invoke_httprequest(task, "finished", "image", mediaitem)
+
+    assert mock_requests_request.call_args.kwargs["params"] == {"filepath": filepath}
 
 
 def test_run_task(commander_plugin: Commander):
