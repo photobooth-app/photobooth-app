@@ -54,10 +54,10 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
     if config.image_filter:
         pipeline.append(PluginFilterStep(config.image_filter))
 
-    if config.img_frame.enable:
-        if not config.img_frame.image:
+    if config.img_frame_enable:
+        if not config.img_frame_file:
             raise ValueError("image frame enabled, but no file given")
-        pipeline.append(ImageFrameStep(config.img_frame.image))
+        pipeline.append(ImageFrameStep(config.img_frame_file))
 
     if config.elements_enable:
         pipeline.append(CanvasElementsStep(config.elements))

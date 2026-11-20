@@ -5,7 +5,6 @@ from typing import Any, Generic, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, FilePath, NonNegativeInt, model_validator
 from pydantic_extra_types.color import Color
 
-from ..models.frameoverlay import FrameOverlay
 from ..models.models import AnimationMergeDefinition, CanvasElement, CollageMergeDefinition, PluginFilters, TextElementConfig
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
 
@@ -126,6 +125,20 @@ class SingleImageProcessing(BaseModel):
 
     model_config = ConfigDict(title="Single captures processing after capture")
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_v9_img_frame(cls, data):
+        """transform the nested img_frame of v9.0.0 to the flat fields."""
+
+        if isinstance(data, dict) and isinstance(data.get("img_frame"), dict):
+            data = dict(data)
+            legacy = data.pop("img_frame")
+            data.setdefault("img_frame_enable", legacy.get("enable") or False)
+            data.setdefault("img_frame_file", legacy.get("image"))
+            data.setdefault("img_frame_preview_mirror", legacy.get("mirror_effect") or False)
+
+        return data
+
     remove_background: bool = Field(
         json_schema_extra={"computeIntense": True},
         default=False,
@@ -152,12 +165,22 @@ class SingleImageProcessing(BaseModel):
 
     image_filter: PluginFilters = Field(default=PluginFilters("original"))
 
-    img_frame: FrameOverlay = Field(
-        default=FrameOverlay(
-            enable=False,
-            image=None,
-            mirror_effect=False,
-        ),
+    img_frame_enable: bool = Field(
+        default=False,
+        description="Apply a frame to the final image. The frame determines the output image size.",
+    )
+    img_frame_file: FilePath | None = Field(
+        default=None,
+        description="Frame image (PNG with transparent area). File needs to be located in working directory/userdata/*",
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
+    )
+    img_frame_preview_enable: bool = Field(
+        default=True,
+        description="Show the frame in the livestream during the countdown. If disabled, the frame is hidden but the livestream is still cropped to the transparent area of the frame, so the field of view matches the final image. The frame is still applied to the final image.",
+    )
+    img_frame_preview_mirror: bool = Field(
+        default=False,
+        description="Flip the frame horizontally in the livestream during the countdown, for example if the livestream is mirrored. The final image is not flipped.",
     )
 
     elements_enable: bool = Field(
@@ -384,11 +407,8 @@ class GroupActions(BaseModel):
                     remove_background=True,
                     img_background_enable=True,
                     img_background_file=Path("userdata/demoassets/backgrounds/background.jpg"),
-                    img_frame=FrameOverlay(
-                        enable=True,
-                        image=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
-                        mirror_effect=False,
-                    ),
+                    img_frame_enable=True,
+                    img_frame_file=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
                     elements_enable=True,
                     elements=[
                         TextElementConfig(

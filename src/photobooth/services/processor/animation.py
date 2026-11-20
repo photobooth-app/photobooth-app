@@ -10,7 +10,6 @@ from ...database.models import Mediaitem
 from ...utils.helper import filename_str_time
 from ..acquisition import AcquisitionService
 from ..config.groups.actions import AnimationConfigurationSet, SingleImageProcessing
-from ..config.models.frameoverlay import FrameOverlay
 from ..config.models.models import PluginFilters
 from ..mediaprocessing.processes import process_and_generate_animation
 from .base import JobModelBase
@@ -87,7 +86,7 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
 
             _config = SingleImageProcessing(
                 elements_enable=False,
-                img_frame=FrameOverlay(enable=False),
+                img_frame_enable=False,
                 image_filter=merge_definition_capture_only[index].image_filter if index is not None else PluginFilters("original"),
             )
 

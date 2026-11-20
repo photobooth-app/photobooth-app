@@ -5,6 +5,7 @@ Testing virtual camera Backend
 import importlib
 import logging
 import os
+from pathlib import Path
 
 import pytest
 
@@ -129,3 +130,14 @@ def test_canvas_elements_mixed_and_untyped():
 
     # roundtrip as stored in config file / database
     assert SingleImageProcessing.model_validate(config.model_dump(mode="json")) == config
+
+
+def test_config_migrate_legacy_v9_img_frame():
+    config = SingleImageProcessing.model_validate(
+        {"img_frame": {"enable": True, "image": "userdata/demoassets/frames/frame_image_photobooth-app.png", "mirror_effect": True}}
+    )
+
+    assert config.img_frame_enable is True
+    assert config.img_frame_file == Path("userdata/demoassets/frames/frame_image_photobooth-app.png")
+    assert config.img_frame_preview_mirror is True
+    assert config.img_frame_preview_enable is True

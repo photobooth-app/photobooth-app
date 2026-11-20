@@ -4,8 +4,9 @@ from statemachine import Event
 
 from ..acquisition import AcquisitionService
 from ..config.groups.actions import SingleImageConfigurationSet
+from ..mediaprocessing.steps.image import get_frame_transparent_size
 from .base import JobModelBase
-from .models import Capture, CaptureSet, UiFrameOverlay
+from .models import Capture, CaptureSet, UiCaptureDefinition, UiFrameOverlay
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +24,30 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
         return 1
 
     @property
-    def captures_definition(self):
+    def captures_definition(self) -> UiCaptureDefinition | None:
+        # frame hidden in preview: crop livestream to the transparent area to match the final image.
+        processing = self._configuration_set.processing
+        if processing.img_frame_enable and processing.img_frame_file and not processing.img_frame_preview_enable:
+            try:
+                width, height = get_frame_transparent_size(processing.img_frame_file)
+            except Exception as exc:
+                logger.warning(f"cannot determine size of frame {processing.img_frame_file}, livestream is not cropped: {exc}")
+                return None
+
+            return UiCaptureDefinition("-", width=width, height=height)
+
         return None
 
     @property
     def frame_overlay(self) -> UiFrameOverlay | None:
-        if self._configuration_set.processing.img_frame.enable and self._configuration_set.processing.img_frame.image:
+        processing = self._configuration_set.processing
+        if processing.img_frame_enable and processing.img_frame_preview_enable and processing.img_frame_file:
             return UiFrameOverlay(
-                self._configuration_set.processing.img_frame.image,
-                mirror_effect=self._configuration_set.processing.img_frame.mirror_effect,
+                processing.img_frame_file,
+                mirror_effect=processing.img_frame_preview_mirror,
             )
+
+        return None
 
     def on_enter_counting(self):
         self._acquisition_service.thrill_still()
