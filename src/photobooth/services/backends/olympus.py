@@ -249,7 +249,6 @@ class OlympusBackend(AbstractBackend):
         # websocket fed (no retry timeouts) while showing only the photo, and
         # stops the livestream from jumping back in before the capture ends.
         self._capture_in_progress: bool = False
-        self._capture_req: StillRequest | None = None
         self._capture_thread: threading.Thread | None = None
         self._capture_state_lock = threading.Lock()
         # Generation token: bumped each time a capture starts or teardown runs.
@@ -451,15 +450,6 @@ class OlympusBackend(AbstractBackend):
     def teardown_resource(self):
         with self._capture_state_lock:
             self._capture_generation += 1
-            request = self._capture_req
-            self._capture_req = None
-
-        if request is not None:
-            with request.condition:
-                request.cancelled = True
-                if request.result_file is None and request.error is None:
-                    request.error = RuntimeError("Olympus backend stopped during capture.")
-                request.condition.notify_all()
         self._invalidate_camera_calls()
 
         # Stop the broadcast FIRST. ``LiveViewReceiver.receive_packets`` re-reads
@@ -655,14 +645,9 @@ class OlympusBackend(AbstractBackend):
         capture starts or teardown runs, the old worker detects it is superseded
         and stops before delivering or touching shared state.
         """
-        with req.condition:
-            if req.cancelled:
-                return
-
         with self._capture_state_lock:
             self._capture_generation += 1
             gen = self._capture_generation
-            self._capture_req = req
             self._capture_in_progress = True
         self._capture_thread = threading.Thread(
             target=self._capture_worker,
@@ -680,24 +665,12 @@ class OlympusBackend(AbstractBackend):
         with self._capture_state_lock:
             return self._stop_event.is_set() or gen != self._capture_generation
 
-    @staticmethod
-    def _capture_cancelled(req: StillRequest) -> bool:
-        with req.condition:
-            return req.cancelled
-
-    @staticmethod
-    def _fail_capture_request(req: StillRequest, error: Exception) -> None:
-        with req.condition:
-            if not req.cancelled and req.result_file is None:
-                req.error = error
-            req.condition.notify_all()
-
     def _capture_worker(self, req: StillRequest, gen: int) -> None:
         """Shutter, download and deliver a still, off the worker thread.
 
         Runs in a background thread (see ``_begin_capture``). The result is
-        delivered via the request. Failures are sent back to the waiting caller
-        through the request condition instead of making it wait for the deadline.
+        delivered via the request. Failures are only logged; the waiting caller
+        runs into its own TimeoutError.
         """
         if self._capture_stale(gen):
             return
@@ -705,11 +678,9 @@ class OlympusBackend(AbstractBackend):
         poll_timeout = self._config.capture_timeout
 
         try:
-            if self._capture_cancelled(req):
-                return
             if self._camera is None and not self._connect():
                 raise ConnectionError("Olympus camera is not reachable (off or wifi disconnected).")
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             assert self._camera is not None
@@ -717,18 +688,15 @@ class OlympusBackend(AbstractBackend):
             with self._mode_machine.ext_mode_switch_lock:
                 self._mode_machine.process_switchmode("still")
 
-            if self._capture_cancelled(req):
-                return
-
             # remember which files already exist on the card before shooting
             before_files = self._run_bounded(self._camera.list_images, timeout=3.0, desc="list_images(initial)") or []
             before = {img.file_name: img.date_time for img in before_files}
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             logger.info("Olympus: triggering shutter...")
             self._run_bounded(self._camera.take_picture, timeout=12.0, desc="take_picture")
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             # freeze the live stream now that the shutter fired: the frontend is
@@ -741,7 +709,7 @@ class OlympusBackend(AbstractBackend):
             busy_streak = 0
             while time.monotonic() < poll_deadline:
                 time.sleep(0.8)
-                if self._capture_stale(gen) or self._capture_cancelled(req):
+                if self._capture_stale(gen):
                     return
                 if self._camera is None:
                     if not self._connect():
@@ -782,7 +750,7 @@ class OlympusBackend(AbstractBackend):
                     new_image = max(added, key=lambda img: (img.date_time, img.file_name))
                     break
 
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             if new_image is None:
@@ -790,7 +758,7 @@ class OlympusBackend(AbstractBackend):
                 # own TimeoutError. The camera is fine, so don't reset it.
                 raise NoNewImageError(f"Olympus: no new image appeared within {poll_timeout:.1f}s.")
 
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             logger.info(f"Olympus: downloading {new_image.file_name}...")
@@ -806,7 +774,7 @@ class OlympusBackend(AbstractBackend):
             )
             if jpeg_bytes is None:
                 raise RuntimeError("Olympus: download_image returned no data.")
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 return
 
             with NamedTemporaryFile(
@@ -823,12 +791,12 @@ class OlympusBackend(AbstractBackend):
                 filepath = Path(jpeg_file.name)
 
             # only deliver if this is still the live session
-            if self._capture_stale(gen) or self._capture_cancelled(req):
+            if self._capture_stale(gen):
                 filepath.unlink(missing_ok=True)
                 return
 
             with req.condition:
-                if req.cancelled or self._capture_stale(gen):
+                if self._capture_stale(gen):
                     filepath.unlink(missing_ok=True)
                     return
                 req.result_file = filepath
@@ -837,21 +805,18 @@ class OlympusBackend(AbstractBackend):
             logger.info("Olympus: still delivered.")
         except NoNewImageError as exc:
             logger.warning(f"Olympus: {exc}")
-            self._fail_capture_request(req, exc)
         except TimeoutError as exc:
             logger.warning(f"Olympus: capture timed out: {exc}")
             if not self._capture_stale(gen):
                 self._invalidate_camera_calls()
                 self._camera = None
                 self._liveview_active = False
-            self._fail_capture_request(req, exc)
         except Exception as exc:
             logger.error(f"Olympus: capture failed: {exc}")
             if not self._capture_stale(gen):
                 self._invalidate_camera_calls()
                 self._camera = None
                 self._liveview_active = False
-            self._fail_capture_request(req, exc)
         finally:
             # Only the still-live session may perform cleanup and the display
             # freeze; a superseded worker must not touch shared state owned by
@@ -867,8 +832,6 @@ class OlympusBackend(AbstractBackend):
 
                 with self._capture_state_lock:
                     if not self._stop_event.is_set() and gen == self._capture_generation:
-                        if self._capture_req is req:
-                            self._capture_req = None
                         self._freeze_until = time.monotonic() + self._settle_after_capture
                         self._capture_in_progress = False
                         logger.debug(f"Olympus: capture done, live frozen {self._settle_after_capture:.1f}s for display")

@@ -10,15 +10,15 @@ from photobooth.services.backends.olympus import OlympusBackend, SupersededError
 from photobooth.services.config.groups.cameras import GroupCameraOlympus
 
 
-def test_still_wait_uses_capture_budget_and_cancels_timed_out_request(monkeypatch):
+def test_still_wait_uses_capture_budget(monkeypatch):
     backend = OlympusBackend(GroupCameraOlympus(capture_timeout=50.0, download_timeout=40.0))
     timeouts = []
 
-    def wait_for(condition, predicate, timeout=None):
+    def wait(condition, timeout=None):
         timeouts.append(timeout)
         return False
 
-    monkeypatch.setattr(threading.Condition, "wait_for", wait_for)
+    monkeypatch.setattr(threading.Condition, "wait", wait)
 
     with pytest.raises(TimeoutError, match="timeout waiting for hires frame"):
         backend.wait_for_still_file()
@@ -26,23 +26,6 @@ def test_still_wait_uses_capture_budget_and_cancels_timed_out_request(monkeypatc
     request = backend._hires_queue[-1]
     assert isinstance(request, StillRequest)
     assert timeouts == [120.0]
-    assert request.cancelled
-
-
-def test_still_wait_surfaces_capture_errors(monkeypatch):
-    backend = OlympusBackend(GroupCameraOlympus())
-    failure = RuntimeError("camera download failed")
-
-    def wait_for(condition, predicate, timeout=None):
-        request = backend._hires_queue[-1]
-        assert isinstance(request, StillRequest)
-        request.error = failure
-        return True
-
-    monkeypatch.setattr(threading.Condition, "wait_for", wait_for)
-
-    with pytest.raises(RuntimeError, match="camera download failed"):
-        backend.wait_for_still_file()
 
 
 def test_orphaned_receiver_is_not_replaced():

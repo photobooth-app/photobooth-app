@@ -44,8 +44,7 @@ class StillRequest:
     id: uuid.UUID
     subdevice_index: int
     result_file: Path | None = None
-    error: Exception | None = None
-    cancelled: bool = False
+    # error: Exception | None = None
     condition: threading.Condition = field(default_factory=threading.Condition)
 
 
@@ -362,17 +361,10 @@ class AbstractBackend(ResilientService, ABC):
             self._hires_queue.append(req)
 
         with req.condition:
-            ok = req.condition.wait_for(
-                lambda: req.result_file is not None or req.error is not None,
-                timeout=self._still_wait_timeout(),
-            )
+            ok = req.condition.wait(timeout=self._still_wait_timeout())
 
             if not ok:
-                req.cancelled = True
                 raise TimeoutError("timeout waiting for hires frame")
-
-            if req.error is not None:
-                raise req.error
 
             filepath = req.result_file
             assert filepath
