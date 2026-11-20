@@ -155,7 +155,7 @@ dev = [
 default-groups = [
   "dev",
 ] # by default only dev is automatically installed, so here add benchmarks
-
+# exclude-newer = "5 days"
 
 # uv does not yet support [tool.pdm.scripts], so we skip this for now... https://github.com/astral-sh/uv/issues/5903
 [tool.poe.tasks]
