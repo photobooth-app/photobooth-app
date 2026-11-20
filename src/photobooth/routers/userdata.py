@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -13,7 +14,12 @@ userdata_router = APIRouter(prefix="/userdata", tags=["userdata"])
 @userdata_router.get("/{filepath:path}")
 def api_get_userfiles(filepath: str):
     try:
-        file_out = filenames_sanitize(f"{USERDATA_PATH}{filepath}")
+        if filepath == "demoassets" or filepath.startswith("demoassets/"):
+            demoassets_path = Path(__file__).resolve().parents[1] / "demoassets" / "userdata"
+            file_out = filenames_sanitize(filepath.removeprefix("demoassets/"), demoassets_path)
+        else:
+            file_out = filenames_sanitize(filepath, Path(USERDATA_PATH))
+
         if not file_out.is_file():
             raise FileNotFoundError(f"{filepath} not found")
 
@@ -21,6 +27,9 @@ def api_get_userfiles(filepath: str):
     except FileNotFoundError as exc:
         logger.warning(f"cannot find {filepath}", exc_info=exc)
         raise HTTPException(status_code=404, detail=f"cannot find {filepath}") from exc
+    except ValueError as exc:
+        logger.warning(f"illegal file requested: {filepath}", exc_info=exc)
+        raise HTTPException(status_code=400, detail=f"illegal file requested: {filepath}") from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=f"something went wrong, Exception: {exc}") from exc
