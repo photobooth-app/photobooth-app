@@ -147,7 +147,7 @@ def test_print_wrong_mediatype_raises(mock_run, _container: Container):
 
 
 @patch("subprocess.run")
-def test_share_parameters_are_literal_arguments_and_keep_defaults(mock_run, _container: Container):
+def test_share_parameters_are_literal_arguments_and_keep_defaults(mock_run, _container: Container, tmp_path: Path):
     action = appconfig.share.actions[0]
     action.processing.share_command = 'send-mail "{filename}" "{mail}" {copies}'
     action.processing.parameters = [
@@ -155,13 +155,14 @@ def test_share_parameters_are_literal_arguments_and_keep_defaults(mock_run, _con
         ShareProcessingParameters(key="copies", default="1", valid_min="1", valid_max="3"),
     ]
     parameters = {"mail": 'guest@example.org"; touch /tmp/not-created; #'}
+    filename = tmp_path / "photo with spaces.jpg"
 
-    _container.share_service.share(Mediaitem(media_type="image", processed=Path("/tmp/photo with spaces.jpg")), 0, parameters)
+    _container.share_service.share(Mediaitem(media_type="image", processed=filename), 0, parameters)
 
     command = mock_run.call_args.args[0]
     assert command == [
         "send-mail",
-        "/tmp/photo with spaces.jpg",
+        str(filename),
         parameters["mail"],
         "1",
     ]
