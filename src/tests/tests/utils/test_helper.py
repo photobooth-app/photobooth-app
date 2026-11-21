@@ -21,5 +21,6 @@ def test_filenames_sanitize_rejects_sibling_with_common_prefix(tmp_path: Path):
 
 def test_filenames_sanitize_accepts_files_under_root():
     root = Path(os.path.abspath(os.sep))
+    expected = Path(os.path.realpath(root / "tmp" / "file.png"))
 
-    assert filenames_sanitize("tmp/file.png", root) == root / "tmp" / "file.png"
+    assert filenames_sanitize("tmp/file.png", root) == expected
