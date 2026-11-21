@@ -86,7 +86,7 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
             logger.info(f"postprocessing capture: {capture_to_process=}")
 
             _config = SingleImageProcessing(
-                texts_enable=False,
+                elements_enable=False,
                 img_frame=FrameOverlay(enable=False),
                 image_filter=merge_definition_capture_only[index].image_filter if index is not None else PluginFilters("original"),
             )

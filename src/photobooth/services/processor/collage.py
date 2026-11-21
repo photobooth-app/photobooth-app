@@ -101,7 +101,7 @@ class JobModelCollage(JobModelBase[CollageConfigurationSet]):
                 fill_background_color=self._configuration_set.processing.capture_fill_background_color,
                 img_background_enable=self._configuration_set.processing.capture_img_background_enable,
                 img_background_file=self._configuration_set.processing.capture_img_background_file,
-                texts_enable=False,
+                elements_enable=False,
                 img_frame=FrameOverlay(enable=False),
                 image_filter=merge_definition_capture_only[index].image_filter if index is not None else PluginFilters("original"),
             )

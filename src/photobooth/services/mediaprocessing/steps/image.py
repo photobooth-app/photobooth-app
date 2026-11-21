@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections import OrderedDict
+from collections.abc import Sequence
 from datetime import datetime
 from enum import Enum
 from itertools import chain
@@ -183,45 +184,88 @@ class ImageFrameStep(PipelineStep):
         next_step(context)
 
 
-class TextStep(PipelineStep):
-    def __init__(self, textstageconfig: list[models.TextsConfig]) -> None:
-        self.textstageconfig = textstageconfig
+class CanvasElementsStep(PipelineStep):
+    """Draw texts and images onto the image. Elements are drawn in list order, so later elements are on top.
+    Position is the element's top-left corner, rotation is around the element's center."""
+
+    def __init__(self, elements: Sequence[models.CanvasElement]) -> None:
+        self.elements = elements
 
     def __call__(self, context: ImageContext, next_step: NextStep) -> None:
         updated_image = context.image.copy()
 
-        for textconfig in self.textstageconfig:
-            logger.debug(f"apply text: {textconfig.text}")
-
-            if not textconfig.text:
-                # skip this one because empty.
-                continue
-
-            # check font is avail, otherwise send pipelineerror
-            if not textconfig.font:
-                raise PipelineError("text to apply to image but no font defined!")
-
-            if not textconfig.font.is_file():
-                raise PipelineError(f"font {textconfig.font} not found!")
-
-            img_font = ImageFont.truetype(font=str(textconfig.font), size=textconfig.font_size)
-
-            draw_rotated_text(
-                image=updated_image,
-                angle=textconfig.rotate,
-                xy=(textconfig.pos_x, textconfig.pos_y),
-                text=textconfig.text.format(
-                    date=datetime.now().strftime("%x"),
-                    time=datetime.now().strftime("%X"),
-                ),
-                fill=Color(textconfig.color).as_rgb_tuple(),
-                font=img_font,
-            )
+        for element in self.elements:
+            if isinstance(element, models.ImageElementConfig):
+                updated_image = self.apply_image(updated_image, element)
+            else:
+                self.apply_text(updated_image, element)
 
         context.image = updated_image
         del updated_image
 
         next_step(context)
+
+    @staticmethod
+    def apply_text(image: Image.Image, textconfig: models.TextElementConfig) -> None:
+        logger.debug(f"apply text: {textconfig.text}")
+
+        if not textconfig.text:
+            # skip this one because empty.
+            return
+
+        # check font is avail, otherwise send pipelineerror
+        if not textconfig.font:
+            raise PipelineError("text to apply to image but no font defined!")
+
+        if not textconfig.font.is_file():
+            raise PipelineError(f"font {textconfig.font} not found!")
+
+        img_font = ImageFont.truetype(font=str(textconfig.font), size=textconfig.font_size)
+
+        draw_rotated_text(
+            image=image,
+            angle=textconfig.rotate,
+            xy=(textconfig.pos_x, textconfig.pos_y),
+            text=textconfig.text.format(
+                date=datetime.now().strftime("%x"),
+                time=datetime.now().strftime("%X"),
+            ),
+            fill=Color(textconfig.color).as_rgb_tuple(),
+            font=img_font,
+        )
+
+    @staticmethod
+    def apply_image(image: Image.Image, imageconfig: models.ImageElementConfig) -> Image.Image:
+        logger.debug(f"apply image: {imageconfig.image}")
+
+        if not imageconfig.image:
+            raise PipelineError("image element to apply but no image defined!")
+
+        try:
+            element_img = Image.open(imageconfig.image).convert("RGBA")
+        except FileNotFoundError as exc:
+            raise PipelineError(f"file {imageconfig.image} not found!") from exc
+
+        box = (imageconfig.width, imageconfig.height)
+        fitted = ImageOps.contain(element_img, box, method=Image.Resampling.BICUBIC)
+        layer = Image.new("RGBA", box, (0, 0, 0, 0))
+        layer.paste(fitted, ((box[0] - fitted.width) // 2, (box[1] - fitted.height) // 2))
+
+        if imageconfig.opacity < 1.0:
+            layer.putalpha(layer.getchannel("A").point(lambda a: round(a * imageconfig.opacity)))
+
+        if imageconfig.rotate != 0:
+            # expand keeps the rotated layer's center at the layer center, so it can be aligned to the element center below
+            layer = layer.rotate(imageconfig.rotate, expand=True, resample=Image.Resampling.BICUBIC)
+
+        center = (imageconfig.pos_x + box[0] / 2, imageconfig.pos_y + box[1] / 2)
+        offset = (round(center[0] - layer.width / 2), round(center[1] - layer.height / 2))
+
+        overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        overlay.paste(layer, offset)
+        composed = Image.alpha_composite(image.convert("RGBA"), overlay)
+
+        return composed if image.mode == "RGBA" else composed.convert(image.mode)
 
 
 class RemovebgStep(PipelineStep):
@@ -284,7 +328,7 @@ def draw_rotated_text(image: Image.Image, angle: int, xy: tuple[int, int], text:
         as Image.text() except for:
 
     :param image: Image to write text into
-    :param angle: Angle to write text at
+    :param angle: Angle to write text at, rotated around the text's center
     """
 
     # build a transparency mask large enough to hold the text
@@ -297,9 +341,10 @@ def draw_rotated_text(image: Image.Image, angle: int, xy: tuple[int, int], text:
     if angle == 0:
         rotated_mask = mask
     else:
-        # rotated_mask = mask.rotate(angle)
+        x0, y0, x1, y1 = draw.textbbox(xy, text, *args, **kwargs)
         rotated_mask = mask.rotate(
             angle=angle,
+            center=((x0 + x1) / 2, (y0 + y1) / 2),
             expand=False,
             resample=Image.Resampling.BICUBIC,
         )  # pos values = counter clockwise

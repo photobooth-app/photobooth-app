@@ -9,6 +9,8 @@ import os
 import pytest
 
 from photobooth.appconfig import AppConfig, appconfig
+from photobooth.services.config.groups.actions import CollageProcessing, SingleImageProcessing
+from photobooth.services.config.models.models import ImageElementConfig, TextElementConfig
 
 logger = logging.getLogger(name=None)
 
@@ -88,3 +90,42 @@ def test_config_validation_error(illegalconfig):
         import photobooth.appconfig
 
         importlib.reload(photobooth.appconfig)
+
+
+def test_migrate_legacy_texts_single_image():
+    config = SingleImageProcessing.model_validate({"texts_enable": True, "texts": [{"text": "legacy", "rotate": 5}]})
+
+    assert config.elements_enable is True
+    assert len(config.elements) == 1
+    assert isinstance(config.elements[0], TextElementConfig)
+    assert config.elements[0].text == "legacy"
+    assert config.elements[0].rotate == 5
+    assert "texts" not in config.model_dump()
+
+
+def test_migrate_legacy_texts_collage():
+    config = CollageProcessing.model_validate({"merge_definition": [], "canvas_texts_enable": True, "canvas_texts": [{"text": "legacy"}]})
+
+    assert config.canvas_elements_enable is True
+    assert isinstance(config.canvas_elements[0], TextElementConfig)
+    assert config.canvas_elements[0].text == "legacy"
+
+
+def test_migrate_legacy_texts_new_key_wins():
+    config = SingleImageProcessing.model_validate({"texts": [{"text": "old"}], "elements": [{"type": "text", "text": "new"}]})
+
+    assert len(config.elements) == 1
+    assert isinstance(config.elements[0], TextElementConfig)
+    assert config.elements[0].text == "new"
+
+
+def test_canvas_elements_mixed_and_untyped():
+    font = "userdata/demoassets/fonts/Roboto-Bold.ttf"
+    logo = "userdata/demoassets/frames/frame_image_photobooth-app.png"
+    config = SingleImageProcessing.model_validate({"elements": [{"text": "untyped", "font": font}, {"type": "image", "image": logo}]})
+
+    assert isinstance(config.elements[0], TextElementConfig)
+    assert isinstance(config.elements[1], ImageElementConfig)
+
+    # roundtrip as stored in config file / database
+    assert SingleImageProcessing.model_validate(config.model_dump(mode="json")) == config

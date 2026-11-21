@@ -1,12 +1,42 @@
+import logging
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, FilePath, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field, FilePath, NonNegativeInt, model_validator
 from pydantic_extra_types.color import Color
 
 from ..models.frameoverlay import FrameOverlay
-from ..models.models import AnimationMergeDefinition, CollageMergeDefinition, PluginFilters, TextsConfig
+from ..models.models import AnimationMergeDefinition, CanvasElement, CollageMergeDefinition, PluginFilters, TextElementConfig
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
+
+logger = logging.getLogger(__name__)
+
+
+def migrate_legacy_texts(data: Any, key_map: dict[str, str]) -> Any:
+    """Move legacy text keys to the canvas elements keys. Texts in legacy configs have no type, so it's set explicitly."""
+    if not isinstance(data, dict):
+        return data
+
+    data = dict(data)
+    for old_key, new_key in key_map.items():
+        if old_key not in data:
+            continue
+
+        old_value = data.pop(old_key)
+        if new_key in data:
+            continue  # new key wins if both are present
+
+        if isinstance(old_value, list):
+            old_value = [{"type": "text", **entry} if isinstance(entry, dict) else entry for entry in old_value]
+            if any(isinstance(entry, dict) and entry.get("rotate", 0) != 0 for entry in old_value):
+                logger.warning(
+                    f"migrated legacy '{old_key}' to '{new_key}'. Rotated texts now rotate around their own center "
+                    "instead of the canvas center, please check their position."
+                )
+
+        data[new_key] = old_value
+
+    return data
 
 
 class SingleImageJobControl(BaseModel):
@@ -130,14 +160,19 @@ class SingleImageProcessing(BaseModel):
         ),
     )
 
-    texts_enable: bool = Field(
+    elements_enable: bool = Field(
         default=False,
-        description="General enable apply texts below.",
+        description="General enable apply texts and images below.",
     )
-    texts: list[TextsConfig] = Field(
+    elements: list[CanvasElement] = Field(
         default=[],
-        description="Text to overlay on images after capture. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in working directory/userdata/*",
+        description="Texts and images (like logos or watermarks) to overlay on images after capture. Elements are drawn in list order, later elements on top. Pos_x/Pos_y is the element's top-left corner in pixel starting 0/0 at top-left in image. Rotation is around the element's center. Files need to be located in working directory/userdata/*",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_texts(cls, data: Any) -> Any:
+        return migrate_legacy_texts(data, {"texts_enable": "elements_enable", "texts": "elements"})
 
 
 class CollageProcessing(BaseModel):
@@ -210,14 +245,19 @@ class CollageProcessing(BaseModel):
         description="Image file to paste on top over photos and backgrounds. Photos are visible only through transparant parts. Image needs to be transparent (PNG). File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
-    canvas_texts_enable: bool = Field(
+    canvas_elements_enable: bool = Field(
         default=False,
-        description="General enable apply texts below.",
+        description="General enable apply texts and images below.",
     )
-    canvas_texts: list[TextsConfig] = Field(
+    canvas_elements: list[CanvasElement] = Field(
         default=[],
-        description="Text to overlay on final collage. Pos_x/Pos_y measure in pixel starting 0/0 at top-left in image. Font to use in text stages. File needs to be located in working directory/userdata/*",
+        description="Texts and images (like logos or watermarks) to overlay on final collage. Elements are drawn in list order, later elements on top. Pos_x/Pos_y is the element's top-left corner in pixel starting 0/0 at top-left in image. Rotation is around the element's center. Files need to be located in working directory/userdata/*",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_texts(cls, data: Any) -> Any:
+        return migrate_legacy_texts(data, {"canvas_texts_enable": "canvas_elements_enable", "canvas_texts": "canvas_elements"})
 
 
 class AnimationProcessing(BaseModel):
@@ -349,9 +389,9 @@ class GroupActions(BaseModel):
                         image=Path("userdata/demoassets/frames/frame_image_photobooth-app.png"),
                         mirror_effect=False,
                     ),
-                    texts_enable=True,
-                    texts=[
-                        TextsConfig(
+                    elements_enable=True,
+                    elements=[
+                        TextElementConfig(
                             text="Visit photobooth-app.org and build yours!",  # use {date} and {time} to add dynamic texts; cannot use in default because tests will fail that compare images
                             pos_x=1300,
                             pos_y=1250,
@@ -416,9 +456,9 @@ class GroupActions(BaseModel):
                     ],
                     canvas_img_front_enable=True,
                     canvas_img_front_file=Path("userdata/demoassets/frames/pixabay-poster-2871536_1920.png"),
-                    canvas_texts_enable=True,
-                    canvas_texts=[
-                        TextsConfig(
+                    canvas_elements_enable=True,
+                    canvas_elements=[
+                        TextElementConfig(
                             text="Have a nice day :)",
                             pos_x=200,
                             pos_y=1100,

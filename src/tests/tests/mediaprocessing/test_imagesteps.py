@@ -7,21 +7,21 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 from pydantic_extra_types.color import Color
 
 from photobooth.appconfig import AppConfig
-from photobooth.services.config.groups.actions import TextsConfig
+from photobooth.services.config.models.models import ImageElementConfig, TextElementConfig
 from photobooth.services.mediaprocessing.context import ImageContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
 from photobooth.services.mediaprocessing.steps.image import (
+    CanvasElementsStep,
     FillBackgroundStep,
     ImageFrameStep,
     ImageMountStep,
     PluginFilters,
     PluginFilterStep,
     RemovebgStep,
-    TextStep,
     get_plugin_avail_filters,
     get_plugin_userselectable_filters,
 )
@@ -110,9 +110,9 @@ def test_pilgram_stage_nonexistantfilter(pil_image: Image.Image):
 
 
 def test_text_stage(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="apply text", font=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"))]
+    textconfig = [TextElementConfig(text="apply text", font=Path("userdata/demoassets/fonts/Roboto-Bold.ttf"))]
     context = ImageContext(pil_image)
-    steps = [TextStep(textconfig)]
+    steps = [CanvasElementsStep(textconfig)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -121,11 +121,11 @@ def test_text_stage(pil_image: Image.Image):
 
 
 def test_text_stage_fontnotavail(pil_image: Image.Image):
-    textconfig = [TextsConfig(text="asdf", font=None)]
+    textconfig = [TextElementConfig(text="asdf", font=None)]
 
     with pytest.raises(PipelineError):
         context = ImageContext(pil_image)
-        steps = [TextStep(textconfig)]
+        steps = [CanvasElementsStep(textconfig)]
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
 
@@ -134,7 +134,7 @@ def test_text_stage_empty_emptyarray_skips(pil_image: Image.Image):
     textconfig = []
 
     context = ImageContext(pil_image)
-    steps = [TextStep(textconfig)]
+    steps = [CanvasElementsStep(textconfig)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
@@ -144,16 +144,100 @@ def test_text_stage_empty_emptyarray_skips(pil_image: Image.Image):
 
 
 def test_text_stage_empty_emptytext_skips(pil_image: Image.Image):
-    textconfig = [TextsConfig(text=""), TextsConfig(pos_x=1), TextsConfig(pos_y=1), TextsConfig(font_size=100)]
+    textconfig = [TextElementConfig(text=""), TextElementConfig(pos_x=1), TextElementConfig(pos_y=1), TextElementConfig(font_size=100)]
 
     context = ImageContext(pil_image)
-    steps = [TextStep(textconfig)]
+    steps = [CanvasElementsStep(textconfig)]
     pipeline = Pipeline[ImageContext](*steps)
     pipeline(context)
     stage_output = context.image
 
     assert pil_image is not stage_output  # original copied, so not equal
     assert is_same(pil_image, stage_output)  # but pixel are same because empty textconfig
+
+
+def test_text_stage_rotates_around_text_center():
+    font = Path("userdata/demoassets/fonts/Roboto-Bold.ttf")
+    canvas = Image.new("RGB", (800, 800), "white")
+
+    def text_bbox_center(rotate: int) -> tuple[float, float]:
+        context = ImageContext(canvas)
+        pipeline = Pipeline[ImageContext](CanvasElementsStep([TextElementConfig(text="I", pos_x=600, pos_y=600, rotate=rotate, font=font)]))
+        pipeline(context)
+        bbox = ImageOps.invert(context.image.convert("L")).getbbox()
+        assert bbox
+        return ((bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2)
+
+    center_unrotated = text_bbox_center(0)
+    center_rotated = text_bbox_center(90)
+
+    # rotation around the canvas center would move the text far away
+    assert abs(center_unrotated[0] - center_rotated[0]) <= 3
+    assert abs(center_unrotated[1] - center_rotated[1]) <= 3
+
+
+@pytest.fixture()
+def logo_file(tmp_path: Path) -> Path:
+    file = tmp_path / "logo.png"
+    Image.new("RGBA", (100, 50), (255, 0, 0, 255)).save(file)
+    return file
+
+
+def test_image_element_top_left_and_size(logo_file: Path):
+    canvas = Image.new("RGB", (400, 400), "white")
+    context = ImageContext(canvas)
+    pipeline = Pipeline[ImageContext](
+        CanvasElementsStep([ImageElementConfig(type="image", image=logo_file, pos_x=100, pos_y=50, width=100, height=50)])
+    )
+    pipeline(context)
+
+    assert context.image.mode == "RGB"
+    assert context.image.size == canvas.size
+    assert context.image.getpixel((100, 50)) == (255, 0, 0)
+    assert context.image.getpixel((199, 99)) == (255, 0, 0)
+    assert context.image.getpixel((99, 50)) == (255, 255, 255)
+    assert context.image.getpixel((200, 99)) == (255, 255, 255)
+    assert context.image.getpixel((100, 100)) == (255, 255, 255)
+
+
+def test_image_element_rotates_around_element_center(logo_file: Path):
+    canvas = Image.new("RGBA", (400, 400), (255, 255, 255, 255))
+    context = ImageContext(canvas)
+    element = ImageElementConfig(type="image", image=logo_file, pos_x=100, pos_y=50, width=100, height=50, rotate=90)
+    pipeline = Pipeline[ImageContext](CanvasElementsStep([element]))
+    pipeline(context)
+
+    # 100x50 rotated by 90° around center (150, 75) becomes 50x100 spanning x 125..175, y 25..125
+    assert context.image.mode == "RGBA"
+    assert context.image.getpixel((150, 75)) == (255, 0, 0, 255)
+    assert context.image.getpixel((150, 30)) == (255, 0, 0, 255)
+    assert context.image.getpixel((110, 75)) == (255, 255, 255, 255)
+
+
+def test_image_element_opacity_and_order(logo_file: Path):
+    canvas = Image.new("RGB", (400, 400), "white")
+    context = ImageContext(canvas)
+    elements = [
+        ImageElementConfig(type="image", image=logo_file, pos_x=0, pos_y=0, width=100, height=50),
+        ImageElementConfig(type="image", image=logo_file, pos_x=0, pos_y=0, width=100, height=50, opacity=0.0),
+    ]
+    pipeline = Pipeline[ImageContext](CanvasElementsStep(elements))
+    pipeline(context)
+
+    assert context.image.getpixel((50, 25)) == (255, 0, 0)
+
+
+def test_image_element_missing_file(logo_file: Path):
+    element = ImageElementConfig(type="image", image=logo_file)
+    logo_file.unlink()
+
+    with pytest.raises(PipelineError):
+        Pipeline[ImageContext](CanvasElementsStep([element]))(ImageContext(Image.new("RGB", (100, 100))))
+
+
+def test_image_element_no_file():
+    with pytest.raises(PipelineError):
+        Pipeline[ImageContext](CanvasElementsStep([ImageElementConfig(type="image")]))(ImageContext(Image.new("RGB", (100, 100))))
 
 
 def test_rembg_ai_stage(pil_image: Image.Image):

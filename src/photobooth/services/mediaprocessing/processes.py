@@ -17,7 +17,7 @@ from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, TextStep
+from .steps.image import CanvasElementsStep, FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep
 from .steps.multicamera import AlignAsPerCalibrationStep
 from .steps.video import BoomerangStep
 
@@ -59,8 +59,8 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
             raise ValueError("image frame enabled, but no file given")
         pipeline.append(ImageFrameStep(config.img_frame.image))
 
-    if config.texts_enable:
-        pipeline.append(TextStep(config.texts))
+    if config.elements_enable:
+        pipeline.append(CanvasElementsStep(config.elements))
 
     # finished assembly
 
@@ -150,8 +150,8 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
             raise ValueError("image frame enabled, but no file given")
         steps_phase2.append(ImageMountStep(config.canvas_img_front_file, reverse=True))
 
-    if config.canvas_texts_enable:
-        steps_phase2.append(TextStep(config.canvas_texts))
+    if config.canvas_elements_enable:
+        steps_phase2.append(CanvasElementsStep(config.canvas_elements))
 
     pipeline = Pipeline[ImageContext](*steps_phase2)
     with MetricsTimer(process_and_generate_collage.__name__):

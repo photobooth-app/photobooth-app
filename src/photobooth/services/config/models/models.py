@@ -1,16 +1,32 @@
 from pathlib import Path
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, FilePath, NonNegativeInt, PositiveInt
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, FilePath, NonNegativeInt, PositiveInt, Tag
 from pydantic_extra_types.color import Color
 
 from ...mediaprocessing.steps.image import PluginFilters
 
 
-class TextsConfig(BaseModel):
-    text: str = ""
-    pos_x: NonNegativeInt = 50
-    pos_y: NonNegativeInt = 50
-    rotate: int = 0
+class TextElementConfig(BaseModel):
+    model_config = ConfigDict(title="Text")
+
+    type: Literal["text"] = "text"
+    text: str = Field(
+        default="",
+        description="Text to render. Use {date} and {time} for dynamic content.",
+    )
+    pos_x: NonNegativeInt = Field(
+        default=50,
+        description="Position of the text's left edge in reference to the left edge of the canvas.",
+    )
+    pos_y: NonNegativeInt = Field(
+        default=50,
+        description="Position of the text's top edge in reference to the top edge of the canvas.",
+    )
+    rotate: int = Field(
+        default=0,
+        description="Rotate the text around its own center. Positive numbers rotate counterclockwise, negative clockwise.",
+    )
     font_size: PositiveInt = 40
     font: FilePath | None = Field(
         # factories are not part of json schema export. path is not json convertible so it would warn and not include the default. using factory, we skip the warning for same outcome.
@@ -18,6 +34,56 @@ class TextsConfig(BaseModel):
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
     color: Color = Color("#cd1c18")
+
+
+class ImageElementConfig(BaseModel):
+    model_config = ConfigDict(title="Image")
+
+    type: Literal["image"] = "image"
+    image: FilePath | None = Field(
+        default=None,
+        description="Image to place, for example a logo or watermark. Transparent PNGs are supported. File needs to be located in working directory/userdata/*",
+        json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
+    )
+    pos_x: NonNegativeInt = Field(
+        default=50,
+        description="Position of the element's left edge in reference to the left edge of the canvas.",
+    )
+    pos_y: NonNegativeInt = Field(
+        default=50,
+        description="Position of the element's top edge in reference to the top edge of the canvas.",
+    )
+    width: PositiveInt = Field(
+        default=200,
+        description="Width of the element. The image is fit into width/height keeping its aspect ratio.",
+    )
+    height: PositiveInt = Field(
+        default=200,
+        description="Height of the element. The image is fit into width/height keeping its aspect ratio.",
+    )
+    rotate: int = Field(
+        default=0,
+        description="Rotate the image around its own center. Positive numbers rotate counterclockwise, negative clockwise.",
+    )
+    opacity: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Opacity of the image, 0 is fully transparent, 1 is fully opaque.",
+    )
+
+
+def _canvas_element_type(v: Any) -> str:
+    # entries without type are legacy texts
+    if isinstance(v, dict):
+        return v.get("type", "text")
+    return getattr(v, "type", "text")
+
+
+CanvasElement = Annotated[
+    Annotated[TextElementConfig, Tag("text")] | Annotated[ImageElementConfig, Tag("image")],
+    Discriminator(_canvas_element_type),
+]
 
 
 class CollageMergeDefinition(BaseModel):
