@@ -45,6 +45,10 @@ class ImageElementConfig(BaseModel):
         description="Image to place, for example a logo or watermark. Transparent PNGs are supported. File needs to be located in working directory/userdata/*",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
+    fill_canvas: bool = Field(
+        default=False,
+        description="Scale the image to cover the whole canvas, like a frame. Edges that do not fit the aspect ratio are cropped. Position, size and rotation are ignored.",
+    )
     pos_x: NonNegativeInt = Field(
         default=50,
         description="Position of the element's left edge in reference to the left edge of the canvas.",

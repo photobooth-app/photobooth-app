@@ -11,9 +11,11 @@ from PIL import Image, ImageDraw, ImageOps
 from pydantic_extra_types.color import Color
 
 from photobooth.appconfig import AppConfig
+from photobooth.services.config.groups.actions import SingleImageProcessing
 from photobooth.services.config.models.models import ImageElementConfig, TextElementConfig
 from photobooth.services.mediaprocessing.context import ImageContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
+from photobooth.services.mediaprocessing.processes import process_image_inner
 from photobooth.services.mediaprocessing.steps.image import (
     CanvasElementsStep,
     FillBackgroundStep,
@@ -227,6 +229,17 @@ def test_image_element_opacity_and_order(logo_file: Path):
     assert context.image.getpixel((50, 25)) == (255, 0, 0)
 
 
+def test_image_element_fill_canvas(logo_file: Path):
+    canvas = Image.new("RGB", (400, 400), "white")  # logo is 2:1, canvas 1:1: fill crops the logo edges, position and size are ignored
+    context = ImageContext(canvas)
+    element = ImageElementConfig(type="image", image=logo_file, fill_canvas=True, pos_x=100, pos_y=100, width=10, height=10, rotate=90)
+    Pipeline[ImageContext](CanvasElementsStep([element]))(context)
+
+    assert context.image.size == canvas.size
+    assert context.image.getpixel((0, 0)) == (255, 0, 0)
+    assert context.image.getpixel((399, 399)) == (255, 0, 0)  # whole canvas covered
+
+
 def test_image_element_missing_file(logo_file: Path):
     element = ImageElementConfig(type="image", image=logo_file)
     logo_file.unlink()
@@ -416,3 +429,24 @@ def test_img_frame_stage_notransparency_rgbmode(pil_image: Image.Image, tmp_path
         pipeline = Pipeline[ImageContext](*steps)
         pipeline(context)
         _ = context.image
+
+
+def test_process_image_img_frame(pil_image: Image.Image, tmp_path: Path):
+    capture_file = tmp_path / "capture.jpg"
+    pil_image.save(capture_file)
+    frame_file = tmp_path / "frame.png"
+    img = Image.new("RGBA", (600, 400), (255, 0, 0, 255))
+    ImageDraw.Draw(img).rectangle((50, 50, 549, 349), fill=(0, 0, 0, 0))
+    img.save(frame_file)
+
+    result = process_image_inner(capture_file, SingleImageProcessing(img_frame_enable=True, img_frame_file=frame_file), preview=False)
+
+    assert result.size == (600, 400)  # size is derived from the frame
+
+
+def test_process_image_img_frame_nofile(pil_image: Image.Image, tmp_path: Path):
+    capture_file = tmp_path / "capture.jpg"
+    pil_image.save(capture_file)
+
+    with pytest.raises(ValueError):
+        process_image_inner(capture_file, SingleImageProcessing(img_frame_enable=True), preview=False)

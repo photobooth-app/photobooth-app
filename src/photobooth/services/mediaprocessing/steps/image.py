@@ -6,6 +6,7 @@ from collections import OrderedDict
 from collections.abc import Sequence
 from datetime import datetime
 from enum import Enum
+from functools import lru_cache
 from itertools import chain
 from pathlib import Path
 from threading import Lock
@@ -130,6 +131,28 @@ class ImageMountStep(PipelineStep):
         next_step(context)
 
 
+def get_transparent_bbox(image_frame: Image.Image) -> tuple[int, int, int, int] | None:
+    """detect boundary box of transparent area, for this get alphachannel, invert and getbbox"""
+    alpha = image_frame.getchannel("A")
+    mask_np = (np.asarray(alpha) < 255).astype(np.uint8) * 255  # Maske erzeugen: 255 für transparent, 0 für opaque
+
+    return Image.fromarray(mask_np, mode="L").getbbox()
+
+
+@lru_cache(maxsize=4)
+def _get_transparent_size(frame_file: Path, mtime_ns: int) -> tuple[int, int]:
+    bbox = get_transparent_bbox(Image.open(frame_file).convert("RGBA"))
+    if bbox is None:
+        raise PipelineError("image has alphachannel but actually has not transparent area")
+
+    return (bbox[2] - bbox[0], bbox[3] - bbox[1])
+
+
+def get_frame_transparent_size(frame_file: Path) -> tuple[int, int]:
+    """size of the transparent area of a frame, cached until the file is changed"""
+    return _get_transparent_size(frame_file, frame_file.stat().st_mtime_ns)
+
+
 class ImageFrameStep(PipelineStep):
     """optimized function for use on single images.
     resulting size is derived from the frame, since frame is considered as the "master"
@@ -152,12 +175,7 @@ class ImageFrameStep(PipelineStep):
             raise PipelineError(f"file {str(self.frame_file)} not found!") from exc
 
         try:
-            # detect boundary box of transparent area, for this get alphachannel, invert and getbbox:
-            alpha = image_frame.getchannel("A")
-            mask_np = (np.asarray(alpha) < 255).astype(np.uint8) * 255  # Maske erzeugen: 255 für transparent, 0 für opaque
-            mask = Image.fromarray(mask_np, mode="L")
-
-            transparent_xy = mask.getbbox()
+            transparent_xy = get_transparent_bbox(image_frame)
 
         except Exception as exc:  # no transparent channel A
             raise PipelineError(f"error processing image, cannot apply stage, error {exc}") from exc
@@ -247,19 +265,25 @@ class CanvasElementsStep(PipelineStep):
             raise PipelineError(f"file {imageconfig.image} not found!") from exc
 
         box = (imageconfig.width, imageconfig.height)
-        fitted = ImageOps.contain(element_img, box, method=Image.Resampling.BICUBIC)
-        layer = Image.new("RGBA", box, (0, 0, 0, 0))
-        layer.paste(fitted, ((box[0] - fitted.width) // 2, (box[1] - fitted.height) // 2))
+        if imageconfig.fill_canvas:
+            layer = ImageOps.fit(element_img, image.size, method=Image.Resampling.BICUBIC)
+        else:
+            fitted = ImageOps.contain(element_img, box, method=Image.Resampling.BICUBIC)
+            layer = Image.new("RGBA", box, (0, 0, 0, 0))
+            layer.paste(fitted, ((box[0] - fitted.width) // 2, (box[1] - fitted.height) // 2))
 
         if imageconfig.opacity < 1.0:
             layer.putalpha(layer.getchannel("A").point(lambda a: round(a * imageconfig.opacity)))
 
-        if imageconfig.rotate != 0:
-            # expand keeps the rotated layer's center at the layer center, so it can be aligned to the element center below
-            layer = layer.rotate(imageconfig.rotate, expand=True, resample=Image.Resampling.BICUBIC)
+        if imageconfig.fill_canvas:
+            offset = (0, 0)
+        else:
+            if imageconfig.rotate != 0:
+                # expand keeps the rotated layer's center at the layer center, so it can be aligned to the element center below
+                layer = layer.rotate(imageconfig.rotate, expand=True, resample=Image.Resampling.BICUBIC)
 
-        center = (imageconfig.pos_x + box[0] / 2, imageconfig.pos_y + box[1] / 2)
-        offset = (round(center[0] - layer.width / 2), round(center[1] - layer.height / 2))
+            center = (imageconfig.pos_x + box[0] / 2, imageconfig.pos_y + box[1] / 2)
+            offset = (round(center[0] - layer.width / 2), round(center[1] - layer.height / 2))
 
         overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
         overlay.paste(layer, offset)
