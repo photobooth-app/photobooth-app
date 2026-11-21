@@ -229,6 +229,17 @@ def test_image_element_opacity_and_order(logo_file: Path):
     assert context.image.getpixel((50, 25)) == (255, 0, 0)
 
 
+def test_image_element_fill_canvas(logo_file: Path):
+    canvas = Image.new("RGB", (400, 400), "white")  # logo is 2:1, canvas 1:1: fill crops the logo edges, position and size are ignored
+    context = ImageContext(canvas)
+    element = ImageElementConfig(type="image", image=logo_file, fill_canvas=True, pos_x=100, pos_y=100, width=10, height=10, rotate=90)
+    Pipeline[ImageContext](CanvasElementsStep([element]))(context)
+
+    assert context.image.size == canvas.size
+    assert context.image.getpixel((0, 0)) == (255, 0, 0)
+    assert context.image.getpixel((399, 399)) == (255, 0, 0)  # whole canvas covered
+
+
 def test_image_element_missing_file(logo_file: Path):
     element = ImageElementConfig(type="image", image=logo_file)
     logo_file.unlink()

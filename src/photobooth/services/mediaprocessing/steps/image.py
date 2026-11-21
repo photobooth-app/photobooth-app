@@ -265,19 +265,25 @@ class CanvasElementsStep(PipelineStep):
             raise PipelineError(f"file {imageconfig.image} not found!") from exc
 
         box = (imageconfig.width, imageconfig.height)
-        fitted = ImageOps.contain(element_img, box, method=Image.Resampling.BICUBIC)
-        layer = Image.new("RGBA", box, (0, 0, 0, 0))
-        layer.paste(fitted, ((box[0] - fitted.width) // 2, (box[1] - fitted.height) // 2))
+        if imageconfig.fill_canvas:
+            layer = ImageOps.fit(element_img, image.size, method=Image.Resampling.BICUBIC)
+        else:
+            fitted = ImageOps.contain(element_img, box, method=Image.Resampling.BICUBIC)
+            layer = Image.new("RGBA", box, (0, 0, 0, 0))
+            layer.paste(fitted, ((box[0] - fitted.width) // 2, (box[1] - fitted.height) // 2))
 
         if imageconfig.opacity < 1.0:
             layer.putalpha(layer.getchannel("A").point(lambda a: round(a * imageconfig.opacity)))
 
-        if imageconfig.rotate != 0:
-            # expand keeps the rotated layer's center at the layer center, so it can be aligned to the element center below
-            layer = layer.rotate(imageconfig.rotate, expand=True, resample=Image.Resampling.BICUBIC)
+        if imageconfig.fill_canvas:
+            offset = (0, 0)
+        else:
+            if imageconfig.rotate != 0:
+                # expand keeps the rotated layer's center at the layer center, so it can be aligned to the element center below
+                layer = layer.rotate(imageconfig.rotate, expand=True, resample=Image.Resampling.BICUBIC)
 
-        center = (imageconfig.pos_x + box[0] / 2, imageconfig.pos_y + box[1] / 2)
-        offset = (round(center[0] - layer.width / 2), round(center[1] - layer.height / 2))
+            center = (imageconfig.pos_x + box[0] / 2, imageconfig.pos_y + box[1] / 2)
+            offset = (round(center[0] - layer.width / 2), round(center[1] - layer.height / 2))
 
         overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
         overlay.paste(layer, offset)
