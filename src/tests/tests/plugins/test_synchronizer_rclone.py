@@ -7,6 +7,7 @@ import pytest
 from photobooth.plugins.synchronizer.config import RemoteConfig, ShareConfig, SynchronizerConfig
 from photobooth.plugins.synchronizer.immediate_synchronizer import ThreadedImmediateSyncPipeline
 from photobooth.plugins.synchronizer.regular_synchronizer import ThreadedRegularSync
+from photobooth.plugins.synchronizer.shareondemand import ShareOnDemandService
 from photobooth.plugins.synchronizer.synchronizer import Synchronizer
 from photobooth.plugins.synchronizer.types import DeleteOperation, TaskDelete
 
@@ -81,7 +82,7 @@ def test_get_share_links_public(sync: Synchronizer):
 
     sync._rclone_client.publiclink.return_value.link = "https://remote/link"  # type: ignore
 
-    out = sync.get_share_links(Path("media/file.jpg"), uuid4())
+    out = sync.get_share_links(Path("media/file.jpg"), uuid4(), revision=0)
     assert out == ["http://test123", "https://remote/link"]
 
 
@@ -89,8 +90,46 @@ def test_get_share_links_public_failure(sync):
 
     sync._rclone_client.publiclink.side_effect = Exception("boom")
 
-    out = sync.get_share_links(Path("media/file.jpg"), uuid4())
+    out = sync.get_share_links(Path("media/file.jpg"), uuid4(), revision=0)
     assert out == ["http://test123"]
+
+
+def test_get_share_links_custom_url_includes_revision(sync: Synchronizer):
+    identifier = uuid4()
+    sync._config.common.custom_qr_url = "https://example/{identifier}/{filename}?revision={revision}"
+
+    links = sync.get_share_links(Path("media/file.jpg"), identifier, revision=3)
+
+    assert links[0] == f"https://example/{identifier}/file.jpg?revision=3"
+
+
+def test_shareondemand_revision_changes_url_and_upload_id(tmp_path: Path):
+    identifier = uuid4()
+    service = ShareOnDemandService(MagicMock(), "", "", "https://example.test/share", "key")
+    media_path = tmp_path / "image.jpg"
+    media_path.write_bytes(b"image")
+    service._mediacollection_db.get_item = MagicMock(return_value=MagicMock(processed=media_path))
+    upload_id = f"{identifier}_3"
+
+    previous_link = service.get_share_link(identifier, revision=2)
+    link = service.get_share_link(identifier, revision=3)
+    assert previous_link != link
+    assert f"id%3D{identifier}%26rev%3D3" in link
+
+    queue_response = MagicMock()
+    queue_response.json.return_value = {"id": upload_id}
+
+    def post(_url, *, data, **_kwargs):
+        if data["action"] == "getpendingjob":
+            return queue_response
+        if data["action"] == "upload":
+            service._stop_event.set()
+        return MagicMock()
+
+    with patch("photobooth.plugins.synchronizer.shareondemand.httpx2.post", side_effect=post):
+        service.run_service()
+
+    service._mediacollection_db.get_item.assert_called_once_with(identifier)
 
 
 # ---------------------------------------------------------------------------

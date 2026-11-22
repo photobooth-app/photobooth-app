@@ -145,7 +145,7 @@ class PluginMediacollectionSpec:
         """deleted a file from collection"""
 
     @hookspec
-    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
+    def get_share_links(self, filepath_local: Path, identifier: UUID, revision: int) -> list[str]:
         """share backends shall create a link to the mediaitem ressource so it can be used in qr codes, ..."""
         return []
 

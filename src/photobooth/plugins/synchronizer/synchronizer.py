@@ -215,7 +215,7 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
         )
 
     @hookimpl
-    def get_share_links(self, filepath_local: Path, identifier: UUID) -> list[str]:
+    def get_share_links(self, filepath_local: Path, identifier: UUID, revision: int) -> list[str]:
         if not self._rclone_client:
             return []
 
@@ -229,12 +229,13 @@ class Synchronizer(BasePlugin[SynchronizerConfig]):
             formatted_custom_qr_url = self._config.common.custom_qr_url.format(
                 filename=filepath_local.name,
                 identifier=str(identifier),
+                revision=revision,
             )
 
             share_links.append(formatted_custom_qr_url)
 
         if self._shareondemand:
-            share_links.append(self._shareondemand.get_share_link(identifier))
+            share_links.append(self._shareondemand.get_share_link(identifier, revision))
 
         for remote in self._config.remotes:
             shareconfig = remote.shareconfig

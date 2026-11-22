@@ -38,8 +38,8 @@ class Common(BaseModel):
         description="If you have your own solution/custom setup (local hotspot, ...), enable this option and the cusotm qr url is displayed as QR code in the frontend.",
     )
     custom_qr_url: str = Field(
-        default=f"http://{hostname}:8000/sharepage/#?url=http://{hostname}:8000/media/full/{{identifier}}",
-        description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {identifier} is replaced by the actual item's id, {filename} is replaced by the actual filename on the photobooth-data, in QR code.",
+        default=f"http://{hostname}:8000/sharepage/#?url=http://{hostname}:8000/media/full/{{identifier}}?rev={{revision}}",
+        description="URL displayed as QR code to image for download. Need you to sync the files on your own or allow the user to access via hotspot. {identifier} is replaced by the actual item's id, {filename} is replaced by the actual filename on the photobooth-data, {revision} is replaced by the item's revision for cache busting.",
     )
 
 

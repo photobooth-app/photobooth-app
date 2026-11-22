@@ -180,6 +180,14 @@ final class ShareService
             throw new RuntimeException("Missing id");
         }
 
+        $revision = $_GET['rev'] ?? null;
+        if ($revision !== null) {
+            if (!is_string($revision) || !ctype_digit($revision)) {
+                throw new RuntimeException("Invalid revision");
+            }
+            $id .= "_$revision";
+        }
+
         if (!$this->hasAnyStatus($id)) {
             $this->setStatus($id, "pending");
         }

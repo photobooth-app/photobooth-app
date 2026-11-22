@@ -147,6 +147,29 @@ def test_shareondemand_download_all_mediaitem_types(sod_srv: ShareOnDemandServic
         assert r.content == f.read()
 
 
+def test_shareondemand_download_revisions(sod_srv: ShareOnDemandService, _mediaitem: Mediaitem):
+    params = {"action": "download", "id": str(_mediaitem.id), "rev": "0"}
+    original = _mediaitem.processed.read_bytes()
+
+    first = requests.get(sod_srv.shareservice_api_php_url, params=params)
+    assert first.status_code == 200
+    assert first.content == original
+
+    updated = original + b"updated"
+    _mediaitem.processed.write_bytes(updated)
+    second = requests.get(sod_srv.shareservice_api_php_url, params=params | {"rev": "1"})
+    assert second.status_code == 200
+    assert second.content == updated
+
+    cached = requests.get(sod_srv.shareservice_api_php_url, params=params)
+    assert cached.status_code == 200
+    assert cached.content == original
+
+    invalid = requests.get(sod_srv.shareservice_api_php_url, params=params | {"rev": "../1"})
+    assert invalid.status_code == 500
+    assert invalid.json()["detail"] == "Invalid revision"
+
+
 def test_shareondemand_download_nonexistant_image(sod_srv: ShareOnDemandService):
     """start service and try to download an image that does not exist"""
 

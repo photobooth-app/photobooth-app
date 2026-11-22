@@ -99,14 +99,14 @@ class ShareOnDemandService(ResilientService):
             Path(self.remote_subdir, indexhtml_source_path.name).as_posix(),
         )
 
-    def get_share_link(self, identifier: UUID) -> str:
+    def get_share_link(self, identifier: UUID, revision: int) -> str:
         logger.debug(f"generating shareondemand qr links for {identifier}")
 
         # qr share service with api.php:
         # this is to the index.html displaying the portal
         download_portal_url = f"{self.baseurl.rstrip('/')}/#/?url="
         # this delivers the actual file (no html around).
-        mediaitem_url = f"{self.baseurl.rstrip('/')}/{API_PHP}?action=download&id={str(identifier)}"
+        mediaitem_url = f"{self.baseurl.rstrip('/')}/{API_PHP}?action=download&id={identifier}&rev={revision}"
 
         return download_portal_url + quote(mediaitem_url, safe="")
 
@@ -181,7 +181,8 @@ class ShareOnDemandService(ResilientService):
                 request_upload_file = {}
                 file_handle = None
                 try:
-                    mediaitem_to_upload = self._mediacollection_db.get_item(UUID(upload_id))
+                    mediaitem_id = UUID(upload_id.split("_", maxsplit=1)[0])
+                    mediaitem_to_upload = self._mediacollection_db.get_item(mediaitem_id)
                     logger.info(f"Uploading {mediaitem_to_upload}")
 
                     file_handle = open(mediaitem_to_upload.processed, "rb")
