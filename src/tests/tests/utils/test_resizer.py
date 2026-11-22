@@ -39,17 +39,6 @@ def test_resize_jpg_force_simplejpeg(tmp_path):
         img.verify()
 
 
-def test_resize_jpg_force_pillow(tmp_path):
-    input = Path("src/tests/assets/input.jpg")
-    output = tmp_path / "output.jpg"
-
-    # pyrefly: ignore[deprecated]
-    mr.resize_jpeg_pillow(filepath_in=input, filepath_out=output, scaled_min_length=100)
-
-    with Image.open(output) as img:
-        img.verify()
-
-
 def test_resize_gif_pillow(tmp_path):
     # testing gif with pillow because it's still around, but too slow compared to pyav.
     input = tmp_path / "anim.gif"

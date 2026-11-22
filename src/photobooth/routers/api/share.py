@@ -18,7 +18,7 @@ def _share(mediaitem: Mediaitem, index: int, parameters: dict[str, str] | None):
     try:
         container.share_service.share(mediaitem, index, parameters)
     except ShareParameterError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     except ShareCommandError as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Share command failed.") from exc
     except (BlockingIOError, ConnectionRefusedError, WrongMediaTypeError):
