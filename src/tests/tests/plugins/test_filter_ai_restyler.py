@@ -74,6 +74,28 @@ def test_unify_and_foreign_filter(plugin: FilterAiRestyler, image):
     assert plugin.mp_filter_pipeline_step(image, "FilterPilgram2._1977", preview=False) is None
 
 
+def test_default_userselectable_styles_are_sorted_by_name(plugin: FilterAiRestyler):
+    names = {plugin.unify(style.id): style.name for style in plugin._config.styles}
+    selectable_names = [names[filter_id] for filter_id in plugin.mp_userselectable_filter()]
+
+    assert selectable_names
+    assert selectable_names == sorted(selectable_names, key=str.casefold)
+
+
+def test_superhero_preset(plugin: FilterAiRestyler, image, httpserver: HTTPServer):
+    _setup_fal(plugin, httpserver)
+    filter_id = "FilterAiRestyler.superhero"
+
+    assert filter_id in plugin.mp_avail_filter()
+    assert filter_id in plugin.mp_userselectable_filter()
+    result = plugin.mp_filter_pipeline_step(image, filter_id, preview=False)
+
+    assert result and result.size == INPUT_SIZE
+    prompt = httpserver.log[0][0].get_json()["prompt"]
+    assert "superhero" in prompt
+    assert "face uncovered and recognizable" in prompt
+
+
 def test_disabled_plugin(plugin: FilterAiRestyler, image):
     plugin._config.common.enabled = False
 

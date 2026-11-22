@@ -110,16 +110,6 @@ ProviderConfig = ReplicateProviderConfig | FalProviderConfig | ComfyUIProviderCo
 
 
 DEFAULT_STYLES = [
-    AiStyle(id="cartoon", name="Cartoon", prompt="a colorful 2D cartoon illustration with bold outlines"),
-    AiStyle(id="anime", name="Anime", prompt="a Japanese anime illustration with cel shading"),
-    AiStyle(id="pixar-3d", name="3D Animation", prompt="a 3D animated movie character render with soft lighting"),
-    AiStyle(id="medieval", name="Medieval", prompt="a medieval painting, people dressed in medieval clothing in a castle setting"),
-    AiStyle(id="renaissance", name="Renaissance", prompt="a renaissance oil painting with dramatic chiaroscuro lighting"),
-    AiStyle(id="comic", name="Comic Book", prompt="a comic book panel with ink lines and halftone shading"),
-    AiStyle(id="pop-art", name="Pop Art", prompt="a pop art print with bright flat colors and ben-day dots"),
-    AiStyle(id="watercolor", name="Watercolor", prompt="a soft watercolor painting on textured paper"),
-    AiStyle(id="pencil-sketch", name="Pencil Sketch", prompt="a detailed graphite pencil sketch"),
-    AiStyle(id="cyberpunk", name="Cyberpunk", prompt="a cyberpunk scene with neon lights and futuristic clothing"),
     AiStyle(
         id="vintage-1920s",
         name="1920s",
@@ -128,17 +118,30 @@ DEFAULT_STYLES = [
             "while preserving each person's face, hairstyle, facial hair, age and gender presentation"
         ),
     ),
-    AiStyle(id="lego", name="Brick Figures", prompt="toy brick minifigures built from plastic bricks"),
-    AiStyle(id="clay", name="Clay Figure", prompt="a stop-motion clay animation with handcrafted figures and textured surfaces"),
-    AiStyle(id="marble", name="Marble Sculpture", prompt="a finely carved marble sculpture with natural stone textures"),
-    AiStyle(id="impasto", name="Impasto Painting", prompt="an oil painting with thick, textured brushstrokes"),
+    AiStyle(id="pixar-3d", name="3D Animation", prompt="a 3D animated movie character render with soft lighting"),
+    AiStyle(id="anime", name="Anime", prompt="a Japanese anime illustration with cel shading"),
     AiStyle(id="astronaut", name="Astronaut", prompt="a realistic photo with astronaut spacesuits and faces clearly visible"),
-    AiStyle(id="vaporwave", name="Vaporwave", prompt="a vaporwave illustration with pastel pink and turquoise colors and retro digital textures"),
+    AiStyle(id="lego", name="Brick Figures", prompt="toy brick minifigures built from plastic bricks"),
+    AiStyle(id="cartoon", name="Cartoon", prompt="a colorful 2D cartoon illustration with bold outlines"),
+    AiStyle(id="clay", name="Clay Figure", prompt="a stop-motion clay animation with handcrafted figures and textured surfaces"),
+    AiStyle(id="comic", name="Comic Book", prompt="a comic book panel with ink lines and halftone shading"),
+    AiStyle(id="cyberpunk", name="Cyberpunk", prompt="a cyberpunk scene with neon lights and futuristic clothing"),
+    AiStyle(id="impasto", name="Impasto Painting", prompt="an oil painting with thick, textured brushstrokes"),
     AiStyle(
         id="kids",
         name="Kids' Illustration",
         prompt="a whimsical children's storybook illustration with soft pastels and hand-drawn details, keeping people their original ages",
     ),
+    AiStyle(id="marble", name="Marble Sculpture", prompt="a finely carved marble sculpture with natural stone textures"),
+    AiStyle(id="medieval", name="Medieval", prompt="a medieval painting, people dressed in medieval clothing in a castle setting"),
+    AiStyle(
+        id="neotokyo",
+        name="Neo Tokyo",
+        prompt="a 1990s hand-drawn cyberpunk anime scene with cel shading and neon-lit Japanese city details",
+    ),
+    AiStyle(id="pencil-sketch", name="Pencil Sketch", prompt="a detailed graphite pencil sketch"),
+    AiStyle(id="pop-art", name="Pop Art", prompt="a pop art print with bright flat colors and ben-day dots"),
+    AiStyle(id="renaissance", name="Renaissance", prompt="a renaissance oil painting with dramatic chiaroscuro lighting"),
     AiStyle(
         id="retro",
         name="Retro Illustration",
@@ -150,10 +153,12 @@ DEFAULT_STYLES = [
         prompt="a bright science-fiction film scene with clean futuristic architecture, metallic details and cool lighting",
     ),
     AiStyle(
-        id="neotokyo",
-        name="Neo Tokyo",
-        prompt="a 1990s hand-drawn cyberpunk anime scene with cel shading and neon-lit Japanese city details",
+        id="superhero",
+        name="Superhero",
+        prompt="a cinematic superhero scene with colorful heroic costumes and capes, keeping each person's face uncovered and recognizable",
     ),
+    AiStyle(id="vaporwave", name="Vaporwave", prompt="a vaporwave illustration with pastel pink and turquoise colors and retro digital textures"),
+    AiStyle(id="watercolor", name="Watercolor", prompt="a soft watercolor painting on textured paper"),
 ]
 
 

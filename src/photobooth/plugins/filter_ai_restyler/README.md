@@ -23,7 +23,7 @@ can keep processing local, depending on how its server and models are hosted.
 ## Styles and previews
 
 The plugin includes presets such as cartoon, anime, 3D animation, medieval,
-renaissance, comic book, pop art, watercolor, pencil sketch, cyberpunk,
+renaissance, comic book, superhero, pop art, watercolor, pencil sketch, cyberpunk,
 1920s, and brick figures. Administrators can add, edit, or remove styles in
 the plugin configuration. Each style has a name and a prompt description;
 styles may also define a negative prompt for compatible ComfyUI workflows.
@@ -31,10 +31,10 @@ Restart the app after changing the style list.
 Updated defaults do not replace saved prompt templates or style lists; update
 them in the plugin configuration if you want to use the new prompts.
 
-The plugin includes one preview image for each built-in style. These previews
-are bundled with the plugin and do not make provider requests. An
-administrator can set a custom preview image for a style. A custom style with
-no preview image and no matching bundled image displays the original photo.
+The plugin includes bundled preview images for most built-in styles. These
+previews do not make provider requests. An administrator can set a custom
+preview image for a style. A style with no preview image and no matching
+bundled image displays the original photo.
 Preview images are returned without resizing or cropping; supply custom previews
 at the desired resolution and aspect ratio.
 
