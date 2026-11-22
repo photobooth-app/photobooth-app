@@ -96,6 +96,17 @@ def test_superhero_preset(plugin: FilterAiRestyler, image, httpserver: HTTPServe
     assert "face uncovered and recognizable" in prompt
 
 
+def test_superhero_preview(plugin: FilterAiRestyler, httpserver: HTTPServer):
+    image = Image.new("RGB", (600, 400), "blue")
+    result = plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.superhero", preview=True)
+
+    assert result is not None
+    with Image.open(SHIPPED_PREVIEWS / "superhero.jpg") as sample:
+        assert result.size == sample.size
+        assert result.tobytes() == sample.tobytes()
+    assert not httpserver.log
+
+
 def test_disabled_plugin(plugin: FilterAiRestyler, image):
     plugin._config.common.enabled = False
 

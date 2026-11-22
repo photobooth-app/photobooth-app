@@ -31,7 +31,7 @@ Restart the app after changing the style list.
 Updated defaults do not replace saved prompt templates or style lists; update
 them in the plugin configuration if you want to use the new prompts.
 
-The plugin includes bundled preview images for most built-in styles. These
+The plugin includes bundled preview images for all built-in styles. These
 previews do not make provider requests. An administrator can set a custom
 preview image for a style. A style with no preview image and no matching
 bundled image displays the original photo.
