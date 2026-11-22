@@ -156,6 +156,8 @@ def test_fal_and_cache(plugin: FilterAiRestyler, image, httpserver: HTTPServer, 
     payload = httpserver.log[0][0].get_json()
     assert payload["image_url"].startswith("data:image/jpeg;base64,")
     assert "colorful 2D cartoon" in payload["prompt"]
+    assert "recognizable identity" in payload["prompt"]
+    assert "gender presentation" in payload["prompt"]
     assert len(input_jpegs) == 1
     assert base64.b64decode(payload["image_url"].split(",", 1)[1]) == input_jpegs[0]
     with Image.open(io.BytesIO(input_jpegs[0])) as uploaded:
@@ -243,12 +245,19 @@ def test_replicate_polling(plugin: FilterAiRestyler, image, httpserver: HTTPServ
     httpserver.expect_request("/v1/predictions/abc").respond_with_json({"status": "succeeded", "output": httpserver.url_for("/out.jpg")})
     httpserver.expect_request("/out.jpg").respond_with_data(_jpeg(), content_type="image/jpeg")
 
-    result = plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.anime", preview=False)
+    result = plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.vintage-1920s", preview=False)
 
     assert result and result.size == INPUT_SIZE
     payload = httpserver.log[0][0].get_json()["input"]
     assert payload["input_image"].startswith("data:image/jpeg;base64,")
     assert payload["aspect_ratio"] == "match_input_image"
+    assert "1920s" in payload["prompt"] and "black-and-white" in payload["prompt"]
+    assert "period-appropriate clothing and surroundings" in payload["prompt"]
+    assert "preserving each person's face" in payload["prompt"]
+    assert "gender presentation" in payload["prompt"]
+    assert "facial hair" in payload["prompt"]
+    assert "Identity preservation takes priority over stylization" in payload["prompt"]
+    assert "{style}" not in payload["prompt"]
     assert len(input_jpegs) == 1
     assert base64.b64decode(payload["input_image"].split(",", 1)[1]) == input_jpegs[0]
 

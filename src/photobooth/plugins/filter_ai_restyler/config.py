@@ -120,7 +120,14 @@ DEFAULT_STYLES = [
     AiStyle(id="watercolor", name="Watercolor", prompt="a soft watercolor painting on textured paper"),
     AiStyle(id="pencil-sketch", name="Pencil Sketch", prompt="a detailed graphite pencil sketch"),
     AiStyle(id="cyberpunk", name="Cyberpunk", prompt="a cyberpunk scene with neon lights and futuristic clothing"),
-    AiStyle(id="vintage-1920s", name="1920s", prompt="a 1920s black and white vintage photograph, people in 1920s fashion"),
+    AiStyle(
+        id="vintage-1920s",
+        name="1920s",
+        prompt=(
+            "a black-and-white 1920s photograph with period-appropriate clothing and surroundings, "
+            "while preserving each person's face, hairstyle, facial hair, age and gender presentation"
+        ),
+    ),
     AiStyle(id="lego", name="Brick Figures", prompt="toy brick minifigures built from plastic bricks"),
     AiStyle(id="clay", name="Clay Figure", prompt="a stop-motion clay animation with handcrafted figures and textured surfaces"),
     AiStyle(id="marble", name="Marble Sculpture", prompt="a finely carved marble sculpture with natural stone textures"),
@@ -157,7 +164,11 @@ class Common(BaseModel):
         "by the provider and personal data leaves the device, so inform your guests.",
     )
     prompt_template: str = Field(
-        default="Transform this photo into {style}. Keep the identity, faces, facial expressions, pose and composition of all people unchanged.",
+        default=(
+            "Edit this photo in the style of {style}. Preserve every person's recognizable identity, facial proportions, eyes, nose, jawline, "
+            "hairstyle, facial hair, skin tone, age and gender presentation. Keep expressions, poses, framing and the number of people unchanged. "
+            "Change the artistic rendering, clothing and setting without redesigning the people. Identity preservation takes priority over stylization."
+        ),
         description="Prompt sent to the model. {style} is replaced by the prompt of the selected style.",
     )
     max_input_size: PositiveInt = Field(

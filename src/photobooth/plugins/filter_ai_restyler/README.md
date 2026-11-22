@@ -28,6 +28,8 @@ renaissance, comic book, pop art, watercolor, pencil sketch, cyberpunk,
 the plugin configuration. Each style has a name and a prompt description;
 styles may also define a negative prompt for compatible ComfyUI workflows.
 Restart the app after changing the style list.
+Updated defaults do not replace saved prompt templates or style lists; update
+them in the plugin configuration if you want to use the new prompts.
 
 The plugin includes one preview image for each built-in style. These previews
 are bundled with the plugin and do not make provider requests. An
