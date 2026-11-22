@@ -91,8 +91,6 @@ uv run photobooth
 
 - The app reloads on each run.  
 - For front-end changes, follow the [frontend setup instructions](https://github.com/photobooth-app/photobooth-frontend).  
-- Run tests with `uv run poe test`. Tests and benchmarks use a temporary working directory and database, so they do not use your local database, media, or configuration.
-- Run pytest in a fresh Python process; importing the application first prevents safe test isolation.
 
 ### Submitting a Pull Request
 

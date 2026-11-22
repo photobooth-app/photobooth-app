@@ -7,7 +7,7 @@ from pathlib import Path
 locale.setlocale(locale.LC_ALL, "")
 
 # database
-DATABASE_PATH: str = "./database/"
+DATABASE_PATH = "./database/"
 # mediaitems cache for resized versions
 CACHE_PATH = "./cache/"
 # media collection files
