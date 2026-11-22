@@ -266,7 +266,7 @@ def test_provider_error_raises(plugin: FilterAiRestyler, image, httpserver: HTTP
 
 
 def test_missing_api_key_raises(plugin: FilterAiRestyler, image):
-    with pytest.raises(Exception, match="API key"):
+    with pytest.raises(Exception, match="API (?:key|token)"):
         plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.cartoon", preview=False)
 
 
