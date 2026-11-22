@@ -37,7 +37,7 @@ def plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setitem(FilterAiRestylerConfig.model_config, "json_file", str(tmp_path / "nonexistent.json"))
     monkeypatch.setitem(FilterAiRestylerConfig.model_config, "env_file", None)
     for key in list(os.environ):
-        if key.startswith("filter-ai-restyler-"):
+        if key.casefold().startswith("filter-ai-restyler-"):
             monkeypatch.delenv(key)
     p = FilterAiRestyler()
     p._config = FilterAiRestylerConfig()
@@ -281,7 +281,7 @@ def test_provider_error_raises(plugin: FilterAiRestyler, image, httpserver: HTTP
 @pytest.mark.parametrize("source", ["environment", "dotenv"])
 def test_plugin_fixture_ignores_local_credentials(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, source: str):
     for key in list(os.environ):
-        if key.startswith("filter-ai-restyler-"):
+        if key.casefold().startswith("filter-ai-restyler-"):
             monkeypatch.delenv(key)
     monkeypatch.chdir(tmp_path)
     settings = {
