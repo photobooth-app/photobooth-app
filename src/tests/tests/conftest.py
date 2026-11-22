@@ -6,13 +6,6 @@ from fastapi.testclient import TestClient
 from gpiozero import Device
 from gpiozero.pins.mock import MockFactory
 
-from photobooth.appconfig import appconfig
-from photobooth.application import app
-from photobooth.container import container
-from photobooth.database.database import create_db_and_tables
-from photobooth.services.collection import MediacollectionService
-from tests.tests.util import dummy_mediaitem
-
 logger = logging.getLogger(name=None)
 
 # globally set device pin_factory to mock
@@ -21,6 +14,9 @@ Device.pin_factory = MockFactory()
 
 @pytest.fixture(scope="session")
 def client() -> Generator[TestClient, None, None]:
+    from photobooth.application import app
+    from photobooth.container import container
+
     with TestClient(app=app, base_url="http://test/api/") as client:
         if not container.is_started():
             container.start()
@@ -40,6 +36,9 @@ def client_authenticated(client: TestClient) -> Generator[TestClient, None, None
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup1():
+    from photobooth.services.collection import MediacollectionService
+    from tests.tests.util import dummy_mediaitem
+
     mcs = MediacollectionService()
 
     create = False
@@ -63,6 +62,8 @@ def global_function_setup1():
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup2():
+    from photobooth.appconfig import appconfig
+
     appconfig.reset_defaults()
 
     appconfig.actions.image[0].jobcontrol.countdown_capture = 0.2
@@ -82,6 +83,8 @@ def global_function_setup2():
 
 @pytest.fixture(scope="session", autouse=True)
 def session_setup1():
+    from photobooth.database.database import create_db_and_tables
+
     create_db_and_tables()
 
     yield

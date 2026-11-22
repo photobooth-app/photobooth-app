@@ -2,14 +2,13 @@ import logging
 
 import pytest
 
-from photobooth.appconfig import appconfig
-from photobooth.database.database import create_db_and_tables
-
 logger = logging.getLogger(name=None)
 
 
 @pytest.fixture(scope="function", autouse=True)
 def global_function_setup2():
+    from photobooth.appconfig import appconfig
+
     logger.info("global function-scoped appconfig reset and optimization for speed reasons")
 
     appconfig.reset_defaults()
@@ -29,6 +28,8 @@ def global_function_setup2():
 
 @pytest.fixture(scope="session", autouse=True)
 def session_setup1():
+    from photobooth.database.database import create_db_and_tables
+
     create_db_and_tables()
 
     yield
