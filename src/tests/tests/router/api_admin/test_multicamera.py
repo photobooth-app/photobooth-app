@@ -1,5 +1,4 @@
 import io
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -43,14 +42,14 @@ def test_delete_calibration_success(mock_cu, client_authenticated: TestClient):
 
 @patch("photobooth.routers.api_admin.multicamera.SimpleCalibrationUtil")
 @patch("photobooth.routers.api_admin.multicamera.get_detector")
-def test_post_calibrate_all_success(mock_get_detector, mock_cu, client_authenticated: TestClient, tmp_path: Path):
+def test_post_calibrate_all_success(mock_get_detector, mock_cu, client_authenticated: TestClient):
     # Fake calibration util methods
     mock_cu.return_value.calibrate_all.return_value = None
     mock_cu.return_value.save_calibration_data.return_value = None
     mock_get_detector.return_value = MagicMock()
 
     req = {
-        "filess_in": [[str(tmp_path / "img0.jpg")]],
+        "filess_in": [["tmp/img0.jpg"]],
         "board_definition": {
             "squares_x": 14,
             "squares_y": 9,
@@ -65,12 +64,12 @@ def test_post_calibrate_all_success(mock_get_detector, mock_cu, client_authentic
 
 @patch("photobooth.routers.api_admin.multicamera.SimpleCalibrationUtil")
 @patch("photobooth.routers.api_admin.multicamera.get_detector")
-def test_post_calibrate_all_failure(mock_get_detector, mock_cu, client_authenticated: TestClient, tmp_path: Path):
+def test_post_calibrate_all_failure(mock_get_detector, mock_cu, client_authenticated: TestClient):
     mock_cu.return_value.calibrate_all.side_effect = ValueError("bad calibration")
     mock_get_detector.return_value = MagicMock()
 
     req = {
-        "filess_in": [[str(tmp_path / "img0.jpg")]],
+        "filess_in": [["tmp/img0.jpg"]],
         "board_definition": {
             "squares_x": 14,
             "squares_y": 9,
