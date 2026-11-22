@@ -72,8 +72,11 @@ def test_validate_test_method_different():
 
 
 def test_pilgram_stage_get_filters():
-    # in default all filter enabled
-    assert get_plugin_avail_filters() == get_plugin_userselectable_filters()
+    # in default all pilgram filter enabled
+    def pilgram(filters):
+        return [f for f in filters if f[0].startswith("FilterPilgram2.")]
+
+    assert pilgram(get_plugin_avail_filters()) == pilgram(get_plugin_userselectable_filters())
 
 
 def test_pilgram_stage(pil_image: Image.Image):

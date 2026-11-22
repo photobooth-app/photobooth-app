@@ -76,6 +76,7 @@ commander = 'photobooth.plugins.commander.commander'
 gpio_lights = 'photobooth.plugins.gpio_lights.gpio_lights'
 wled = 'photobooth.plugins.wled.wled'
 filter_pilgram2 = 'photobooth.plugins.filter_pilgram2.filter_pilgram2'
+filter_ai_restyler = 'photobooth.plugins.filter_ai_restyler.filter_ai_restyler'
 synchronizer = 'photobooth.plugins.synchronizer.synchronizer'
 
 

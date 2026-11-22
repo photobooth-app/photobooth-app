@@ -33,6 +33,8 @@ The plugin includes one preview image for each built-in style. These previews
 are bundled with the plugin and do not make provider requests. An
 administrator can set a custom preview image for a style. A custom style with
 no preview image and no matching bundled image displays the original photo.
+Preview images are returned without resizing or cropping; supply custom previews
+at the desired resolution and aspect ratio.
 
 ## Common settings
 
