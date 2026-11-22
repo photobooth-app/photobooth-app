@@ -119,7 +119,11 @@ DEFAULT_STYLES = [
         ),
     ),
     AiStyle(id="pixar-3d", name="3D Animation", prompt="a 3D animated movie character render with soft lighting"),
-    AiStyle(id="anime", name="Anime", prompt="a Japanese anime illustration with cel shading"),
+    AiStyle(
+        id="anime",
+        name="Anime",
+        prompt="a Japanese anime illustration with clean line art, large expressive eyes, flat cel shading and vibrant colors",
+    ),
     AiStyle(id="astronaut", name="Astronaut", prompt="a realistic photo with astronaut spacesuits and faces clearly visible"),
     AiStyle(id="lego", name="Brick Figures", prompt="toy brick minifigures built from plastic bricks"),
     AiStyle(id="cartoon", name="Cartoon", prompt="a colorful 2D cartoon illustration with bold outlines"),
@@ -132,14 +136,22 @@ DEFAULT_STYLES = [
         name="Kids' Illustration",
         prompt="a whimsical children's storybook illustration with soft pastels and hand-drawn details, keeping people their original ages",
     ),
-    AiStyle(id="marble", name="Marble Sculpture", prompt="a finely carved marble sculpture with natural stone textures"),
+    AiStyle(
+        id="marble",
+        name="Marble Sculpture",
+        prompt="a white Carrara marble sculpture with finely chiseled details, natural stone veins and soft museum lighting",
+    ),
     AiStyle(id="medieval", name="Medieval", prompt="a medieval painting, people dressed in medieval clothing in a castle setting"),
     AiStyle(
         id="neotokyo",
         name="Neo Tokyo",
         prompt="a 1990s hand-drawn cyberpunk anime scene with cel shading and neon-lit Japanese city details",
     ),
-    AiStyle(id="pencil-sketch", name="Pencil Sketch", prompt="a detailed graphite pencil sketch"),
+    AiStyle(
+        id="pencil-sketch",
+        name="Pencil Sketch",
+        prompt="a detailed graphite pencil sketch with fine cross-hatching and soft shading on white paper",
+    ),
     AiStyle(id="pop-art", name="Pop Art", prompt="a pop art print with bright flat colors and ben-day dots"),
     AiStyle(id="renaissance", name="Renaissance", prompt="a renaissance oil painting with dramatic chiaroscuro lighting"),
     AiStyle(
@@ -170,9 +182,10 @@ class Common(BaseModel):
     )
     prompt_template: str = Field(
         default=(
-            "Edit this photo in the style of {style}. Preserve every person's recognizable identity, facial proportions, eyes, nose, jawline, "
-            "hairstyle, facial hair, skin tone, age and gender presentation. Keep expressions, poses, framing and the number of people unchanged. "
-            "Change the artistic rendering, clothing and setting without redesigning the people. Identity preservation takes priority over stylization."
+            "Convert this photo into {style}. Keep every person in the exact same position, scale and pose, with identical camera angle, "
+            "framing and perspective. Preserve each person's facial features, face shape, eyes, nose, jawline, hairstyle, facial hair, skin tone, "
+            "age and gender presentation so they stay clearly recognizable. Keep the number of people and their expressions unchanged. "
+            "Only change the artistic rendering, clothing and background to match the style."
         ),
         description="Prompt sent to the model. {style} is replaced by the prompt of the selected style.",
     )

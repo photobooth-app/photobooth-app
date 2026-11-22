@@ -202,7 +202,7 @@ def test_fal_and_cache(plugin: FilterAiRestyler, image, httpserver: HTTPServer, 
     payload = httpserver.log[0][0].get_json()
     assert payload["image_url"].startswith("data:image/jpeg;base64,")
     assert "colorful 2D cartoon" in payload["prompt"]
-    assert "recognizable identity" in payload["prompt"]
+    assert "clearly recognizable" in payload["prompt"]
     assert "gender presentation" in payload["prompt"]
     assert len(input_jpegs) == 1
     assert base64.b64decode(payload["image_url"].split(",", 1)[1]) == input_jpegs[0]
@@ -341,7 +341,7 @@ def test_replicate_polling(plugin: FilterAiRestyler, image, httpserver: HTTPServ
     assert "preserving each person's face" in payload["prompt"]
     assert "gender presentation" in payload["prompt"]
     assert "facial hair" in payload["prompt"]
-    assert "Identity preservation takes priority over stylization" in payload["prompt"]
+    assert "exact same position, scale and pose" in payload["prompt"]
     assert "{style}" not in payload["prompt"]
     assert len(input_jpegs) == 1
     assert base64.b64decode(payload["input_image"].split(",", 1)[1]) == input_jpegs[0]
