@@ -5,15 +5,20 @@ Testing mediaprocessing singleimages pipeline
 import logging
 from collections.abc import Generator
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from PIL import Image, ImageDraw, ImageOps
 from pydantic_extra_types.color import Color
 
 from photobooth.appconfig import AppConfig
-from photobooth.services.config.models.models import ImageElementConfig, TextElementConfig
+from photobooth.database.models import Mediaitem
+from photobooth.services.config.groups.actions import CollageProcessing, SingleImageProcessing
+from photobooth.services.config.models.models import CollageMergeDefinition, ImageElementConfig, TextElementConfig
+from photobooth.services.config.models.watermark import Watermark
 from photobooth.services.mediaprocessing.context import ImageContext
 from photobooth.services.mediaprocessing.pipeline import Pipeline
+from photobooth.services.mediaprocessing.processes import process_and_generate_collage, process_image_inner, process_phase1images
 from photobooth.services.mediaprocessing.steps.image import (
     CanvasElementsStep,
     FillBackgroundStep,
@@ -22,6 +27,7 @@ from photobooth.services.mediaprocessing.steps.image import (
     PluginFilters,
     PluginFilterStep,
     RemovebgStep,
+    WatermarkStep,
     get_plugin_avail_filters,
     get_plugin_userselectable_filters,
 )
@@ -238,6 +244,121 @@ def test_image_element_missing_file(logo_file: Path):
 def test_image_element_no_file():
     with pytest.raises(PipelineError):
         Pipeline[ImageContext](CanvasElementsStep([ImageElementConfig(type="image")]))(ImageContext(Image.new("RGB", (100, 100))))
+
+
+@pytest.mark.parametrize("fill_method", ["cover", "contain"])
+def test_watermark_step_sizes_and_composites(fill_method: Literal["cover", "contain"], tmp_path: Path):
+    watermark_file = tmp_path / "watermark.png"
+    watermark = Image.new("RGBA", (40, 20), (255, 0, 0, 128))
+    ImageDraw.Draw(watermark).rectangle((0, 0, 8, 19), fill=(0, 255, 0, 128))
+    ImageDraw.Draw(watermark).rectangle((31, 0, 39, 19), fill=(0, 0, 255, 128))
+    watermark.save(watermark_file)
+    config = Watermark(enable=True, image=watermark_file, fill_method=fill_method)
+    context = ImageContext(Image.new("RGB", (40, 40), (0, 0, 255)))
+
+    Pipeline[ImageContext](WatermarkStep(watermark_file, config.fill_method))(context)
+
+    assert context.image.mode == "RGB"
+    assert context.image.size == (40, 40)
+    assert context.image.getpixel((20, 20)) == (128, 0, 127)
+    if fill_method == "contain":
+        assert context.image.getpixel((20, 0)) == (0, 0, 255)
+        assert context.image.getpixel((2, 20)) == (0, 128, 127)
+    else:
+        assert context.image.getpixel((20, 0)) == (128, 0, 127)
+        assert context.image.getpixel((2, 20)) == (128, 0, 127)
+
+
+def test_watermark_step_preserves_alpha(tmp_path: Path):
+    watermark_file = tmp_path / "watermark.png"
+    watermark = Image.new("RGBA", (2, 1), (255, 0, 0, 128))
+    watermark.putpixel((1, 0), (0, 255, 0, 0))
+    watermark.save(watermark_file)
+    context = ImageContext(Image.new("RGBA", (2, 1), (0, 0, 255, 128)))
+
+    Pipeline[ImageContext](WatermarkStep(watermark_file, "cover"))(context)
+
+    assert context.image.getpixel((0, 0)) == (170, 0, 85, 192)
+    assert context.image.getpixel((1, 0)) == (0, 0, 255, 128)
+
+
+def test_watermark_contain_very_narrow_image(tmp_path: Path):
+    watermark_file = tmp_path / "watermark.png"
+    Image.new("RGBA", (1, 1000), (255, 0, 0, 255)).save(watermark_file)
+    context = ImageContext(Image.new("RGB", (100, 2), "blue"))
+
+    Pipeline[ImageContext](WatermarkStep(watermark_file, "contain"))(context)
+
+    assert context.image.getpixel((49, 0)) == (255, 0, 0)
+    assert context.image.getpixel((48, 0)) == (0, 0, 255)
+
+
+def test_watermark_step_missing_file(tmp_path: Path):
+    with pytest.raises(PipelineError, match="not found"):
+        Pipeline[ImageContext](WatermarkStep(tmp_path / "missing.png", "cover"))(ImageContext(Image.new("RGB", (2, 2))))
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_watermark_image_pipeline_is_last_and_reprocessable(enabled: bool, tmp_path: Path):
+    capture = tmp_path / "capture.png"
+    element = tmp_path / "element.png"
+    watermark = tmp_path / "watermark.png"
+    Image.new("RGB", (8, 8), "blue").save(capture)
+    Image.new("RGB", (8, 8), "green").save(element)
+    Image.new("RGBA", (8, 8), (255, 0, 0, 128)).save(watermark)
+    config = SingleImageProcessing(
+        elements_enable=True,
+        elements=[ImageElementConfig(type="image", image=element, pos_x=0, pos_y=0, width=8, height=8)],
+        watermark=Watermark(enable=enabled, image=watermark),
+    )
+    config = SingleImageProcessing.model_validate(config.model_dump(mode="json"))
+
+    mediaitem = Mediaitem(processed=tmp_path / "out.jpg", pipeline_config=config.model_dump(mode="json"))
+
+    process_phase1images(capture, mediaitem)
+
+    with Image.open(mediaitem.processed) as result:
+        assert result.getpixel((4, 4)) == pytest.approx((128, 64, 0) if enabled else (0, 128, 0), abs=3)
+    with Image.open(capture) as original:
+        assert original.getpixel((4, 4)) == (0, 0, 255)
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_watermark_collage_pipeline_is_last(enabled: bool, tmp_path: Path):
+    capture = tmp_path / "capture.png"
+    element = tmp_path / "element.png"
+    watermark = tmp_path / "watermark.png"
+    Image.new("RGB", (8, 8), "blue").save(capture)
+    Image.new("RGB", (8, 8), "green").save(element)
+    Image.new("RGBA", (8, 8), (255, 0, 0, 128)).save(watermark)
+    config = CollageProcessing(
+        canvas_width=8,
+        canvas_height=8,
+        merge_definition=[CollageMergeDefinition(pos_x=0, pos_y=0, width=8, height=8)],
+        canvas_elements_enable=True,
+        canvas_elements=[ImageElementConfig(type="image", image=element, pos_x=0, pos_y=0, width=8, height=8)],
+        watermark=Watermark(enable=enabled, image=watermark),
+    )
+    mediaitem = Mediaitem(processed=tmp_path / "out.jpg", pipeline_config=config.model_dump(mode="json"))
+
+    process_and_generate_collage([capture], mediaitem)
+
+    with Image.open(mediaitem.processed) as result:
+        assert result.getpixel((4, 4)) == pytest.approx((128, 64, 0) if enabled else (0, 128, 0), abs=3)
+    with Image.open(capture) as original:
+        assert original.getpixel((4, 4)) == (0, 0, 255)
+
+
+def test_watermark_enabled_without_image_fails(tmp_path: Path):
+    capture = tmp_path / "capture.png"
+    Image.new("RGB", (8, 8)).save(capture)
+    with pytest.raises(ValueError, match="watermark enabled, but no file"):
+        process_image_inner(capture, SingleImageProcessing(watermark=Watermark(enable=True)), preview=False)
+
+    config = CollageProcessing(merge_definition=[], watermark=Watermark(enable=True))
+    mediaitem = Mediaitem(processed=tmp_path / "out.jpg", pipeline_config=config.model_dump(mode="json"))
+    with pytest.raises(ValueError, match="watermark enabled, but no file"):
+        process_and_generate_collage([], mediaitem)
 
 
 def test_rembg_ai_stage(pil_image: Image.Image):

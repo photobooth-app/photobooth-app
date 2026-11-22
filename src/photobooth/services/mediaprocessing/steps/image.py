@@ -9,6 +9,7 @@ from enum import Enum
 from itertools import chain
 from pathlib import Path
 from threading import Lock
+from typing import Literal
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -266,6 +267,36 @@ class CanvasElementsStep(PipelineStep):
         composed = Image.alpha_composite(image.convert("RGBA"), overlay)
 
         return composed if image.mode == "RGBA" else composed.convert(image.mode)
+
+
+class WatermarkStep(PipelineStep):
+    def __init__(self, image: Path | str, fill_method: Literal["cover", "contain"]) -> None:
+        self.image = image
+        self.fill_method = fill_method
+
+    def __call__(self, context: ImageContext, next_step: NextStep) -> None:
+        try:
+            with Image.open(self.image) as image:
+                watermark = image.convert("RGBA")
+        except FileNotFoundError as exc:
+            raise PipelineError(f"file {self.image} not found!") from exc
+
+        if self.fill_method == "cover":
+            watermark = ImageOps.fit(watermark, context.image.size, method=Image.Resampling.BICUBIC)
+        elif self.fill_method == "contain":
+            fitted = ImageOps.contain(watermark, context.image.size, method=Image.Resampling.BICUBIC)
+            # catch 1px width/height only watermarks (extreme cases, but watermarks might be strange ;)
+            if not fitted.width or not fitted.height:
+                fitted = watermark.resize((max(1, fitted.width), max(1, fitted.height)), Image.Resampling.BICUBIC)
+            watermark = fitted
+        else:
+            raise ValueError(f"unsupported watermark fill method: {self.fill_method}")
+
+        result = context.image.convert("RGBA")
+        result.alpha_composite(watermark, dest=((result.width - watermark.width) // 2, (result.height - watermark.height) // 2))
+        context.image = result.convert("RGB") if context.image.mode == "RGB" else result
+
+        next_step(context)
 
 
 class RemovebgStep(PipelineStep):

@@ -17,7 +17,7 @@ from .pipeline import NextStep, Pipeline, PipelineStep
 from .steps.animation import AlignSizesStep
 from .steps.animation_collage_shared import AddPredefinedImagesStep, PostPredefinedImagesStep
 from .steps.collage import MergeCollageStep
-from .steps.image import CanvasElementsStep, FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep
+from .steps.image import CanvasElementsStep, FillBackgroundStep, ImageFrameStep, ImageMountStep, PluginFilterStep, RemovebgStep, WatermarkStep
 from .steps.multicamera import AlignAsPerCalibrationStep
 from .steps.video import BoomerangStep
 
@@ -61,6 +61,11 @@ def process_image_inner(file_in: Path, config: SingleImageProcessing, preview: b
 
     if config.elements_enable:
         pipeline.append(CanvasElementsStep(config.elements))
+
+    if config.watermark.enable:
+        if not config.watermark.image:
+            raise ValueError("watermark enabled, but no file given")
+        pipeline.append(WatermarkStep(config.watermark.image, config.watermark.fill_method))
 
     # finished assembly
 
@@ -152,6 +157,11 @@ def process_and_generate_collage(files_in: list[Path], mediaitem: Mediaitem):
 
     if config.canvas_elements_enable:
         steps_phase2.append(CanvasElementsStep(config.canvas_elements))
+
+    if config.watermark.enable:
+        if not config.watermark.image:
+            raise ValueError("watermark enabled, but no file given")
+        steps_phase2.append(WatermarkStep(config.watermark.image, config.watermark.fill_method))
 
     pipeline = Pipeline[ImageContext](*steps_phase2)
     with MetricsTimer(process_and_generate_collage.__name__):

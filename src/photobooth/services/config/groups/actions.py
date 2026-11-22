@@ -8,6 +8,7 @@ from pydantic_extra_types.color import Color
 from ..models.frameoverlay import FrameOverlay
 from ..models.models import AnimationMergeDefinition, CanvasElement, CollageMergeDefinition, PluginFilters, TextElementConfig
 from ..models.trigger import GpioTrigger, KeyboardTrigger, Trigger, UiTrigger
+from ..models.watermark import Watermark
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +169,7 @@ class SingleImageProcessing(BaseModel):
         default=[],
         description="Texts and images (like logos or watermarks) to overlay on images after capture. Elements are drawn in list order, later elements on top. Pos_x/Pos_y is the element's top-left corner in pixel starting 0/0 at top-left in image. Rotation is around the element's center. Files need to be located in working directory/userdata/*",
     )
+    watermark: Watermark = Field(default_factory=Watermark)
 
     @model_validator(mode="before")
     @classmethod
@@ -253,6 +255,7 @@ class CollageProcessing(BaseModel):
         default=[],
         description="Texts and images (like logos or watermarks) to overlay on final collage. Elements are drawn in list order, later elements on top. Pos_x/Pos_y is the element's top-left corner in pixel starting 0/0 at top-left in image. Rotation is around the element's center. Files need to be located in working directory/userdata/*",
     )
+    watermark: Watermark = Field(default_factory=Watermark)
 
     @model_validator(mode="before")
     @classmethod
