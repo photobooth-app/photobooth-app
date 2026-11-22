@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import os
 from pathlib import Path
 from typing import cast
 
@@ -18,7 +19,7 @@ from photobooth.plugins.filter_ai_restyler.config import (
     ReplicateProviderConfig,
 )
 from photobooth.plugins.filter_ai_restyler.filter_ai_restyler import SHIPPED_PREVIEWS, FilterAiRestyler
-from photobooth.plugins.filter_ai_restyler.providers.base import encode_jpeg
+from photobooth.plugins.filter_ai_restyler.providers.base import ProviderError, encode_jpeg
 from photobooth.plugins.filter_ai_restyler.providers.comfyui import fill_placeholders
 
 INPUT_SIZE = (400, 300)
@@ -32,8 +33,12 @@ def _jpeg(size=(256, 256), color=(255, 0, 0)) -> bytes:
 
 @pytest.fixture()
 def plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    # never load the local config file, it may contain real api keys
+    # Never load local plugin settings, which may contain real API keys.
     monkeypatch.setitem(FilterAiRestylerConfig.model_config, "json_file", str(tmp_path / "nonexistent.json"))
+    monkeypatch.setitem(FilterAiRestylerConfig.model_config, "env_file", None)
+    for key in list(os.environ):
+        if key.startswith("filter-ai-restyler-"):
+            monkeypatch.delenv(key)
     p = FilterAiRestyler()
     p._config = FilterAiRestylerConfig()
     p._config.common.enabled = True
@@ -131,8 +136,9 @@ def test_preview_does_not_request(plugin: FilterAiRestyler, image, httpserver: H
 
     assert result is not None
     with Image.open(SHIPPED_PREVIEWS / "cartoon.jpg") as sample:
-        assert result.size == sample.size
-        assert result.tobytes() == sample.tobytes()
+        expected = sample.crop((33, 0, 566, 400))
+        assert result.size == expected.size
+        assert result.tobytes() == expected.tobytes()
     assert len(httpserver.log) == 0
 
 
@@ -151,31 +157,38 @@ def test_preview_sample_image(plugin: FilterAiRestyler, image, tmp_path: Path):
 
     result = plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.custom", preview=True)
 
-    assert result and result.size == (100, 100)
-    assert cast(tuple, result.getpixel((50, 50)))[1] > 200
+    assert result and result.size == (100, 75)
+    assert cast(tuple, result.getpixel((50, 37)))[1] > 200
 
 
 @pytest.mark.parametrize(
-    ("mode", "input_size"),
+    ("mode", "input_size", "crop_box"),
     [
-        ("RGB", (400, 300)),
-        ("RGBA", (300, 400)),
-        ("L", (10, 10)),
+        ("RGB", (400, 300), (0, 12, 100, 87)),
+        ("RGBA", (300, 400), (12, 0, 87, 100)),
+        ("L", (10, 10), (0, 0, 100, 100)),
+        ("RGB", (1000, 1), (0, 49, 100, 50)),
+        ("RGB", (1, 1000), (49, 0, 50, 100)),
     ],
 )
-def test_preview_returns_unmodified_sample(plugin: FilterAiRestyler, tmp_path: Path, mode: str, input_size: tuple[int, int]):
+def test_preview_crops_without_resizing(
+    plugin: FilterAiRestyler, tmp_path: Path, mode: str, input_size: tuple[int, int], crop_box: tuple[int, int, int, int]
+):
     sample = Image.new("RGB", (100, 100))
     for x in range(sample.width):
         for y in range(sample.height):
             sample.putpixel((x, y), (x, y, 128))
     sample = sample.convert(mode)
+    if mode == "RGBA":
+        sample.putalpha(0)
     sample_path = tmp_path / "sample.png"
     sample.save(sample_path)
     style = AiStyle(id="custom", name="Custom", prompt="custom", preview_image=sample_path)
 
     result = plugin.do_preview(Image.new("RGB", input_size), style)
-    assert result.size == sample.size and result.mode == sample.mode
-    assert result.tobytes() == sample.tobytes()
+    expected = sample.crop(crop_box).convert("RGB")
+    assert result.size == expected.size and result.mode == "RGB"
+    assert result.tobytes() == expected.tobytes()
 
 
 def test_fal_and_cache(plugin: FilterAiRestyler, image, httpserver: HTTPServer, input_jpegs: list[bytes]):
@@ -265,8 +278,47 @@ def test_provider_error_raises(plugin: FilterAiRestyler, image, httpserver: HTTP
     assert plugin._stats_errors == 1
 
 
-def test_missing_api_key_raises(plugin: FilterAiRestyler, image):
-    with pytest.raises(Exception, match="API (?:key|token)"):
+@pytest.mark.parametrize("source", ["environment", "dotenv"])
+def test_plugin_fixture_ignores_local_credentials(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, source: str):
+    for key in list(os.environ):
+        if key.startswith("filter-ai-restyler-"):
+            monkeypatch.delenv(key)
+    monkeypatch.chdir(tmp_path)
+    settings = {
+        "filter-ai-restyler-provider__provider_type": "replicate",
+        "filter-ai-restyler-provider__api_key": "dummy-key",
+    }
+    if source == "environment":
+        for key, value in settings.items():
+            monkeypatch.setenv(key, value)
+    else:
+        (tmp_path / ".env.prod").write_text("".join(f"{key}={value}\n" for key, value in settings.items()))
+
+    isolated_plugin = request.getfixturevalue("plugin")
+
+    assert isolated_plugin._config.provider.api_key.get_secret_value() == ""
+
+
+@pytest.mark.parametrize(
+    ("provider", "message"),
+    [
+        (ReplicateProviderConfig(api_key=SecretStr("")), "Replicate API token is missing"),
+        (FalProviderConfig(api_key=SecretStr("")), r"fal\.ai API key is missing"),
+    ],
+)
+def test_missing_api_key_raises(
+    plugin: FilterAiRestyler,
+    image: Image.Image,
+    monkeypatch: pytest.MonkeyPatch,
+    provider: ReplicateProviderConfig | FalProviderConfig,
+    message: str,
+):
+    def fail_request(*args, **kwargs):
+        raise AssertionError("Unexpected provider request")
+
+    monkeypatch.setattr("requests.post", fail_request)
+    plugin._config.provider = provider
+    with pytest.raises(ProviderError, match=message):
         plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.cartoon", preview=False)
 
 

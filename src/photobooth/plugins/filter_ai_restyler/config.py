@@ -43,7 +43,7 @@ class AiStyle(BaseModel):
     userselectable: bool = Field(default=True, description="Users can choose this style in the gallery.")
     preview_image: FilePath | None = Field(
         default=None,
-        description="Optional sample image shown as the preview in the filter selection. Supply the desired resolution and aspect ratio: the image is returned without resizing or cropping. If empty, the preview shipped with the plugin for this style id is used. No AI request is made for previews.",
+        description="Optional sample image shown as the preview in the filter selection. The image is center-cropped to the photo's aspect ratio without resizing. If empty, the preview shipped with the plugin for this style id is used. No AI request is made for previews.",
         json_schema_extra={"list_api": "/api/admin/enumerate/userfiles"},
     )
 
