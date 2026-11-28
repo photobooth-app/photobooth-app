@@ -46,7 +46,9 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
     def on_enter_capture(self):
         logger.info(f"current capture ({self.captures_taken + 1}/{self.total_captures_to_take}, remaining {self.remaining_captures_to_take - 1})")
 
-        captureset = CaptureSet([Capture(self._acquisition_service.wait_for_still_file())])
+        capture_path = self._acquisition_service.wait_for_still_file()
+        captured_original = self._move_capture_to_original(capture_path, show_in_gallery=True)
+        captureset = CaptureSet([Capture(captured_original)])
 
         # add to tmp collection
         # update model so it knows the latest number of captures and the machine can react accordingly if finished
@@ -67,8 +69,8 @@ class JobModelImage(JobModelBase[SingleImageConfigurationSet]):
 
         ## PHASE 1:
         # postprocess each capture individually
-        capture_to_process = self._capture_sets[0].captures[0].filepath
-        mediaitem = self.complete_phase1image(capture_to_process, True, self._configuration_set.processing)
+        captured_original = self._capture_sets[0].captures[0].filepath
+        mediaitem = self.complete_phase1image(captured_original, True, self._configuration_set.processing)
 
         # out to db/ui
         self.set_results(mediaitem, mediaitem.id)

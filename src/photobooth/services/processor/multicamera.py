@@ -78,7 +78,9 @@ class JobModelMulticamera(JobModelBase[MulticameraConfigurationSet]):
             # until now just a very basic filter avail applied over all images
             _config = SingleImageProcessing(image_filter=self._configuration_set.processing.image_filter)
 
-            mediaitem = self.complete_phase1image(file_to_process, self._configuration_set.jobcontrol.show_individual_captures_in_gallery, _config)
+            show_in_gallery = self._configuration_set.jobcontrol.show_individual_captures_in_gallery
+            captured_original = self._move_capture_to_original(file_to_process, show_in_gallery)
+            mediaitem = self.complete_phase1image(captured_original, show_in_gallery, _config)
             phase1_mediaitems.append(mediaitem)
 
             logger.info(f"capture {mediaitem=} successful")

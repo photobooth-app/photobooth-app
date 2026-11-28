@@ -1,14 +1,90 @@
 import logging
 import time
 from collections.abc import Generator
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
 from photobooth.services.acquisition import AcquisitionService
 from photobooth.services.config.groups.actions import SingleImageConfigurationSet, SingleImageJobControl, SingleImageProcessing, Trigger
+from photobooth.services.processor import base as processor_base
 from photobooth.services.processor.image import JobModelImage
+from photobooth.services.processor.models import Capture, CaptureSet
 
 logger = logging.getLogger(name=None)
+
+
+def test_export_includes_image_preview_capture_id():
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        ),
+        Mock(spec=AcquisitionService),
+    )
+    capture = Capture(filepath=Path("capture.jpg"))
+    jm._capture_sets.append(CaptureSet([capture]))
+
+    assert jm.export().preview_capture_id == str(capture.uuid)
+
+
+def test_on_enter_capture_moves_capture_to_original(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        ),
+        Mock(spec=AcquisitionService),
+    )
+    capture_path = tmp_path / "capture.jpg"
+    capture_path.write_bytes(b"capture")
+    original_dir = tmp_path / "originals"
+    original_dir.mkdir()
+    monkeypatch.setattr(processor_base, "PATH_CAMERA_ORIGINAL", str(original_dir))
+    jm._acquisition_service.wait_for_still_file.return_value = capture_path
+
+    jm.on_enter_capture()
+
+    capture = jm._capture_sets[0].captures[0]
+    assert capture.filepath.parent == original_dir
+    assert capture.filepath.is_file()
+    assert not capture_path.exists()
+    assert jm.export().preview_capture_id == str(capture.uuid)
+
+
+def test_complete_phase1image_uses_captured_original(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    jm = JobModelImage(
+        SingleImageConfigurationSet(
+            jobcontrol=SingleImageJobControl(),
+            processing=SingleImageProcessing(),
+            trigger=Trigger(),
+        ),
+        Mock(spec=AcquisitionService),
+    )
+    original_dir = tmp_path / "originals"
+    original_dir.mkdir()
+    capture_path = original_dir / "capture.jpg"
+    capture_path.write_bytes(b"capture")
+    processed_dir = tmp_path / "processed"
+    processed_dir.mkdir()
+    cached_path = tmp_path / "cached.jpg"
+    cached_path.write_bytes(b"cached")
+    monkeypatch.setattr(processor_base, "PATH_CAMERA_ORIGINAL", str(original_dir))
+    monkeypatch.setattr(processor_base, "PATH_PROCESSED", str(processed_dir))
+    monkeypatch.setattr(jm._cache, "get_cached_repr", Mock(return_value=SimpleNamespace(filepath=cached_path)))
+
+    def process_images(_filepath: Path, mediaitem):
+        assert capture_path.is_file()
+        mediaitem.processed.write_bytes(b"processed")
+
+    monkeypatch.setattr(processor_base, "process_phase1images", process_images)
+    mediaitem = jm.complete_phase1image(capture_path, True, SingleImageProcessing())
+
+    assert capture_path == mediaitem.captured_original
 
 
 @pytest.fixture(scope="module")

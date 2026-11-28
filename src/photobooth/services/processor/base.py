@@ -90,6 +90,7 @@ class JobModelBase(ABC, Generic[T]):
             approval_id=str(self._approval_id) if self._approval_id else None,
             frame_overlay=self.frame_overlay,
             captures_definition=self.captures_definition,
+            preview_capture_id=(str(self._capture_sets[-1].captures[-1].uuid) if self._media_type == "image" and self._capture_sets else None),
         )
 
     ## states logic to implement by the models
@@ -206,17 +207,21 @@ class JobModelBase(ABC, Generic[T]):
     def wait_countdown_finished(self):
         self._countdown_timer.wait_countdown_finished()
 
-    def complete_phase1image(self, capture_to_process: Path, show_in_gallery: bool, pipeline_config: SingleImageProcessing) -> Mediaitem:
+    def _move_capture_to_original(self, capture_to_process: Path, show_in_gallery: bool) -> Path:
         original_filenamepath = Path(f"{filename_str_time()}{'' if show_in_gallery else '_hidden'}").with_suffix(capture_to_process.suffix)
+        return capture_to_process.rename(Path(PATH_CAMERA_ORIGINAL, original_filenamepath))
 
-        # very first, move the capture_to_process to originals. if anything later fails, at least we got the file in safe place.
-        captured_original = capture_to_process.rename(Path(PATH_CAMERA_ORIGINAL, original_filenamepath))
-
+    def complete_phase1image(
+        self,
+        captured_original: Path,
+        show_in_gallery: bool,
+        pipeline_config: SingleImageProcessing,
+    ) -> Mediaitem:
         mediaitem = Mediaitem(
             id=uuid4(),
             job_identifier=self._job_identifier,
             media_type="image",
-            processed=Path(PATH_PROCESSED, original_filenamepath),
+            processed=Path(PATH_PROCESSED, captured_original.name),
             captured_original=captured_original,
             pipeline_config=pipeline_config.model_dump(mode="json"),
             show_in_gallery=show_in_gallery,

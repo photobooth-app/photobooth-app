@@ -91,11 +91,9 @@ class JobModelAnimation(JobModelBase[AnimationConfigurationSet]):
                 image_filter=merge_definition_capture_only[index].image_filter if index is not None else PluginFilters("original"),
             )
 
-            mediaitem = self.complete_phase1image(
-                capture_to_process.filepath,
-                self._configuration_set.jobcontrol.show_individual_captures_in_gallery,
-                _config,
-            )
+            show_in_gallery = self._configuration_set.jobcontrol.show_individual_captures_in_gallery
+            captured_original = self._move_capture_to_original(capture_to_process.filepath, show_in_gallery)
+            mediaitem = self.complete_phase1image(captured_original, show_in_gallery, _config)
             phase1_mediaitems.append(mediaitem)
 
             logger.info(f"capture {mediaitem} successful")
