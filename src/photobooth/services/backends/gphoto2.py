@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile
 
 import gphoto2 as gp
 
+from ...utils.cameraparameters import resolve_extreme_choice
 from ...utils.helper import filename_str_time
 from ..config.groups.cameras import Gphoto2Parameters, GroupCameraGphoto2
 from .abstractbackend import AbstractBackend, StillRequest
@@ -90,7 +91,8 @@ class Gphoto2Backend(AbstractBackend):
 
     def _handle_switchmode_still_mode(self):
         logger.debug("configure camera optimized for still capture")
-        self._handle_switchmode(self._config.parameterset_still)
+        overrides = [Gphoto2Parameters(enabled=True, name=name, value=value) for name, value in self.still_parameter_overrides.items()]
+        self._handle_switchmode(list(self._config.parameterset_still) + overrides)
 
     def _handle_switchmode_standby(self):
         logger.debug("configure camera optimized for standby")
@@ -132,6 +134,7 @@ class Gphoto2Backend(AbstractBackend):
             # to the camera and breaks everything. The available choices reported by the camera may differ by the selected mode
             available_choices = [choice for choice in child.get_choices()]
 
+            value_new = resolve_extreme_choice(value_new, available_choices)
             if value_new not in available_choices:
                 raise ValueError(f"{value_new} is not an option for '{name}' in current mode. Available choices are {available_choices}")
 
