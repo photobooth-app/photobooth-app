@@ -42,12 +42,12 @@ def resize_jpeg_simplejpeg(filepath_in: Path, filepath_out: Path, scaled_min_len
         jpeg_bytes_in = file_in.read()
 
     height, width, _, _ = decode_jpeg_header(jpeg_bytes_in)
-    original_length = max(int(width), int(height))  # scale for the max length
+    original_length = max(width, height)  # scale for the max length
     scaling_factor = scaled_min_length / original_length
 
     # simplejpeg will pick the closest fast scaling factor (1/2, 1/4, 1/8)
-    target_height = int(int(height) * scaling_factor)
-    target_width = int(int(width) * scaling_factor)
+    target_height = int(height * scaling_factor)
+    target_width = int(width * scaling_factor)
 
     if scaling_factor > 1:
         buffer_out = jpeg_bytes_in

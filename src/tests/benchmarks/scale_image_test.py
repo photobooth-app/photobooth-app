@@ -19,8 +19,8 @@ def simplejpeg_scale(jpeg_bytes, tmp_path):
 
     # 2. Calculate target dimensions for 50% reduction
     # simplejpeg will pick the closest fast scaling factor (1/2, 1/4, 1/8)
-    target_height = int(height) // 2
-    target_width = int(width) // 2
+    target_height = height // 2
+    target_width = width // 2
     decoded_img = decode_jpeg(jpeg_bytes, min_height=target_height, min_width=target_width, fastdct=True)  # half the height of original
     bytes = encode_jpeg(
         decoded_img,

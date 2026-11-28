@@ -45,6 +45,7 @@ def test_on_enter_capture_moves_capture_to_original(monkeypatch: pytest.MonkeyPa
     original_dir = tmp_path / "originals"
     original_dir.mkdir()
     monkeypatch.setattr(processor_base, "PATH_CAMERA_ORIGINAL", str(original_dir))
+    # pyrefly: ignore[missing-attribute]
     jm._acquisition_service.wait_for_still_file.return_value = capture_path
 
     jm.on_enter_capture()
