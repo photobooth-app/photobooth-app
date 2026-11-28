@@ -21,7 +21,7 @@ class FalProvider(BaseProvider):
         payload = {
             **parse_params(cfg.extra_params),
             "prompt": prompt,
-            cfg.image_param_name: to_data_uri(jpeg),
+            cfg.image_param_name: [to_data_uri(jpeg)] if cfg.image_param_as_list else to_data_uri(jpeg),
             "num_images": 1,
             "sync_mode": True,
         }

@@ -52,6 +52,11 @@ class _ApiKeyProviderConfig(BaseModel):
     api_key: SecretStr = Field(default=SecretStr(""), description="API key of the provider.")
     timeout: PositiveFloat = Field(default=30.0, description="Maximum time in seconds to wait for a result.")
     extra_params: list[ProviderParameter] = Field(default=[], description="Additional parameters sent to the model.")
+    image_param_as_list: bool = Field(
+        default=False,
+        description="Send the input image as a list. Required by models that accept multiple input images, "
+        "for example nano-banana ('image_input' on Replicate, 'image_urls' on fal.ai).",
+    )
 
     @field_serializer("api_key")
     def contextual_serializer(self, value, info: SerializationInfo):

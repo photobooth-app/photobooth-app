@@ -30,7 +30,7 @@ class ReplicateProvider(BaseProvider):
             "input": {
                 **parse_params(cfg.extra_params),
                 "prompt": prompt,
-                cfg.image_param_name: to_data_uri(jpeg),
+                cfg.image_param_name: [to_data_uri(jpeg)] if cfg.image_param_as_list else to_data_uri(jpeg),
             }
         }
         if ":" in cfg.model_id:

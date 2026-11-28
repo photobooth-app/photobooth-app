@@ -347,6 +347,28 @@ def test_replicate_polling(plugin: FilterAiRestyler, image, httpserver: HTTPServ
     assert base64.b64decode(payload["input_image"].split(",", 1)[1]) == input_jpegs[0]
 
 
+def test_replicate_image_param_as_list(plugin: FilterAiRestyler, image, httpserver: HTTPServer, input_jpegs: list[bytes]):
+    plugin._config.provider = ReplicateProviderConfig(
+        api_key=SecretStr("token"),
+        base_url=HttpUrl(httpserver.url_for("/v1")),
+        model_id="google/nano-banana",
+        image_param_name="image_input",
+        image_param_as_list=True,
+    )
+    httpserver.expect_request("/v1/models/google/nano-banana/predictions", method="POST").respond_with_json(
+        {"status": "succeeded", "output": [httpserver.url_for("/out.jpg")]}
+    )
+    httpserver.expect_request("/out.jpg").respond_with_data(_jpeg(), content_type="image/jpeg")
+
+    result = plugin.mp_filter_pipeline_step(image, "FilterAiRestyler.cartoon", preview=False)
+
+    assert result and result.size == INPUT_SIZE
+    payload = httpserver.log[0][0].get_json()["input"]
+    assert "input_image" not in payload
+    assert isinstance(payload["image_input"], list) and len(payload["image_input"]) == 1
+    assert base64.b64decode(payload["image_input"][0].split(",", 1)[1]) == input_jpegs[0]
+
+
 def test_comfyui(plugin: FilterAiRestyler, image, httpserver: HTTPServer, tmp_path: Path, input_jpegs: list[bytes]):
     workflow = tmp_path / "workflow.json"
     workflow.write_text(
